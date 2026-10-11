@@ -2,20 +2,20 @@ import { type Finding, byDebtKey, finding } from "./finding.js";
 import { kindOf } from "./kind-of.js";
 import type { Snapshot } from "./snapshot.js";
 
-const TEST_REST = /^([^.]+)\.test\.ts$/;
-
 // What a run of words is: a term, or a retired word and the term that replaced it.
 interface Entry {
   readonly term: string;
   readonly retired: boolean;
 }
 
-// R3, names: the terms file defines each term once; every module name, exported symbol and test name
-// of a placed file is built from terms and the config's connectors; no retired word appears in a name
-// or in spec prose. Only the `<name>` segment (and a test's law segment) is a name; zone and kind
-// segments are structure. Legacy files are not held.
+// R3, names: the terms file defines each term once; every module name and exported symbol of a placed
+// file (a test's module prefix included) is built from terms and the config's connectors; no retired
+// word appears in a name or in spec prose. Only the `<name>` segment is a name: zone and kind segments
+// are structure, and a test's law segment is its claim's anchor. A word matches a term or its plural:
+// the term plus one of the config's plural suffixes, on the last word of a compound term
+// (`running-totals` is `running-total`). Legacy files are not held.
 export function nameCheck(snapshot: Snapshot): Finding[] {
-  const { srcRoot, oracleRoot, termsFile, connectors } = snapshot.config;
+  const { srcRoot, oracleRoot, termsFile, connectors, plurals } = snapshot.config;
   const findings: Finding[] = [];
 
   const termLines = new Map<string, number[]>();
@@ -33,15 +33,23 @@ export function nameCheck(snapshot: Snapshot): Finding[] {
     findings.push(finding("R3", "duplicate-term", term, fix));
   }
 
+  // A run is an entry as written, or its plural: the last word less one plural suffix.
+  const entryOf = (run: string): Entry | undefined =>
+    entries.get(run) ??
+    plurals
+      .filter((suffix) => run.endsWith(suffix) && !run.endsWith(` ${suffix}`))
+      .map((suffix) => entries.get(run.slice(0, -suffix.length)))
+      .find((entry) => entry !== undefined);
+
   // Each run of words, longest match first, so a compound term wins over its parts.
   const longest = Math.max(1, ...[...entries.keys()].map((k) => k.split(" ").length));
   const scan = (path: string, text: string, isName: boolean): void => {
     const words = wordsOf(text);
     for (let i = 0; i < words.length; ) {
       let n = Math.min(longest, words.length - i);
-      while (n > 1 && !entries.has(words.slice(i, i + n).join(" "))) n--;
+      while (n > 1 && entryOf(words.slice(i, i + n).join(" ")) === undefined) n--;
       const run = words.slice(i, i + n).join(" ");
-      const entry = entries.get(run);
+      const entry = entryOf(run);
       i += n;
       if (entry?.retired === true) {
         const fix = `In ${path}, \`${run}\` is retired: use the defined term \`${entry.term}\`.`;
@@ -57,9 +65,7 @@ export function nameCheck(snapshot: Snapshot): Finding[] {
     const at = kindOf(file.path, file.type === "test" ? oracleRoot : srcRoot);
     if (!at.placed) continue;
     if (file.type === "source") scan(at.artifact, at.name, true);
-    if (file.type !== "test") continue;
-    scan(file.path, at.name, true);
-    scan(file.path, TEST_REST.exec(at.rest)?.[1] ?? "", true);
+    if (file.type === "test") scan(file.path, at.name, true);
   }
   for (const { file, name } of snapshot.symbols) {
     const at = kindOf(file, srcRoot);

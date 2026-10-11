@@ -7,7 +7,7 @@ const keys = (parts: Parameters<typeof snapshotOf>[0]) =>
     (f) => f.debtKey,
   );
 
-describe("nameCheck: module names, exported symbols and test names use only terms and connectors", () => {
+describe("nameCheck: module names and exported symbols use only terms and connectors", () => {
   test("a name of terms has no finding", () => {
     expect(
       keys({
@@ -51,9 +51,34 @@ describe("nameCheck: module names, exported symbols and test names use only term
     ]);
   });
 
-  test("a test's module prefix and law segment are both names", () => {
-    expect(keys({ files: ["oracle/core/reading/step.limit-order.test.ts"] })).toEqual([
-      "R3:undefined-word:oracle/core/reading/step.limit-order.test.ts:order",
+  test("a test's module prefix is a name; its law segment is the claim's anchor, never checked", () => {
+    expect(
+      keys({
+        files: [
+          "oracle/core/reading/step.limit-order.test.ts",
+          "oracle/core/reading/cap.amount.test.ts",
+        ],
+      }),
+    ).toEqual(["R3:undefined-word:oracle/core/reading/cap.amount.test.ts:cap"]);
+  });
+
+  test("a word matches a term or its plural, and a plural compound pluralises its last word", () => {
+    const pluralKeys = (files: readonly string[]) =>
+      nameCheck(snapshotOf({ terms: ["kind", "zone", "box", "running-total"], files })).map(
+        (f) => f.debtKey,
+      );
+    expect(
+      pluralKeys([
+        "src/core/data/kinds.ts",
+        "src/core/data/zones.ts",
+        "src/core/data/boxes.ts",
+        "src/core/data/running-totals.ts",
+      ]),
+    ).toEqual([]);
+    expect(pluralKeys(["src/core/data/kindness.ts", "src/core/data/runnings-total.ts"])).toEqual([
+      "R3:undefined-word:core/data/kindness:kindness",
+      "R3:undefined-word:core/data/runnings-total:runnings",
+      "R3:undefined-word:core/data/runnings-total:total",
     ]);
   });
 });

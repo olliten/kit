@@ -30,14 +30,14 @@ test("the fixture reads as its files, imports and headings", () => {
 });
 
 // The fixture seeds exactly five findings: a missing heading, a shell file importing core state, an
-// import cycle, a test law that is a retired word, and an exported symbol with an undefined word. Anything more or less is a regression in the reader or the readings.
+// import cycle, a retired word in spec prose, and an exported symbol with an undefined word. Anything more or less is a regression in the reader or the readings.
 test("the fixture yields exactly its seeded findings", () => {
   const s = readSnapshot(FIXTURE);
   expect([...binder(s), ...dependencyCheck(s), ...nameCheck(s)].map((f) => f.debtKey)).toEqual([
     "R3:no-heading:core/reading/label",
     "R2:cycle:core/reading/average:core/reading/average,core/reading/total",
     "R2:edge:shell/reading/screen:core/state/tally",
-    "R3:retired-word:oracle/core/reading/total.sums.test.ts:sums",
+    "R3:retired-word:spec/tally.md:sums",
     "R3:undefined-word:core/reading/total:summary",
   ]);
 });

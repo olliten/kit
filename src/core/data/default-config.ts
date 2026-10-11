@@ -7,6 +7,8 @@ export interface KitConfig {
   readonly termsFile: string;
   // The small words a name may carry without a term line (R3, names).
   readonly connectors: readonly string[];
+  // The suffixes that make a term's plural, which matches as the term itself (R3, names).
+  readonly plurals: readonly string[];
 }
 
 export const DEFAULT_CONFIG: KitConfig = {
@@ -15,4 +17,5 @@ export const DEFAULT_CONFIG: KitConfig = {
   specRoot: "spec",
   termsFile: "spec/terms.md",
   connectors: ["of", "to", "by", "at", "in", "on", "is", "a", "the"],
+  plurals: ["s", "es"],
 };

@@ -12,7 +12,7 @@ The amounts added so far.
 
 ### core/reading/total — the sum of the amounts
 
-The sum of the amounts.
+Sums the amounts.
 
 ### core/reading/average
 
