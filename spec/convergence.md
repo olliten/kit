@@ -14,4 +14,7 @@
 - **Gradient.** Every finding names its fix and its rule. A rule a check can only approximate is marked review-held.
 - **Topics lead.** An agent starts from the topic, not the folder. Topics group meaning, never code: the dependency
   graph is the only structure. A generated index shows, per topic, its modules → code files → tests.
+- **Features reshape topics first.** A change that adds or alters what a user can do first asks whether the topics
+  still fit it, and proposes a regrouping when they don't. Its PR reports its topic footprint: the topics it adds,
+  changes, and touches through their modules. A feature that touches many topics signals a regrouping.
 - **Debt only drains.** Each check keeps one keyed debt list. An entry names what drains it and never comes back.
