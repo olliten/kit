@@ -15,5 +15,6 @@
 - **Topics carry intent.** A topic is prose that says why its artifacts exist and how they compose into what a user
   experiences. Each artifact's heading sits in exactly one topic, and an agent starts from the topic, not the folder.
   Topics group meaning, never code: the dependency graph is the only structure. A generated index shows, per topic,
-  its artifacts → code files → tests.
+  its artifacts → code files → tests. Agents bind code to the artifacts a topic names; they never invent the split. A
+  new artifact starts as a heading the owner okays.
 - **Debt only drains.** Each check keeps one keyed debt list. An entry names what drains it and never comes back.

@@ -6,7 +6,7 @@
 |---|---|
 | R1 | **Zones.** The core performs no effect. The shell decides nothing about a core fact; its only output to the core is normalised input. The substrate holds no domain rule or core name. |
 | R2 | **Dependencies.** Within a zone, data ← state ← reading ← change ← effect, acyclic. Across zones, only inward to the core, and only to its data, readings and changes: core state is private. |
-| R3 | **Binding.** `<zone>/<kind>/<name>` is the same path for the spec heading, the code file and the tests (`<name>.<law>.test.ts`). One artifact per file; private helpers may live inside it. The folder decides the kind; where the language has types, the type must agree. A rename moves all three together. |
+| R3 | **Binding.** `<zone>/<kind>/<name>` is an artifact's identity; the spec heading, the code file and the tests (`<name>.<law>.test.ts`) each carry it, and the config maps it to file paths. One artifact per file; private helpers may live inside it. The folder decides the kind; where the language has types, the type must agree. A rename moves all three together. |
 | R4 | **Proof.** A law attaches to a kind, proved once across every artifact of that kind, or to one artifact. Per-artifact tests use only public faces; kind-law tests may also see state. The tier follows the zone: core headless, shell browser, substrate contract. A change marked `wiring` also runs full-stack. A cost is measured by wrapping inputs, never by counters inside; test hooks enter only through the declared probe port. |
 
 ## The kit's own artifacts for the rules
