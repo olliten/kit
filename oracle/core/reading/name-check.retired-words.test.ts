@@ -31,3 +31,11 @@ test("a retired word in spec prose or an exported symbol is a finding; other pro
     }),
   ).toEqual(["R3:retired-word:core/data/amount:total", "R3:retired-word:spec/topic.md:total"]);
 });
+
+test("a retired word in a placed file's comment is a finding; a legacy file's comment is not held", () => {
+  expect(
+    keys({
+      comments: ["src/core/data/amount.ts#// Keeps the total small.", "src/main.ts#// total"],
+    }),
+  ).toEqual(["R3:retired-word:core/data/amount:total"]);
+});

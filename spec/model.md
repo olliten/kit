@@ -39,7 +39,6 @@
 - **Dispatch** is a core reading from normalised input plus state to the change it fires.
 - A **surface** is a shell render plus the decoding of its raw input.
 - A **behaviour** is normalised input → dispatch → change → views.
-- A **journey** is a change marked `wiring`, also run through all three zones.
 
 ## Topics
 

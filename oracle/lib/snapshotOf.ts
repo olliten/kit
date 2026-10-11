@@ -3,6 +3,7 @@ import type {
   ExportedSymbol,
   ImportEdge,
   Snapshot,
+  SnapshotComment,
   SpecHeading,
   SpecProse,
   SpecTerm,
@@ -11,7 +12,7 @@ import type {
 // The one snapshot builder for headless tests: source files under src/, tests (`*.test.ts`) under
 // oracle/, imports as "from > to", headings as artifact names in spec/topic.md, terms as
 // "<term>" or "<term> · retired: <word>, <word>" (one terms-file line each), prose as the text of
-// spec/topic.md, and exported symbols as "file#name".
+// spec/topic.md, exported symbols as "file#name", and comments as "file#text" (each on line 1).
 export function snapshotOf(parts: {
   files?: readonly string[];
   imports?: readonly string[];
@@ -19,6 +20,7 @@ export function snapshotOf(parts: {
   terms?: readonly string[];
   prose?: readonly string[];
   symbols?: readonly string[];
+  comments?: readonly string[];
 }): Snapshot {
   const files = (parts.files ?? []).map((path) => ({
     path,
@@ -42,5 +44,9 @@ export function snapshotOf(parts: {
     const [file = "", name = ""] = symbol.split("#");
     return { file, name };
   });
-  return { files, imports, headings, terms, prose, symbols, config: DEFAULT_CONFIG };
+  const comments: SnapshotComment[] = (parts.comments ?? []).map((comment) => {
+    const [file = "", ...text] = comment.split("#");
+    return { file, line: 1, text: text.join("#") };
+  });
+  return { files, imports, headings, terms, prose, symbols, comments, config: DEFAULT_CONFIG };
 }

@@ -1,5 +1,5 @@
-// The finding format (proposal §8): the rule it serves, the artifact path, the named fix, and a stable
-// debt key a debt list can hold.
+// The finding format: the rule it serves, the module's path, the named fix, and a stable debt key a debt
+// list can hold.
 export type Rule = "R1" | "R2" | "R3" | "R4";
 
 export interface Finding {

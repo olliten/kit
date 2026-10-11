@@ -9,6 +9,10 @@ export interface KitConfig {
   readonly connectors: readonly string[];
   // The suffixes that make a term's plural, which matches as the term itself (R3, names).
   readonly plurals: readonly string[];
+  // How the spec marks a claim anchor, as a regular expression (R3, comments).
+  readonly anchor: string;
+  // The words that mark debt in a comment, where debt never lives (R3, comments).
+  readonly debtMarkers: readonly string[];
 }
 
 export const DEFAULT_CONFIG: KitConfig = {
@@ -18,4 +22,6 @@ export const DEFAULT_CONFIG: KitConfig = {
   termsFile: "spec/terms.md",
   connectors: ["of", "to", "by", "at", "in", "on", "is", "a", "the"],
   plurals: ["s", "es"],
+  anchor: "\\{#[\\w-]+\\}",
+  debtMarkers: ["TODO", "FIXME", "XXX", "HACK"],
 };

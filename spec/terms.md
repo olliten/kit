@@ -32,3 +32,5 @@
 - **binder** — the check that a heading, a file and its tests name one module.
 - **dependency-check** — the check that imports point forward within a zone and inward across zones.
 - **name-check** — the check that names use only terms and connectors.
+- **comment** — text in a source or test file that the program ignores; it says why the implementation is built this way.
+- **comment-check** — the check that comments cite nothing and carry no debt.

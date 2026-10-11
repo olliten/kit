@@ -10,7 +10,7 @@ interface Entry {
 
 // R3, names: the terms file defines each term once; every module name and exported symbol of a placed
 // file (a test's module prefix included) is built from terms and the config's connectors; no retired
-// word appears in a name or in spec prose. Only the `<name>` segment is a name: zone and kind segments
+// word appears in a name, in spec prose or in a placed file's comments. Only the `<name>` segment is a name: zone and kind segments
 // are structure, and a test's law segment is its claim's anchor. A word matches a term or its plural:
 // the term plus one of the config's plural suffixes, on the last word of a compound term
 // (`running-totals` is `running-total`). Legacy files are not held.
@@ -72,6 +72,11 @@ export function nameCheck(snapshot: Snapshot): Finding[] {
     if (at.placed) scan(at.artifact, name, true);
   }
   for (const { file, text } of snapshot.prose) scan(file, text, false);
+  for (const { file, text } of snapshot.comments) {
+    const test = file.startsWith(`${oracleRoot}/`);
+    const at = kindOf(file, test ? oracleRoot : srcRoot);
+    if (at.placed) scan(test ? file : at.artifact, text, false);
+  }
   // One finding per debt key, however many names repeat a word.
   return [...new Map(findings.map((f) => [f.debtKey, f])).values()].sort(byDebtKey);
 }
