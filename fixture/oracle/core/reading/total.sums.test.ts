@@ -1,3 +1,4 @@
+// Seeded name: the law `sums` is a retired word; `total` replaced it.
 import { expect, test } from "vitest";
 import { total } from "../../../src/core/reading/total.js";
 

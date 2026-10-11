@@ -46,7 +46,8 @@
 A **topic** is the unit the owner ratifies: prose that says why its modules exist and how they compose into what a
 user experiences, ending in their headings and the claims the oracle reads. Every module sits in exactly one topic.
 The owner ratifies topics; agents bind code and tests beneath them and never invent the split. A **feature** is a
-topic that names something a user can do.
+topic that names something a user can do. The **terms** file is the app's language: one line per word, ratified
+like a topic.
 
 ## The kit's own modules in this model
 

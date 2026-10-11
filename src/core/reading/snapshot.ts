@@ -20,9 +20,33 @@ export interface SpecHeading {
   readonly name: string;
 }
 
+// A line `- **<term>** — <meaning>` of the terms file, optionally ending `Retired: <word>, <word>.`:
+// the retired words this term replaces. `line` is 1-based.
+export interface SpecTerm {
+  readonly term: string;
+  readonly meaning: string;
+  readonly retired: readonly string[];
+  readonly line: number;
+}
+
+// The text of one spec file; the terms file's own definition lines are left out.
+export interface SpecProse {
+  readonly file: string;
+  readonly text: string;
+}
+
+// A name a source file exports: `export function|const|class|type|interface <name>`.
+export interface ExportedSymbol {
+  readonly file: string;
+  readonly name: string;
+}
+
 export interface Snapshot {
   readonly files: readonly SnapshotFile[];
   readonly imports: readonly ImportEdge[];
   readonly headings: readonly SpecHeading[];
+  readonly terms: readonly SpecTerm[];
+  readonly prose: readonly SpecProse[];
+  readonly symbols: readonly ExportedSymbol[];
   readonly config: KitConfig;
 }

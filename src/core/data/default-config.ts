@@ -3,10 +3,16 @@ export interface KitConfig {
   readonly srcRoot: string;
   readonly oracleRoot: string;
   readonly specRoot: string;
+  // The app's language: one `- **term** — meaning` line per domain term (R3, names).
+  readonly termsFile: string;
+  // The small words a name may carry without a term line (R3, names).
+  readonly connectors: readonly string[];
 }
 
 export const DEFAULT_CONFIG: KitConfig = {
   srcRoot: "src",
   oracleRoot: "oracle",
   specRoot: "spec",
+  termsFile: "spec/terms.md",
+  connectors: ["of", "to", "by", "at", "in", "on", "is", "a", "the"],
 };

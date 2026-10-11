@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import { binder } from "../../../src/core/reading/binder.js";
 import { dependencyCheck } from "../../../src/core/reading/dependency-check.js";
+import { nameCheck } from "../../../src/core/reading/name-check.js";
 import { readSnapshot } from "../../../src/substrate/effect/read-snapshot.js";
 
 const FIXTURE = fileURLToPath(new URL("../../../fixture", import.meta.url));
@@ -12,19 +13,31 @@ test("the fixture reads as its files, imports and headings", () => {
     "oracle/core/reading/total.sums.test.ts",
   ]);
   expect(s.headings).toHaveLength(7);
+  // The terms file's section headings are not module headings, and its prose omits its term lines.
+  expect(s.terms).toHaveLength(12);
+  expect(s.terms).toContainEqual({
+    term: "total",
+    meaning: "the sum of the amounts.",
+    retired: ["sums"],
+    line: 14,
+  });
+  expect(s.prose.find((p) => p.file === "spec/terms.md")?.text).not.toContain("**");
+  expect(s.symbols).toContainEqual({ file: "src/core/data/limits.ts", name: "MAX_STEP" });
   expect(s.imports).toContainEqual({
     from: "src/shell/reading/screen.ts",
     to: "src/core/state/tally.ts",
   });
 });
 
-// The fixture seeds exactly three findings: a missing heading, a shell file importing core state, and
-// an import cycle. Anything more or less is a regression in the reader or the readings.
+// The fixture seeds exactly five findings: a missing heading, a shell file importing core state, an
+// import cycle, a test law that is a retired word, and an exported symbol with an undefined word. Anything more or less is a regression in the reader or the readings.
 test("the fixture yields exactly its seeded findings", () => {
   const s = readSnapshot(FIXTURE);
-  expect([...binder(s), ...dependencyCheck(s)].map((f) => f.debtKey)).toEqual([
+  expect([...binder(s), ...dependencyCheck(s), ...nameCheck(s)].map((f) => f.debtKey)).toEqual([
     "R3:no-heading:core/reading/label",
     "R2:cycle:core/reading/average:core/reading/average,core/reading/total",
     "R2:edge:shell/reading/screen:core/state/tally",
+    "R3:retired-word:oracle/core/reading/total.sums.test.ts:sums",
+    "R3:undefined-word:core/reading/total:summary",
   ]);
 });
