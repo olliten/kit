@@ -4,7 +4,7 @@
 
 - **Portable.** It names no app concept. Everything app-specific is the app's spec and its config.
 - **Small.** It stays under 10% of the code it governs, and every check names the rule it serves.
-- **The spec names no code:** no functions, types, libraries or file paths. An artifact's identity is a name, not a
+- **The spec names no code:** no functions, types, libraries or file paths. A module's identity is a name, not a
   path.
 - **Self-hosted.** `kit check` runs on the kit itself. Its folders are `kit/spec`, `kit/oracle`, `kit/src` and
   `kit/fixture`.

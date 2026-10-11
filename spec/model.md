@@ -1,7 +1,9 @@
 # model — three zones, five kinds
 
-> Every artifact of an app is one cell: a zone (what it may do) × a kind (its signature). The kit holds an app to
-> this model and names no app concept. The app declares itself in its config.
+> A **module** is one named piece of data, state, reading, change or effect. Its identity `<zone>/<kind>/<name>` is
+> carried by one spec heading, one code file and its tests. Every module of an app is one cell: a zone (what it may
+> do) × a kind (its signature). The kit holds an app to this model and names no app concept. The app declares itself
+> in its config.
 
 ## Zones
 
@@ -35,11 +37,18 @@
 - A **view** is a core reading whose value is exactly what one render draws: items with stable identity, their facts,
   and the changes each offers. Views are keyed, so a render patches only what changed.
 - **Dispatch** is a core reading from normalised input plus state to the change it fires.
-- A **surface module** is a shell render plus the decoding of its raw input.
+- A **surface** is a shell render plus the decoding of its raw input.
 - A **behaviour** is normalised input → dispatch → change → views.
 - A **journey** is a change marked `wiring`, also run through all three zones.
 
-## The kit's own artifacts in this model
+## Topics
+
+A **topic** is the unit the owner ratifies: prose that says why its modules exist and how they compose into what a
+user experiences, ending in their headings and the claims the oracle reads. Every module sits in exactly one topic.
+The owner ratifies topics; agents bind code and tests beneath them and never invent the split. A **feature** is a
+topic that names something a user can do.
+
+## The kit's own modules in this model
 
 ### core/data/zones — the three zones and what each may never do
 - def: the zone table above, as data.
@@ -51,5 +60,5 @@
 - def: the zone roots, the spec and oracle roots, the test pattern `<name>.<law>.test.ts` and the tier per zone.
   An app overrides names, never structure.
 
-### core/reading/kind-of — an artifact's zone and kind, read from its path
+### core/reading/kind-of — a module's zone and kind, read from its path
 - def: a path `<root>/<zone>/<kind>/<name>` gives that zone and kind. Any other source path is legacy.

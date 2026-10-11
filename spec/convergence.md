@@ -3,18 +3,15 @@
 > If agents only ever make the kit's checks pass, the codebase should end in the model and only there. This is a goal
 > shown by evidence (the fixture), not a proof.
 
-- **Opt-in by path.** An artifact is held to R1–R4 once it sits at `<zone>/<kind>/`. The kit installs into any
+- **Opt-in by path.** A module is held to R1–R4 once it sits at `<zone>/<kind>/`. The kit installs into any
   codebase with a green gate.
 - **The whole tree converges.** Every source file lives in a zone, or in an exception the config declares. A legacy
   file counts as debt, so legacy only shrinks, and no new source file may appear outside a zone.
-- **The ledger.** One derived page shows, per artifact: its state (legacy → placed → converged), its open debt per
+- **The ledger.** One derived page shows, per module: its state (legacy → placed → converged), its open debt per
   check, its test tiers and its findings. It is computed from the snapshot and the debt lists, never by hand.
-- **The ratchet.** A change never raises total open debt and never moves an artifact back a state. Its PR reports the
+- **The ratchet.** A change never raises total open debt and never moves a module back a state. Its PR reports the
   delta.
 - **Gradient.** Every finding names its fix and its rule. A rule a check can only approximate is marked review-held.
-- **Topics carry intent.** A topic is prose that says why its artifacts exist and how they compose into what a user
-  experiences. Each artifact's heading sits in exactly one topic, and an agent starts from the topic, not the folder.
-  Topics group meaning, never code: the dependency graph is the only structure. A generated index shows, per topic,
-  its artifacts → code files → tests. Agents bind code to the artifacts a topic names; they never invent the split. A
-  new artifact starts as a heading the owner okays.
+- **Topics lead.** An agent starts from the topic, not the folder. Topics group meaning, never code: the dependency
+  graph is the only structure. A generated index shows, per topic, its modules → code files → tests.
 - **Debt only drains.** Each check keeps one keyed debt list. An entry names what drains it and never comes back.
