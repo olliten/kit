@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { kindOf } from "../../../src/core/reading/kindOf.js";
+import { kindOf } from "../../../src/core/reading/kind-of.js";
 
 describe("kindOf reads zone and kind from <root>/<zone>/<kind>/<name>", () => {
   test("a placed source file", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { dependencyCheck } from "../../../src/core/reading/dependencyCheck.js";
+import { dependencyCheck } from "../../../src/core/reading/dependency-check.js";
 import { snapshotOf } from "../../lib/snapshotOf.js";
 
 const keysOf = (...imports: string[]) =>

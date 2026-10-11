@@ -1,6 +1,6 @@
 import { KINDS, PUBLIC_CORE_KINDS } from "../data/kinds.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { type Placed, kindOf } from "./kindOf.js";
+import { type Placed, kindOf } from "./kind-of.js";
 import type { Snapshot } from "./snapshot.js";
 
 // R2, dependencies. Only imports between two placed artifacts are held; legacy files are not.

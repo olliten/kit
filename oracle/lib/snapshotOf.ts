@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG } from "../../src/core/data/defaultConfig.js";
+import { DEFAULT_CONFIG } from "../../src/core/data/default-config.js";
 import type { ImportEdge, Snapshot, SpecHeading } from "../../src/core/reading/snapshot.js";
 
 // The one snapshot builder for headless tests: source files under src/, tests (`*.test.ts`) under

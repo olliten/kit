@@ -10,7 +10,7 @@ The largest amount one step may add.
 
 The amounts added so far.
 
-### core/reading/total
+### core/reading/total — the sum of the amounts
 
 The sum of the amounts.
 

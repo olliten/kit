@@ -1,8 +1,8 @@
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import { binder } from "../../../src/core/reading/binder.js";
-import { dependencyCheck } from "../../../src/core/reading/dependencyCheck.js";
-import { readSnapshot } from "../../../src/substrate/effect/readSnapshot.js";
+import { dependencyCheck } from "../../../src/core/reading/dependency-check.js";
+import { readSnapshot } from "../../../src/substrate/effect/read-snapshot.js";
 
 const FIXTURE = fileURLToPath(new URL("../../../fixture", import.meta.url));
 

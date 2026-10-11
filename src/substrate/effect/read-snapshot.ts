@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, posix, relative, sep } from "node:path";
-import { DEFAULT_CONFIG, type KitConfig } from "../../core/data/defaultConfig.js";
+import { DEFAULT_CONFIG, type KitConfig } from "../../core/data/default-config.js";
 import type {
   FileType,
   ImportEdge,
@@ -11,10 +11,11 @@ import type {
 
 // The kit's only effect: read one snapshot of the codebase at `appRoot`. The TypeScript adapter is a
 // regex over `from "…"`, `import "…"` and `import("…")`; only relative imports that resolve to a file
-// of the snapshot are recorded. Spec headings are Markdown lines `### <zone>/<kind>/<name>`.
+// of the snapshot are recorded. Spec headings are Markdown lines `### <zone>/<kind>/<name>`, optionally
+// followed by ` — <description>`.
 const SKIP_DIR = /^(?:node_modules|\..*)$/;
 const IMPORT = /\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
-const HEADING = /^###\s+`?([\w.-]+\/[\w.-]+\/[\w.-]+)`?\s*$/gm;
+const HEADING = /^###\s+`?([\w.-]+\/[\w.-]+\/[\w.-]+)`?(?:\s+—\s+.*)?\s*$/gm;
 const SOURCE = /\.(?:ts|tsx|mts|js|mjs)$/;
 
 export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG): Snapshot {

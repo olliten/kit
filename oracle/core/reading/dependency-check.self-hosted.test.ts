@@ -1,12 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import { binder } from "../../../src/core/reading/binder.js";
-import { dependencyCheck } from "../../../src/core/reading/dependencyCheck.js";
-import { kindOf } from "../../../src/core/reading/kindOf.js";
-import { readSnapshot } from "../../../src/substrate/effect/readSnapshot.js";
+import { dependencyCheck } from "../../../src/core/reading/dependency-check.js";
+import { kindOf } from "../../../src/core/reading/kind-of.js";
+import { readSnapshot } from "../../../src/substrate/effect/read-snapshot.js";
 
-// The kit follows its own layout. The binder's heading checks wait on kit/spec; until then only its
-// test-name checks run here.
+// The kit follows its own layout: its spec headings, its source files and its tests name the same artifacts.
 const KIT = fileURLToPath(new URL("../../..", import.meta.url));
 const kit = readSnapshot(KIT);
 
@@ -22,7 +21,7 @@ test("the kit's own imports obey R2", () => {
   expect(dependencyCheck(kit)).toEqual([]);
 });
 
-test("every kit test names a kit artifact", () => {
-  const testFindings = binder(kit).filter((f) => /^R3:(?:orphan-test|test-name):/.test(f.debtKey));
-  expect(testFindings).toEqual([]);
+test("kit/spec, kit/src and the kit's tests bind with no finding (R3)", () => {
+  expect(kit.headings.length).toBeGreaterThan(0);
+  expect(binder(kit)).toEqual([]);
 });

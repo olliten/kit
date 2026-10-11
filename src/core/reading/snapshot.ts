@@ -1,4 +1,4 @@
-import type { KitConfig } from "../data/defaultConfig.js";
+import type { KitConfig } from "../data/default-config.js";
 
 // One read of a codebase. Every path is relative to the app root, with "/" separators.
 export type FileType = "source" | "test" | "spec" | "other";

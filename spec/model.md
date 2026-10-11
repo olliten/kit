@@ -47,9 +47,9 @@
 ### core/data/kinds — the five kinds and their order within a zone
 - def: the kind table above, with the order data ← state ← reading ← change ← effect.
 
-### core/data/defaultConfig — the target, as defaults
+### core/data/default-config — the target, as defaults
 - def: the zone roots, the spec and oracle roots, the test pattern `<name>.<law>.test.ts` and the tier per zone.
   An app overrides names, never structure.
 
-### core/reading/kindOf — an artifact's zone and kind, read from its path
+### core/reading/kind-of — an artifact's zone and kind, read from its path
 - def: a path `<root>/<zone>/<kind>/<name>` gives that zone and kind. Any other source path is legacy.

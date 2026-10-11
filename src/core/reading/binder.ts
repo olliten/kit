@@ -1,5 +1,5 @@
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { kindOf } from "./kindOf.js";
+import { kindOf } from "./kind-of.js";
 import type { Snapshot } from "./snapshot.js";
 
 const TEST_REST = /^[^.]+\.test\.ts$/;
