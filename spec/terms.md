@@ -45,3 +45,6 @@
 - **proof** — a test that establishes a claim.
 - **inventory** — the collected declarations and references read from a document.
 - **marker** — the notation identifying a declaration or reference.
+- **semantic** — identifying a defined meaning rather than matching an ordinary word.
+- **reference** — a marked use that points to the home of a term, topic or claim.
+- **resolved** — matched to exactly one existing home in the intended namespace.

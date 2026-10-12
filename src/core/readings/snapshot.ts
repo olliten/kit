@@ -49,6 +49,12 @@ export interface SnapshotComment {
 }
 
 export interface Snapshot {
+  readonly semanticReferences?: readonly {
+    readonly file: string;
+    readonly namespace: "topic" | "term";
+    readonly name: string;
+    readonly line: number;
+  }[];
   readonly claims?: readonly {
     readonly file: string;
     readonly anchor: string;

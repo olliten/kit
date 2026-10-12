@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { cachedKitCheck } from "./kit-snapshot-cache.mjs";
 import { kitConfig } from "./kit-config.mjs";
+import { cachedKitCheck } from "./kit-snapshot-cache.mjs";
 
 export function ratchetFindings(findings, baselineKeys, placedPaths, imports) {
   const baseline = new Set(baselineKeys);
@@ -55,6 +55,7 @@ async function main() {
     const { binder } = await load("kit/src/core/readings/binder.ts");
     const { nameCheck } = await load("kit/src/core/readings/name-check.ts");
     const { commentCheck } = await load("kit/src/core/readings/comment-check.ts");
+    const { referenceCheck } = await load("kit/src/core/readings/semantic-references.ts");
     const config = {
       ...DEFAULT_CONFIG,
       srcRoot: declared.roots.src.replace(/\/$/, ""),
@@ -76,6 +77,7 @@ async function main() {
         ...binder(topicSnapshot),
         ...nameCheck(snapshot),
         ...commentCheck(snapshot),
+        ...referenceCheck(snapshot),
       ].map((item) => ({
         ...item,
         category: "placed-violation",

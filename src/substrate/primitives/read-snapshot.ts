@@ -3,6 +3,7 @@ import { basename, dirname, join, posix, relative, sep } from "node:path";
 import ts from "typescript";
 import { DEFAULT_CONFIG, type KitConfig } from "../../core/primitives/default-config.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
+import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import type {
   ExportedSymbol,
   FileType,
@@ -40,9 +41,16 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
   const comments: SnapshotComment[] = [];
   const claims: NonNullable<Snapshot["claims"]>[number][] = [];
   const claimReferences: NonNullable<Snapshot["claimReferences"]>[number][] = [];
+  const semanticReferences: NonNullable<Snapshot["semanticReferences"]>[number][] = [];
   for (const { path, type } of files) {
     if (type === "other") continue;
     const text = readFileSync(join(appRoot, path), "utf8");
+    if (type === "spec") {
+      const inventory = semanticReferenceInventory(text);
+      semanticReferences.push(
+        ...inventory.references.map((reference) => ({ ...reference, file: path })),
+      );
+    }
     if (type === "spec" && path === config.termsFile) {
       const rest = text.split("\n").filter((line, i) => {
         const [, term, meaning = "", words] = TERM.exec(line) ?? [];
@@ -92,6 +100,7 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
     compiler,
     claims,
     claimReferences,
+    semanticReferences,
   };
 }
 

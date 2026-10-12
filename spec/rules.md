@@ -60,6 +60,17 @@ Terms are defined once. Names use terms and declared connectors. Compounds are t
 in their own right; plurals use the same term. Duplicate definitions, undefined
 words in names and retired words are findings. Roster entries are terms too.
 
+Write `[[Topic]]` to reference a topic and `{{term}}` to reference a term. Each resolves to exactly one home
+in its own namespace. A topic's identity is its filename within the configured spec root, without the
+extension; case does not distinguish identities. A term's identity is its defined name; case and repeated
+whitespace do not distinguish identities. Punctuation remains significant, and titles introduce no aliases.
+Missing or ambiguous targets are findings. Code blocks, inline code and escaped examples are ignored.
+The checker does not infer semantic references from unmarked ordinary words.
+
+Incoming topic references are derived alongside claim ownership and proof locations. Moving a claim's
+topic preserves its anchor and updates its references and proof location together. Topic regrouping never
+changes code import permissions. No separate registry of these relationships is maintained.
+
 Meaning lives in terms, purpose in topics, guarantees in claims, shape in types,
 proof in tests and debt in the ledger. Comments explain implementation choices none
 of those express. They cite nothing, carry no debt markers and restate no claims.
@@ -148,7 +159,13 @@ app's configuration; undeclared hooks are findings.
 ### core/readings/claim-inventory — structural declarations and references
 - def: reads Markdown structure to distinguish closing claim declarations from references.
 
+### core/readings/semantic-references — topic and term resolution
+- def: reads marked topic and term references, resolves their homes, reports missing or ambiguous targets,
+  and derives incoming topic references from the snapshot.
+
 ### Proof obligations
+- Marked references resolve in their own namespaces and expose topic-refactoring impact without changing
+  claim identities or import permissions. · {#semantic-references-resolve}
 - The ratchet rejects new legacy debt, every placed violation and every checker limit reachable from placed code. · {#ratchet-keeps-architecture-obligations}
 - runtime authority is conservatively derived from actual module inputs. · {#authority-is-derived}
 - binder: one path in spec, code and oracle. · {#binder-binding}
