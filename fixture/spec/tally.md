@@ -2,30 +2,32 @@
 
 A counter that adds amounts up to a limit.
 
-### core/data/limits
+### core/primitives/limits
 
 The largest amount one step may add.
 
-### core/state/tally
+### core/primitives/tally
 
 The amounts added so far.
 
-### core/reading/total — the sum of the amounts
+### core/readings/total — the sum of the amounts
 
 Sums the amounts.
 
-### core/reading/average
+### core/readings/average
 
 The mean of the amounts.
 
-### core/change/add
+### core/compositions/add
 
 Adds one amount, capped at the limit.
 
-### shell/reading/screen
+### shell/readings/screen
 
 The text the screen shows.
 
-### substrate/effect/save
+### substrate/compositions/save
 
 Writes the tally out.
+
+- The total equals the sum of the supplied amounts. {#total-holds}

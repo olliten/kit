@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG } from "../../src/core/data/default-config.js";
+import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import type {
   ExportedSymbol,
   ImportEdge,
@@ -7,7 +7,7 @@ import type {
   SpecHeading,
   SpecProse,
   SpecTerm,
-} from "../../src/core/reading/snapshot.js";
+} from "../../src/core/readings/snapshot.js";
 
 // The one snapshot builder for headless tests: source files under src/, tests (`*.test.ts`) under
 // oracle/, imports as "from > to", headings as artifact names in spec/topic.md, terms as
@@ -21,6 +21,7 @@ export function snapshotOf(parts: {
   prose?: readonly string[];
   symbols?: readonly string[];
   comments?: readonly string[];
+  claims?: Snapshot["claims"];
 }): Snapshot {
   const files = (parts.files ?? []).map((path) => ({
     path,
@@ -48,5 +49,15 @@ export function snapshotOf(parts: {
     const [file = "", ...text] = comment.split("#");
     return { file, line: 1, text: text.join("#") };
   });
-  return { files, imports, headings, terms, prose, symbols, comments, config: DEFAULT_CONFIG };
+  return {
+    files,
+    imports,
+    headings,
+    terms,
+    prose,
+    symbols,
+    comments,
+    config: DEFAULT_CONFIG,
+    ...(parts.claims === undefined ? {} : { claims: parts.claims }),
+  };
 }

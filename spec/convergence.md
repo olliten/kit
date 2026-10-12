@@ -1,20 +1,46 @@
-# convergence — how a codebase gets to the model, and stays there
+# Convergence
 
-> If agents only ever make the kit's checks pass, the codebase should end in the model and only there. This is a goal
-> shown by evidence (the fixture), not a proof.
+## Convergence
 
-- **Opt-in by path.** A module is held to R1–R4 once it sits at `<zone>/<kind>/`. The kit installs into any
-  codebase with a green gate.
-- **The whole tree converges.** Every source file lives in a zone, or in an exception the config declares. A legacy
-  file counts as debt, so legacy only shrinks, and no new source file may appear outside a zone.
-- **The ledger.** One derived page shows, per module: its state (legacy → placed → converged), its open debt per
-  check, its test tiers and its findings. It is computed from the snapshot and the debt lists, never by hand.
-- **The ratchet.** A change never raises total open debt and never moves a module back a state. Its PR reports the
-  delta.
-- **Gradient.** Every finding names its fix and its rule. A rule a check can only approximate is marked review-held.
-- **Topics lead.** An agent starts from the topic, not the folder. Topics group meaning, never code: the dependency
-  graph is the only structure. A generated index shows, per topic, its modules → code files → tests.
-- **Features reshape topics first.** A change that adds or alters what a user can do first asks whether the topics
-  still fit it, and proposes a regrouping when they don't. Its PR reports its topic footprint: the topics it adds,
-  changes, and touches through their modules. A feature that touches many topics signals a regrouping.
-- **Debt only drains.** Each check keeps one keyed debt list. An entry names what drains it and never comes back.
+The derived ledger shows each module's placement, findings, debt and proofs.
+Debt is keyed and states what resolves it. Placement-independent violations in legacy
+code are debt that only drains. Zone permissions, layer direction and reading inputs
+are checked where placement is declared. Checker limits are reported separately and
+never become debt; a limit cannot establish a required guarantee. New debt and placed
+violations fail the ratchet.
+A module never moves backwards in placement.
+
+Topics group meaning, not access rights. Their derived view shows claims, public
+contracts other topics use, proofs, dependencies and affected tests. Regrouping topics
+does not change what modules may import.
+
+A feature checks whether its topics still fit and proposes regrouping to the owner
+when they do not. Its report names the topics added, changed and touched through modules.
+
+## The Kit
+
+The Kit names no app concept. App-specific declarations live in the app's
+configuration. It checks its own modules using the same model.
+
+The Kit checks architectural guarantees without prescribing a Kit-specific style.
+Code uses plain functions, unions, readonly data and ordinary language declarations.
+There are no Kit decorators, registration calls, generated base classes or duplicate
+module annotations. Adapters own genuine boundaries, not wrappers added only to
+satisfy a checker.
+
+When clear, idiomatic code fails a check, examine the approximation before adding
+scaffolding. Preserve the guarantee through a better check, explicit uncertainty,
+human review or runtime proof.
+
+Each architectural fact has one authoritative representation. Paths, contracts,
+topics, adapter rosters and harnesses are not repeated in separate manifests.
+The checker, ledger and topic view read the same snapshot. Contract suites use the
+existing runner.
+
+The Kit stays below 10% of the source it governs. Each check names its rule and each
+finding names its fix and limits. The fixture demonstrates the ratchet. Configuration,
+debt and ledger remain app-specific when the Kit becomes a separate package.
+
+Only the Kit lane changes its spec, source and oracle. The owner approves each such
+change. No agent weakens a check to pass its own work. Its public commands are check,
+ledger, partition and rename.

@@ -1,64 +1,106 @@
-# model — three zones, five kinds
+# Model
 
-> A **module** is one named piece of data, state, reading, change or effect. Its identity `<zone>/<kind>/<name>` is
-> carried by one spec heading, one code file and its tests. Every module of an app is one cell: a zone (what it may
-> do) × a kind (its signature). The kit holds an app to this model and names no app concept. The app declares itself
-> in its config.
+## Model
 
-## Zones
+A module is one named contract. Its identity is `<zone>/<layer>/<name>`. One topic
+heading names it and one source file implements it. Private helpers may share that
+file. The configuration maps identities to paths.
 
-| Zone | It … | It never … |
+### Zones
+
+A zone states which capabilities its modules may use.
+
+| Zone | Responsibility | Boundary |
 |---|---|---|
-| core | decides everything | performs an effect: no clock, randomness, I/O or global counter |
-| shell | turns views into pixels and raw input into normalised input; may decide presentation (what to mount, when to paint) | decides anything about a core fact |
-| substrate | performs I/O; holds every state cell and applies write sets; may hold transport policy (ordering, resend, echo matching) | holds a domain rule or a core name |
+| core | Decide domain facts and describe changes | No external effects |
+| shell | Render views and normalise input | No domain decisions or substrate I/O |
+| substrate | Own resources, transport and applying writes | No domain decisions |
 
-## Kinds
+Domain decisions run without the browser, transport or storage. External code uses
+the core's exported contracts.
 
-| Kind | Signature | Its laws, the same in every zone |
-|---|---|---|
-| data | a constant, no writer | holds no logic; equals its roster in the spec; public |
-| state | a value written only by applying a change's write set | private to its zone; held by the substrate's store in the form the app chooses |
-| reading | `(…) → value`, pure | total and deterministic; may be memoized in place when the memo always equals it |
-| change | `(…) → write set + effect requests`, pure | the write set is applied atomically; effect results return as normalised input; it may sequence writers, branch on readings and describe failure handling, and computes no fact of its own; time and fresh ids are inputs |
-| effect | performs I/O | holds no domain rule; carries out what a change requested and reports the result as normalised input |
+### Layers
 
-## State properties (declared per app, never assumed)
+Each zone has three layers. Imports point down or sideways, never up. Dependencies
+have no cycles.
 
-| Property | Applies when | Its law |
-|---|---|---|
-| persisted / session | always | session state does not survive a restart; a schema change migrates persisted state without losing what the app declares it keeps |
-| undoable | the app declares undo | undo of a write set restores every reading; an undo-exempt value says so |
-| replicated | the app keeps optimistic or offline copies | the local copy converges to the authoritative one; rollback is a change |
-| event-sourced | the app stores events | stored fields are readings of the event log; the only writer appends a write set |
+| Layer | Responsibility |
+|---|---|
+| primitives | Values, types, schemas, rosters, construction operations and narrow capability adapters |
+| readings | Derive facts from supplied data without effects or writes |
+| compositions | Connect contracts into behavior using the zone's permitted capabilities |
 
-## Derived terms
+A primitive does not coordinate a workflow. Readings may compose other readings.
+Core compositions describe writes and effect requests without performing an external
+effect. Shell and substrate compositions interpret descriptions through adapters.
 
-- A **view** is a core reading whose value is exactly what one render draws: items with stable identity, their facts,
-  and the changes each offers. Views are keyed, so a render patches only what changed.
-- **Dispatch** is a core reading from normalised input plus state to the change it fires.
-- A **surface** is a shell render plus the decoding of its raw input.
-- A **behaviour** is normalised input → dispatch → change → views.
+A schema needs no fabricated runtime value.
 
-## Topics
+### Capabilities
 
-A **topic** is the unit the owner ratifies: prose that says why its modules exist and how they compose into what a
-user experiences, ending in their headings and the claims the oracle reads. Every module sits in exactly one topic.
-The owner ratifies topics; agents bind code and tests beneath them and never invent the split. A **feature** is a
-topic that names something a user can do. The **terms** file is the app's language: one line per word, ratified
-like a topic.
+A capability is access to one operation, such as sampling the clock or storing a
+value. Its adapter owns the real operation and its contract. The adapter roster names
+these boundaries and their types. Rendering, input, focus and scroll, clipboard,
+storage, transport, clock, randomness and timers have narrow contracts rather than
+one platform interface.
 
-## The kit's own modules in this model
+Only adapters create authority. A module gains access when it imports an implementation
+or receives a parameter whose type grants that access. For example, a Clock parameter
+with a now method lets the module sample the clock; a timestamp parameter does not.
 
-### core/data/zones — the three zones and what each may never do
-- def: the zone table above, as data.
+A runtime import inherits the supplying module's capabilities, even when the selected
+export does not use them. Type-only imports grant no access. Requirements propagate
+through runtime imports. They describe what a module may do, not what each execution
+does.
 
-### core/data/kinds — the five kinds and their order within a zone
-- def: the kind table above, with the order data ← state ← reading ← change ← effect.
+Descriptions are data: an offered action or request states an operation and its
+arguments, never a closure over authority. Carrying a description grants no capability.
+Compositions and harnesses connect capability contracts to implementations.
 
-### core/data/default-config — the target, as defaults
-- def: the zone roots, the spec and oracle roots, the test pattern `<name>.<law>.test.ts` and the tier per zone.
-  An app overrides names, never structure.
+#### Reading inputs
 
-### core/reading/kind-of — a module's zone and kind, read from its path
-- def: a path `<root>/<zone>/<kind>/<name>` gives that zone and kind. Any other source path is legacy.
+Readings accept data, never supplied functions. Data is plain values and readonly
+records and arrays of data. A reading may map it with private helpers, imported
+readings and supported built-ins. A readonly type alone does not prove a runtime
+value is plain.
+
+#### Composition inputs
+
+A composition may accept functions. A closure retains the capabilities of the module
+where it is created. A function is not an operation description merely because it is
+returned in a record. When the checker cannot establish a connection's capabilities,
+it reports that uncertainty rather than calling it pure.
+
+Producing writes and applying writes are separate capabilities. Inspecting or carrying
+an existing write set needs neither. Constructing one needs production capability;
+applying it needs application capability.
+
+### Topics
+
+A topic is the unit the owner ratifies and the agent works from. It explains why its
+modules exist and how they compose. Each module has one topic home; other topics
+reference its public contracts.
+
+Each claim appears once in its topic under a stable anchor. It may describe a module
+or a composition. Several tests may prove its consequences. Claims need no artificial
+single-module owner. The terms file defines the app's words once.
+
+A claim declaration is an anchor that closes a Markdown list item or heading,
+after the configured separator or bare. Other occurrences are references.
+Paragraph reflow does not change their role. New topics declare claims in list
+items. Legacy law headings declare claims only in configured legacy area files.
+One structural reader owns this grammar.
+
+### State
+
+The app declares which state is persisted, session-only, undoable, replicated or
+event-sourced. Session state does not survive restart. Changes to persisted schemas
+migrate the values the app promises to retain. Undo restores every reading unless
+a value declares itself undo-exempt.
+Replicated copies converge. In an event-sourced store, applying writes appends the
+declared operation group. Stored fields are readings of the event log. Rollback is
+a described change.
+
+Views expose the facts and offered actions a surface needs. Dispatch returns an
+action description. A composition with the required capabilities interprets it.
+Views have stable identities so rendering patches only what changed.

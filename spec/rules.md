@@ -1,42 +1,173 @@
-# rules — the four rules every check serves
+# Rules
 
-> A check exists only to hold one of these rules. Every finding names the rule, the module's path and the fix.
+## Rules
 
-| # | Rule |
-|---|---|
-| R1 | **Zones.** The core performs no effect. The shell decides nothing about a core fact; its only output to the core is normalised input. The substrate holds no domain rule or core name. |
-| R2 | **Dependencies.** Within a zone, data ← state ← reading ← change ← effect, acyclic. Across zones, only inward to the core, and only to its data, readings and changes: core state is private. |
-| R3 | **Binding.** `<zone>/<kind>/<name>`, the name in kebab-case, is a module's identity; the spec heading, the code file and the tests (`<name>.<law>.test.ts`) each carry it, and the config maps it to file paths. One module per file; private helpers may live inside it. The folder decides the kind; where the language has types, the type must agree. A rename moves all three together. **Names.** The app's terms file defines every domain term once, one line each: `- **term** — meaning`, optionally ending `Retired: <words>`. A compound term (`running-total`) is a term of its own; a term's plural is the same term; every value of a roster is a term too. Topics use terms freely and define none. Module names and exported symbols use only terms and the config's connectors; path segments are structure, and a test's law segment is its claim's anchor, not a name. A second definition, an undefined word in a name, or a retired word anywhere is a finding. The kit generates where each term is used. **Types.** Where the language has types, every export of a module states its type, and its main export satisfies its kind's type. Each zone compiles against only what it may touch: the core sees no I/O or rendering API, the shell no I/O. No escape hatch the language adapter lists appears: an untyped value, an unchecked cast, a suppressed type error. In the core, a value named by a term has that term's type, narrower than a bare primitive unless the terms file declares the term plain. A value compared against fixed literals has a union type. The kit reads each zone's compiler settings, so loosening them is a finding. **Comments.** Every fact has one home in the graph: a word's meaning in the terms file, a module's purpose in its topic, its promises in its claims, its shape in its type, its proof in its tests, its debt in the debt lists. A comment holds what none of these can: why the implementation is built this way. So a comment cites nothing, since the path and the imports already link it, carries no debt, and restates nothing. A reference, a debt marker or a retired word in a comment is a finding; a restatement is review-held. |
-| R4 | **Proof.** A law attaches to a kind, proved once across every module of that kind, or to one module. Every claim in a topic names the module whose law test proves it, and every law test proves a claim or a kind law. Per-module tests use only public faces; kind-law tests may also see state. The tier follows the zone: core headless, shell browser, substrate contract. Surface tests run against the real core and substrate, so each also proves its wiring. A shell render's look is proved by a reference rendering the owner ratifies; the render is compared to it. A data module's roster is the table or fenced list under its heading; the module's value equals it, entry for entry. A cost is measured by wrapping inputs, never by counters inside; test hooks enter only through the declared probe port. |
+### R1: zones and capabilities
+
+A module's capabilities must be permitted by its zone. Readings perform no external
+effect, produce no writes and apply no writes.
+
+The language adapter checks supported primitive access. Raw operations occur only
+in their adapters. Reading the clock differs from converting a supplied timestamp.
+Aliases and re-exports retain the supplying module's capabilities.
+
+Authority enters through ambient globals, runtime imports and parameters whose
+contracts grant it. Readings accept data contracts. Calls do not introduce an
+additional capability; they use the capabilities of their inputs and implementation.
+The adapter checks executable members and accessors visible in a reading's parameter
+type. It does not prove that an arbitrary runtime object is free of getters or proxies.
+
+Capabilities propagate through legacy modules without assigning them a layer. An
+unknown external package produces a finding at its import. One package declaration
+in the configuration states its capabilities. An unsupported authority entry remains
+an explicit checker limit, never evidence of purity. Ordinary calls and arbitrary
+data provenance do not produce separate uncertainty findings.
+
+Each zone compiles against only the APIs it may touch. Loosening its required
+compiler settings is a finding. Exports state their types.
+Domain values use their term's type unless the term is declared plain. Compared
+fixed literals have union types. Untyped values, non-const type assertions and suppressed
+type errors are findings. A non-null assertion directly on an indexed access, such as
+`items[i]!`, is permitted. Other non-null assertions are type escapes. Literal `as const`
+preserves precision and is permitted.
+
+A rule that the checker cannot establish is checked by a person. For example,
+whether a shell module invents a domain decision needs review when the structure
+alone cannot establish it. The finding states this limit.
+
+### R2: dependencies and writes
+
+Imports point down or sideways within a zone and inward across zones. Cycles are findings.
+
+Code that neither produces nor applies writes never calls code that does. A visible
+write-set construction outside a module with production capability is a finding.
+Inspection and transport of an existing description do not produce writes.
+
+Spreading an existing write set into a new one is a visible construction. A private
+type brand does not exempt that construction from its production capability.
+
+Private implementation mutation is not a domain-state write by itself. It must not
+escape or alter the promised result. A memo equals the uncached reading. Behavior
+the adapter cannot establish remains explicit rather than assumed harmless.
+
+### R3: binding and one home for meaning
+
+A module heading and its source file carry the same `<zone>/<layer>/<name>` identity,
+in kebab-case. Layers state dependency position, not claim ownership. Renames move
+identities and references together.
+
+Terms are defined once. Names use terms and declared connectors. Compounds are terms
+in their own right; plurals use the same term. Duplicate definitions, undefined
+words in names and retired words are findings. Roster entries are terms too.
+
+Meaning lives in terms, purpose in topics, guarantees in claims, shape in types,
+proof in tests and debt in the ledger. Comments explain implementation choices none
+of those express. They cite nothing, carry no debt markers and restate no claims.
+A suspected restatement is reviewed by a person.
+
+A roster is the table or fenced list under its module heading. The module's value
+equals it entry for entry. Reference rendering belongs to the contracts that
+promise it, not to every schema or constant.
+
+### R4: proof
+
+Every claim is named by one or more tests. Every law test names a claim or an
+applicable structural obligation. Tests use public contracts; structural checks
+may inspect the facts they establish.
+
+A claim test lives under the configured oracle root, in the directory named for
+its owning topic: `<oracle-root>/<topic>/<claim-anchor>.<variant>.test.ts`, or
+`<oracle-root>/<topic>/<claim-anchor>.test.ts`. A structural obligation's tests
+live with the topic that states it. Neither the topic directory nor the filename
+selects the test environment.
+Imports show reachability, not execution or proof of a claim.
+
+Harnesses connect contracts to real or fake implementations. These connections
+establish their environment requirements. Real DOM use needs a browser; real resource
+access needs its contract environment. Requirements compose. An unresolved connection
+cannot silently select a cheaper environment. Supplying a fake does not erase a
+direct import of the real implementation.
+
+Each adapter with a fake has one contract suite run against both implementations,
+including the contract's timing and failure behavior. The Kit checks that the suite
+and both runs exist; execution proves their results. Separate integration tests prove
+real wiring. Fake-backed tests do not replace required surface proof or the owner's
+reference rendering.
+
+Ordering, atomicity, idempotency and exclusion are claims in the owning topic,
+proved at the composition where they matter. Completing each request once does
+not prove that concurrent requests preserve an established binding.
+
+Cost tests observe boundary inputs and outputs. Production code does not maintain
+counters solely for tests. A test-only observation hook must be declared once in the
+app's configuration; undeclared hooks are findings.
+
 
 ## The kit's own modules for the rules
 
-### core/reading/snapshot — one normalised value of a codebase
+### core/readings/snapshot — one normalised value of a codebase
 - def: the files (path), the imports (from → to), the spec headings (module identities), the test files, the debt lists
   and the config. Every check reads only this value.
 
-### core/reading/finding — what a check reports
+### core/readings/finding — what a check reports
 - def: `{ rule, path, fix, debtKey }`. The fix says, in one sentence, the change that clears the finding.
 
-### core/reading/binder — R3: heading, file and tests name the same module
-- def: a finding for each heading with no file, each file under a zone with no heading, and each test file whose
-  prefix names no module.
+### core/readings/binder — R3: module headings bind to files and proofs name topic claims
+- def: a finding for each module heading with no file, each placed file with no heading, and each claim-first test
+  with no matching claim in its topic. Every claim has at least one proof.
 
-### core/reading/name-check — R3: names are built from defined terms
-- def: a finding for each term defined twice, each word of a module name or exported symbol (a test's module prefix included) that is
+### core/readings/name-check — R3: names are built from defined terms
+- def: a finding for each term defined twice, each word of a module name or exported symbol that is
   neither a term nor a connector the config declares, and each retired word anywhere in the spec, the code names,
   the test names or the comments.
 
-### core/reading/comment-check — R3: comments cite nothing and carry no debt
+### core/readings/comment-check — R3: comments cite nothing and carry no debt
 - def: a finding for each claim anchor, Markdown file or module identity cited in a placed file's comment, and each
   debt marker the config declares.
 
-### core/reading/dependency-check — R2: imports point forward within a zone and inward across zones
-- def: a finding for each import that points backward in the kind order, crosses zones outward, or reaches core
-  state from outside the core; and one for each cycle.
+### core/readings/dependency-check — R2: imports point forward within a zone and inward across zones
+- def: a finding for each import that points upward through the layers or crosses zones outward, and one for each cycle.
 
-### substrate/effect/read-snapshot — read a repository into a snapshot
+### substrate/primitives/read-snapshot — read a repository into a snapshot
 - def: walks the configured roots, reads imports and spec headings, and lists the test files. It is the kit's only
   effect, and the only place a language adapter lives.
 
-Still to build, as further modules: R1's zone checks (compiler settings per zone, core globals), the claim ↔ test binding, the type checks (kind types, term types, escape hatches, literal unions), roster values as terms, the review-held scan for comments that restate a claim, the tier partition, the kind-law roster, the roster reader (a data module equals its roster), the reference-rendering check for shell renders, the ledger and topic index views, the ratchet with the topic footprint in its PR delta, and the rename planner.
+
+### core/readings/capability-check — authority and structural findings
+- def: derives module capabilities from compiler facts and runtime imports, reports placed violations, legacy debt and explicit checker limits.
+
+### core/primitives/default-config — shared configuration contracts
+- def: the configuration schema and default roots, with app-specific capabilities supplied by the caller.
+
+### core/primitives/zones — zone roster
+- def: the three permitted zones.
+
+### core/readings/placement-of — placement interpretation
+- def: reads declared zone and layer paths without assigning a placement to legacy files.
+
+### core/readings/claim-inventory — structural declarations and references
+- def: reads Markdown structure to distinguish closing claim declarations from references.
+
+### Proof obligations
+- The ratchet rejects new legacy debt, every placed violation and every checker limit reachable from placed code. · {#ratchet-keeps-architecture-obligations}
+- runtime authority is conservatively derived from actual module inputs. · {#authority-is-derived}
+- binder: one path in spec, code and oracle. · {#binder-binding}
+- a cache hit reuses extraction, reruns the checker and retains unresolved evidence. · {#cached-check-keeps-evidence}
+- a core composition may produce an actual write set without a primitive constructor wrapper. · {#capability-producers-follow-layers}
+- a debt marker in a comment is a finding whose fix moves it to a debt list. · {#comment-check-carries-no-debt}
+- a comment that says why the code is built this way is free. · {#comment-check-cites-nothing}
+- the kit. · {#comment-check-self-hosted}
+- a chain is acyclic. · {#dependency-check-acyclic}
+- Within a zone, imports point down or sideways through primitives, readings and compositions. · {#dependency-check-direction}
+- every kit source file under src/ is placed. · {#dependency-check-self-hosted}
+- a finding carries rule, path and fix, and a debt key from rule, check, path and detail. · {#finding-debt-key}
+- Placement is read from <root>/<zone>/<layer>/<name>; an old kind folder is legacy, not a placement. · {#kind-of-layout}
+- omitting the directory mapping retains the three canonical default layers. · {#layers-map-paths}
+- nameCheck: module names and exported symbols use only terms and connectors. · {#name-check-built-from-terms}
+- a term defined once has no finding. · {#name-check-defined-once}
+- a retired word in a name is a finding, and its fix names the term that replaced it. · {#name-check-retired-words}
+- the kit. · {#name-check-self-hosted}
+- a parenthesized index is outside the directly indexed assertion permission. · {#project-imports-carry-authority}
+- the fixture reads as its files, imports and headings. · {#read-snapshot-fixture}
+- the real snapshot reader discovers every independently supplied case input. · {#readings-use-data}
+- Claim declarations and topic-first proofs bind in both directions, without treating paragraph reflow as a new declaration. · {#claims-have-one-home}
