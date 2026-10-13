@@ -1,10 +1,6 @@
-import { fromMarkdown } from "mdast-util-from-markdown";
 import type { Nodes, Text } from "mdast";
-
-export interface ClaimMarker {
-  readonly anchor: string;
-  readonly line: number;
-}
+import { fromMarkdown } from "mdast-util-from-markdown";
+import type { ClaimMarker } from "../primitives/claim.js";
 
 export interface ClaimInventory {
   readonly declarations: readonly ClaimMarker[];

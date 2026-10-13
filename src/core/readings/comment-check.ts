@@ -1,8 +1,7 @@
 import { ZONES } from "../primitives/zones.js";
-import { proofOf } from "./binder.js";
+import { proofOf } from "./claim-proof-binder.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { LAYERS, placementOf } from "./placement-of.js";
-import type { Snapshot } from "./snapshot.js";
+import { placementOf } from "./placement-of.js";
 
 // R3, comments: a comment in a placed source or test file cites nothing and carries no debt. A citation
 // is a claim anchor in the config's form, a Markdown file, or a module's identity: the path and the
@@ -37,3 +36,5 @@ export function commentCheck(snapshot: Snapshot): Finding[] {
   // One finding per debt key, however many comments repeat a citation.
   return [...new Map(findings.map((f) => [f.debtKey, f])).values()].sort(byDebtKey);
 }
+import { LAYERS } from "../primitives/layer.js";
+import type { Snapshot } from "../primitives/snapshot.js";

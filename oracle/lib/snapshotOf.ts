@@ -1,13 +1,11 @@
+import type { SnapshotComment } from "../../src/core/primitives/comment.js";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import type {
-  ExportedSymbol,
-  ImportEdge,
-  Snapshot,
-  SnapshotComment,
-  SpecHeading,
-  SpecProse,
-  SpecTerm,
-} from "../../src/core/readings/snapshot.js";
+import type { ExportedSymbol } from "../../src/core/primitives/exported-symbol.js";
+import type { SpecProse } from "../../src/core/primitives/file.js";
+import type { ImportEdge } from "../../src/core/primitives/import.js";
+import type { SpecHeading } from "../../src/core/primitives/module.js";
+import type { Snapshot } from "../../src/core/primitives/snapshot.js";
+import type { SpecTerm } from "../../src/core/primitives/term.js";
 
 // The one snapshot builder for headless tests: source files under src/, tests (`*.test.ts`) under
 // oracle/, imports as "from > to", headings as artifact names in spec/topic.md, terms as

@@ -1,29 +1,24 @@
 import type { Nodes } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
+import type { Reference, SemanticReference } from "../primitives/reference.js";
+import type { Topic } from "../primitives/topic.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import type { Snapshot } from "./snapshot.js";
-
-export interface SemanticReference {
-  readonly namespace: "topic" | "term";
-  readonly name: string;
-  readonly line: number;
-}
 
 export interface SemanticReferenceInventory {
   readonly title: string | null;
   readonly references: readonly SemanticReference[];
 }
 
-export interface ResolvedSemanticReference extends SemanticReference {
-  readonly file: string;
+export interface ResolvedSemanticReference extends Reference {
   readonly target: string | null;
 }
 
 export interface SemanticReferences {
   readonly findings: readonly Finding[];
   readonly references: readonly ResolvedSemanticReference[];
-  readonly topics: readonly { readonly file: string; readonly name: string }[];
+  readonly topics: readonly Topic[];
   readonly incomingTopics: readonly { readonly topic: string; readonly from: readonly string[] }[];
+  readonly topicModules: readonly { readonly topic: string; readonly modules: readonly string[] }[];
 }
 
 export function semanticReferenceInventory(text: string): SemanticReferenceInventory {
@@ -70,7 +65,7 @@ function identity(name: string): string {
 
 export function semanticReferences(snapshot: Snapshot): SemanticReferences {
   const findings: Finding[] = [];
-  const topics: { file: string; name: string }[] = [];
+  const topics: Topic[] = [];
   const indexes = {
     topic: new Map<string, Set<string>>(),
     term: new Map<string, Set<string>>(),
@@ -126,14 +121,40 @@ export function semanticReferences(snapshot: Snapshot): SemanticReferences {
       ),
     ].sort(),
   }));
+  const moduleTerms = new Map(
+    snapshot.terms
+      .filter((term) => term.metadata?.kind === "module")
+      .map((term) => [`${snapshot.config.termsFile}:${term.line}`, term.term]),
+  );
+  const topicModules = topics
+    .map(({ file }): { topic: string; modules: readonly string[] } => ({
+      topic: file,
+      modules: [
+        ...new Set(
+          references.flatMap((reference) => {
+            if (
+              reference.file !== file ||
+              reference.namespace !== "term" ||
+              reference.target === null
+            )
+              return [];
+            const term = moduleTerms.get(reference.target);
+            return term === undefined ? [] : [term];
+          }),
+        ),
+      ].sort(),
+    }))
+    .sort((left, right) => left.topic.localeCompare(right.topic));
   return {
     findings: [...new Map(findings.map((item) => [item.debtKey, item])).values()].sort(byDebtKey),
     references,
     topics,
     incomingTopics,
+    topicModules,
   };
 }
 
 export function referenceCheck(snapshot: Snapshot): readonly Finding[] {
   return semanticReferences(snapshot).findings;
 }
+import type { Snapshot } from "../primitives/snapshot.js";

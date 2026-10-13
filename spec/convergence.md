@@ -44,3 +44,16 @@ debt and ledger remain app-specific when the Kit becomes a separate package.
 Only the Kit lane changes its spec, source and oracle. The owner approves each such
 change. No agent weakens a check to pass its own work. Its public commands are check,
 ledger, partition and rename.
+
+[[code-structure]], [[language]] and [[proof]] supply the guarantees this process holds.
+
+## Contracts
+
+### core/readings/finding
+
+Give independent checks a common result without adding a schema-only module. Uses {{finding}}.
+
+## Proof obligations
+
+- The ratchet rejects new legacy debt, every placed violation and every checker limit reachable from placed code. · {#ratchet-keeps-architecture-obligations}
+- a finding carries rule, path and fix, and a debt key from rule, check, path and detail. · {#finding-debt-key}

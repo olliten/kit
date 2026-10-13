@@ -18,6 +18,7 @@ export interface KitConfig {
   readonly layerNames?: {
     readonly primitives: string;
     readonly readings: string;
+    readonly adapters: string;
     readonly compositions: string;
   };
   readonly packages?: readonly {

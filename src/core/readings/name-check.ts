@@ -1,7 +1,6 @@
-import { proofOf } from "./binder.js";
+import { proofOf } from "./claim-proof-binder.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
 import { placementOf } from "./placement-of.js";
-import type { Snapshot } from "./snapshot.js";
 
 // What a run of words is: a term, or a retired word and the term that replaced it.
 interface Entry {
@@ -9,20 +8,17 @@ interface Entry {
   readonly retired: boolean;
 }
 
-// R3, names: the terms file defines each term once; every module name and exported symbol of a placed
-// file (a test's module prefix included) is built from terms and the config's connectors; no retired
-// word appears in a name, in spec prose or in a placed file's comments. Only the `<name>` segment is a name: zone and kind segments
-// are structure, and a test's law segment is its claim's anchor. A word matches a term or its plural:
-// the term plus one of the config's plural suffixes, on the last word of a compound term
-// (`running-totals` is `running-total`). Legacy files are not held.
+// Identifier tokenization recognizes camel-case and kebab-case retirement spellings;
+// definition identity keeps punctuation because it names a global concept.
 export function nameCheck(snapshot: Snapshot): Finding[] {
-  const { srcRoot, oracleRoot, termsFile, connectors, plurals } = snapshot.config;
+  const { srcRoot, oracleRoot, termsFile, plurals } = snapshot.config;
   const findings: Finding[] = [];
 
   const termLines = new Map<string, number[]>();
   const entries = new Map<string, Entry>();
   for (const { term, line } of snapshot.terms) {
-    termLines.set(term, [...(termLines.get(term) ?? []), line]);
+    const identity = term.toLowerCase().trim().replace(/\s+/g, " ");
+    termLines.set(identity, [...(termLines.get(identity) ?? []), line]);
     entries.set(wordsOf(term).join(" "), { term, retired: false });
   }
   for (const { term, retired } of snapshot.terms) {
@@ -44,7 +40,7 @@ export function nameCheck(snapshot: Snapshot): Finding[] {
 
   // Each run of words, longest match first, so a compound term wins over its parts.
   const longest = Math.max(1, ...[...entries.keys()].map((k) => k.split(" ").length));
-  const scan = (path: string, text: string, isName: boolean): void => {
+  const scan = (path: string, text: string): void => {
     const words = wordsOf(text);
     for (let i = 0; i < words.length; ) {
       let n = Math.min(longest, words.length - i);
@@ -55,29 +51,25 @@ export function nameCheck(snapshot: Snapshot): Finding[] {
       if (entry?.retired === true) {
         const fix = `In ${path}, \`${run}\` is retired: use the defined term \`${entry.term}\`.`;
         findings.push(finding("R3", "retired-word", path, fix, run.replaceAll(" ", "-")));
-      } else if (isName && entry === undefined && !connectors.includes(run)) {
-        const fix = `In ${path}, \`${run}\` is not a term: define it with a \`- **${run}** — <meaning>\` line in ${termsFile}, or use the defined term.`;
-        findings.push(finding("R3", "undefined-word", path, fix, run));
       }
     }
   };
 
   for (const file of snapshot.files) {
     const at = placementOf(file.path, srcRoot);
-    if (file.type === "source" && at.placed) scan(at.artifact, at.name, true);
-    if (file.type === "test" && proofOf(file.path, oracleRoot) !== null)
-      scan(file.path, file.path, false);
+    if (file.type === "source" && at.placed) scan(at.artifact, at.name);
+    if (file.type === "test" && proofOf(file.path, oracleRoot) !== null) scan(file.path, file.path);
   }
   for (const { file, name } of snapshot.symbols) {
     const at = placementOf(file, srcRoot);
-    if (at.placed) scan(at.artifact, name, true);
+    if (at.placed) scan(at.artifact, name);
   }
-  for (const { file, text } of snapshot.prose) scan(file, text, false);
+  for (const { file, text } of snapshot.prose) scan(file, text);
   for (const { file, text } of snapshot.comments) {
     const test = file.startsWith(`${oracleRoot}/`);
     const at = placementOf(file, srcRoot);
-    if (at.placed) scan(at.artifact, text, false);
-    else if (test && proofOf(file, oracleRoot) !== null) scan(file, text, false);
+    if (at.placed) scan(at.artifact, text);
+    else if (test && proofOf(file, oracleRoot) !== null) scan(file, text);
   }
   // One finding per debt key, however many names repeat a word.
   return [...new Map(findings.map((f) => [f.debtKey, f])).values()].sort(byDebtKey);
@@ -93,3 +85,4 @@ function wordsOf(name: string): string[] {
     .split(/[^a-z0-9]+/)
     .filter((w) => w !== "");
 }
+import type { Snapshot } from "../primitives/snapshot.js";

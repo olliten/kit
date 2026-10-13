@@ -1,7 +1,5 @@
 import { cycles } from "./dependency-check.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { LAYERS } from "./placement-of.js";
-import type { Snapshot } from "./snapshot.js";
 
 export interface CapabilityFinding extends Finding {
   readonly status: "violation" | "unresolved" | "review-held";
@@ -37,7 +35,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             "R1",
             "layer-config",
             snapshot.config.srcRoot,
-            "Declare one distinct directory name for each of the three layers.",
+            "Declare one distinct directory name for each of the four layers.",
           ),
           status: "unresolved",
           blocking: true,
@@ -154,12 +152,12 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         "The declared adapter export is not resolved by the compiler.",
         adapter.export,
       );
-    if (adapter.kind === "external" && placement(path)?.[2] !== "primitives")
+    if (adapter.kind === "external" && placement(path)?.[2] !== "adapters")
       add(
         "R1",
         "adapter-layer",
         path,
-        "Keep raw authority at a narrow primitive boundary.",
+        "Keep raw authority in a narrow capability adapter.",
         adapter.export,
       );
     const contract = adapter.contract;
@@ -261,7 +259,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             "R1",
             "raw-primitive",
             access.file,
-            "Sample this operation only in its declared primitive adapter.",
+            "Sample this operation only in its declared capability adapter.",
             access.kind,
           );
         }
@@ -284,7 +282,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
               "R1",
               "raw-primitive",
               global.file,
-              "Acquire this ambient authority only through its declared primitive adapter.",
+              "Acquire this ambient authority only through its declared capability adapter.",
               adapter.capability,
             );
           }
@@ -295,9 +293,14 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       const to = edge.target === null ? null : placement(edge.target);
       if (from !== null && to !== null) {
         if (
-          from[1] === to[1]
-            ? layers.indexOf(to[2] ?? "") > layers.indexOf(from[2] ?? "")
-            : to[1] !== "core"
+          (from[2] === "adapters" && to[2] !== "primitives") ||
+          (from[1] === to[1]
+            ? !(
+                from[2] === "compositions" ||
+                to[2] === "primitives" ||
+                (from[2] === "readings" && to[2] === "readings")
+              )
+            : from[1] === "core" || to[1] !== "core")
         )
           add(
             "R2",
@@ -397,6 +400,92 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             (adapter.globals?.length ?? 0) === 0)),
     );
   };
+  const connections = projects
+    .flatMap((project) => project.connections)
+    .filter(
+      (connection) =>
+        direct.has(connection.file) && connection.target !== null && direct.has(connection.target),
+    );
+  const keyOf = (input: { readonly file: string; readonly start: number }): string =>
+    `${input.file}:${input.start}`;
+  const bindings = connections.flatMap((connection) =>
+    connection.callableOrigins.map((origin, index) => ({
+      origin,
+      source: connection.callableBindings?.[index]?.source ?? null,
+      target: connection.callableBindings?.[index]?.target ?? null,
+      supported: connection.callableBindings?.[index] !== undefined,
+    })),
+  );
+  const inputs = new Map(
+    projects.flatMap((project) =>
+      project.parameters
+        .filter((parameter) => parameter.callable || parameter.accessor)
+        .map((parameter) => [keyOf(parameter), parameter.file] as const),
+    ),
+  );
+  for (const binding of bindings)
+    for (const input of [binding.source, binding.target])
+      if (input !== null) inputs.set(keyOf(input), input.file);
+  const known = new Set<string>();
+  const suppliedCapabilities = new Map([...inputs.keys()].map((key) => [key, new Set<string>()]));
+  for (const parameter of projects.flatMap((project) => project.parameters))
+    for (const contract of contractTypes)
+      if (
+        parameter.types[0]?.file === contract.type.file &&
+        parameter.types[0]?.name === contract.type.name
+      ) {
+        const key = keyOf(parameter);
+        known.add(key);
+        suppliedCapabilities.get(key)?.add(contract.capability);
+      }
+  const established = (binding: (typeof bindings)[number]): boolean =>
+    binding.supported &&
+    (binding.source !== null
+      ? known.has(keyOf(binding.source))
+      : binding.origin !== null &&
+        inherited.has(binding.origin) &&
+        [...inputs].every(([key, file]) => file !== binding.origin || known.has(key)));
+  const bindingCapabilities = (binding: (typeof bindings)[number]): Set<string> =>
+    new Set([
+      ...(inherited.get(binding.origin ?? "") ?? []),
+      ...(binding.source !== null
+        ? (suppliedCapabilities.get(keyOf(binding.source)) ?? [])
+        : [...inputs]
+            .filter(([, file]) => file === binding.origin)
+            .flatMap(([key]) => [...(suppliedCapabilities.get(key) ?? [])])),
+    ]);
+  changed = true;
+  while (changed) {
+    changed = false;
+    for (const [key] of inputs) {
+      const incoming = bindings.filter(
+        (binding) =>
+          binding.target !== null &&
+          keyOf(binding.target) === key &&
+          (binding.source === null || keyOf(binding.source) !== key),
+      );
+      if (!known.has(key) && incoming.length > 0 && incoming.every(established)) {
+        known.add(key);
+        changed = true;
+      }
+      for (const binding of incoming)
+        for (const capability of bindingCapabilities(binding)) {
+          const caps = suppliedCapabilities.get(key);
+          if (caps !== undefined && !caps.has(capability)) {
+            caps.add(capability);
+            changed = true;
+          }
+        }
+    }
+  }
+  const capabilityUniverse = new Set([
+    ...adapters.map((adapter) => adapter.capability),
+    ...[...inherited.values()].flatMap((capabilities) => [...capabilities]),
+  ]);
+  const restricted = (path: string): boolean =>
+    placement(path)?.[1] === "core" ||
+    placement(path)?.[2] === "readings" ||
+    [...capabilityUniverse].some((capability) => !permits(path, capability));
   for (const [path, caps] of inherited) {
     if (placement(path) === null) continue;
     for (const capability of caps) {
@@ -454,9 +543,22 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     for (const connection of project.connections) {
       if (!direct.has(connection.file)) continue;
       if (connection.target === null || placement(connection.target) === null) continue;
-      for (const origin of connection.callableOrigins) {
-        if (origin === null || !inherited.has(origin)) continue;
-        for (const capability of inherited.get(origin) ?? [])
+      for (const [index, origin] of connection.callableOrigins.entries()) {
+        const binding = {
+          origin,
+          source: connection.callableBindings?.[index]?.source ?? null,
+          target: connection.callableBindings?.[index]?.target ?? null,
+          supported: connection.callableBindings?.[index] !== undefined,
+        };
+        if (!established(binding) && restricted(connection.target))
+          unresolved(
+            "callable-binding",
+            connection.file,
+            "The supplied executable input has no established capability boundary.",
+            `${connection.target}:${connection.start}`,
+          );
+        if (origin === null) continue;
+        for (const capability of bindingCapabilities(binding))
           if (
             !permits(connection.target, capability) ||
             placement(connection.target)?.[2] === "readings"
@@ -482,3 +584,5 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     ].sort(byDebtKey),
   };
 }
+import { LAYERS } from "../primitives/layer.js";
+import type { Snapshot } from "../primitives/snapshot.js";

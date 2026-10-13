@@ -1,6 +1,5 @@
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { LAYERS, type Placed, placementOf } from "./placement-of.js";
-import type { Snapshot } from "./snapshot.js";
+import { type Placed, placementOf } from "./placement-of.js";
 
 // R2, dependencies. Only imports between two placed artifacts are held; legacy files are not.
 // - Within a zone: imports point to the same layer or a lower one.
@@ -31,9 +30,17 @@ export function dependencyCheck(snapshot: Snapshot): Finding[] {
 
 function edgeFix(a: Placed, b: Placed): string | undefined {
   const edge = `${a.artifact} imports ${b.artifact}`;
+  if (a.layer === "adapters" && b.layer !== "primitives") {
+    return `${edge}: adapters depend only on primitive data contracts; keep calculations and workflow assembly in readings and compositions.`;
+  }
   if (a.zone === b.zone) {
-    if (LAYERS.indexOf(b.layer) <= LAYERS.indexOf(a.layer)) return undefined;
-    return `${edge}, a higher layer: move the shared part to ${a.zone}/${a.layer} or lower, or invert the call.`;
+    if (
+      a.layer === "compositions" ||
+      b.layer === "primitives" ||
+      (a.layer === "readings" && b.layer === "readings")
+    )
+      return undefined;
+    return `${edge}, outside its permitted layers: move the shared data to primitives, or assemble the behavior in a composition.`;
   }
   if (a.zone === "core") {
     return `${edge}, outside the core: the core imports no other zone; have ${b.zone} call the core instead.`;
@@ -85,3 +92,4 @@ export function cycles(edges: readonly [string, string][]): string[][] {
   for (const v of [...next.keys()].sort()) if (!index.has(v)) visit(v);
   return found.sort((x, y) => ((x[0] ?? "") < (y[0] ?? "") ? -1 : 1));
 }
+import type { Snapshot } from "../primitives/snapshot.js";

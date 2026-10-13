@@ -1,7 +1,5 @@
+import { LAYERS, type Layer } from "../primitives/layer.js";
 import { ZONES, type Zone } from "../primitives/zones.js";
-
-export const LAYERS = ["primitives", "readings", "compositions"] as const;
-export type Layer = (typeof LAYERS)[number];
 
 export interface Placed {
   readonly placed: true;
