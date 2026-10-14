@@ -5,7 +5,7 @@ import { afterEach, expect, test } from "vitest";
 
 const cacheSource =
   process.env.KIT_CACHE_SOURCE ??
-  new URL("../../../scripts/kit-snapshot-cache.mjs", import.meta.url).href;
+  new URL("../../scripts/kit-snapshot-cache.mjs", import.meta.url).href;
 const { cachedKitCheck } = await import(cacheSource);
 const roots: string[] = [];
 function makeFixture() {

@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, expect, test } from "vitest";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
@@ -529,7 +530,7 @@ test("unsupported generic annotations remain limits, never an accepted field ide
 });
 
 test("the same checker binds the actual Kit Snapshot.config declaration", () => {
-  const root = "/workspace/kit";
+  const root = fileURLToPath(new URL("../..", import.meta.url));
   const owners = [
     "claim",
     "comment",

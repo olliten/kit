@@ -8,7 +8,7 @@ import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 
 const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../../scripts/kit-check.mjs", import.meta.url).href;
+  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
 const { ratchetFindings } = await import(gateSource);
 
 function inspect(

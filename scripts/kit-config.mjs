@@ -14,9 +14,9 @@ export function kitConfig(text) {
   return config;
 }
 
-/** @param {import("../kit/src/core/primitives/default-config.js").KitConfig} defaults
+/** @param {import("../src/core/primitives/default-config.js").KitConfig} defaults
  * @param {Record<string, unknown>} declaration
- * @returns {import("../kit/src/core/primitives/default-config.js").KitConfig}
+ * @returns {import("../src/core/primitives/default-config.js").KitConfig}
  */
 export function configuredKit(defaults, declaration) {
   return {
@@ -52,8 +52,8 @@ export function kitCheckPaths(args, engineRoot) {
     throw new Error("A different governed root requires its --config and --baseline paths.");
   return {
     root,
-    configPath: resolve(engineRoot, config ?? "kit/config.md"),
-    baselinePath: resolve(engineRoot, baseline ?? "kit/debt/legacy.json"),
+    configPath: resolve(engineRoot, config ?? "self-config.md"),
+    baselinePath: resolve(engineRoot, baseline ?? "self-debt/legacy.json"),
   };
 }
 

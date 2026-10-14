@@ -50,17 +50,17 @@ async function main() {
       resolveId: (id, importer) => loader.resolveId(id, importer),
     });
     const load = (name) => runner.executeFile(join(engineRoot, name));
-    const { DEFAULT_CONFIG } = await load("kit/src/core/primitives/default-config.ts");
-    const { readSnapshot } = await load("kit/src/substrate/compositions/read-snapshot.ts");
-    const { capabilityCheck } = await load("kit/src/core/readings/capability-check.ts");
-    const { moduleBinder } = await load("kit/src/core/readings/module-binder.ts");
-    const { claimProofBinder } = await load("kit/src/core/readings/claim-proof-binder.ts");
-    const { byDebtKey } = await load("kit/src/core/readings/finding.ts");
-    const { nameCheck } = await load("kit/src/core/readings/name-check.ts");
-    const { commentCheck } = await load("kit/src/core/readings/comment-check.ts");
-    const { referenceCheck } = await load("kit/src/core/readings/semantic-references.ts");
-    const { termModel } = await load("kit/src/core/readings/term-model.ts");
-    const { placementOf } = await load("kit/src/core/readings/placement-of.ts");
+    const { DEFAULT_CONFIG } = await load("src/core/primitives/default-config.ts");
+    const { readSnapshot } = await load("src/substrate/compositions/read-snapshot.ts");
+    const { capabilityCheck } = await load("src/core/readings/capability-check.ts");
+    const { moduleBinder } = await load("src/core/readings/module-binder.ts");
+    const { claimProofBinder } = await load("src/core/readings/claim-proof-binder.ts");
+    const { byDebtKey } = await load("src/core/readings/finding.ts");
+    const { nameCheck } = await load("src/core/readings/name-check.ts");
+    const { commentCheck } = await load("src/core/readings/comment-check.ts");
+    const { referenceCheck } = await load("src/core/readings/semantic-references.ts");
+    const { termModel } = await load("src/core/readings/term-model.ts");
+    const { placementOf } = await load("src/core/readings/placement-of.ts");
     const config = configuredKit(DEFAULT_CONFIG, declared);
     const checked = await cachedKitCheck(
       root,

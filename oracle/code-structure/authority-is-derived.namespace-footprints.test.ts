@@ -7,7 +7,7 @@ import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 
 const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../../scripts/kit-check.mjs", import.meta.url).href;
+  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
 const { ratchetFindings } = await import(gateSource);
 
 function inspect(source: string, declarations: Readonly<Record<string, string>> = {}) {

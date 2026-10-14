@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, expect, test } from "vitest";
 
-const engine = fileURLToPath(new URL("../../..", import.meta.url));
+const engine = fileURLToPath(new URL("../..", import.meta.url));
 const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
