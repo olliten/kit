@@ -11,6 +11,7 @@ export interface SpecTerm {
         readonly role: "fact" | "derived" | "adapter" | "composition";
         readonly zone: "core" | "shell" | "substrate";
         readonly references: readonly string[];
+        readonly legacySources?: readonly string[];
       }
     | {
         readonly kind: "field";

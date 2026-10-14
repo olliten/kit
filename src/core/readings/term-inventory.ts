@@ -59,7 +59,16 @@ export function termInventory(text: string): {
               const zone = keys.get("Zone");
               const key = role === "derived" ? "From" : "Of";
               const list = keys.get(key) ?? "";
-              const references = [...list.matchAll(/\{\{([^{}]+)\}\}/g)].map((m) => m[1] ?? "");
+              const entries = list === "[]" ? [] : list.split(/\s*,\s*/);
+              const references = entries.flatMap((entry) => {
+                const match = /^\{\{([^{}]+)\}\}$/.exec(entry);
+                return match?.[1] ? [match[1]] : [];
+              });
+              const legacySources = entries.filter((entry) =>
+                /^(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)+[A-Za-z0-9_-][A-Za-z0-9_.-]*\.[cm]?[jt]sx?$/.test(
+                  entry,
+                ),
+              );
               if (
                 !(
                   role === "fact" ||
@@ -69,10 +78,17 @@ export function termInventory(text: string): {
                 ) ||
                 !(zone === "core" || zone === "shell" || zone === "substrate") ||
                 keys.size !== 3 ||
-                !(list === "[]" || /^\{\{[^{}]+\}\}(?:\s*,\s*\{\{[^{}]+\}\})*$/.test(list))
+                !(list === "[]" || entries.length === references.length + legacySources.length)
               ) {
                 fail("Declare Role, Zone and the matching From or Of list.");
-              } else metadata = { kind: "module", role, zone, references };
+              } else
+                metadata = {
+                  kind: "module",
+                  role,
+                  zone,
+                  references,
+                  ...(legacySources.length > 0 ? { legacySources } : {}),
+                };
             } else if (keys.has("Field")) {
               const field = /^([^:]+)::([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)$/.exec(
                 keys.get("Field") ?? "",

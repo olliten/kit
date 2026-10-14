@@ -2,12 +2,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { snapshotOf } from "../lib/snapshotOf.js";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { snapshotOf } from "../lib/snapshotOf.js";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -138,6 +138,65 @@ test("a local owner outside src remains an undeclared owner through a TypeScript
 function moduleTerm(name: string, role: string, references = "[]", zone = "core"): string {
   return `- **${name}** — The ${name} contract.\n  - Role: ${role}\n  - Zone: ${zone}\n  - ${role === "derived" ? "From" : "Of"}: ${references}\n`;
 }
+
+test("a declared legacy source satisfies ownership without inventing a placed term", () => {
+  const { result } = inspect(
+    {
+      "src/core/legacy/value.ts": "export const value = 1;\n",
+      "src/core/readings/read.ts":
+        "import { value } from '../legacy/value.js';\nexport function read() { return value; }\n",
+    },
+    moduleTerm("read", "derived", "`src/core/legacy/value.ts`"),
+  );
+  expect(result).toEqual({ findings: [], limits: [] });
+});
+
+test.each(["[]", "`src/core/legacy/missing.ts`", "`src/core/legacy/other.ts`"])(
+  "an undeclared, missing or different legacy owner cannot hide an import: %s",
+  (reference) => {
+    const { result } = inspect(
+      {
+        "src/core/legacy/value.ts": "export const value = 1;\n",
+        "src/core/legacy/other.ts": "export const other = 2;\n",
+        "src/core/readings/read.ts":
+          "import { value } from '../legacy/value.js';\nexport function read() { return value; }\n",
+      },
+      moduleTerm("read", "derived", reference),
+    );
+    expect(checks(result)).toContain("term-source");
+    if (reference !== "[]") expect(checks(result)).toContain("term-legacy-source");
+  },
+);
+
+test("a placed source still binds through its global term, never a legacy path", () => {
+  const { result } = inspect(
+    {
+      "src/core/primitives/value.ts": valueSource,
+      "src/core/readings/read.ts":
+        "import type { Value } from '../primitives/value.js';\nexport function read(value: Value) { return value.label; }\n",
+    },
+    moduleTerm("value", "fact") + moduleTerm("read", "derived", "`src/core/primitives/value.ts`"),
+  );
+  expect(checks(result)).toContain("term-legacy-source");
+  expect(checks(result)).toContain("term-source");
+});
+
+test("declaring a legacy path grants no clock capability to a core reading", () => {
+  const { snapshot, result } = inspect(
+    {
+      "src/core/legacy/value.ts": "export function value() { return Date.now(); }\n",
+      "src/core/readings/read.ts":
+        "import { value } from '../legacy/value.js';\nexport function read() { return value(); }\n",
+    },
+    moduleTerm("read", "derived", "`src/core/legacy/value.ts`"),
+  );
+  expect(result).toEqual({ findings: [], limits: [] });
+  expect(
+    capabilityCheck(snapshot).findings.some(
+      (item) => item.path === "src/core/readings/read.ts" && item.status === "violation",
+    ),
+  ).toBe(true);
+});
 
 function inspect(files: Readonly<Record<string, string>>, terms: string) {
   const root = mkdtempSync(join(tmpdir(), "term-model-proof-"));

@@ -52,6 +52,12 @@ From and Of include actual direct local type-only and runtime owners. Supported
 external operations retain their explicit package and {{capability}} evidence. A
 missing owner or unsupported pattern remains a finding or explicit limit.
 
+From and Of name global module terms for placed dependencies. During migration,
+they may also name an existing unplaced source by its repository path. That path
+must resolve to the actual imported source. A placed dependency must use its global
+term, never this legacy path form. Declaring a dependency changes no zone, layer,
+capability or cycle permission.
+
 Supporting types belong with their concepts. Field roles create no extra module;
 private helpers create no extra term. Raw draft and encoded representations remain
 distinct from accepted domain data. No declaration supplies an invented schema value.

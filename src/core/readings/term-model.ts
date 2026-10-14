@@ -107,6 +107,20 @@ export function termModel(snapshot: Snapshot): {
       const home = homes.get(identity(term.term));
       if (!home || ambiguousHomes.has(home)) continue;
       const allowed = new Set<string>();
+      for (const path of metadata.legacySources ?? []) {
+        const source = snapshot.files.find((file) => file.path === path && file.type === "source");
+        if (!source || placementOf(path, snapshot.config.srcRoot).placed) {
+          findings.push(
+            finding(
+              "R3",
+              "term-legacy-source",
+              home,
+              "Name an existing unplaced source by path; use its global term once placed.",
+              path,
+            ),
+          );
+        } else allowed.add(path);
+      }
       for (const reference of metadata.references) {
         const resolved = terms.get(identity(reference));
         if (resolved?.length !== 1) {
@@ -149,6 +163,18 @@ export function termModel(snapshot: Snapshot): {
               home,
               "Declare this actual imported owner in From or Of.",
               imported,
+            ),
+          );
+      }
+      for (const path of metadata.legacySources ?? []) {
+        if (allowed.has(path) && !imports.includes(path))
+          findings.push(
+            finding(
+              "R3",
+              "term-legacy-source",
+              home,
+              "Name the actual imported legacy source, not another repository file.",
+              path,
             ),
           );
       }
