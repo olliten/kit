@@ -260,7 +260,7 @@ function readCompiler(
             (type.flags & ts.TypeFlags.TypeParameter) !== 0
               ? checker.getBaseConstraintOfType(type)
               : undefined;
-          const children = type.isUnionOrIntersection()
+          const contents = type.isUnionOrIntersection()
             ? type.types
             : type.getCallSignatures().length > 0
               ? []
@@ -272,11 +272,24 @@ function readCompiler(
                     ? []
                     : type.getProperties().flatMap((property) => {
                         const declaration = property.valueDeclaration ?? property.declarations?.[0];
-                        return declaration === undefined
-                          ? []
-                          : [checker.getTypeOfSymbolAtLocation(property, declaration)];
+                        return declaration !== undefined &&
+                          (ts.isPropertySignature(declaration) ||
+                            ts.isPropertyDeclaration(declaration) ||
+                            ts.isPropertyAssignment(declaration) ||
+                            ts.isShorthandPropertyAssignment(declaration) ||
+                            (ts.isParameter(declaration) &&
+                              ts.isConstructorDeclaration(declaration.parent) &&
+                              ts.isParameterPropertyDeclaration(declaration, declaration.parent)))
+                          ? [checker.getTypeOfSymbolAtLocation(property, declaration)]
+                          : [];
                       })),
                 ];
+          const children = [
+            ...type
+              .getConstructSignatures()
+              .map((signature) => checker.getReturnTypeOfSignature(signature)),
+            ...contents,
+          ];
           result = [
             ...new Map(
               children
@@ -287,6 +300,15 @@ function readCompiler(
         }
         if (complete) nativeCache.set(type, result);
         return result;
+      };
+      const nativeMemberAuthority = (
+        member: ts.Symbol,
+        receiver: ts.Type,
+        location: ts.Node,
+      ): readonly NativeAuthority[] => {
+        if (nativeMember(member)) return nativeAuthorityOf(receiver);
+        const type = checker.getTypeOfSymbolAtLocation(member, location);
+        return type.getConstructSignatures().length > 0 ? nativeAuthorityOf(type) : [];
       };
       const nativeContract = (
         type: ts.Type,
@@ -892,12 +914,14 @@ function readCompiler(
               : key?.isStringLiteral()
                 ? receiver.getProperty(key.value)
                 : undefined;
-            if (member !== undefined && nativeMember(member))
+            const authority =
+              member === undefined ? [] : nativeMemberAuthority(member, receiver, node);
+            if (member !== undefined && (nativeMember(member) || authority.length > 0))
               accesses.push({
                 file: path,
                 start: node.getStart(sf),
                 kind: "native",
-                nativeAuthority: nativeAuthorityOf(receiver),
+                nativeAuthority: authority,
               });
           }
           if (ts.isBindingElement(node) && ts.isIdentifier(node.name)) {
@@ -914,12 +938,14 @@ function readCompiler(
             ) {
               const receiver = checker.getTypeAtLocation(owner.initializer);
               const member = receiver.getProperty(key.text);
-              if (member !== undefined && nativeMember(member))
+              const authority =
+                member === undefined ? [] : nativeMemberAuthority(member, receiver, node);
+              if (member !== undefined && (nativeMember(member) || authority.length > 0))
                 accesses.push({
                   file: path,
                   start: node.getStart(sf),
                   kind: "native",
-                  nativeAuthority: nativeAuthorityOf(receiver),
+                  nativeAuthority: authority,
                 });
             }
           }
