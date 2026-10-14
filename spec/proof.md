@@ -15,6 +15,9 @@ A claim declaration is an anchor that closes a Markdown list item or heading,
 after the configured separator or bare. Other occurrences are references.
 Paragraph reflow does not change their role. New topics declare claims in list
 items. Legacy law headings declare claims only in configured legacy area files.
+In those legacy files, an anchored claim paragraph may be followed by nested
+explanatory bullets. A legacy `### law · id — explanation` heading declares its
+claim. In new topics, the anchor closes the whole claim item.
 One structural reader owns this grammar.
 
 ### R4: proof

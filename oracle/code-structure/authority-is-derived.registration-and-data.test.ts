@@ -18,6 +18,7 @@ function inspect(
   const root = mkdtempSync(join(tmpdir(), "kit-registration-data-"));
   const config: KitConfig = {
     ...DEFAULT_CONFIG,
+    legacyZones: [{ root: "src/legacy/", zone: "shell" }],
     adapters: [
       {
         module: "shell/adapters/focus",

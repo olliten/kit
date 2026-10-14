@@ -1,6 +1,9 @@
-import { resolve } from "node:path";
+import { posix, resolve } from "node:path";
 import { JSON_SCHEMA, load } from "js-yaml";
 
+/** @param {string} text
+ * @returns {Record<string, unknown>}
+ */
 export function kitConfig(text) {
   const fences = [...text.matchAll(/^```yaml[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*$/gm)];
   if (fences.length !== 1)
@@ -11,6 +14,10 @@ export function kitConfig(text) {
   return config;
 }
 
+/** @param {import("../kit/src/core/primitives/default-config.js").KitConfig} defaults
+ * @param {Record<string, unknown>} declaration
+ * @returns {import("../kit/src/core/primitives/default-config.js").KitConfig}
+ */
 export function configuredKit(defaults, declaration) {
   return {
     ...defaults,
@@ -20,6 +27,7 @@ export function configuredKit(defaults, declaration) {
     termsFile: declaration.terms,
     claimSeparator: declaration["claim-separator"] ?? defaults.claimSeparator,
     legacyAreas: declaration["legacy-areas"] ?? [],
+    legacyZones: declaration["legacy-zones"] ?? [],
     adapters: declaration.adapters ?? [],
     packages: declaration.packages ?? [],
   };
@@ -47,4 +55,26 @@ export function kitCheckPaths(args, engineRoot) {
     configPath: resolve(engineRoot, config ?? "kit/config.md"),
     baselinePath: resolve(engineRoot, baseline ?? "kit/debt/legacy.json"),
   };
+}
+
+/** Legacy proofs remain registered while the declared oracle root is adopted. */
+/** @param {Record<string, unknown>} declaration
+ * @returns {string[]}
+ */
+export function testRoots(declaration) {
+  const oracle = declaration.roots?.oracle;
+  const normalized = typeof oracle === "string" ? posix.normalize(oracle).replace(/\/$/, "") : "";
+  if (
+    typeof oracle !== "string" ||
+    !oracle ||
+    oracle.trim() !== oracle ||
+    oracle.includes("\\") ||
+    /^[a-z]:/i.test(oracle) ||
+    /[*?{}[\]]/.test(oracle) ||
+    posix.isAbsolute(oracle) ||
+    oracle.split("/").includes("..") ||
+    normalized === "."
+  )
+    throw new Error("The Kit configuration must declare one relative oracle directory.");
+  return [...new Set(["spec", "src", "__tests__", normalized])];
 }

@@ -62,6 +62,14 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   const files = snapshot.files
     .filter((file) => file.type === "source" && file.path.startsWith(prefix))
     .map((file) => file.path);
+  const zoneOf = (path: string): string | undefined => {
+    if (!path.startsWith(prefix)) return undefined;
+    const zone = path.slice(prefix.length).split("/")[0];
+    if (zone === "core" || zone === "shell" || zone === "substrate") return zone;
+    return snapshot.config.legacyZones?.find(({ root }) =>
+      path.startsWith(`${root.replace(/\/$/, "")}/`),
+    )?.zone;
+  };
   const adapters = snapshot.config.adapters ?? [];
   const pathOf = (module: string): string => {
     const [zone, layer, name] = module.split("/");
@@ -117,6 +125,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   };
   const findings: CapabilityFinding[] = [];
   const rawFailures = new Set<string>();
+  const crossZoneFailures = new Set<string>();
   const add = (
     rule: "R1" | "R2",
     check: string,
@@ -358,6 +367,32 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             edge.target ?? "",
           );
       }
+      if (
+        edge.target !== null &&
+        direct.has(edge.file) &&
+        direct.has(edge.target) &&
+        (from === null) !== (to === null)
+      ) {
+        const fromZone = zoneOf(edge.file);
+        const toZone = zoneOf(edge.target);
+        if (fromZone === undefined || toZone === undefined)
+          unresolved(
+            "migration-zone",
+            edge.file,
+            "Declare the legacy prefix's actual zone before establishing this cross-placement boundary.",
+            edge.target,
+          );
+        else if (fromZone !== toZone && (fromZone === "core" || toZone !== "core")) {
+          crossZoneFailures.add(`${edge.file}:${edge.target}`);
+          add(
+            "R2",
+            "zone-edge",
+            edge.file,
+            "Keep cross-placement imports in the same zone or point inward to core; legacy placement grants no outer-zone access.",
+            edge.target,
+          );
+        }
+      }
       if (edge.typeOnly || !direct.has(edge.file)) continue;
       if (edge.target === null || !direct.has(edge.target)) {
         const packageName = edge.specifier.startsWith("@")
@@ -443,7 +478,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     (adapter.primitives?.length ?? 0) === 0 &&
     (adapter.globals?.length ?? 0) === 0;
   const permits = (path: string, capability: string): boolean => {
-    const zone = placement(path)?.[1];
+    const zone = zoneOf(path);
     if (zone === undefined) return false;
     const native = nativeAuthorities.get(capability);
     if (native !== undefined)
@@ -469,7 +504,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       (adapter) =>
         adapter.capability === capability &&
         (adapter.kind === "produce"
-          ? coreProducer(adapter) && placement(path)?.[2] === "compositions"
+          ? coreProducer(adapter) &&
+            (placement(path)?.[2] === "compositions" || placement(path) === null)
           : zone !== "core" && adapter.zones.some((allowed) => allowed === zone)),
     );
   };
@@ -632,6 +668,30 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           "zone-authority",
           path,
           "Connect this capability in a zone permitted to use it.",
+          capability,
+        );
+    }
+  }
+  for (const edge of edges) {
+    if (crossZoneFailures.has(`${edge.file}:${edge.target}`)) continue;
+    if (placement(edge.file) !== null || edge.target === null || placement(edge.target) === null)
+      continue;
+    if (zoneOf(edge.file) === undefined) continue;
+    for (const capability of inherited.get(edge.target) ?? []) {
+      if (permits(edge.file, capability) || rawFailures.has(`${edge.file}:${capability}`)) continue;
+      if (nativeAuthorities.has(capability))
+        unresolved(
+          "native-authority",
+          edge.file,
+          "This cross-placement dependency grants native authority outside its legacy zone's permitted capability boundary.",
+          capability,
+        );
+      else
+        add(
+          "R1",
+          "zone-authority",
+          edge.file,
+          "Supply data across this boundary instead of importing a capability the legacy zone does not permit.",
           capability,
         );
     }

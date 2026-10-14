@@ -19,6 +19,8 @@ export function claimInventory(
   const declarations: ClaimMarker[] = [];
   const references: ClaimMarker[] = [];
   const declared = new Map<Text, number>();
+  let legacyHeading: string | null = null;
+  let headingMarkerConsumed = false;
   const pattern = options.anchor ?? "\\{#[\\w-]+\\}";
   const matches = (value: string): RegExpStringIterator<RegExpExecArray> =>
     value.matchAll(new RegExp(pattern, "g"));
@@ -34,27 +36,38 @@ export function claimInventory(
     for (const match of matches(tail.value)) {
       if (tail.value.slice(match.index + match[0].length).trim() !== "") continue;
       declared.set(tail, match.index);
-      declarations.push(marker(tail, match));
+      const claim = marker(tail, match);
+      if (options.legacy && legacyHeading === claim.anchor && !headingMarkerConsumed)
+        headingMarkerConsumed = true;
+      else declarations.push(claim);
     }
   };
   const visit = (node: Nodes): void => {
     if (node.type === "code") return;
     if (node.type === "listItem") {
-      const last = node.children.at(-1);
-      if (last?.type === "paragraph") close(last);
+      const paragraph = options.legacy ? node.children[0] : node.children.at(-1);
+      if (paragraph?.type === "paragraph") close(paragraph);
     }
     if (node.type === "heading") {
+      legacyHeading = null;
+      headingMarkerConsumed = false;
       close(node);
       if (options.legacy && options.separator !== undefined && node.depth === 3) {
         const value = node.children
           .map((child) => (child.type === "text" ? child.value : ""))
           .join("");
         const prefix = `law ${options.separator} `;
-        if (value.startsWith(prefix) && /^[\w-]+$/.test(value.slice(prefix.length))) {
-          declarations.push({
-            anchor: value.slice(prefix.length),
-            line: node.position?.start.line ?? 1,
-          });
+        const law = value.startsWith(prefix)
+          ? /^([\w-]+)(?:\s+—\s+.*)?$/.exec(value.slice(prefix.length))
+          : null;
+        if (law?.[1]) {
+          legacyHeading = law[1];
+          if (
+            !declarations.some(
+              (claim) => claim.anchor === law[1] && claim.line === node.position?.start.line,
+            )
+          )
+            declarations.push({ anchor: law[1], line: node.position?.start.line ?? 1 });
         }
       }
     }

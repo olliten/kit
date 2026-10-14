@@ -78,7 +78,10 @@ test("project references and path aliases preserve actual local legacy authority
       mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, value);
     }
-    const snapshot = readSnapshot(root, DEFAULT_CONFIG);
+    const snapshot = readSnapshot(root, {
+      ...DEFAULT_CONFIG,
+      legacyZones: [{ root: "src/shared/", zone: "core" }],
+    });
     const actual = capabilityCheck(snapshot);
     expect(actual.requirements.find((row) => row.path === "src/shared/clock.ts")?.direct).toEqual([
       "clock",

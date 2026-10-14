@@ -136,6 +136,11 @@ alone cannot establish it. The finding states this limit.
 Imports follow the layer relationships in the model and point inward across zones.
 Adapter dependencies are primitives even across zones. Cycles are findings.
 
+During migration, legacy layer ordering governs legacy-to-legacy imports, and
+Kit layer ordering governs placed-to-placed imports. Imports between them still
+obey zone boundaries and transitive capability restrictions. A legacy module
+without a Kit layer is not assigned a fictitious layer.
+
 Readings never call code that produces or applies writes. A visible write-set
 construction outside its declared Core producer module is a finding.
 Inspection and transport of an existing description do not produce writes.

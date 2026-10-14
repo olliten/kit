@@ -685,7 +685,12 @@ function readCompiler(
         const visit = (node: ts.Node): void => {
           let runtime = true;
           for (let parent: ts.Node | undefined = node; parent !== undefined; parent = parent.parent)
-            if (ts.isTypeNode(parent) || (ts.isImportClause(parent) && parent.isTypeOnly))
+            if (
+              ts.isTypeNode(parent) ||
+              ts.isInterfaceDeclaration(parent) ||
+              ts.isTypeAliasDeclaration(parent) ||
+              (ts.isImportClause(parent) && parent.isTypeOnly)
+            )
               runtime = false;
           for (const comment of [
             ...(ts.getLeadingCommentRanges(sf.text, node.pos) ?? []),

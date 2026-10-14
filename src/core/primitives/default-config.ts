@@ -13,6 +13,10 @@ export interface KitConfig {
   readonly anchor: string;
   readonly claimSeparator?: string;
   readonly legacyAreas?: readonly string[];
+  readonly legacyZones?: readonly {
+    readonly root: string;
+    readonly zone: "core" | "shell" | "substrate";
+  }[];
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
   readonly layerNames?: {
