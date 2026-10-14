@@ -157,6 +157,7 @@ export const cases: readonly FixtureCase[] = [
     ],
     paths: [
       "src/core/primitives/write-description.ts",
+      "src/core/compositions/write-description.ts",
       "src/substrate/primitives/apply-description.ts",
       "src/core/readings/description-target.ts",
       "src/core/readings/literal-production.ts",
@@ -165,6 +166,7 @@ export const cases: readonly FixtureCase[] = [
       "src/core/readings/spread-copy.ts",
       "src/core/readings/inferred-spread.ts",
       "src/core/primitives/union-description.ts",
+      "src/core/compositions/union-description.ts",
       "src/core/readings/union-literal.ts",
       "src/core/readings/union-spread.ts",
     ],

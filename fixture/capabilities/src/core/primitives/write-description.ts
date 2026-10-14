@@ -3,7 +3,3 @@ export interface WriteDescription {
   readonly key: string;
   readonly value: string;
 }
-
-export function writeDescription(key: string, value: string): WriteDescription {
-  return { kind: "put-cell", key, value };
-}

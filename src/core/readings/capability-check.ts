@@ -87,10 +87,34 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   );
   const contractTypes = adapters.flatMap((adapter) =>
     (contracts.get(adapter) ?? []).flatMap((fact) =>
-      fact.type === null ? [] : [{ capability: adapter.capability, type: fact.type }],
+      fact.type === null
+        ? []
+        : [{ capability: adapter.capability, type: fact.type, kind: adapter.kind }],
+    ),
+  );
+  const externalAdapterPaths = new Set(
+    adapters
+      .filter((adapter) => adapter.kind === "external")
+      .map((adapter) => pathOf(adapter.module)),
+  );
+  const nativeKey = (identity: { readonly file: string; readonly name: string }): string =>
+    `native:${identity.file}:${identity.name}`;
+  const nativeAuthorities = new Map(
+    projects.flatMap((project) =>
+      [...project.parameters, ...project.accesses, ...project.globals].flatMap((entry) =>
+        (entry.nativeAuthority ?? []).map(
+          (authority) => [nativeKey(authority.root), authority] as const,
+        ),
+      ),
     ),
   );
   const direct = new Map(files.map((path) => [path, new Set<string>()]));
+  const internalNative = new Map(
+    [...externalAdapterPaths].map((path) => [path, new Set<string>()]),
+  );
+  const recordNative = (path: string, capability: string): void => {
+    (internalNative.get(path) ?? direct.get(path))?.add(capability);
+  };
   const findings: CapabilityFinding[] = [];
   const rawFailures = new Set<string>();
   const add = (
@@ -132,7 +156,11 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       unresolved("compiler-boundary", path, "No compiler project covers the source.");
   else
     for (const path of files)
-      if (!projects.some((project) => project.files.includes(path)))
+      if (
+        !projects.some(
+          (project) => project.files.includes(path) || project.ambientFiles.includes(path),
+        )
+      )
         unresolved(
           "compiler-boundary",
           path,
@@ -223,14 +251,18 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             project.file,
           );
     for (const parameter of project.parameters) {
+      for (const authority of parameter.nativeAuthority ?? [])
+        recordNative(parameter.file, nativeKey(authority.root));
       for (const contract of contractTypes)
         if (
+          (contract.kind !== "produce" || parameter.callable || parameter.accessor) &&
           parameter.types.some(
             (type) => type.file === contract.type.file && type.name === contract.type.name,
           )
         )
           direct.get(parameter.file)?.add(contract.capability);
       if (
+        parameter.exported !== false &&
         placement(parameter.file)?.[2] === "readings" &&
         (parameter.callable || parameter.accessor)
       )
@@ -244,7 +276,17 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     }
     for (const access of project.accesses) {
       if (!direct.has(access.file)) continue;
-      if (access.kind === "clock" || access.kind === "randomness") {
+      if (access.kind === "native") {
+        for (const authority of access.nativeAuthority ?? [])
+          recordNative(access.file, nativeKey(authority.root));
+        if ((access.nativeAuthority ?? []).length === 0)
+          unresolved(
+            "native-authority",
+            access.file,
+            "The native executable member has no supported receiver identity.",
+            `${access.start}`,
+          );
+      } else if (access.kind === "clock" || access.kind === "randomness") {
         const kind = access.kind;
         const adapter = adapters.find(
           (row) =>
@@ -273,6 +315,12 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     }
     for (const global of project.globals) {
       if (!global.runtime || !direct.has(global.file)) continue;
+      if (
+        externalAdapterPaths.has(global.file) ||
+        !adapters.some((adapter) => adapter.globals?.includes(global.name))
+      )
+        for (const authority of global.nativeAuthority ?? [])
+          recordNative(global.file, nativeKey(authority.root));
       for (const adapter of adapters)
         if (adapter.globals?.includes(global.name)) {
           direct.get(global.file)?.add(adapter.capability);
@@ -387,19 +435,74 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         }
       }
   }
+  const coreProducer = (adapter: (typeof adapters)[number]): boolean =>
+    adapter.kind === "produce" &&
+    placement(pathOf(adapter.module))?.[1] === "core" &&
+    placement(pathOf(adapter.module))?.[2] === "compositions" &&
+    adapter.zones.includes("core") &&
+    (adapter.primitives?.length ?? 0) === 0 &&
+    (adapter.globals?.length ?? 0) === 0;
   const permits = (path: string, capability: string): boolean => {
     const zone = placement(path)?.[1];
     if (zone === undefined) return false;
+    const native = nativeAuthorities.get(capability);
+    if (native !== undefined)
+      return (
+        zone === "shell" &&
+        placement(path)?.[2] !== "readings" &&
+        adapters.some(
+          (adapter) =>
+            adapter.kind === "external" &&
+            adapter.zones.includes("shell") &&
+            contracts
+              .get(adapter)
+              ?.some((contract) =>
+                (contract.nativeAuthority ?? []).some(
+                  (accepted) =>
+                    native.root.file === accepted.root.file &&
+                    native.root.name === accepted.root.name,
+                ),
+              ),
+        )
+      );
     return adapters.some(
       (adapter) =>
         adapter.capability === capability &&
-        adapter.zones.some((allowed) => allowed === zone) &&
-        (zone !== "core" ||
-          (adapter.kind === "produce" &&
-            (adapter.primitives?.length ?? 0) === 0 &&
-            (adapter.globals?.length ?? 0) === 0)),
+        (adapter.kind === "produce"
+          ? coreProducer(adapter) && placement(path)?.[2] === "compositions"
+          : zone !== "core" && adapter.zones.some((allowed) => allowed === zone)),
     );
   };
+  for (const [path, capabilities] of internalNative)
+    for (const capability of capabilities) {
+      const native = nativeAuthorities.get(capability);
+      if (native === undefined) continue;
+      const allowed = adapters.some(
+        (adapter) =>
+          pathOf(adapter.module) === path &&
+          adapter.kind === "external" &&
+          [
+            ...(contracts.get(adapter) ?? []).flatMap((contract) => contract.nativeAuthority ?? []),
+            ...projects.flatMap((project) =>
+              project.globals.flatMap((global) =>
+                global.file === path && global.runtime && adapter.globals?.includes(global.name)
+                  ? (global.nativeAuthority ?? [])
+                  : [],
+              ),
+            ),
+          ].some(
+            (accepted) =>
+              native.root.file === accepted.root.file && native.root.name === accepted.root.name,
+          ),
+      );
+      if (!allowed)
+        unresolved(
+          "native-authority",
+          path,
+          "This adapter's native SDK authority is outside its contract and declared globals.",
+          capability,
+        );
+    }
   const connections = projects
     .flatMap((project) => project.connections)
     .filter(
@@ -416,21 +519,28 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       supported: connection.callableBindings?.[index] !== undefined,
     })),
   );
+  const parameterExecutability = new Map(
+    projects.flatMap((project) =>
+      project.parameters.map((parameter) => [keyOf(parameter), parameter.executable] as const),
+    ),
+  );
   const inputs = new Map(
     projects.flatMap((project) =>
       project.parameters
-        .filter((parameter) => parameter.callable || parameter.accessor)
+        .filter((parameter) => parameter.executable ?? (parameter.callable || parameter.accessor))
         .map((parameter) => [keyOf(parameter), parameter.file] as const),
     ),
   );
   for (const binding of bindings)
     for (const input of [binding.source, binding.target])
-      if (input !== null) inputs.set(keyOf(input), input.file);
+      if (input !== null && parameterExecutability.get(keyOf(input)) !== false)
+        inputs.set(keyOf(input), input.file);
   const known = new Set<string>();
   const suppliedCapabilities = new Map([...inputs.keys()].map((key) => [key, new Set<string>()]));
   for (const parameter of projects.flatMap((project) => project.parameters))
     for (const contract of contractTypes)
       if (
+        (contract.kind !== "produce" || parameter.callable || parameter.accessor) &&
         parameter.types[0]?.file === contract.type.file &&
         parameter.types[0]?.name === contract.type.name
       ) {
@@ -486,9 +596,22 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     placement(path)?.[1] === "core" ||
     placement(path)?.[2] === "readings" ||
     [...capabilityUniverse].some((capability) => !permits(path, capability));
+  const nativeFailures = new Set<string>();
   for (const [path, caps] of inherited) {
     if (placement(path) === null) continue;
     for (const capability of caps) {
+      if (nativeAuthorities.has(capability)) {
+        if (!permits(path, capability)) {
+          nativeFailures.add(`${path}:${capability}`);
+          unresolved(
+            "native-authority",
+            path,
+            "This native SDK handle grants authority outside a matching Shell adapter boundary.",
+            capability,
+          );
+        }
+        continue;
+      }
       if (placement(path)?.[2] === "readings")
         add(
           "R1",
@@ -516,18 +639,22 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   for (const project of projects) {
     for (const construction of project.constructions) {
       if (!direct.has(construction.file)) continue;
-      const description = descriptions.find((adapter) =>
+      const matchingDescriptions = descriptions.filter((adapter) =>
         construction.types.some(
           (type) => type.file === adapter.type.file && type.name === adapter.type.name,
         ),
       );
-      if (description !== undefined) {
-        if (!(inherited.get(construction.file)?.has(description.capability) ?? false))
+      if (matchingDescriptions.length > 0) {
+        if (
+          !matchingDescriptions.some(
+            (adapter) => coreProducer(adapter) && construction.file === pathOf(adapter.module),
+          )
+        )
           add(
             "R2",
             "write-construction",
             construction.file,
-            "Construct this description only with its production capability.",
+            "Construct this description only in its declared Core producer.",
             String(construction.start),
           );
         if (construction.callable)
@@ -543,6 +670,18 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     for (const connection of project.connections) {
       if (!direct.has(connection.file)) continue;
       if (connection.target === null || placement(connection.target) === null) continue;
+      const invocation = adapters.some(
+        (adapter) => adapter.kind === "external" && pathOf(adapter.module) === connection.target,
+      )
+        ? connection.file
+        : connection.target;
+      const relocated = placement(connection.file) === null;
+      const boundary = relocated
+        ? placement(invocation) === null
+          ? connection.target
+          : invocation
+        : connection.file;
+      const detail = `${relocated ? `${connection.file}:` : ""}${connection.target}:${connection.start}`;
       for (const [index, origin] of connection.callableOrigins.entries()) {
         const binding = {
           origin,
@@ -553,23 +692,40 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         if (!established(binding) && restricted(connection.target))
           unresolved(
             "callable-binding",
-            connection.file,
-            "The supplied executable input has no established capability boundary.",
-            `${connection.target}:${connection.start}`,
+            boundary,
+            relocated
+              ? `The executable input supplied by ${connection.file} has no established capability boundary.`
+              : "The supplied executable input has no established capability boundary.",
+            detail,
           );
         if (origin === null) continue;
-        for (const capability of bindingCapabilities(binding))
-          if (
-            !permits(connection.target, capability) ||
-            placement(connection.target)?.[2] === "readings"
-          )
+        for (const capability of bindingCapabilities(binding)) {
+          if (nativeAuthorities.has(capability)) {
+            if (
+              !permits(invocation, capability) &&
+              !nativeFailures.has(`${connection.file}:${capability}`)
+            )
+              unresolved(
+                "native-authority",
+                boundary,
+                relocated
+                  ? `The callable supplied by ${connection.file} retains native SDK authority outside this boundary's matching Shell adapter contract.`
+                  : "This callable retains native SDK authority outside a matching Shell adapter boundary.",
+                `${detail}:${capability}`,
+              );
+            continue;
+          }
+          if (!permits(invocation, capability) || placement(connection.target)?.[2] === "readings")
             add(
               "R1",
               "closure-binding",
-              connection.file,
-              "Connect this callable only where its creation capabilities are permitted.",
-              `${connection.target}:${connection.start}:${capability}`,
+              boundary,
+              relocated
+                ? `Connect the callable supplied by ${connection.file} only where its creation capabilities are permitted.`
+                : "Connect this callable only where its creation capabilities are permitted.",
+              `${detail}:${capability}`,
             );
+        }
       }
     }
   }

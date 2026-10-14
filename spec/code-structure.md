@@ -79,9 +79,11 @@ where it is created. A function is not an operation description merely because i
 returned in a record. When the checker cannot establish a connection's capabilities,
 it reports that uncertainty rather than calling it pure.
 
-Producing writes and applying writes are separate capabilities. Inspecting or carrying
-an existing write set needs neither. Constructing one needs production capability;
-applying it needs application capability.
+Only declared Core producers construct write descriptions and make their domain decisions.
+Shell and Substrate compositions may invoke those Core changes and carry their descriptions.
+Applying writes still requires its separate permitted capability.
+Readings neither construct write descriptions nor invoke changes that produce them.
+Inspecting or carrying an existing write set grants no application capability.
 
 ### State
 
@@ -134,8 +136,8 @@ alone cannot establish it. The finding states this limit.
 Imports follow the layer relationships in the model and point inward across zones.
 Adapter dependencies are primitives even across zones. Cycles are findings.
 
-Code that neither produces nor applies writes never calls code that does. A visible
-write-set construction outside a module with production capability is a finding.
+Readings never call code that produces or applies writes. A visible write-set
+construction outside its declared Core producer module is a finding.
 Inspection and transport of an existing description do not produce writes.
 
 Spreading an existing write set into a new one is a visible construction. A private

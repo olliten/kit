@@ -82,7 +82,7 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
       }
     }
   }
-  const compiler = readCompiler(appRoot, paths, files);
+  const compiler = readCompiler(appRoot, paths, files, config);
   return {
     files,
     imports,
@@ -106,9 +106,27 @@ function readCompiler(
   appRoot: string,
   paths: readonly string[],
   files: readonly SnapshotFile[],
+  config: KitConfig,
 ): CompilerFacts {
   const source = new Set(files.filter((file) => file.type === "source").map((file) => file.path));
   const local = (file: string): string => relative(appRoot, file).split(sep).join("/");
+  const shellPrefix = `${config.srcRoot}/shell/${config.layerNames?.compositions ?? "compositions"}/`;
+  const shellCompositions = new Set(
+    [...source].filter(
+      (path) => path.startsWith(shellPrefix) && !path.slice(shellPrefix.length).includes("/"),
+    ),
+  );
+  const externalAdapters = new Set(
+    (config.adapters ?? []).flatMap((adapter) => {
+      const [zone, layer, name] = adapter.module.split("/");
+      return adapter.kind === "external" &&
+        (zone === "shell" || zone === "substrate") &&
+        layer === "adapters" &&
+        name !== undefined
+        ? [`${config.srcRoot}/${zone}/${config.layerNames?.adapters ?? layer}/${name}.ts`]
+        : [];
+    }),
+  );
   const projects = paths
     .filter((path) => /^tsconfig(?:\.[\w-]+)*\.json$/.test(basename(path)))
     .map((file): Project => {
@@ -145,7 +163,10 @@ function readCompiler(
       const exports: Project["exports"][number][] = [];
       const globals: Project["globals"][number][] = [];
       const escapes: Project["escapes"][number][] = [];
-      const parameters: Project["parameters"][number][] = [];
+      const parameters = new Map<
+        ts.ParameterDeclaration,
+        Project["parameters"][number] & { readonly exported: boolean }
+      >();
       const contracts: Project["contracts"][number][] = [];
       const accesses: Project["accesses"][number][] = [];
       const constructions: Project["constructions"][number][] = [];
@@ -164,10 +185,151 @@ function readCompiler(
         readonly types: readonly { readonly file: string; readonly name: string }[];
       };
       const completeTypeFacts = new Map<ts.Type, TypeFacts>();
-      const typeFacts = (type: ts.Type, seen = new Set<ts.Type>()): TypeFacts => {
+      const completeArgumentFacts = new Map<ts.Type, TypeFacts>();
+      const completeAdapterArgumentFacts = new Map<ts.Type, TypeFacts>();
+      const referenceType = (type: ts.Type): type is ts.TypeReference =>
+        "objectFlags" in type &&
+        typeof type.objectFlags === "number" &&
+        (type.objectFlags & ts.ObjectFlags.Reference) !== 0;
+      type NativeAuthority = NonNullable<Project["parameters"][number]["nativeAuthority"]>[number];
+      type NativeType = NativeAuthority["root"];
+      const nativeLibrary = (node: ts.Node): boolean =>
+        program.isSourceFileDefaultLibrary(node.getSourceFile()) &&
+        /^lib\.dom(?:\.[\w-]+)*\.d\.ts$/.test(basename(node.getSourceFile().fileName));
+      const nativeMember = (symbol: ts.Symbol): boolean =>
+        symbol.declarations?.some(
+          (node) =>
+            nativeLibrary(node) &&
+            (ts.isMethodSignature(node) ||
+              ts.isMethodDeclaration(node) ||
+              ts.isGetAccessorDeclaration(node) ||
+              ts.isSetAccessorDeclaration(node)),
+        ) === true;
+      const nativeType = (type: ts.Type): NativeType | null => {
+        const symbol = type.symbol;
+        const declaration = symbol?.declarations?.find(
+          (node) =>
+            nativeLibrary(node) && (ts.isInterfaceDeclaration(node) || ts.isClassDeclaration(node)),
+        );
+        return declaration !== undefined &&
+          type
+            .getProperties()
+            .some((property) =>
+              property.declarations?.some(
+                (node) =>
+                  nativeLibrary(node) &&
+                  (ts.isMethodSignature(node) ||
+                    ts.isMethodDeclaration(node) ||
+                    ts.isGetAccessorDeclaration(node) ||
+                    ts.isSetAccessorDeclaration(node)),
+              ),
+            )
+          ? { file: local(declaration.getSourceFile().fileName), name: symbol?.name ?? "" }
+          : null;
+      };
+      const baseTypes = (type: ts.Type): readonly ts.BaseType[] => {
+        const target = referenceType(type) ? type.target : type;
+        return target.isClassOrInterface() ? checker.getBaseTypes(target) : [];
+      };
+      const nativeCache = new Map<ts.Type, readonly NativeAuthority[]>();
+      const nativeAuthorityOf = (
+        type: ts.Type,
+        seen = new Set<ts.Type>(),
+      ): readonly NativeAuthority[] => {
+        const complete = seen.size === 0;
+        const cached = complete ? nativeCache.get(type) : undefined;
+        if (cached !== undefined) return cached;
+        if (seen.has(type)) return [];
+        seen.add(type);
+        const root = nativeType(type);
+        let result: readonly NativeAuthority[];
+        if (root !== null) {
+          const queue = [...baseTypes(type)];
+          const visited = new Set<ts.Type>();
+          const bases: NativeType[] = [];
+          for (const base of queue) {
+            if (visited.has(base)) continue;
+            visited.add(base);
+            const identity = nativeType(base);
+            if (identity !== null) bases.push(identity);
+            queue.push(...baseTypes(base));
+          }
+          result = [{ root, bases }];
+        } else {
+          const constraint =
+            (type.flags & ts.TypeFlags.TypeParameter) !== 0
+              ? checker.getBaseConstraintOfType(type)
+              : undefined;
+          const children = type.isUnionOrIntersection()
+            ? type.types
+            : type.getCallSignatures().length > 0
+              ? []
+              : [
+                  ...(constraint === undefined ? [] : [constraint]),
+                  ...(type.aliasTypeArguments ?? []),
+                  ...(referenceType(type) ? checker.getTypeArguments(type) : []),
+                  ...((type.flags & ts.TypeFlags.Object) === 0
+                    ? []
+                    : type.getProperties().flatMap((property) => {
+                        const declaration = property.valueDeclaration ?? property.declarations?.[0];
+                        return declaration === undefined
+                          ? []
+                          : [checker.getTypeOfSymbolAtLocation(property, declaration)];
+                      })),
+                ];
+          result = [
+            ...new Map(
+              children
+                .flatMap((child) => nativeAuthorityOf(child, seen))
+                .map((authority) => [`${authority.root.file}:${authority.root.name}`, authority]),
+            ).values(),
+          ];
+        }
+        if (complete) nativeCache.set(type, result);
+        return result;
+      };
+      const nativeContract = (
+        type: ts.Type,
+      ): { readonly nativeAuthority: readonly NativeAuthority[] } => ({
+        nativeAuthority: [
+          ...new Map(
+            [
+              ...nativeAuthorityOf(type),
+              ...[
+                ...type.getCallSignatures(),
+                ...type.getProperties().flatMap((property) => {
+                  const declaration = property.valueDeclaration ?? property.declarations?.[0];
+                  return declaration === undefined
+                    ? []
+                    : checker.getTypeOfSymbolAtLocation(property, declaration).getCallSignatures();
+                }),
+              ].flatMap((signature) => [
+                ...nativeAuthorityOf(checker.getReturnTypeOfSignature(signature)),
+                ...signature.parameters.flatMap((parameter) => {
+                  const declaration = parameter.valueDeclaration ?? parameter.declarations?.[0];
+                  return declaration === undefined
+                    ? []
+                    : nativeAuthorityOf(checker.getTypeOfSymbolAtLocation(parameter, declaration));
+                }),
+              ]),
+            ].map((authority) => [`${authority.root.file}:${authority.root.name}`, authority]),
+          ).values(),
+        ],
+      });
+      const typeFacts = (
+        type: ts.Type,
+        seen = new Set<ts.Type>(),
+        supplied: boolean | "adapter" = false,
+      ): TypeFacts => {
+        const cache =
+          supplied === "adapter"
+            ? completeAdapterArgumentFacts
+            : supplied
+              ? completeArgumentFacts
+              : completeTypeFacts;
         const complete = seen.size === 0;
         if (complete) {
-          const cached = completeTypeFacts.get(type);
+          const cached = cache.get(type);
           if (cached !== undefined) return cached;
         }
         if (seen.has(type)) return { callable: false, accessor: false, types: [] };
@@ -195,6 +357,7 @@ function readCompiler(
               const declaration = property.valueDeclaration ?? property.declarations?.[0];
               if (
                 declaration === undefined ||
+                (supplied && program.isSourceFileDefaultLibrary(declaration.getSourceFile())) ||
                 (ts.isMethodSignature(declaration) &&
                   ts.isInterfaceDeclaration(declaration.parent) &&
                   ["Array", "ReadonlyArray"].includes(declaration.parent.name.text) &&
@@ -212,13 +375,16 @@ function readCompiler(
         )
           children = type.getProperties().flatMap((property) => {
             const declaration = property.valueDeclaration ?? property.declarations?.[0];
-            return declaration === undefined
+            return declaration === undefined ||
+              (supplied && program.isSourceFileDefaultLibrary(declaration.getSourceFile()))
               ? []
               : [checker.getTypeOfSymbolAtLocation(property, declaration)];
           });
-        const facts = [...children, ...(type.aliasTypeArguments ?? [])].map((child) =>
-          typeFacts(child, seen),
-        );
+        const facts = [
+          ...children,
+          ...(type.aliasTypeArguments ?? []),
+          ...(supplied && referenceType(type) ? checker.getTypeArguments(type) : []),
+        ].map((child) => typeFacts(child, seen, supplied));
         const result: TypeFacts = {
           callable: type.getCallSignatures().length > 0 || facts.some((fact) => fact.callable),
           accessor:
@@ -227,7 +393,14 @@ function readCompiler(
             ) === true ||
             type
               .getProperties()
-              .some((property) => property.declarations?.some(ts.isGetAccessorDeclaration)) ||
+              .some((property) =>
+                property.declarations?.some(
+                  (node) =>
+                    ts.isGetAccessorDeclaration(node) &&
+                    (supplied !== "adapter" ||
+                      !program.isSourceFileDefaultLibrary(node.getSourceFile())),
+                ),
+              ) ||
             facts.some((fact) => fact.accessor),
           types: [
             ...new Map(
@@ -238,8 +411,33 @@ function readCompiler(
             ).values(),
           ],
         };
-        if (complete) completeTypeFacts.set(type, result);
+        if (complete) cache.set(type, result);
         return result;
+      };
+      const parameterFacts = (
+        type: ts.Type,
+      ): TypeFacts & {
+        readonly executable: boolean;
+        readonly nativeAuthority: readonly NativeAuthority[];
+      } => {
+        const supplied = typeFacts(type, new Set(), "adapter");
+        return {
+          ...typeFacts(type),
+          executable: supplied.callable || supplied.accessor,
+          nativeAuthority: nativeAuthorityOf(type),
+        };
+      };
+      const recordParameter = (parameter: ts.ParameterDeclaration, exported = false): void => {
+        const sf = parameter.getSourceFile();
+        const file = local(sf.fileName);
+        if (sf.isDeclarationFile || !source.has(file)) return;
+        parameters.set(parameter, {
+          file,
+          start: parameter.getStart(sf),
+          name: parameter.name.getText(sf),
+          ...parameterFacts(checker.getTypeAtLocation(parameter)),
+          exported: exported || parameters.get(parameter)?.exported === true,
+        });
       };
       const operationsOf = (type: ts.Type): string[] =>
         type
@@ -491,6 +689,7 @@ function readCompiler(
               parameter: null,
               operations: operationsOf(checker.getTypeAtLocation(node)),
               type: contractIdentity(checker.getTypeAtLocation(node)),
+              ...nativeContract(checker.getTypeAtLocation(node)),
             });
           if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
             for (const [index, parameter] of node.parameters.entries()) {
@@ -500,14 +699,10 @@ function readCompiler(
                 parameter: index,
                 operations: operationsOf(checker.getTypeAtLocation(parameter)),
                 type: contractIdentity(checker.getTypeAtLocation(parameter)),
+                ...nativeContract(checker.getTypeAtLocation(parameter)),
               });
               if (node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword))
-                parameters.push({
-                  file: path,
-                  start: parameter.getStart(sf),
-                  name: parameter.name.getText(sf),
-                  ...typeFacts(checker.getTypeAtLocation(parameter)),
-                });
+                recordParameter(parameter, true);
             }
           }
           if (
@@ -528,13 +723,9 @@ function readCompiler(
                 parameter: index,
                 operations: operationsOf(type),
                 type: contractIdentity(type),
+                ...nativeContract(type),
               });
-              parameters.push({
-                file: path,
-                start: parameter.getStart(sf),
-                name: parameter.name.getText(sf),
-                ...typeFacts(type),
-              });
+              recordParameter(parameter, true);
             }
           }
           if (ts.isObjectLiteralExpression(node)) {
@@ -577,8 +768,16 @@ function readCompiler(
             const declaration = targetOf(node.expression);
             const raw = rawAccess(node.expression);
             if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
+            const nativeDestination =
+              declaration !== undefined &&
+              (externalAdapters.has(local(declaration.getSourceFile().fileName)) ||
+                shellCompositions.has(local(declaration.getSourceFile().fileName)));
             const callableArguments = node.arguments.flatMap((argument, index) => {
-              const facts = typeFacts(checker.getTypeAtLocation(argument));
+              const facts = typeFacts(
+                checker.getTypeAtLocation(argument),
+                new Set(),
+                nativeDestination ? "adapter" : true,
+              );
               if (!facts.callable && !facts.accessor) return [];
               let input = argument;
               while (
@@ -611,6 +810,8 @@ function readCompiler(
                 called !== undefined && ts.isFunctionLike(called)
                   ? called.parameters[index]
                   : undefined;
+              if (parameter !== null) recordParameter(parameter);
+              if (targetParameter !== undefined) recordParameter(targetParameter);
               return [
                 {
                   origin:
@@ -678,9 +879,49 @@ function readCompiler(
             const raw = runtime ? rawAccess(node) : null;
             if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
           }
+          if (
+            runtime &&
+            (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node))
+          ) {
+            const receiver = checker.getTypeAtLocation(node.expression);
+            const key = ts.isElementAccessExpression(node)
+              ? checker.getTypeAtLocation(node.argumentExpression)
+              : null;
+            const member = ts.isPropertyAccessExpression(node)
+              ? checker.getSymbolAtLocation(node.name)
+              : key?.isStringLiteral()
+                ? receiver.getProperty(key.value)
+                : undefined;
+            if (member !== undefined && nativeMember(member))
+              accesses.push({
+                file: path,
+                start: node.getStart(sf),
+                kind: "native",
+                nativeAuthority: nativeAuthorityOf(receiver),
+              });
+          }
           if (ts.isBindingElement(node) && ts.isIdentifier(node.name)) {
             const raw = rawAccess(node.name);
             if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
+            const owner = node.parent.parent;
+            const key = node.propertyName ?? node.name;
+            if (
+              runtime &&
+              ts.isObjectBindingPattern(node.parent) &&
+              ts.isVariableDeclaration(owner) &&
+              owner.initializer !== undefined &&
+              (ts.isIdentifier(key) || ts.isStringLiteralLike(key))
+            ) {
+              const receiver = checker.getTypeAtLocation(owner.initializer);
+              const member = receiver.getProperty(key.text);
+              if (member !== undefined && nativeMember(member))
+                accesses.push({
+                  file: path,
+                  start: node.getStart(sf),
+                  kind: "native",
+                  nativeAuthority: nativeAuthorityOf(receiver),
+                });
+            }
           }
           if (ts.isNewExpression(node)) {
             const name = globalName(node.expression);
@@ -720,6 +961,7 @@ function readCompiler(
                 start: node.getStart(sf),
                 declarationFile: local(declaration.getSourceFile().fileName),
                 runtime,
+                nativeAuthority: nativeAuthorityOf(checker.getTypeAtLocation(node)),
               });
           }
           if (ts.isPropertyAccessExpression(node)) {
@@ -818,16 +1060,14 @@ function readCompiler(
               ? checker.getReturnTypeOfSignature(signatures[0])
               : undefined;
           const actualResultSymbol = returned?.aliasSymbol ?? returned?.symbol;
+          const actualResultIdentity = returned === undefined ? null : contractIdentity(returned);
           const resultType =
             resultDeclaration !== undefined &&
             (ts.isInterfaceDeclaration(resultDeclaration) ||
               ts.isTypeAliasDeclaration(resultDeclaration)) &&
             actualResultSymbol?.name === resultDeclaration.name.text &&
             source.has(local(resultDeclaration.getSourceFile().fileName))
-              ? {
-                  file: local(resultDeclaration.getSourceFile().fileName),
-                  name: resultDeclaration.name.text,
-                }
+              ? actualResultIdentity
               : null;
           exports.push({
             file: path,
@@ -890,7 +1130,7 @@ function readCompiler(
         exports,
         globals,
         escapes,
-        parameters,
+        parameters: [...parameters.values()],
         contracts,
         accesses,
         constructions,

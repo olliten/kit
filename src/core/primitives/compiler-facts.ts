@@ -1,3 +1,8 @@
+interface NativeAuthority {
+  readonly root: { readonly file: string; readonly name: string };
+  readonly bases: readonly { readonly file: string; readonly name: string }[];
+}
+
 export interface CompilerFacts {
   readonly version: string;
   readonly projects: readonly {
@@ -48,6 +53,9 @@ export interface CompilerFacts {
       readonly name: string;
       readonly callable: boolean;
       readonly accessor: boolean;
+      readonly executable?: boolean;
+      readonly exported?: boolean;
+      readonly nativeAuthority?: readonly NativeAuthority[];
       readonly types: readonly { readonly file: string; readonly name: string }[];
     }[];
     readonly contracts: readonly {
@@ -56,11 +64,13 @@ export interface CompilerFacts {
       readonly parameter: number | null;
       readonly operations: readonly string[];
       readonly type: { readonly file: string; readonly name: string } | null;
+      readonly nativeAuthority?: readonly NativeAuthority[];
     }[];
     readonly accesses: readonly {
       readonly file: string;
       readonly start: number;
-      readonly kind: "clock" | "randomness" | "dynamic";
+      readonly kind: "clock" | "randomness" | "dynamic" | "native";
+      readonly nativeAuthority?: readonly NativeAuthority[];
     }[];
     readonly constructions: readonly {
       readonly file: string;
@@ -99,6 +109,7 @@ export interface CompilerFacts {
       readonly start: number;
       readonly declarationFile: string | null;
       readonly runtime: boolean;
+      readonly nativeAuthority?: readonly NativeAuthority[];
     }[];
     readonly escapes: readonly {
       readonly file: string;

@@ -1,4 +1,4 @@
-import { writeDescription } from "../primitives/write-description.js";
+import { writeDescription } from "./write-description.js";
 import type { WriteDescription } from "../primitives/write-description.js";
 import { validValue } from "../readings/valid-value.js";
 

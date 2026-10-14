@@ -20,7 +20,7 @@ export const fixtureConfig: KitConfig = {
       contract: { type: "BroadService" },
     },
     {
-      module: "core/primitives/write-description",
+      module: "core/compositions/write-description",
       export: "writeDescription",
       capability: "cell.produce",
       kind: "produce",

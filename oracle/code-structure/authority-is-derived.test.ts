@@ -207,7 +207,7 @@ describe("runtime authority is conservatively derived from actual module inputs"
       adapters: [
         ...(fixtureConfig.adapters ?? []),
         {
-          module: "core/primitives/union-description",
+          module: "core/compositions/union-description",
           export: "putDescription",
           capability: "union.produce",
           kind: "produce" as const,
@@ -219,7 +219,7 @@ describe("runtime authority is conservatively derived from actual module inputs"
     expect(
       actual.findings.filter(
         (finding) =>
-          finding.path === "src/core/primitives/union-description.ts" && finding.blocking,
+          finding.path === "src/core/compositions/union-description.ts" && finding.blocking,
       ),
     ).toEqual([]);
     expect(actual.findings).toEqual(
@@ -455,7 +455,7 @@ describe("readings take data and never acquire production or application authori
   });
 
   test("D2: construction and application are distinct, but carrying a description requires neither", () => {
-    expect(requirements("src/core/primitives/write-description.ts").direct).toEqual([
+    expect(requirements("src/core/compositions/write-description.ts").direct).toEqual([
       "cell.produce",
     ]);
     expect(requirements("src/substrate/primitives/apply-description.ts").direct).toEqual([
@@ -465,7 +465,7 @@ describe("readings take data and never acquire production or application authori
       direct: [],
       inherited: [],
     });
-    clear("src/core/primitives/write-description.ts");
+    clear("src/core/compositions/write-description.ts");
     clear("src/substrate/primitives/apply-description.ts");
     clear("src/core/readings/description-target.ts");
   });
