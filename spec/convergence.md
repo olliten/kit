@@ -14,7 +14,7 @@ Topics group meaning, not access rights. Their derived view shows claims, public
 contracts other topics use, proofs, dependencies and affected tests. Regrouping topics
 does not change what modules may import.
 
-A feature checks whether its topics still fit and proposes regrouping to the owner
+A feature checks whether its topics still fit and proposes regrouping to the maintainer
 when they do not. Its report names the topics added, changed and touched through modules.
 
 ## The Kit
@@ -39,9 +39,9 @@ existing runner.
 
 The Kit stays below 10% of the source it governs. Each check names its rule and each
 finding names its fix and limits. The fixture demonstrates the ratchet. Configuration,
-debt and ledger remain app-specific when the Kit becomes a separate package.
+debt and ledger stay with each app; the Kit is a separate package.
 
-Only the Kit lane changes its spec, source and oracle. The owner approves each such
+Only the Kit lane changes its spec, source and oracle. The maintainer approves each such
 change. No agent weakens a check to pass its own work. Its public commands are check,
 ledger, partition and rename.
 

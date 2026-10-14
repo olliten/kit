@@ -50,7 +50,7 @@
   - Role: fact
   - Zone: core
   - Of: []
-- **topic** — the unit the owner ratifies and the agent works from; it explains why its modules exist and how they compose.
+- **topic** — the unit the maintainer ratifies and the agent works from; it explains why its modules exist and how they compose.
   - Role: fact
   - Zone: core
   - Of: []
@@ -135,13 +135,14 @@
 - **placement** — a module's declared zone, layer and name.
 - **placed** — at `<zone>/<layer>/<name>`, and so held to the placement rules.
 - **legacy** — a source file that is not placed.
-- **spec** — the prose the owner ratifies.
+- **spec** — the prose the maintainer ratifies.
 - **heading** — the spec line that carries a module's identity.
 - **prose** — any text of the spec.
 - **read** — to take a snapshot of a codebase.
 - **file-type** — what a file is: source, test, spec or other.
 - **import-edge** — one file's import of another.
 - **kit** — the checks, their spec and their config, applied to an app.
+- **maintainer** — the person who ratifies the spec and approves each change to the kit.
 - **config** — what an app declares to the kit.
 - **rule** — one of R1–R4; every check serves one.
 - **debt-key** — a finding's stable name, which a debt list holds.

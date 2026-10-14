@@ -42,7 +42,7 @@ direct import of the real implementation.
 Each adapter with a fake has one contract suite run against both implementations,
 including the contract's timing and failure behavior. The Kit checks that the suite
 and both runs exist; execution proves their results. Separate integration tests prove
-real wiring. Fake-backed tests do not replace required surface proof or the owner's
+real wiring. Fake-backed tests do not replace required surface proof or the maintainer's
 reference rendering.
 
 Ordering, atomicity, idempotency and exclusion are claims in the owning topic,

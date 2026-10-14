@@ -6,18 +6,16 @@
 - **Small.** It stays under 10% of the code it governs, and every check names the rule it serves.
 - **Product prose names no code.** Structural declarations may bind named types and selected domain fields.
   They do not duplicate type shapes or prescribe helper modules.
-- **Self-hosted.** `kit check` runs on the kit itself. Its folders are `kit/spec`, `kit/oracle`, `kit/src` and
-  `kit/fixture`.
-- **The app's use of it** lives beside it: `kit/config`, `kit/debt/` and `kit/ledger/`. The app's own checks treat
-  `kit/` as a separate app.
-- **Protected.** No agent weakens a check to pass its own work. Only the kit lane writes `kit/spec`, `kit/oracle` and
-  `kit/src`, with the owner's okay on each change.
+- **Self-hosted.** `kit check` runs on the kit itself. Its folders are `spec`, `oracle`, `src` and `fixture`; its
+  own config is `self-config.md`.
+- **The app's use of it** lives in the app: `kit/config`, `kit/debt/` and `kit/ledger/`.
+- **Protected.** No agent weakens a check to pass its own work. Only the kit lane writes `spec`, `oracle` and `src`,
+  with the maintainer's okay on each change.
 - **Its public surface:** the config schema, the finding format, and four commands: `kit check` (fails on new
   debt), `kit ledger`, `kit partition` (test tiers for the runner), and `kit rename <from> <to>`.
 - **Evidence.** The fixture is a small app in legacy shape. Replaying its recorded fixes reaches zero debt, and the
   ratchet never rises along the way.
-- **Extraction.** When a second app adopts it, `kit/{spec,oracle,src,fixture}` becomes its own package; config, debt
-  and ledger stay with the app.
+- **Its own repository.** The kit is a separate package; config, debt and ledger stay with each app.
 
 The Kit follows [[code-structure]], [[language]], [[proof]] and [[convergence]] itself.
 
