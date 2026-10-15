@@ -28,6 +28,7 @@ export function configuredKit(defaults, declaration) {
     claimSeparator: declaration["claim-separator"] ?? defaults.claimSeparator,
     legacyAreas: declaration["legacy-areas"] ?? [],
     legacyZones: declaration["legacy-zones"] ?? [],
+    exceptions: declaration.exceptions ?? [],
     adapters: declaration.adapters ?? [],
     packages: declaration.packages ?? [],
   };

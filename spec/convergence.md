@@ -7,5 +7,5 @@ are debt that may only shrink, and placed code is held to every rule.
 
 - A finding carries its rule, path and fix, and a debt key made of rule, check, path and detail
   ({{finding}}). · {#finding-debt-key}
-- The check rejects new legacy debt, every placed violation and every checker limit reachable from placed
-  code through its imports; a baseline can't waive the last two ({{finding}}). · {#ratchet-keeps-architecture-obligations}
+- The check rejects new legacy debt, every placed violation and every checker limit reachable through imports
+  from placed code or a declared startup file; a baseline can't waive the last two ({{finding}}). · {#ratchet-keeps-architecture-obligations}

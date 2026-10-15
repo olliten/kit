@@ -160,6 +160,30 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       true,
       limit,
     );
+  const startups = new Set<string>();
+  for (const path of snapshot.config.exceptions ?? []) {
+    if (!path.startsWith(prefix)) continue;
+    if (
+      !files.includes(path) ||
+      /[*?{}[\]\\]/.test(path) ||
+      path.split("/").some((part) => part === "." || part === ".." || part === "") ||
+      placement(path) !== null ||
+      zoneOf(path) !== undefined
+    ) {
+      add(
+        "R2",
+        "startup-placement",
+        path,
+        "Declare only an exact existing application startup source outside every zone.",
+        path,
+        "unresolved",
+        true,
+        "Directory, pattern, missing-source and zoned-module exceptions grant no startup permission.",
+      );
+      continue;
+    }
+    startups.add(path);
+  }
   if (projects.length === 0)
     for (const path of files)
       unresolved("compiler-boundary", path, "No compiler project covers the source.");
@@ -370,6 +394,26 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     for (const edge of project.imports) {
       const from = placement(edge.file);
       const to = edge.target === null ? null : placement(edge.target);
+      if (edge.target !== null && startups.has(edge.target) && direct.has(edge.file))
+        add(
+          "R2",
+          "startup-import",
+          edge.file,
+          "Keep application startup outside the imported application module graph.",
+          edge.target,
+        );
+      if (
+        startups.has(edge.file) &&
+        edge.target !== null &&
+        direct.has(edge.target) &&
+        zoneOf(edge.target) === undefined
+      )
+        unresolved(
+          "migration-zone",
+          edge.file,
+          "Startup wiring does not establish a zone for its dependencies.",
+          edge.target,
+        );
       if (from !== null && to !== null) {
         if (
           (from[2] === "adapters" && to[2] !== "primitives") ||
@@ -393,6 +437,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         edge.target !== null &&
         direct.has(edge.file) &&
         direct.has(edge.target) &&
+        !startups.has(edge.file) &&
+        !startups.has(edge.target) &&
         (from === null) !== (to === null)
       ) {
         const fromZone = zoneOf(edge.file);
@@ -501,16 +547,23 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     (adapter.globals?.length ?? 0) === 0;
   const permits = (path: string, capability: string): boolean => {
     const zone = zoneOf(path);
-    if (zone === undefined) return false;
+    const permittedZones = startups.has(path)
+      ? ["shell", "substrate"]
+      : zone === undefined
+        ? []
+        : [zone];
+    if (permittedZones.length === 0) return false;
     const native = nativeAuthorities.get(capability);
     if (native !== undefined)
       return (
-        zone === "shell" &&
+        permittedZones.some((allowed) => allowed !== "core") &&
         placement(path)?.[2] !== "readings" &&
         adapters.some(
           (adapter) =>
             adapter.kind === "external" &&
-            adapter.zones.includes("shell") &&
+            adapter.zones.some(
+              (allowed) => allowed !== "core" && permittedZones.includes(allowed),
+            ) &&
             contracts
               .get(adapter)
               ?.some((contract) =>
@@ -528,7 +581,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         (adapter.kind === "produce"
           ? coreProducer(adapter) &&
             (placement(path)?.[2] === "compositions" || placement(path) === null)
-          : zone !== "core" && adapter.zones.some((allowed) => allowed === zone)),
+          : adapter.zones.some(
+              (allowed) => allowed !== "core" && permittedZones.includes(allowed),
+            )),
     );
   };
   // A declared host global is a door: every handle an adapter reaches through it, such as the elements
@@ -666,12 +721,13 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     ...[...inherited.values()].flatMap((capabilities) => [...capabilities]),
   ]);
   const restricted = (path: string): boolean =>
+    startups.has(path) ||
     placement(path)?.[1] === "core" ||
     placement(path)?.[2] === "readings" ||
     [...capabilityUniverse].some((capability) => !permits(path, capability));
   const nativeFailures = new Set<string>();
   for (const [path, caps] of inherited) {
-    if (placement(path) === null) continue;
+    if (placement(path) === null && !startups.has(path)) continue;
     for (const capability of caps) {
       if (nativeAuthorities.has(capability)) {
         if (!permits(path, capability)) {
@@ -679,7 +735,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           unresolved(
             "native-authority",
             path,
-            "This native SDK handle grants authority outside a matching Shell adapter boundary.",
+            "This native SDK handle grants authority outside a matching permitted adapter boundary.",
             capability,
           );
         }
@@ -806,8 +862,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
                 "native-authority",
                 boundary,
                 relocated
-                  ? `The callable supplied by ${connection.file} retains native SDK authority outside this boundary's matching Shell adapter contract.`
-                  : "This callable retains native SDK authority outside a matching Shell adapter boundary.",
+                  ? `The callable supplied by ${connection.file} retains native SDK authority outside this boundary's matching permitted adapter contract.`
+                  : "This callable retains native SDK authority outside a matching permitted adapter boundary.",
                 `${detail}:${capability}`,
               );
             continue;

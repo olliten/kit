@@ -208,6 +208,17 @@ without naming the app.
   would make the slower app set the pace; a red check is a list of work, and the ratchet keeps it from
   growing.
 
+## 2026-10-15 · A declared startup file, and native contracts in Substrate
+
+- **Decision:** an app may declare an exact startup source file outside every zone (`exceptions` in its config).
+  It may connect Shell and Substrate contracts and use the core's; nothing imports it, its permission does not
+  pass to its imports, and the ratchet counts limits reachable from it as it does from placed code. A native
+  capability contract is usable in any outer zone its registered adapter permits, Substrate included.
+- **Why:** the first app's sign-in work needed a process entry that wires the server and the page, which no zone
+  may do, and a Substrate adapter for a native contract, which only Shell could hold. The maintainer approved
+  both there; the change was written against that app's pinned Kit and kept on `leeloo/startup-boundaries`,
+  and is ported here so every app gets it.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

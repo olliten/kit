@@ -5,10 +5,14 @@ import { configuredKit, kitCheckPaths, kitConfig } from "./kit-config.mjs";
 import { withKit } from "./kit-load.mjs";
 import { cachedKitCheck } from "./kit-snapshot-cache.mjs";
 
-export function ratchetFindings(findings, baselineKeys, placedPaths, imports) {
+export function startupCheckRoots(config) {
+  return (config.exceptions ?? []).filter((path) => path.startsWith(`${config.srcRoot}/`));
+}
+
+export function ratchetFindings(findings, baselineKeys, placedPaths, imports, requiredRoots = []) {
   const baseline = new Set(baselineKeys);
-  const reachable = new Set(placedPaths);
-  const pending = [...placedPaths];
+  const reachable = new Set([...placedPaths, ...requiredRoots]);
+  const pending = [...reachable];
   const edges = new Map();
   for (const { from, to } of imports) {
     const targets = edges.get(from) ?? [];
@@ -98,7 +102,13 @@ async function main() {
       return;
     }
     const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
-    const failures = ratchetFindings(findings, Object.keys(baseline), placedPaths, imports);
+    const failures = ratchetFindings(
+      findings,
+      Object.keys(baseline),
+      placedPaths,
+      imports,
+      startupCheckRoots(config),
+    );
     const counts = {};
     for (const item of findings) {
       const key = item.category + ":" + item.debtKey.split(":")[1];

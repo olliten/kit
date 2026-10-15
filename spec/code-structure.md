@@ -45,10 +45,20 @@ compositions wire the others into behaviour.
 - Registering a handler or carrying a record passes on no authority the caller lacks: a clock closure, a map
   of callbacks or a native handle can't reach the core through a registration, a record or a private
   endpoint ({{capability-check}}). · {#registration-passes-no-authority}
+- A native capability contract is usable in any outer zone its registered adapter permits, where its operation
+  contract establishes the access; the core stays forbidden, and undeclared native authority stays a limit
+  ({{capability-check}}). · {#native-contracts-follow-permitted-zones}
 - An import between legacy and placed code obeys zone boundaries and carries capabilities transitively,
   and a legacy module is not given a layer ({{capability-check}}, {{dependency-check}}). · {#legacy-edges-keep-zones}
 - Imports through project references and path aliases carry the authority of the file they reach, and a
   non-null assertion is allowed only directly on an indexed access ({{compiler-facts}}). · {#project-imports-carry-authority}
+
+## Startup
+
+- An app may declare one exact, existing source file outside every zone as its startup: it may connect Shell and
+  Substrate contracts and use the core's, no module imports it, and its permission does not pass to what it
+  imports or exempt it from the capability, write, compiler and cycle checks. A directory, a pattern, a missing
+  file or a placed module declared as startup grants nothing ({{capability-check}}, {{default-config}}). · {#startup-assembles-outer-zones}
 
 ## Writes
 

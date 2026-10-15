@@ -17,6 +17,7 @@ export interface KitConfig {
     readonly root: string;
     readonly zone: "core" | "shell" | "substrate";
   }[];
+  readonly exceptions?: readonly string[];
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
   readonly layerNames?: {
