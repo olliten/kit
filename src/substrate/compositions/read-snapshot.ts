@@ -954,6 +954,12 @@ function readCompiler(
                 });
             }
           }
+          // A cast erases which global is reached, so the authority it acquires has no identity.
+          if (
+            (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) &&
+            globalName(node.expression) === "globalThis"
+          )
+            accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
           if (ts.isNewExpression(node)) {
             const name = globalName(node.expression);
             const kind =

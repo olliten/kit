@@ -10,6 +10,19 @@ export function termModel(snapshot: Snapshot): {
   const findings: Finding[] = (snapshot.termSyntax ?? []).map(({ term, line, detail }) =>
     finding("R3", "term-declaration", term, detail, String(line)),
   );
+  // Without its terms file the app has no words, so every name would pass unchecked.
+  if (
+    snapshot.terms.length === 0 &&
+    !snapshot.files.some((file) => file.path === snapshot.config.termsFile)
+  )
+    findings.push(
+      finding(
+        "R3",
+        "terms-file",
+        snapshot.config.termsFile,
+        `Create ${snapshot.config.termsFile}, or point the config's terms entry at the app's terms file.`,
+      ),
+    );
   const limits: Finding[] = [];
   const repositorySources = new Set(
     snapshot.files

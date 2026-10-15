@@ -159,6 +159,18 @@ without naming the app.
 - **Why:** a second codebase is adopting the Kit, and agents should see the reasons for its rules without the
   first app's context.
 
+## 2026-10-15 · Gaps the second app found
+
+- **Decision:** an ambient global from an installed package, such as Node's `process`, `require` or `Buffer`,
+  counts as host authority. Code that uses it without an adapter that declares it in `globals` is an explicit
+  limit, also when reached as `globalThis.<name>`. A cast of `globalThis` erases which global is reached, so it
+  is a dynamic access. A missing terms file is a finding. Paths a caller gives `kit check` resolve against the
+  caller's directory; with none, the Kit checks itself.
+- **Why:** the first check of a second app passed code that reads files through
+  `(globalThis as any).process.getBuiltinModule('node:fs')`, said nothing about its missing terms file, and could
+  not be run from the app's own folder. Treating every type declared by Node as authority was tried first: it
+  also caught plain data such as directory entries, and gave the Kit 84 limits on itself.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check` exists.

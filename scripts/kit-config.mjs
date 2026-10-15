@@ -33,7 +33,8 @@ export function configuredKit(defaults, declaration) {
   };
 }
 
-export function kitCheckPaths(args, engineRoot) {
+/** Paths the caller gives resolve against where the caller runs; the defaults check the Kit itself. */
+export function kitCheckPaths(args, engineRoot, cwd = process.cwd()) {
   const option = (name) => {
     const values = [];
     for (let index = 0; index < args.length; index++) {
@@ -45,15 +46,17 @@ export function kitCheckPaths(args, engineRoot) {
       throw new Error(`Supply one nonempty --${name} path.`);
     return values[0];
   };
-  const root = resolve(engineRoot, option("root") ?? ".");
+  const given = option("root");
+  const root = given === undefined ? engineRoot : resolve(cwd, given);
   const config = option("config");
   const baseline = option("baseline");
   if (root !== engineRoot && (!config || !baseline))
     throw new Error("A different governed root requires its --config and --baseline paths.");
   return {
     root,
-    configPath: resolve(engineRoot, config ?? "self-config.md"),
-    baselinePath: resolve(engineRoot, baseline ?? "self-debt/legacy.json"),
+    configPath: config === undefined ? resolve(engineRoot, "self-config.md") : resolve(cwd, config),
+    baselinePath:
+      baseline === undefined ? resolve(engineRoot, "self-debt/legacy.json") : resolve(cwd, baseline),
   };
 }
 

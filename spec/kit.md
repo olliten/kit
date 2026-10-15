@@ -50,3 +50,4 @@ Connect acquisition adapters to pure interpreters and return their supplied evid
 - a cache hit reuses extraction, reruns the checker and retains unresolved evidence. · {#cached-check-keeps-evidence}
 - the fixture reads as its files, imports and headings. · {#read-snapshot-fixture}
 - the real snapshot reader discovers every independently supplied case input. · {#readings-use-data}
+- the paths given to `kit check` resolve against the directory it runs in. · {#paths-from-the-caller}

@@ -322,8 +322,30 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           `${access.kind}:${access.start}`,
         );
     }
+    const hostGlobals = new Set<string>();
     for (const global of project.globals) {
       if (!global.runtime || !direct.has(global.file)) continue;
+      // An installed package's ambient global, such as Node's process or require, reaches the host
+      // without any import, so only an adapter that declares it may use it.
+      const name = global.name.startsWith("globalThis.")
+        ? global.name.slice("globalThis.".length)
+        : global.name;
+      const declared = global.declarationFile ?? "";
+      if (
+        !name.includes(".") &&
+        /(?:^|\/)node_modules\//.test(declared) &&
+        !/(?:^|\/)node_modules\/typescript\/lib\//.test(declared) &&
+        !adapters.some((adapter) => adapter.globals?.includes(name)) &&
+        !hostGlobals.has(`${global.file}:${name}`)
+      ) {
+        hostGlobals.add(`${global.file}:${name}`);
+        unresolved(
+          "ambient-global",
+          global.file,
+          "This ambient global from an installed package has no declared capability adapter.",
+          name,
+        );
+      }
       if (
         externalAdapterPaths.has(global.file) ||
         !adapters.some((adapter) => adapter.globals?.includes(global.name))
