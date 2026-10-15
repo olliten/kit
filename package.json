@@ -7,6 +7,7 @@
   "scripts": {
     "check": "node scripts/kit-check.mjs",
     "refs": "node scripts/kit-refs.mjs",
+    "consumers": "node scripts/kit-consumers.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },

@@ -196,9 +196,21 @@ without naming the app.
   nothing. Matching modules to claims needs little judgment once the modules are defined. Sorted terms let
   agents adding different terms edit different lines.
 
+## 2026-10-15 · Apps pin the Kit and converge to it
+
+- **Decision:** each app pins a Kit commit as a git dependency and runs the Kit from `node_modules/kit`. A
+  learning from either app is fixed in the Kit, with its test, never worked around in the app. Before a Kit
+  change merges, `kit consumers` shows what it means for each app; the change may still turn an app's check
+  red. Each app then moves its pin in a pull request of its own and converges its code to the new findings.
+  No deploy runs the Kit, so an app whose check is red still deploys.
+- **Why:** two apps develop at once, and what one teaches the Kit should reach the other. A pin keeps every
+  machine on the same Kit and makes each upgrade a visible change. Holding a Kit change until both apps pass
+  would make the slower app set the pace; a red check is a list of work, and the ratchet keeps it from
+  growing.
+
 ## Not yet built
 
-- `kit ledger`, `kit partition` and `kit rename`; only `kit check` and `kit refs` exist.
+- `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.
 - Incremental extraction, which pre-commit use waits on.
 - A published command and build: `scripts/kit-check.mjs` runs the TypeScript source through vite-node.
 - Validation of the config: the runner reads roots, terms, claim separator, legacy areas and zones, adapters and

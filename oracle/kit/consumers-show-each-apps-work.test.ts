@@ -1,0 +1,66 @@
+import { execFileSync } from "node:child_process";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterAll, expect, test } from "vitest";
+
+const { pinnedKit, readCheck, describeConsumer } = await import(
+  new URL("../../scripts/kit-consumers.mjs", import.meta.url).href
+);
+
+const engine = resolve(import.meta.dirname, "../..");
+const scratch = mkdtempSync(join(tmpdir(), "kit-consumers-"));
+afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+
+const lock = (resolved: string) =>
+  JSON.stringify({ packages: { "node_modules/kit": { resolved } } });
+
+test("an app's pinned Kit is read from its lockfile, and an app without one pins none", () => {
+  const app = join(scratch, "pinned");
+  mkdirSync(app);
+  writeFileSync(join(app, "package-lock.json"), lock("git+ssh://git@github.com/olliten/kit.git#552affb535b1"));
+  expect(pinnedKit(app)).toBe("552affb535b1");
+  expect(pinnedKit(join(scratch, "nowhere"))).toBeNull();
+});
+
+test("a check's failures are grouped by check, and its counts are kept", () => {
+  const read = readCheck(
+    'Kit check {"counts":{"placed-violation:topic-shape":2}}\nKit limit R1:x:y: a limit\n',
+    "R4:topic-shape:spec/a.md:3: Move this prose.\nR4:topic-shape:spec/b.md:1: Start with a title.\nR3:term-order:step:4: Place step first.\n",
+  );
+  expect(read.counts).toEqual({ "placed-violation:topic-shape": 2 });
+  expect(read.byCheck).toEqual({ "topic-shape": 2, "term-order": 1 });
+  expect(read.failures[0]).toEqual({
+    rule: "R4",
+    check: "topic-shape",
+    key: "R4:topic-shape:spec/a.md:3",
+    fix: "Move this prose.",
+  });
+});
+
+test("an app that passes says so; one that fails lists its work under its pin", () => {
+  const base = { app: "shop", kit: "0b955dfbeff8", failures: [], byCheck: {} };
+  expect(describeConsumer({ ...base, pinned: "0b955df", exitCode: 0 })).toBe("shop: passes (pins this Kit).");
+  expect(describeConsumer({ ...base, pinned: null, exitCode: 0 })).toBe("shop: passes (pins no Kit).");
+  const failing = readCheck("", "R4:unreferenced-module:core/readings/total: Name {{total}}.\n");
+  expect(describeConsumer({ ...base, pinned: "552affb", exitCode: 1, ...failing })).toBe(
+    "shop: 1 failing (pins 552affb): unreferenced-module 1\n  R4:unreferenced-module:core/readings/total: Name {{total}}.",
+  );
+});
+
+test("the real run checks an app checkout against this Kit and does not fail on the app's findings", () => {
+  const app = join(scratch, "tally");
+  for (const folder of ["src", "spec", "oracle"]) cpSync(join(engine, "fixture", folder), join(app, folder), { recursive: true });
+  mkdirSync(join(app, "kit/debt"), { recursive: true });
+  writeFileSync(
+    join(app, "kit/config.md"),
+    "```yaml\napp: tally\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\n```\n",
+  );
+  writeFileSync(join(app, "kit/debt/legacy.json"), "{}");
+  writeFileSync(join(app, "package-lock.json"), lock("git+https://github.com/olliten/kit.git#552affb"));
+  const output = execFileSync(process.execPath, [join(engine, "scripts/kit-consumers.mjs"), app], {
+    encoding: "utf8",
+  });
+  expect(output).toMatch(/^tally: \d+ failing \(pins 552affb\): /);
+  expect(output).toContain("  R4:unreferenced-module:substrate/compositions/save:");
+}, 120_000);

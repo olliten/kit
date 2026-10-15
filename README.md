@@ -178,4 +178,5 @@ hook on `Read` at `kit-refs.mjs --hook --root . --config kit/config.md`.
 ## This repository
 
 Kit is written in its own structure and checks itself. Rules: `spec/`. Reasons: `docs/decisions.md`. `npm test`,
-`npm run check`, `npm run refs -- <module>`.
+`npm run check`, `npm run refs -- <module>`, and `npm run consumers -- ../app …` to see what a change to the Kit
+means for each app that uses it.
