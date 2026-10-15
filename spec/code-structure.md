@@ -42,6 +42,15 @@ effect. Shell and substrate compositions interpret descriptions through adapters
 
 A schema needs no fabricated runtime value.
 
+### Application startup
+
+An explicitly declared application startup file outside every zone may connect Shell
+and Substrate contracts and use the Core's contracts. No application module imports
+that file. Its permission does not extend to its dependencies or exempt capability,
+write, compiler or cycle checks. A placed module cannot be declared outside its zone.
+Only an exact existing source-file declaration grants startup assembly permission;
+directory and wildcard exceptions grant no application-source permission.
+
 ### Capabilities
 
 A capability is access to a narrow set of related operations, such as sampling the
@@ -102,6 +111,10 @@ Views have stable identities so rendering patches only what changed.
 
 A module's capabilities must be permitted by its zone. Readings perform no external
 effect, produce no writes and apply no writes.
+
+A native capability contract is permitted only where its registered adapter permits
+that outer zone and its operation contract establishes the required access. Core
+remains forbidden, and undeclared native authority remains an explicit limit.
 
 The language adapter checks supported primitive access. Raw operations occur only
 in their adapters. Reading the clock differs from converting a supplied timestamp.
@@ -196,3 +209,7 @@ Keep established requirements and unsupported authority evidence visible togethe
 - Placement is read from <root>/<zone>/<layer>/<name>; an old kind folder is legacy, not a placement. · {#kind-of-layout}
 - omitting the directory mapping retains the four canonical default layers. · {#layers-map-paths}
 - a parenthesized index is outside the directly indexed assertion permission. · {#project-imports-carry-authority}
+- An explicitly declared startup file may assemble outer-zone contracts without granting
+  that permission to its dependencies or becoming an importable application module. · {#startup-assembles-outer-zones}
+- Native capability contracts follow their adapter's permitted outer zones; Core and
+  undeclared authority retain their restrictions. · {#native-contracts-follow-permitted-zones}
