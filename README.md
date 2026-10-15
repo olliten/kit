@@ -19,8 +19,9 @@ drift. That is Kit. A person decides what the product promises and what the word
 the code. The check keeps the two consistent.
 
 The same structure is what lets agents work in parallel. One module per file and one test file per claim mean
-two tasks on different features edit different files. Effects behind adapters mean a change's reach is known from
-its imports. And a headless core means the whole suite runs in seconds, so every agent's change goes through the
+two tasks on different features edit different files. Effects behind adapters mean a module's imports show every effect it can
+cause, so an agent can change one module knowing what else it can affect, without reading the modules another
+agent is changing. And a headless core means the whole suite runs in seconds, so every agent's change goes through the
 gate without waiting on the others.
 
 ## Humans and agents
