@@ -18,6 +18,11 @@ its agents drifted anyway. A check prevents it, if it runs on every change and f
 drift. That is Kit. A person decides what the product promises and what the words mean, in the spec. Agents write
 the code. The check keeps the two consistent.
 
+The same structure is what lets agents work in parallel. One module per file and one test file per claim mean
+two tasks on different features edit different files. Effects behind adapters mean a change's reach is known from
+its imports. And a headless core means the whole suite runs in seconds, so every agent's change goes through the
+gate without waiting on the others.
+
 ## Humans and agents
 
 | What a developer does | A person | An agent | So Kit makes the codebase | What that costs |
