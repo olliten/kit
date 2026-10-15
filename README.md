@@ -30,6 +30,7 @@ what the product promises and what words mean. Agents build. The check binds the
 | **Remembers** the design | In their head since last month; docs are a reminder | Nothing between sessions. A doc not read this time does not exist | Everything that matters is in the repo, in a form the check reads: topics, terms, claims | The spec is the design. Cut badly, the check enforces that |
 | **Decides** a change | Sees the whole; bends a rule when it makes sense | Sees the task; cannot tell deliberate structure from accident | Decisions live in a core with no effects, where a check can see them. Rules are absolute | No exceptions; changing a rule is a change to Kit |
 | **Writes** it down | Prose costs time; comments, specs and tests stay thin | Writing is free; will produce a definition and a test for anything | Every module has a heading and a term; every claim has a test | Each sentence lands on the person who ratifies it |
+| **Proves** a change works | Runs the suite before pushing; tolerates a slow one | Runs it on every change; many agents, many times an hour; the gate's length is the pace of everything | Decisions in a headless core, so most tests run in a plain process in seconds; the browser covers only the shell | Browser and transport are still proved, separately and less often |
 | **Reviews** work | Reads the diff | Writes faster than anyone can read | The person reviews the spec: promises and words. The check reviews the code | Quality below the claim goes unreviewed |
 | **Works alongside** others | A few people, talking; conflicts settled in review | Many at once, not talking; a conflict is a failed merge | Nothing to collide on: one file per module, one test file per claim, effects behind adapters | Real only once the check runs in CI |
 | **Lives with** the codebase | It degrades slowly; someone refactors | It degrades at the rate it is changed; nobody notices | Each change that would degrade it fails | A rule an agent cannot satisfy stops it until a person rules |
@@ -80,8 +81,8 @@ Each zone has four layers:
 - `adapters`: one external capability each, behind a plain contract.
 - `compositions`: the others wired into behaviour.
 
-So every decision is a reading or a core composition and tests without a browser, a network or storage, and every
-effect has exactly one adapter it happens in.
+So the core is headless: its decisions run in a plain process. That is where most tests live, and why the gate
+stays short enough to run on every change. And every effect has exactly one adapter it happens in.
 
 **R2, dependencies.**
 
@@ -111,6 +112,17 @@ So the spec is only promises that are proved, and no test exists without saying 
 
 A change that breaks a rule fails the check. Existing code is legacy until it is moved into place; its findings
 are debt that may only shrink.
+
+## Headless and modular
+
+*Headless*: the core runs without the browser, the network or storage. All of its logic is proved in a plain
+process, so the gate is seconds, not minutes, and runs on every change from every agent.
+
+*Modular*: one module per file, imports one way, each effect behind one adapter with a plain contract. A change's
+reach is known from its imports, so agents can change modules at the same time without reading each other's work.
+
+Kit enforces both. It does not decide whether the modules are the right ones; that is the spec, which a person
+ratifies.
 
 ## The shape
 
