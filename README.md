@@ -4,37 +4,31 @@ Architecture as a check, for codebases that agents write.
 
 ## Why
 
-Nearly everything we think of as good practice in a codebase exists because a person has to read it. Big files,
-so a feature fits on one screen. Feature folders, so you can browse to the billing code. Code review, so a second
-person reads what the first wrote. Asking whoever built the thing. All of it is about fitting the code into a
-human head.
+Most conventions in a codebase exist because a person reads it. Big files keep a feature on one screen.
+Feature folders let you browse to the billing code. Code review has a second person read what the first wrote.
+Agents don't read that way. An agent starts each task with no memory of the codebase, finds code by searching,
+and doesn't talk to other agents. The conventions that serve a person's reading don't serve an agent's.
 
-Agents have no head to fit it into. An agent starts every task knowing nothing. It reads by searching. It never
-talks to the other agents. It finishes and forgets. So the conventions that help a person don't help an agent,
-and the one thing a person would never need turns out to be the only thing that works: a check that runs the
-architecture on every change.
-
-Here is why. An agent solves the task in front of it, and only that. It doesn't know the codebase already has a
+Agents also drift in a specific way. An agent solves the task in front of it. It doesn't know the codebase has a
 word for the thing, so it adds a second word. It doesn't know a function already does this, so it adds a wrapper.
-It can't tell whether the structure it's about to cut across was deliberate, so it goes around. Each of these is
-a reasonable choice on its own. Together they are three names for one concept, two paths to one effect, and a
-layer of indirection nobody designed. The next agent reads that, understands less, and makes more of the same
-choices. A person who hits the second name eventually fixes it, out of irritation. An agent just adapts. And ten
-agents working in parallel produce ten dialects in a week.
+It can't tell whether the structure it's about to cut across was deliberate, so it goes around. Each choice is
+defensible on its own. Together they are two names for one concept, two paths to one effect, and indirection
+nobody designed. The next agent reads that and understands less. A person who meets the second name eventually
+removes it. An agent adapts to it. With several agents working at once, this compounds.
 
-You can't fix this with a document, because the agent that drifts has read the document. You can only fix it at
-the change that starts the drift, by refusing it. That's Kit. A new word has to be a term defined once, so a
-synonym fails. A module has to be a declared concept at one path, so a parallel path fails. A decision outside
-the core, an effect outside an adapter, an import pointing the wrong way: each fails, and the finding says what
-to do instead. A person decides what the product promises and what the words mean. Agents build. The check holds
-the two together.
+A document doesn't prevent this, because the agent that drifts has read the document. A check does, if it runs
+on every change and fails the change that starts the drift. That is what Kit is. A new word must be a term
+defined once, so a synonym fails. A module must be a declared concept at one path, so a parallel path fails. A
+decision outside the core, an effect outside an adapter, an import pointing the wrong way: each fails, and the
+finding states the fix. A person decides what the product promises and what the words mean. Agents implement.
+The check keeps the code consistent with the spec.
 
 ## Humans and agents
 
 | What a developer does | A person | An agent | So Kit makes the codebase | What that costs |
 |---|---|---|---|---|
 | **Reads** code | Opens a file and scrolls. Wants the feature on one screen, in one head | Starts with no memory. Greps, opens the three files it needs, ignores the rest | One module per file, hundreds of files | A person opening it sees fragments |
-| **Places** a module | Picks the folder it belongs to. A shared module belongs to several, so it ends up in `utils/`, and the tree stops meaning anything | Picks the folder that looks right for this task; the next agent picks another | The path answers one question only, what the module may do: `src/<zone>/<layer>/<name>.ts`. Twelve folders, fixed forever | The tree says nothing about features |
+| **Places** a module | Picks the folder it belongs to. A shared module belongs to several, so it ends up in `utils/`, and the tree stops meaning anything | Picks the folder that looks right for this task; the next agent picks another | The path answers one question only, what the module may do: `src/<zone>/<layer>/<name>.ts`. Twelve folders, which don't change | The tree says nothing about features |
 | **Groups** modules into a feature | The folder tree, decided once, reorganised at great cost | Nothing. It sees files, not features | A topic names the modules of one feature, from any zone. A module appears in every topic that uses it. The check keeps each reference true | Regrouping is a spec edit, which a person ratifies |
 | **Finds** where things live | Browses the tree | Searches a name | The path follows from the role; the topic lists the rest | Names must be true, or search finds nothing |
 | **Remembers** the design | In their head since last month; docs are a reminder | Nothing between sessions. A doc not read this time doesn't exist | Everything that matters is in the repo, in a form the check reads: topics, terms, claims | The spec is the design. Cut it badly and the check enforces that |
@@ -43,13 +37,13 @@ the two together.
 | **Proves** a change works | Runs the suite before pushing; tolerates a slow one | Runs it on every change, many agents, many times an hour; the gate's length is the pace of everything | Decisions in a headless core, so most tests run in a plain process in seconds. The browser covers only the shell | Browser and transport are still proved, separately and less often |
 | **Reviews** work | Reads the diff | Writes faster than anyone can read | The person reviews the spec: promises and words. The check reviews the code | Quality below the claim goes unreviewed |
 | **Works alongside** others | A few people, talking; conflicts settled in review | Many at once, not talking; a conflict is a failed merge | Nothing to collide on: one file per module, one test file per claim, effects behind adapters | Real only once the check runs in CI |
-| **Lives with** the codebase | It degrades slowly, and someone refactors | It degrades at the rate it's changed, and nobody notices | Each change that would degrade it fails | A rule an agent can't satisfy stops it until a person rules |
+| **Lives with** the codebase | It degrades slowly, and someone refactors | It degrades at the rate it's changed, and nobody is watching | A change that would degrade it fails | A rule an agent can't satisfy stops it until a person rules |
 
 ## Topics
 
-A folder tree makes you decide where a module belongs, and a shared module belongs in several places. Whichever
-you pick, the other features reach across the tree for it, and soon the tree describes nothing. Kit asks two
-questions instead of one. Where a module lives is answered by what it may do, `src/<zone>/<layer>/<name>.ts`,
+A folder tree asks where a module belongs, and a shared module belongs in several places. Whichever you pick,
+the other features import it from across the tree, and the tree stops describing the features. Kit separates
+the two questions. Where a module lives is answered by what it may do, `src/<zone>/<layer>/<name>.ts`,
 once and mechanically. What it's for is answered by topics, and a topic can name any module.
 
 The spec is a set of topics, one file each, usually one thing a user does. A topic names the modules that
@@ -66,9 +60,9 @@ Draw on the page and report input as plain presses.
 
 The heading binds a module to `src/shell/adapters/surface.ts`. The anchor binds a claim to
 `oracle/review-an-article/decline-needs-reason.test.ts`. A heading with no file, a claim with no test, a test
-that names no claim: each fails. So a topic is always a true map of its feature: what it promises, what
-implements it, what proves it. Hundreds of small files have no story on their own. The topic is the story, and
-it's the only story in the repo that's checked.
+that names no claim: each fails. So a topic is a map of its feature that the check keeps accurate: what it
+promises, what implements it, what proves it. The files under `src/` don't show which feature they belong to;
+the topic does.
 
 ## A feature
 
@@ -80,7 +74,7 @@ An agent gets the task *decline a whole article with one reason*.
 3. It writes `oracle/review-an-article/decline-whole-article.test.ts`. That is the definition of done.
 4. It writes the module at `src/core/compositions/decline-article.ts`. The core is pure, so the test runs in
    milliseconds without a browser. An effect it lacks is a finding naming the adapter to declare.
-5. `kit check` exits 0 and the tests pass. The person reads one sentence in the spec diff and says yes.
+5. `kit check` exits 0 and the tests pass. The person reviews the claim in the spec diff.
 
 ## The rules
 
