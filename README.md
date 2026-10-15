@@ -4,27 +4,18 @@ Architecture as a check, for codebases that agents write.
 
 ## Why
 
-Most conventions in a codebase exist because a person reads it. Big files keep a feature on one screen.
-Feature folders let you browse to the billing code. Code review has a second person read what the first wrote.
-Agents don't read that way. An agent starts each task with no memory of the codebase, finds code by searching,
-and doesn't talk to other agents. The conventions that serve a person's reading don't serve an agent's.
+Most conventions in a codebase exist so a person can read it. Agents don't read that way: an agent starts each
+task with no memory of the codebase, finds code by searching, and doesn't talk to other agents.
 
-Agents also drift in a specific way. An agent solves the task in front of it. It doesn't know the codebase has a
-word for the thing, so it adds a second word. It doesn't know a function already does this, so it adds a wrapper.
-It can't tell whether the structure it's about to cut across was deliberate, so it goes around. Each choice is
-defensible on its own. Together they are two names for one concept, two paths to one effect, and indirection
-nobody designed. The next agent reads that and understands less. A person who meets the second name eventually
-removes it. An agent adapts to it. With several agents working at once, this compounds.
+Agents drift in a specific way. An agent solves the task in front of it. It doesn't know the codebase has a word
+for the thing, so it adds a second word. It doesn't know a function already does this, so it adds a wrapper. Each
+choice is defensible alone. Together they are two names for one concept, two paths to one effect, and indirection
+nobody designed. The next agent reads that and understands less. With several agents at once, this compounds.
 
-A document doesn't prevent this. The first app Kit was written for had the architecture in its instructions, and
-its agents read them and drifted anyway, because each change looked fine from where the agent stood. A check
-prevents it, if it runs on every change and fails the change that starts the drift. That is what Kit is. A new word must be a term
-defined once, so a synonym fails. A module must be a declared concept at one path, so a parallel path fails. A
-decision outside the core, an effect outside an adapter, an import pointing the wrong way: each fails, and the
-finding states the fix.
-
-That divides the work in three. A person decides what the product promises and what the words mean, in the
-spec. Agents write the code. The check keeps the code consistent with the spec.
+A document doesn't prevent it: the first app Kit was written for had the architecture in its instructions, and
+its agents drifted anyway. A check prevents it, if it runs on every change and fails the one that starts the
+drift. That is Kit. A person decides what the product promises and what the words mean, in the spec. Agents write
+the code. The check keeps the two consistent.
 
 ## Humans and agents
 
