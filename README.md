@@ -16,28 +16,31 @@ defensible on its own. Together they are two names for one concept, two paths to
 nobody designed. The next agent reads that and understands less. A person who meets the second name eventually
 removes it. An agent adapts to it. With several agents working at once, this compounds.
 
-A document doesn't prevent this, because the agent that drifts has read the document. A check does, if it runs
-on every change and fails the change that starts the drift. That is what Kit is. A new word must be a term
+A document doesn't prevent this. The first app Kit was written for had the architecture in its instructions, and
+its agents read them and drifted anyway, because each change looked fine from where the agent stood. A check
+prevents it, if it runs on every change and fails the change that starts the drift. That is what Kit is. A new word must be a term
 defined once, so a synonym fails. A module must be a declared concept at one path, so a parallel path fails. A
 decision outside the core, an effect outside an adapter, an import pointing the wrong way: each fails, and the
-finding states the fix. A person decides what the product promises and what the words mean. Agents implement.
-The check keeps the code consistent with the spec.
+finding states the fix.
+
+That divides the work in three. A person decides what the product promises and what the words mean, in the
+spec. Agents write the code. The check keeps the code consistent with the spec.
 
 ## Humans and agents
 
 | What a developer does | A person | An agent | So Kit makes the codebase | What that costs |
 |---|---|---|---|---|
-| **Reads** code | Opens a file and scrolls. Wants the feature on one screen, in one head | Starts with no memory. Greps, opens the three files it needs, ignores the rest | One module per file, hundreds of files | A person opening it sees fragments |
-| **Places** a module | Picks the folder it belongs to. A shared module belongs to several, so it ends up in `utils/`, and the tree stops meaning anything | Picks the folder that looks right for this task; the next agent picks another | The path answers one question only, what the module may do: `src/<zone>/<layer>/<name>.ts`. Twelve folders, which don't change | The tree says nothing about features |
+| **Reads** code | Opens a file and scrolls. Prefers a feature on one screen | Starts with no memory. Searches, opens the few files the task needs, ignores the rest | One module per file, hundreds of files | A person reads this codebase worse than a conventional one |
+| **Places** a module | Picks the folder it belongs to. A shared module belongs to several, so it ends up in `utils/`, and the tree stops meaning anything | Picks the folder that looks right for this task. Another agent, another task, picks another | The path answers one question only, what the module may do: `src/<zone>/<layer>/<name>.ts`. Twelve folders, the same in every app | The tree says nothing about features |
 | **Groups** modules into a feature | The folder tree, decided once, reorganised at great cost | Nothing. It sees files, not features | A topic names the modules of one feature, from any zone. A module appears in every topic that uses it. The check keeps each reference true | Regrouping is a spec edit, which a person ratifies |
 | **Finds** where things live | Browses the tree | Searches a name | The path follows from the role; the topic lists the rest | Names must be true, or search finds nothing |
 | **Remembers** the design | In their head since last month; docs are a reminder | Nothing between sessions. A doc not read this time doesn't exist | Everything that matters is in the repo, in a form the check reads: topics, terms, claims | The spec is the design. Cut it badly and the check enforces that |
 | **Decides** a change | Sees the whole; bends a rule when it makes sense | Sees the task; can't tell deliberate structure from accident | Decisions live in a core with no effects, where a check can see them. Rules are absolute | No exceptions; changing a rule means changing Kit |
-| **Writes** it down | Prose costs time, so comments, specs and tests stay thin | Writing is free; it will produce a definition and a test for anything | Every module has a heading and a term; every claim has a test | Each sentence lands on the person who ratifies it |
-| **Proves** a change works | Runs the suite before pushing; tolerates a slow one | Runs it on every change, many agents, many times an hour; the gate's length is the pace of everything | Decisions in a headless core, so most tests run in a plain process in seconds. The browser covers only the shell | Browser and transport are still proved, separately and less often |
+| **Writes** it down | Prose costs time, so comments, specs and tests stay thin | Writing is free; it produces a definition and a test for anything | Every module has a heading and a term; every claim has a test | Each sentence lands on the person who ratifies it |
+| **Proves** a change works | Runs the suite before pushing; tolerates a slow one | Runs it on every change; with many agents, many times an hour. How long the suite takes sets how fast everything merges | Decisions in a headless core, so most tests run in a plain process in seconds. The browser covers only the shell | Browser and transport are still proved, separately and less often |
 | **Reviews** work | Reads the diff | Writes faster than anyone can read | The person reviews the spec: promises and words. The check reviews the code | Quality below the claim goes unreviewed |
-| **Works alongside** others | A few people, talking; conflicts settled in review | Many at once, not talking; a conflict is a failed merge | Nothing to collide on: one file per module, one test file per claim, effects behind adapters | Real only once the check runs in CI |
-| **Lives with** the codebase | It degrades slowly, and someone refactors | It degrades at the rate it's changed, and nobody is watching | A change that would degrade it fails | A rule an agent can't satisfy stops it until a person rules |
+| **Works alongside** others | A few people, talking; conflicts settled in review | Many at once, not talking; a conflict is a failed merge | Two tasks on different modules edit different files: one file per module, one test file per claim, effects behind adapters | Real only once the check runs in CI |
+| **Lives with** the codebase | It degrades slowly, and someone refactors | It degrades at the rate it's changed, and no agent is in a position to see that | A change that would degrade it fails | A rule an agent can't satisfy stops it until a person rules |
 
 ## Topics
 
