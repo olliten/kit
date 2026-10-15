@@ -171,6 +171,16 @@ without naming the app.
   not be run from the app's own folder. Treating every type declared by Node as authority was tried first: it
   also caught plain data such as directory entries, and gave the Kit 84 limits on itself.
 
+## 2026-10-15 · A declared host global covers what it reaches, inside its adapter
+
+- **Decision:** inside an external adapter, a host global it declares (`document`, `fetch`, `navigator`) covers
+  every native handle reached through it: elements, responses, the clipboard. The adapter's contract still
+  decides what leaves; a composition holds a native handle only when a contract names its type.
+- **Why:** before this, each handle was its own native root and had to appear in the contract, so adapters
+  passed only by naming DOM types in their contracts. That hands live elements to compositions and defeats the
+  adapter. The second app's surface adapter hit this on its first page. The first app's render adapter had
+  taken the contract route; it may now narrow its contract.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check` exists.

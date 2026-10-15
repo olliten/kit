@@ -53,7 +53,8 @@ storage, transport, clock, randomness and timers have narrow contracts rather th
 one platform interface.
 
 Only adapters create authority. A module gains access when it imports an implementation
-or receives a parameter whose type grants that access. For example, a Clock parameter
+or receives a parameter whose type grants that access. Inside an adapter, a declared host
+global covers every handle reached through it; the adapter's contract decides what leaves. For example, a Clock parameter
 with a now method lets the module sample the clock; a timestamp parameter does not.
 
 A runtime import inherits the supplying module's capabilities, even when the selected

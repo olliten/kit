@@ -531,6 +531,20 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           : zone !== "core" && adapter.zones.some((allowed) => allowed === zone)),
     );
   };
+  // A declared host global is a door: every handle an adapter reaches through it, such as the elements
+  // behind document or the response behind fetch, belongs to the same host library and is the adapter's to
+  // hold. Its contract decides what leaves.
+  const hostLibrary = /(?:^|\/)lib\.dom(?:\.[\w-]+)*\.d\.ts$/;
+  const declaresHostGlobal = (adapter: (typeof adapters)[number], path: string): boolean =>
+    projects.some((project) =>
+      project.globals.some(
+        (global) =>
+          global.file === path &&
+          global.runtime &&
+          adapter.globals?.includes(global.name) === true &&
+          hostLibrary.test(global.declarationFile ?? ""),
+      ),
+    );
   for (const [path, capabilities] of internalNative)
     for (const capability of capabilities) {
       const native = nativeAuthorities.get(capability);
@@ -539,6 +553,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         (adapter) =>
           pathOf(adapter.module) === path &&
           adapter.kind === "external" &&
+          ((hostLibrary.test(native.root.file) && declaresHostGlobal(adapter, path)) ||
           [
             ...(contracts.get(adapter) ?? []).flatMap((contract) => contract.nativeAuthority ?? []),
             ...projects.flatMap((project) =>
@@ -551,7 +566,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ].some(
             (accepted) =>
               native.root.file === accepted.root.file && native.root.name === accepted.root.name,
-          ),
+          )),
       );
       if (!allowed)
         unresolved(
