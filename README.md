@@ -5,7 +5,8 @@ Architecture as a check, for codebases that agents write.
 ## Why
 
 Most conventions in a codebase exist so a person can read it. Agents don't read that way: an agent starts each
-task with no memory of the codebase, finds code by searching, and doesn't talk to other agents.
+task with no memory of the codebase and finds code by searching. What agents tell each other isn't in the repo
+for the next one.
 
 Agents drift in a specific way. An agent solves the task in front of it. It doesn't know the codebase has a word
 for the thing, so it adds a second word. It doesn't know a function already does this, so it adds a wrapper. Each
@@ -30,7 +31,7 @@ the code. The check keeps the two consistent.
 | **Writes** it down | Prose costs time, so comments, specs and tests stay thin | Writing is free; it produces a definition and a test for anything | Every module has a heading and a term; every claim has a test | Each sentence lands on the person who ratifies it |
 | **Proves** a change works | Runs the suite before pushing; tolerates a slow one | Runs it on every change; with many agents, many times an hour. How long the suite takes sets how fast everything merges | Decisions in a headless core, so most tests run in a plain process in seconds. The browser covers only the shell | Browser and transport are still proved, separately and less often |
 | **Reviews** work | Reads the diff | Writes faster than anyone can read | The person reviews the spec: promises and words. The check reviews the code | Quality below the claim goes unreviewed |
-| **Works alongside** others | A few people, talking; conflicts settled in review | Many at once, not talking; a conflict is a failed merge | Two tasks on different modules edit different files: one file per module, one test file per claim, effects behind adapters | Real only once the check runs in CI |
+| **Works alongside** others | A few people, who share a running picture of the code; conflicts settled in review | Many at once, each with its own picture; a conflict is a failed merge | Two tasks on different modules edit different files: one file per module, one test file per claim, effects behind adapters | Real only once the check runs in CI |
 | **Lives with** the codebase | It degrades slowly, and someone refactors | It degrades at the rate it's changed, and no agent is in a position to see that | A change that would degrade it fails | A rule an agent can't satisfy stops it until a person rules |
 
 ## Topics
