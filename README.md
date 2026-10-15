@@ -30,11 +30,11 @@ gate without waiting on the others.
 |---|---|---|---|---|
 | **Reads** code | Opens a file and scrolls. Prefers a feature on one screen | Starts with no memory. Searches, opens the few files the task needs, ignores the rest | One module per file, hundreds of files | A person reads this codebase worse than a conventional one |
 | **Places** a module | Picks the folder it belongs to. A shared module belongs to several, so it ends up in `utils/`, and the tree stops meaning anything | Picks the folder that looks right for this task. Another agent, another task, picks another | The path answers one question only, what the module may do: `src/<zone>/<layer>/<name>.ts`. Twelve folders, the same in every app | The tree says nothing about features |
-| **Groups** modules into a feature | The folder tree, decided once, reorganised at great cost | Nothing. It sees files, not features | A topic names the modules of one feature, from any zone. A module appears in every topic that uses it. The check keeps each reference true | Regrouping is a spec edit, which a person ratifies |
-| **Finds** where things live | Browses the tree | Searches a name | The path follows from the role; the topic lists the rest | Names must be true, or search finds nothing |
+| **Groups** modules into a feature | The folder tree, decided once, reorganised at great cost | Nothing. It sees files, not features | A topic states one feature's claims, and each claim names the modules it depends on, from any zone. A module's claims are derived from those names | Regrouping is a spec edit, which a person ratifies |
+| **Finds** where things live | Browses the tree | Searches a name | The path follows from the role; `kit refs` lists the claims a module keeps | Names must be true, or search finds nothing |
 | **Remembers** the design | In their head since last month; docs are a reminder | Nothing between sessions. A doc not read this time doesn't exist | Everything that matters is in the repo, in a form the check reads: topics, terms, claims | The spec is the design. Cut it badly and the check enforces that |
 | **Decides** a change | Sees the whole; bends a rule when it makes sense | Sees the task; can't tell deliberate structure from accident | Decisions live in a core with no effects, where a check can see them. Rules are absolute | No exceptions; changing a rule means changing Kit |
-| **Writes** it down | Prose costs time, so comments, specs and tests stay thin | Writing is free; it produces a definition and a test for anything | Every module has a heading and a term; every claim has a test | Each sentence lands on the person who ratifies it |
+| **Writes** it down | Prose costs time, so comments, specs and tests stay thin | Writing is free; it produces a definition and a test for anything | Every module has a term and a claim that names it; every claim has a test | Each sentence lands on the person who ratifies it |
 | **Proves** a change works | Runs the suite before pushing; tolerates a slow one | Runs it on every change; with many agents, many times an hour. How long the suite takes sets how fast everything merges | Decisions in a headless core, so most tests run in a plain process in seconds. The browser covers only the shell | Browser and transport are still proved, separately and less often |
 | **Reviews** work | Reads the diff | Writes faster than anyone can read | The person reviews the spec: promises and words. The check reviews the code | Quality below the claim goes unreviewed |
 | **Works alongside** others | A few people, who share a running picture of the code; conflicts settled in review | Many at once, each with its own picture; a conflict is a failed merge | Two tasks on different modules edit different files: one file per module, one test file per claim, effects behind adapters | Real only once the check runs in CI |
@@ -45,33 +45,41 @@ gate without waiting on the others.
 A folder tree asks where a module belongs, and a shared module belongs in several places. Whichever you pick,
 the other features import it from across the tree, and the tree stops describing the features. Kit separates
 the two questions. Where a module lives is answered by what it may do, `src/<zone>/<layer>/<name>.ts`,
-once and mechanically. What it's for is answered by topics, and a topic can name any module.
+once and mechanically. What it's for is answered by the claims that name it, in any topic.
 
-The spec is a set of topics, one file each, usually one thing a user does. A topic names the modules that
-implement it and states its claims:
+The spec is a set of topics, one file each, usually one thing a user does. A topic has one shape: a title,
+an intro of at most three sentences, then sections and claims. Each claim names the modules it depends on:
 
 ```markdown
 # Review an article
 
-### shell/adapters/surface
-Draw on the page and report input as plain presses.
+A reviewer reads each waiting reading and accepts or declines it.
 
-- A decline cannot be saved without a reason in the reviewer's own words. · {#decline-needs-reason}
+## Declining
+
+- A decline cannot be saved without a reason in the reviewer's own words ({{decline}}, {{surface}}). · {#decline-needs-reason}
 ```
 
-The heading binds a module to `src/shell/adapters/surface.ts`. The anchor binds a claim to
-`oracle/review-an-article/decline-needs-reason.test.ts`. A heading with no file, a claim with no test, a test
-that names no claim: each fails. So a topic is a map of its feature that the check keeps accurate: what it
-promises, what implements it, what proves it. The files under `src/` don't show which feature they belong to;
-the topic does.
+`{{decline}}` and `{{surface}}` are terms, each defined once in `spec/terms.md` and bound to one file, such as
+`src/shell/adapters/surface.ts`. The anchor binds the claim to
+`oracle/review-an-article/decline-needs-reason.test.ts`. A claim with no test, a test that names no claim, a
+module no claim names, prose outside a claim: each fails. So a topic is a map of its feature that the check
+keeps accurate: what it promises, what implements it, what proves it.
+
+The reverse view is derived, never written into the module: `kit refs src/shell/adapters/surface.ts` lists
+every claim that names the surface, in any topic, with its tests. Run as a Claude Code read hook
+(`.claude/settings.json` in this repository), it adds that list to what an agent sees when it opens the file.
+An agent changing a module knows which promises it can break without reading the topics, and two agents never
+edit the same header to record what a module is for.
 
 ## A feature
 
 An agent gets the task *decline a whole article with one reason*.
 
-1. It opens `spec/review-an-article.md` and reads its claims and the modules it names. Nothing else.
+1. It opens `spec/review-an-article.md` and reads its claims and the modules they name. Nothing else.
 2. It adds one claim: `- A reviewer may decline every waiting reading of an article with one reason. ·
-   {#decline-whole-article}`. For a new module it adds a heading and a terms line. This diff is the design.
+   {#decline-whole-article}`, naming the modules it depends on. A new module also gets a terms line. This diff
+   is the design.
 3. It writes `oracle/review-an-article/decline-whole-article.test.ts`. That is the definition of done.
 4. It writes the module at `src/core/compositions/decline-article.ts`. The core is pure, so the test runs in
    milliseconds without a browser. An effect it lacks is a finding naming the adapter to declare.
@@ -116,10 +124,13 @@ contradicts the spec.
 
 **R4, proof.**
 
+- A topic is a title, a short intro, sections and claims; nothing else.
 - Every claim in the spec has a test.
 - Every test names a claim.
+- Every placed module is named by a claim.
 
-So the spec is only promises that are proved, and no test exists without saying what it proves.
+So the spec is only promises that are proved, no test exists without saying what it proves, and no module
+exists without a promise it keeps.
 
 A change that breaks a rule fails the check. Existing code is legacy until it's moved into place; its findings
 are debt that may only shrink.
@@ -140,7 +151,7 @@ ratifies it.
 ```
 spec/
   terms.md                     every word, defined once
-  review-an-article.md         one topic per feature: its modules, its claims
+  review-an-article.md         one topic per feature: its claims, which name its modules
   research-a-client.md
 src/
   core/      {primitives, readings, adapters, compositions}/<name>.ts
@@ -161,9 +172,10 @@ git clone <this repo> ../kit && (cd ../kit && npm install)
 ```
 
 Add `kit/config.md` mapping your folders to zones, `spec/terms.md` with your domain's words, and a baseline of
-today's findings. Run `kit check` in CI. Nothing users see changes.
+today's findings. Run `kit check` in CI. Nothing users see changes. For the read hook, point a `PostToolUse`
+hook on `Read` at `kit-refs.mjs --hook --root . --config kit/config.md`.
 
 ## This repository
 
 Kit is written in its own structure and checks itself. Rules: `spec/`. Reasons: `docs/decisions.md`. `npm test`,
-`npm run check`.
+`npm run check`, `npm run refs -- <module>`.

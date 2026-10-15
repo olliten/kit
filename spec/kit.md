@@ -1,53 +1,24 @@
-# kit — what the kit is, and the rules it keeps for itself
+# Kit
 
-> The kit is an app built with its own model and checked by itself.
+The Kit is built in its own structure and checks itself. It names no app concept: an app's layout lives in
+its config, and its debt in its own baseline.
 
-- **Portable.** It names no app concept. Everything app-specific is the app's spec and its config.
-- **Small.** It stays under 10% of the code it governs, and every check names the rule it serves.
-- **Product prose names no code.** Structural declarations may bind named types and selected domain fields.
-  They do not duplicate type shapes or prescribe helper modules.
-- **Self-hosted.** `kit check` runs on the kit itself. Its folders are `spec`, `oracle`, `src` and `fixture`; its
-  own config is `self-config.md`.
-- **The app's use of it** lives in the app: `kit/config`, `kit/debt/` and `kit/ledger/`.
-- **Protected.** No agent weakens a check to pass its own work. Only the kit lane writes `spec`, `oracle` and `src`,
-  with the maintainer's okay on each change.
-- **Its public surface:** the config schema, the finding format, and four commands: `kit check` (fails on new
-  debt), `kit ledger`, `kit partition` (test tiers for the runner), and `kit rename <from> <to>`.
-- **Evidence.** The fixture is a small app in legacy shape. Replaying its recorded fixes reaches zero debt, and the
-  ratchet never rises along the way.
-- **Its own repository.** The kit is a separate package; config, debt and ledger stay with each app.
+## Reading an app
 
-The Kit follows [[code-structure]], [[language]], [[proof]] and [[convergence]] itself.
+- {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
+  {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
+- The real snapshot reader discovers every case input it is given, and readings over that data run without
+  changing it ({{read-snapshot}}). · {#readings-use-data}
+- A cache hit reuses extraction and reruns the check; a corrupt cache is rebuilt, and a source change during
+  extraction or checking rejects the result. · {#cached-check-keeps-evidence}
+- `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
+  list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}
+- Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. · {#paths-from-the-caller}
 
-## Contracts
+## Checking itself
 
-### core/primitives/default-config
-
-Supply the starting configuration while allowing each app to declare its layout. Uses {{default-config}}.
-
-### core/primitives/file
-
-Keep FileType, SnapshotFile and file-text support with their shared input owner. Uses {{file}}.
-
-### core/primitives/snapshot
-
-Assemble supplied evidence from its actual primitive owners; checks add interpretations rather than acquisition effects. Uses {{snapshot}}.
-
-### substrate/adapters/filesystem
-
-Keep real file acquisition behind its narrow operation contract. Uses {{filesystem}}.
-
-### substrate/adapters/compiler
-
-Keep real compiler access behind its narrow operation contract. Uses {{compiler}}.
-
-### substrate/compositions/read-snapshot
-
-Connect acquisition adapters to pure interpreters and return their supplied evidence together. Uses {{read-snapshot}}.
-
-## Proof obligations
-
-- a cache hit reuses extraction, reruns the checker and retains unresolved evidence. · {#cached-check-keeps-evidence}
-- the fixture reads as its files, imports and headings. · {#read-snapshot-fixture}
-- the real snapshot reader discovers every independently supplied case input. · {#readings-use-data}
-- the paths given to `kit check` resolve against the directory it runs in. · {#paths-from-the-caller}
+- Every Kit source file is placed, its imports obey the dependency rules, and its claims, modules and tests
+  bind with no finding. · {#kit-checks-itself}
+- The Kit's terms are each defined once, and its names and prose use no retired word. · {#kit-terms-are-defined-once}
+- The Kit's placed modules bind to their terms without supporting-word terms. · {#kit-modules-bind-to-terms}
+- The Kit's comments cite nothing and carry no debt. · {#kit-comments-cite-nothing}

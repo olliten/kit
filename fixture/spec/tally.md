@@ -2,32 +2,12 @@
 
 A counter that adds amounts up to a limit.
 
-### core/primitives/limits
+## Counting
 
-The largest amount one step may add.
+- The total equals the sum of the supplied amounts. {{tally}}, {{total}} {#total-holds}
+- One step adds at most the limit, so the tally never sums past it. {{add}}, {{limits}} · {#one-step-is-capped}
+- The average is the total over the count of amounts. {{average}} · {#average-of-amounts}
 
-### core/primitives/tally
+## Showing
 
-The amounts added so far.
-
-### core/readings/total — the sum of the amounts
-
-Sums the amounts.
-
-### core/readings/average
-
-The mean of the amounts.
-
-### core/compositions/add
-
-Adds one amount, capped at the limit.
-
-### shell/readings/screen
-
-The text the screen shows.
-
-### substrate/compositions/save
-
-Writes the tally out.
-
-- The total equals the sum of the supplied amounts. {#total-holds}
+- The screen shows the total as text. {{screen}}, {{label}} · {#screen-shows-the-total}

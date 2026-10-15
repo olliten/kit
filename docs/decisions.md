@@ -181,10 +181,34 @@ without naming the app.
   adapter. The second app's surface adapter hit this on its first page. The first app's render adapter had
   taken the contract route; it may now narrow its contract.
 
+## 2026-10-15 · Topics hold only claims; claims name their modules
+
+- **Decision:** a topic is a title, an intro of at most three sentences, `## ` sections and claims, and nothing
+  else. Every claim has a test; there is no untested or reviewed-only claim. A module has no heading in any
+  topic: it is defined once in the terms file, and each claim names the modules it depends on as `{{term}}`. A
+  placed module that no claim names is a finding. A module's claims are derived by `kit refs`, which a read
+  hook shows to an agent opening the module; nothing is written back into the module. Each list in the terms
+  file is alphabetical. What the old topics required but no test proves moved to "Not yet built" below.
+- **Why:** the Kit's own topics were about 670 lines, mostly prose rules no test bound, so the check could not
+  tell a kept rule from a forgotten one. A fixed shape leaves a requirement nowhere to live but a tested
+  claim. Module headings gave each module one home topic, which a shared module does not have. Writing a
+  module's claims into the module would go stale and make parallel edits collide; deriving them costs
+  nothing. Matching modules to claims needs little judgment once the modules are defined. Sorted terms let
+  agents adding different terms edit different lines.
+
 ## Not yet built
 
-- `kit ledger`, `kit partition` and `kit rename`; only `kit check` exists.
+- `kit ledger`, `kit partition` and `kit rename`; only `kit check` and `kit refs` exist.
 - Incremental extraction, which pre-commit use waits on.
 - A published command and build: `scripts/kit-check.mjs` runs the TypeScript source through vite-node.
 - Validation of the config: the runner reads roots, terms, claim separator, legacy areas and zones, adapters and
   packages. Other keys are ignored silently, and `layerNames` is not passed through from the config file.
+- A check that each claim's test reaches the modules the claim names. Today a claim's names are trusted.
+- `kit partition`, choosing each test's environment from what its imports reach; harnesses that connect a
+  contract to a real or a fake implementation; one contract suite run against both.
+- Declared test-only observation hooks, with an undeclared hook as a finding.
+- Per-zone compiler settings, so each zone compiles against only the APIs it may touch.
+- App-declared state properties (persisted, session-only, undoable, replicated, event-sourced) and their checks.
+- A roster that must equal the table under its term, entry for entry.
+- The ledger and topic view: each module's placement, findings, debt and proofs, and a feature's topic footprint.
+- A check that the Kit stays under a tenth of the code it governs.

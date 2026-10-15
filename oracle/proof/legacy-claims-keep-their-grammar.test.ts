@@ -88,7 +88,6 @@ describe("legacy declarations retain their structural scope without changing top
       ],
       claims,
       imports: [],
-      headings: [],
       terms: [],
       prose: [],
       symbols: [],

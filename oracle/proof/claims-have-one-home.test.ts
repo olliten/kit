@@ -124,8 +124,9 @@ test("duplicate declaration homes are rejected rather than merged", () => {
 
 test("repeating a claim in one topic is rejected even when its module is shared", () => {
   const actual = inspect({
-    "spec/value.md": `${topic}\nUses {{value}}.\n- A second declaration. · {#value-stays}\n`,
-    "spec/printing.md": "# Printing\nUses {{value}}.\n",
+    "spec/value.md": `${topic}\n- A second declaration. {{value}} · {#value-stays}\n`,
+    "spec/printing.md": "# Printing\n\n- Printing keeps the value. {{value}} · {#printing-keeps-value}\n",
+    "oracle/printing/printing-keeps-value.test.ts": proof,
     "spec/terms.md":
       "- **value** — A supplied value.\n  - Role: fact\n  - Zone: core\n  - Of: []\n",
     "src/core/primitives/value.ts": "export interface Value { readonly label: string }\n",
@@ -189,15 +190,5 @@ test("historical law headings declare claims only in explicitly configured legac
     ["spec/old.md"],
   );
   expect(actual.snapshot.claims?.map((claim) => claim.anchor)).toEqual(["kept-law"]);
-  expect(actual.findings).toEqual([]);
-});
-
-test("canonical module headings bind to source independently of claim ownership", () => {
-  const actual = inspect({
-    "spec/value.md": `${topic}\n### core/readings/value\n\nReads supplied data.\n`,
-    "src/core/readings/value.ts":
-      "export function value(input: number): number { return input; }\n",
-    "oracle/value/value-stays.test.ts": proof,
-  });
   expect(actual.findings).toEqual([]);
 });

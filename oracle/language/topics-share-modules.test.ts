@@ -26,26 +26,30 @@ function evidence(documents: Readonly<Record<string, string>>, declarations: str
   };
 }
 
-test("two unrelated narratives share one module while another module has no topic", () => {
-  const snapshot = evidence(
+test("two unrelated narratives share one module, and a module no claim names is a finding", () => {
+  const base = evidence(
     {
-      "spec/planning.md": "# Planning\nUse {{value}} to plan.",
-      "spec/printing.md": "# Printing\nPrint {{VALUE}}.",
+      "spec/planning.md": "# Planning\n\n- Use {{value}} to plan. · {#plan}",
+      "spec/printing.md": "# Printing\n\n- Print {{VALUE}}. · {#print}",
     },
-    declaration("value") + declaration("spare"),
+    declaration("spare") + declaration("value"),
   );
+  const snapshot: Snapshot = {
+    ...base,
+    files: [...base.files, { path: "oracle/planning/plan.test.ts", type: "test" }, { path: "oracle/printing/print.test.ts", type: "test" }],
+    claims: [
+      { file: "spec/planning.md", anchor: "plan", line: 3, terms: ["value"] },
+      { file: "spec/printing.md", anchor: "print", line: 3, terms: ["VALUE"] },
+    ],
+  };
   expect(semanticReferences(snapshot).topicModules).toEqual([
     { topic: "spec/planning.md", modules: ["value"] },
     { topic: "spec/printing.md", modules: ["value"] },
   ]);
   expect(termModel(snapshot)).toEqual({ findings: [], limits: [] });
-  expect(bindingFindings(snapshot)).toEqual([]);
-  const headings = ["spec/planning.md", "spec/printing.md"].map((file) => ({
-    file,
-    name: "core/readings/value",
-  }));
-  expect(termModel({ ...snapshot, headings })).toEqual({ findings: [], limits: [] });
-  expect(bindingFindings({ ...snapshot, headings })).toEqual([]);
+  expect(bindingFindings(snapshot).map((row) => row.debtKey)).toEqual([
+    "R4:unreferenced-module:core/readings/spare",
+  ]);
 });
 
 test("groups sort and deduplicate resolved module names and exclude global From/Of edges", () => {

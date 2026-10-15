@@ -6,7 +6,6 @@ import { DEFAULT_CONFIG, type KitConfig } from "../../core/primitives/default-co
 import type { ExportedSymbol } from "../../core/primitives/exported-symbol.js";
 import type { FileType, SnapshotFile, SpecProse } from "../../core/primitives/file.js";
 import type { ImportEdge } from "../../core/primitives/import.js";
-import type { SpecHeading } from "../../core/primitives/module.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
@@ -16,13 +15,11 @@ import { compilerWorkspace } from "../adapters/compiler.js";
 import { filesystem } from "../adapters/filesystem.js";
 
 // The kit's only effect: read one snapshot of the codebase at `appRoot`. Only imports that resolve to a file
-// of the snapshot are recorded. Spec headings are Markdown lines `### <zone>/<layer>/<name>`, optionally
-// followed by ` — <description>`. Terms come only from the config's terms file, as lines
+// of the snapshot are recorded. Terms come only from the config's terms file, as lines
 // `- **<term>** — <meaning>` optionally ending `Retired: <word>, <word>.`; its headings are sections. A source file's exported symbols are its top-level declarations
 // `export [async] function|const|class|type|interface <name>`.
 const SKIP_DIR = /^(?:node_modules|\..*)$/;
 const IMPORT = /\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
-const HEADING = /^###\s+`?([\w.-]+\/[\w.-]+\/[\w.-]+)`?(?:\s+—\s+.*)?\s*$/gm;
 const EXPORT =
   /^export\s+(?:async\s+)?(?:function\*?|const|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm;
 const SOURCE = /\.(?:ts|tsx|mts|js|mjs)$/;
@@ -32,9 +29,9 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
   const files: SnapshotFile[] = paths.sort().map((path) => ({ path, type: typeOf(path, config) }));
   const known = new Set(paths);
   const imports: ImportEdge[] = [];
-  const headings: SpecHeading[] = [];
   const terms: SpecTerm[] = [];
   const termSyntax: NonNullable<Snapshot["termSyntax"]>[number][] = [];
+  const termOrder: NonNullable<Snapshot["termOrder"]>[number][] = [];
   const prose: SpecProse[] = [];
   const symbols: ExportedSymbol[] = [];
   const comments: SnapshotComment[] = [];
@@ -54,6 +51,7 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
       const inventory = termInventory(text);
       terms.push(...inventory.terms);
       termSyntax.push(...inventory.issues);
+      termOrder.push(...inventory.order);
       prose.push({ file: path, text: inventory.prose });
       continue;
     }
@@ -65,7 +63,6 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
       });
       claims.push(...inventory.declarations.map((claim) => ({ ...claim, file: path })));
       claimReferences.push(...inventory.references.map((claim) => ({ ...claim, file: path })));
-      for (const m of text.matchAll(HEADING)) headings.push({ file: path, name: m[1] ?? "" });
       prose.push({ file: path, text });
       continue;
     }
@@ -86,9 +83,9 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
   return {
     files,
     imports,
-    headings,
     terms,
     termSyntax,
+    termOrder,
     prose,
     symbols,
     comments,

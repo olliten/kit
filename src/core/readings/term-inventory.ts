@@ -6,9 +6,11 @@ export function termInventory(text: string): {
   readonly terms: readonly SpecTerm[];
   readonly prose: string;
   readonly issues: readonly TermSyntaxIssue[];
+  readonly order: readonly TermSyntaxIssue[];
 } {
   const terms: SpecTerm[] = [];
   const issues: TermSyntaxIssue[] = [];
+  const order: TermSyntaxIssue[] = [];
   const ranges: [number, number][] = [];
   const plain = (node: Nodes): string =>
     node.type === "text" || node.type === "inlineCode"
@@ -16,8 +18,27 @@ export function termInventory(text: string): {
       : "children" in node
         ? node.children.map(plain).join("")
         : "";
+  // Each list of terms is alphabetical, so agents adding different terms at once edit different lines.
+  const sorted = (list: Nodes): void => {
+    if (list.type !== "list") return;
+    let previous = "";
+    for (const item of list.children) {
+      const paragraph = item.children[0];
+      const first = paragraph?.type === "paragraph" ? paragraph.children[0] : undefined;
+      if (first?.type !== "strong") continue;
+      const term = plain(first);
+      if (term.toLowerCase() < previous.toLowerCase())
+        order.push({
+          term,
+          line: item.position?.start.line ?? 1,
+          detail: `Place ${term} in alphabetical order, before ${previous}.`,
+        });
+      previous = term;
+    }
+  };
   const visit = (node: Nodes): void => {
     if (node.type === "code" || node.type === "inlineCode") return;
+    sorted(node);
     if (node.type === "listItem") {
       const paragraph = node.children[0];
       const first = paragraph?.type === "paragraph" ? paragraph.children[0] : undefined;
@@ -159,5 +180,5 @@ export function termInventory(text: string): {
   for (const [start, end] of ranges.sort((a, b) => b[0] - a[0]))
     prose =
       prose.slice(0, start) + prose.slice(start, end).replace(/[^\n]/g, " ") + prose.slice(end);
-  return { terms, prose, issues };
+  return { terms, prose, issues, order };
 }

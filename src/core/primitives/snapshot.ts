@@ -5,18 +5,18 @@ import type { KitConfig } from "./default-config.js";
 import type { ExportedSymbol } from "./exported-symbol.js";
 import type { SnapshotFile, SpecProse } from "./file.js";
 import type { ImportEdge } from "./import.js";
-import type { SpecHeading } from "./module.js";
 import type { Reference } from "./reference.js";
 import type { SpecTerm, TermSyntaxIssue } from "./term.js";
 
 export interface Snapshot {
   readonly termSyntax?: readonly TermSyntaxIssue[];
+  // Terms out of alphabetical order in the terms file.
+  readonly termOrder?: readonly TermSyntaxIssue[];
   readonly semanticReferences?: readonly Reference[];
   readonly claims?: readonly Claim[];
   readonly claimReferences?: readonly Claim[];
   readonly files: readonly SnapshotFile[];
   readonly imports: readonly ImportEdge[];
-  readonly headings: readonly SpecHeading[];
   readonly terms: readonly SpecTerm[];
   readonly prose: readonly SpecProse[];
   readonly symbols: readonly ExportedSymbol[];

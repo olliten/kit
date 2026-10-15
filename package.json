@@ -6,6 +6,7 @@
   "description": "Checks how a TypeScript app's code is structured and proved against its spec.",
   "scripts": {
     "check": "node scripts/kit-check.mjs",
+    "refs": "node scripts/kit-refs.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },

@@ -21,7 +21,6 @@ function snapshot(
   return {
     files: Object.keys(documents).map((path) => ({ path, type: "spec" })),
     imports: [],
-    headings: [],
     terms: terms.map((term, index) => ({ term, meaning: "", retired: [], line: index + 1 })),
     prose: Object.entries(documents).map(([file, text]) => ({ file, text })),
     symbols: [],
@@ -259,7 +258,7 @@ test("semantic markup leaves the existing claim declaration and reference gramma
     { separator: "·" },
   );
   expect(inventory).toEqual({
-    declarations: [{ anchor: "value-stays", line: 1 }],
+    declarations: [{ anchor: "value-stays", line: 1, terms: ["value"] }],
     references: [{ anchor: "value-stays", line: 3 }],
   });
 });

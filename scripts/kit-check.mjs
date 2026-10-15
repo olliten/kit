@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { configuredKit, kitCheckPaths, kitConfig } from "./kit-config.mjs";
+import { withKit } from "./kit-load.mjs";
 import { cachedKitCheck } from "./kit-snapshot-cache.mjs";
 
 export function ratchetFindings(findings, baselineKeys, placedPaths, imports) {
@@ -31,36 +32,19 @@ async function main() {
   const engineRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const { root, configPath, baselinePath } = kitCheckPaths(process.argv.slice(2), engineRoot);
   const declared = kitConfig(readFileSync(configPath, "utf8"));
-  const { createServer } = await import("vite");
-  const { ViteNodeServer } = await import("vite-node/server");
-  const { ViteNodeRunner } = await import("vite-node/client");
-  const server = await createServer({
-    root: engineRoot,
-    configFile: false,
-    server: { middlewareMode: true, hmr: false, watch: null },
-  });
-  try {
-    const loader = new ViteNodeServer(server, {
-      deps: { external: ["typescript", "mdast-util-from-markdown"] },
-    });
-    const runner = new ViteNodeRunner({
-      root: engineRoot,
-      base: server.config.base,
-      fetchModule: (id) => loader.fetchModule(id),
-      resolveId: (id, importer) => loader.resolveId(id, importer),
-    });
-    const load = (name) => runner.executeFile(join(engineRoot, name));
+  await withKit(engineRoot, async (load) => {
     const { DEFAULT_CONFIG } = await load("src/core/primitives/default-config.ts");
     const { readSnapshot } = await load("src/substrate/compositions/read-snapshot.ts");
     const { capabilityCheck } = await load("src/core/readings/capability-check.ts");
-    const { moduleBinder } = await load("src/core/readings/module-binder.ts");
+    const { moduleReferences } = await load("src/core/readings/module-references.ts");
     const { claimProofBinder } = await load("src/core/readings/claim-proof-binder.ts");
     const { byDebtKey } = await load("src/core/readings/finding.ts");
     const { nameCheck } = await load("src/core/readings/name-check.ts");
     const { commentCheck } = await load("src/core/readings/comment-check.ts");
     const { referenceCheck } = await load("src/core/readings/semantic-references.ts");
-    const { termModel } = await load("src/core/readings/term-model.ts");
+    const { termModel, termOrder } = await load("src/core/readings/term-model.ts");
     const { placementOf } = await load("src/core/readings/placement-of.ts");
+    const { topicShape } = await load("src/core/readings/topic-shape.ts");
     const config = configuredKit(DEFAULT_CONFIG, declared);
     const checked = await cachedKitCheck(
       root,
@@ -74,10 +58,12 @@ async function main() {
           claims: snapshot.claims.filter((claim) => !config.legacyAreas.includes(claim.file)),
         };
         const structural = [
-          ...[...moduleBinder(topicSnapshot), ...claimProofBinder(topicSnapshot)].sort(byDebtKey),
+          ...[...moduleReferences(topicSnapshot), ...claimProofBinder(topicSnapshot)].sort(byDebtKey),
           ...nameCheck(snapshot),
           ...commentCheck(snapshot),
           ...referenceCheck(snapshot),
+          ...topicShape(snapshot),
+          ...termOrder(snapshot),
           ...concepts.findings,
         ].map((item) => ({
           ...item,
@@ -125,9 +111,7 @@ async function main() {
       process.stdout.write("Kit limit " + item.debtKey + ": " + item.limit + "\n");
     for (const item of failures) process.stderr.write(item.debtKey + ": " + item.fix + "\n");
     if (failures.length > 0) process.exitCode = 1;
-  } finally {
-    await server.close();
-  }
+  });
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)

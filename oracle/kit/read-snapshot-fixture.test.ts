@@ -8,12 +8,21 @@ import { bindingFindings } from "../lib/bindingFindings.js";
 
 const FIXTURE = fileURLToPath(new URL("../../fixture", import.meta.url));
 
-test("the fixture reads as its files, imports and headings", () => {
+test("the fixture reads as its files, imports, claims and terms", () => {
   const s = readSnapshot(FIXTURE);
   expect(s.files.filter((f) => f.type === "test").map((f) => f.path)).toEqual([
+    "oracle/tally/average-of-amounts.test.ts",
+    "oracle/tally/one-step-is-capped.test.ts",
+    "oracle/tally/screen-shows-the-total.test.ts",
     "oracle/tally/total-holds.test.ts",
   ]);
-  expect(s.headings).toHaveLength(7);
+  // Each claim records the modules it names.
+  expect(s.claims?.map((claim) => [claim.anchor, claim.terms])).toEqual([
+    ["total-holds", ["tally", "total"]],
+    ["one-step-is-capped", ["add", "limits"]],
+    ["average-of-amounts", ["average"]],
+    ["screen-shows-the-total", ["screen", "label"]],
+  ]);
   // The terms file's section headings are not module headings, and its prose omits its term lines.
   expect(s.terms).toHaveLength(12);
   expect(s.terms).toContainEqual({
@@ -36,12 +45,13 @@ test("the fixture reads as its files, imports and headings", () => {
   });
 });
 
-// The fixture retains direction, cycle, retirement, citation and debt findings.
+// The fixture retains direction, cycle, retirement, citation, debt and unnamed-module findings.
 // Its summary export remains valid under the ratified supporting-symbol rule.
 test("the fixture yields exactly its seeded findings", () => {
   const s = readSnapshot(FIXTURE);
   const all = [...bindingFindings(s), ...dependencyCheck(s), ...nameCheck(s), ...commentCheck(s)];
   expect(all.map((f) => f.debtKey)).toEqual([
+    "R4:unreferenced-module:substrate/compositions/save",
     "R2:cycle:core/readings/average:core/readings/average,core/readings/total",
     "R2:edge:shell/readings/screen:substrate/compositions/save",
     "R3:retired-word:spec/tally.md:sums",

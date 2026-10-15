@@ -539,7 +539,6 @@ test("the same checker binds the actual Kit Snapshot.config declaration", () => 
     "exported-symbol",
     "file",
     "import",
-    "module",
     "reference",
     "term",
   ];
@@ -554,7 +553,7 @@ test("the same checker binds the actual Kit Snapshot.config declaration", () => 
     moduleTerm(
       "snapshot",
       "fact",
-      "{{config}}, {{claim}}, {{comment}}, {{compiler-facts}}, {{exported-symbol}}, {{file}}, {{import}}, {{module}}, {{reference}}, {{term}}",
+      "{{config}}, {{claim}}, {{comment}}, {{compiler-facts}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{term}}",
     ) +
     "- **config** — The chosen configuration.\n  - Field: snapshot::Snapshot.config\n  - Type: default-config::KitConfig\n";
   const good = inspect(files, terms).result;

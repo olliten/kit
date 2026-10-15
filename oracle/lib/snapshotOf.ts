@@ -3,18 +3,16 @@ import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import type { ExportedSymbol } from "../../src/core/primitives/exported-symbol.js";
 import type { SpecProse } from "../../src/core/primitives/file.js";
 import type { ImportEdge } from "../../src/core/primitives/import.js";
-import type { SpecHeading } from "../../src/core/primitives/module.js";
 import type { Snapshot } from "../../src/core/primitives/snapshot.js";
 import type { SpecTerm } from "../../src/core/primitives/term.js";
 
 // The one snapshot builder for headless tests: source files under src/, tests (`*.test.ts`) under
-// oracle/, imports as "from > to", headings as artifact names in spec/topic.md, terms as
+// oracle/, imports as "from > to", terms as
 // "<term>" or "<term> · retired: <word>, <word>" (one terms-file line each), prose as the text of
 // spec/topic.md, exported symbols as "file#name", and comments as "file#text" (each on line 1).
 export function snapshotOf(parts: {
   files?: readonly string[];
   imports?: readonly string[];
-  headings?: readonly string[];
   terms?: readonly string[];
   prose?: readonly string[];
   symbols?: readonly string[];
@@ -29,10 +27,6 @@ export function snapshotOf(parts: {
     const [from = "", to = ""] = edge.split(" > ");
     return { from, to };
   });
-  const headings: SpecHeading[] = (parts.headings ?? []).map((name) => ({
-    file: "spec/topic.md",
-    name,
-  }));
   const terms: SpecTerm[] = (parts.terms ?? []).map((entry, i) => {
     const [term = "", words] = entry.split(" · retired: ");
     const retired = words === undefined ? [] : words.split(", ");
@@ -50,7 +44,6 @@ export function snapshotOf(parts: {
   return {
     files,
     imports,
-    headings,
     terms,
     prose,
     symbols,

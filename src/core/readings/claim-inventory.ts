@@ -29,14 +29,21 @@ export function claimInventory(
     line:
       (node.position?.start.line ?? 1) + node.value.slice(0, match.index).split("\n").length - 1,
   });
+  const named = (node: Nodes): string[] =>
+    node.type === "text"
+      ? [...node.value.matchAll(/\{\{([^{}]+)\}\}/g)].map((match) => (match[1] ?? "").trim())
+      : node.type !== "inlineCode" && "children" in node
+        ? node.children.flatMap(named)
+        : [];
   const close = (node: Nodes): void => {
     if (!("children" in node)) return;
     const tail = node.children.at(-1);
     if (tail?.type !== "text") return;
+    const terms = [...new Set(named(node))];
     for (const match of matches(tail.value)) {
       if (tail.value.slice(match.index + match[0].length).trim() !== "") continue;
       declared.set(tail, match.index);
-      const claim = marker(tail, match);
+      const claim = terms.length === 0 ? marker(tail, match) : { ...marker(tail, match), terms };
       if (options.legacy && legacyHeading === claim.anchor && !headingMarkerConsumed)
         headingMarkerConsumed = true;
       else declarations.push(claim);

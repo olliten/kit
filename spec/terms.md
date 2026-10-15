@@ -34,10 +34,6 @@
   - Role: fact
   - Zone: core
   - Of: []
-- **module** — one named contract, identified as `<zone>/<layer>/<name>`.
-  - Role: fact
-  - Zone: core
-  - Of: []
 - **reference** — a marked use that points to the home of a term, topic or claim.
   - Role: fact
   - Zone: core
@@ -45,7 +41,7 @@
 - **snapshot** — the supplied files, declarations, configuration and compiler facts of one codebase.
   - Role: fact
   - Zone: core
-  - Of: {{claim}}, {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{module}}, {{reference}}, {{term}}
+  - Of: {{claim}}, {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{term}}
 - **term** — a concept defined once in the global terms file, with its meaning and any declared contract metadata.
   - Role: fact
   - Zone: core
@@ -85,7 +81,7 @@
   - Role: derived
   - Zone: core
   - From: []
-- **module-binder** — findings from matching declared module headings to their source files.
+- **module-references** — the check that every placed module is named by a claim it keeps, and the claims each module keeps.
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{placement-of}}
@@ -109,6 +105,10 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{term}}, {{finding}}, {{placement-of}}
+- **topic-shape** — the check that a topic is a title, a short intro, then only section headings, described module headings and claims.
+  - Role: derived
+  - Zone: core
+  - From: {{snapshot}}, {{finding}}
 
 ## Adapter contracts
 
@@ -126,33 +126,34 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{module}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
 
 ## Supporting vocabulary and roles
 
-- **core** — the zone that decides everything and performs no effect.
-- **public** — importable from another zone under the inward dependency rule.
-- **placement** — a module's declared zone, layer and name.
-- **placed** — at `<zone>/<layer>/<name>`, and so held to the placement rules.
-- **legacy** — a source file that is not placed.
-- **spec** — the prose the maintainer ratifies.
-- **heading** — the spec line that carries a module's identity.
-- **prose** — any text of the spec.
-- **read** — to take a snapshot of a codebase.
-- **file-type** — what a file is: source, test, spec or other.
-- **import-edge** — one file's import of another.
-- **kit** — the checks, their spec and their config, applied to an app.
-- **maintainer** — the person who ratifies the spec and approves each change to the kit.
-- **config** — what an app declares to the kit.
-- **rule** — one of R1–R4; every check serves one.
-- **debt-key** — a finding's stable name, which a debt list holds.
 - **capability** — access to an operation a module may perform.
 - **check** — a reading that reports findings for a rule.
-- **result** — the value returned by a reading or composition.
+- **config** — what an app declares to the kit.
+- **core** — the zone that decides everything and performs no effect.
 - **cycle** — a dependency path that returns to its starting module.
-- **workspace** — the project files and settings a compiler loads.
-- **proof** — a test that establishes a claim.
+- **debt-key** — a finding's stable name, which a debt list holds.
+- **file-type** — what a file is: source, test, spec or other.
+- **heading** — the spec line that carries a module's identity.
+- **import-edge** — one file's import of another.
 - **inventory** — the collected declarations and references read from a document.
+- **kit** — the checks, their spec and their config, applied to an app.
+- **legacy** — a source file that is not placed.
+- **maintainer** — the person who ratifies the spec and approves each change to the kit.
 - **marker** — the notation identifying a declaration or reference.
-- **semantic** — identifying a defined meaning rather than matching an ordinary word.
+- **module** — one named contract, at `<zone>/<layer>/<name>`, defined once in the terms file.
+- **placed** — at `<zone>/<layer>/<name>`, and so held to the placement rules.
+- **placement** — a module's declared zone, layer and name.
+- **proof** — a test that establishes a claim.
+- **prose** — any text of the spec.
+- **public** — importable from another zone under the inward dependency rule.
+- **read** — to take a snapshot of a codebase.
 - **resolved** — matched to exactly one existing home in the intended namespace.
+- **result** — the value returned by a reading or composition.
+- **rule** — one of R1–R4; every check serves one.
+- **semantic** — identifying a defined meaning rather than matching an ordinary word.
+- **spec** — the prose the maintainer ratifies.
+- **workspace** — the project files and settings a compiler loads.

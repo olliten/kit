@@ -285,3 +285,10 @@ export function termModel(snapshot: Snapshot): {
     [...new Map(items.map((item) => [item.debtKey, item])).values()].sort(byDebtKey);
   return { findings: unique(findings), limits: unique(limits) };
 }
+
+// The terms file lists each section's terms alphabetically, so concurrent additions edit different lines.
+export function termOrder(snapshot: Snapshot): Finding[] {
+  return (snapshot.termOrder ?? []).map(({ term, line, detail }) =>
+    finding("R3", "term-order", term, detail, String(line)),
+  );
+}

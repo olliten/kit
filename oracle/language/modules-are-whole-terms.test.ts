@@ -9,7 +9,7 @@ function concept(name: string, role = "derived", zone = "core"): string {
 
 function inspect(files: readonly string[], terms: string) {
   return termModel({
-    ...snapshotOf({ files, headings: files.map((file) => file.slice(4, -3)) }),
+    ...snapshotOf({ files }),
     terms: termInventory(terms).terms,
   });
 }
