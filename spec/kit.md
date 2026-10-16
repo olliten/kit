@@ -10,7 +10,13 @@ its config, and its debt in its own baseline.
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
 - A cache hit reuses extraction and reruns the check; a corrupt cache is rebuilt, and a source change during
-  extraction or checking rejects the result. · {#cached-check-keeps-evidence}
+  extraction or checking rejects the result. `kit check --fresh-compare` also extracts afresh and fails when
+  the cached snapshot or its findings differ. · {#cached-check-keeps-evidence}
+- A cached snapshot is reused only while every read its extraction made through {{filesystem}} and
+  {{compiler}} returns the same: each file's bytes, each directory listing and each probe that found nothing.
+  A change nothing read misses no entry, and worktrees of one repository share one cache. · {#cache-keys-on-what-was-read}
+- A path the config ignores is never listed or read by {{read-snapshot}}, and an import into it is an error,
+  never a missing edge. · {#ignored-paths-are-unread}
 - `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
   list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}
 - `kit consumers <app>…` checks each app checkout against this Kit, with the app's own config and baseline, and

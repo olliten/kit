@@ -1,123 +1,72 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
+import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { CACHE_CONFIG, adapters, cacheApp, cachedKitCheck, removeCacheApps } from "../lib/cache-fixture.js";
 
-const cacheSource =
-  process.env.KIT_CACHE_SOURCE ??
-  new URL("../../scripts/kit-snapshot-cache.mjs", import.meta.url).href;
-const { cachedKitCheck } = await import(cacheSource);
-const roots: string[] = [];
-function makeFixture() {
-  const root = mkdtempSync(join(tmpdir(), "kit-cache-proof-"));
-  roots.push(root);
-  const put = (path: string, source: string) => {
-    mkdirSync(dirname(join(root, path)), { recursive: true });
-    writeFileSync(join(root, path), source);
-  };
-  put("src/value.ts", "export const value = 7;");
-  let extractions = 0;
-  let checks = 0;
-  const limits = [{ rule: "R1", status: "unresolved", debtKey: "package:unknown" }];
-  const read = async () => {
-    extractions++;
-    return { limits };
-  };
-  const check = (snapshot: { limits: typeof limits }) => {
-    checks++;
-    return snapshot.limits;
-  };
-  const run = (config = {}) => cachedKitCheck(root, config, read, check);
-  return { root, put, read, check, run, counts: () => ({ extractions, checks }), limits };
-}
-afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
-});
+afterEach(removeCacheApps);
 
-test("a cache hit reuses extraction, reruns the checker and retains unresolved evidence", async () => {
-  const fixture = makeFixture();
-  const first = await fixture.run();
-  const second = await fixture.run();
+test("a cache hit reuses extraction, reruns the checker and gives it the snapshot a fresh read gives", async () => {
+  const app = cacheApp();
+  const first = await app.run();
+  const second = await app.run();
   expect(first.receipt.reused).toBe(false);
   expect(second.receipt.reused).toBe(true);
-  expect(fixture.counts()).toEqual({ extractions: 1, checks: 2 });
-  expect(second.result).toEqual(fixture.limits);
-});
+  expect(app.counts()).toEqual({ extractions: 1, checks: 2 });
+  expect(second.result).toEqual(readSnapshot(app.root, CACHE_CONFIG));
+}, 120_000);
 
-test.each(["untracked", "deleted", "config", "dependency"])(
-  "%s changes invalidate saved extraction",
-  async (change) => {
-    const fixture = makeFixture();
-    if (change === "dependency")
-      fixture.put("node_modules/a/index.d.ts", "export interface Value { readonly n: number; }");
-    await fixture.run();
-    let config = {};
-    if (change === "untracked") fixture.put("src/new.ts", "export const added = 9;");
-    if (change === "deleted") rmSync(join(fixture.root, "src/value.ts"));
-    if (change === "config") config = { packages: [{ name: "a", capabilities: ["storage.read"] }] };
-    if (change === "dependency")
-      fixture.put("node_modules/a/index.d.ts", "export interface Value { readonly n: string; }");
-    const result = await fixture.run(config);
-    expect(result.receipt.reused).toBe(false);
-    expect(fixture.counts()).toEqual({ extractions: 2, checks: 2 });
+test.each(["payload and trace", "index"])(
+  "a corrupt %s is rebuilt, never accepted as evidence",
+  async (part) => {
+    const app = cacheApp();
+    await app.run();
+    if (part === "index") writeFileSync(join(app.cacheDir, "index.json"), "{ invalid");
+    else
+      for (const name of readdirSync(join(app.cacheDir, "objects")))
+        writeFileSync(join(app.cacheDir, "objects", name), "{ invalid");
+    const rebuilt = await app.run();
+    expect(rebuilt.receipt.reused).toBe(false);
+    expect(rebuilt.result).toEqual(readSnapshot(app.root, CACHE_CONFIG));
+    const reused = await app.run();
+    expect(reused.receipt.reused).toBe(true);
+    expect(app.counts()).toEqual({ extractions: 2, checks: 3 });
+    expect(JSON.parse(readFileSync(join(app.cacheDir, "index.json"), "utf8")).entries).toHaveLength(1);
   },
+  120_000,
 );
-
-test.each([".vite/vitest/results.json", ".vitest/results.json"])(
-  "generated runner output at %s does not invalidate extraction, but dependency declarations do",
-  async (runnerOutput) => {
-    const fixture = makeFixture();
-    fixture.put("node_modules/a/index.d.ts", "export interface Value { readonly n: number; }");
-    await fixture.run();
-    fixture.put(`node_modules/${runnerOutput}`, JSON.stringify({ duration: 123 }));
-    const warmed = await fixture.run();
-    expect(warmed.receipt.reused).toBe(true);
-    expect(fixture.counts()).toEqual({ extractions: 1, checks: 2 });
-    expect(warmed.result).toEqual(fixture.limits);
-    fixture.put("node_modules/a/index.d.ts", "export interface Value { readonly n: string; }");
-    const changed = await fixture.run();
-    expect(changed.receipt.reused).toBe(false);
-    expect(fixture.counts()).toEqual({ extractions: 2, checks: 3 });
-  },
-);
-
-test("corrupt cache is rebuilt, never accepted as evidence", async () => {
-  const fixture = makeFixture();
-  await fixture.run();
-  fixture.put("node_modules/.cache/kit/snapshot.json", "{ invalid");
-  const result = await fixture.run();
-  expect(result.receipt.reused).toBe(false);
-  expect(fixture.counts()).toEqual({ extractions: 2, checks: 2 });
-});
 
 test("source mutation during extraction rejects the result", async () => {
-  const fixture = makeFixture();
+  const app = cacheApp();
   await expect(
     cachedKitCheck(
-      fixture.root,
-      {},
-      async () => {
-        fixture.put("src/value.ts", "export const value = 8;");
-        return { limits: fixture.limits };
+      app.root,
+      CACHE_CONFIG,
+      (...args: Parameters<typeof app.read>) => {
+        const snapshot = app.read(...args);
+        app.put("src/core/primitives/value.ts", "export const value = 8;\n");
+        return snapshot;
       },
-      fixture.check,
+      app.check,
+      adapters,
+      { cacheDir: app.cacheDir },
     ),
   ).rejects.toThrow(/inputs changed/);
-  expect(fixture.counts().checks).toBe(0);
-});
+  expect(app.counts().checks).toBe(0);
+}, 120_000);
 
 test("source mutation during cached checking rejects the result", async () => {
-  const fixture = makeFixture();
-  await fixture.run();
+  const app = cacheApp();
+  await app.run();
   await expect(
     cachedKitCheck(
-      fixture.root,
-      {},
-      fixture.read,
-      (snapshot: { limits: typeof fixture.limits }) => {
-        fixture.put("src/value.ts", "export const value = 8;");
-        return snapshot.limits;
-      },
+      app.root,
+      CACHE_CONFIG,
+      app.read,
+      () => app.put("node_modules/a/index.d.ts", "export interface Shape { readonly n: string; }\n"),
+      adapters,
+      { cacheDir: app.cacheDir },
     ),
   ).rejects.toThrow(/inputs changed/);
-});
+  expect(app.counts().extractions).toBe(1);
+}, 120_000);
