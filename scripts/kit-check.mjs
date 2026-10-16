@@ -39,6 +39,8 @@ async function main() {
   await withKit(engineRoot, async (load) => {
     const { DEFAULT_CONFIG } = await load("src/core/primitives/default-config.ts");
     const { readSnapshot } = await load("src/substrate/compositions/read-snapshot.ts");
+    const { filesystem } = await load("src/substrate/adapters/filesystem.ts");
+    const { compilerWorkspace } = await load("src/substrate/adapters/compiler.ts");
     const { capabilityCheck } = await load("src/core/readings/capability-check.ts");
     const { moduleReferences } = await load("src/core/readings/module-references.ts");
     const { claimProofBinder } = await load("src/core/readings/claim-proof-binder.ts");
@@ -51,56 +53,69 @@ async function main() {
     const { placementOf } = await load("src/core/readings/placement-of.ts");
     const { topicShape } = await load("src/core/readings/topic-shape.ts");
     const config = configuredKit(DEFAULT_CONFIG, declared);
-    const checked = await cachedKitCheck(
-      root,
-      config,
-      readSnapshot,
-      (snapshot) => {
-        const capability = capabilityCheck(snapshot);
-        const concepts = termModel(snapshot);
-        const topicSnapshot = {
-          ...snapshot,
-          claims: snapshot.claims.filter((claim) => !config.legacyAreas.includes(claim.file)),
-        };
-        const structural = [
-          ...[
-            ...moduleReferences(topicSnapshot),
-            ...claimProofBinder(topicSnapshot),
-            ...proofReach(topicSnapshot),
-          ].sort(byDebtKey),
-          ...nameCheck(snapshot),
-          ...commentCheck(snapshot),
-          ...referenceCheck(snapshot),
-          ...topicShape(snapshot),
-          ...termOrder(snapshot),
-          ...concepts.findings,
-        ].map((item) => ({
-          ...item,
-          category: "placed-violation",
-          status: "violation",
-          blocking: true,
-          limit: "",
-        }));
-        const conceptLimits = concepts.limits.map((item) => ({
-          ...item,
-          category: "checker-limit",
-          status: "unresolved",
-          blocking: true,
-          limit: item.fix,
-        }));
-        const findings = [...capability.findings, ...structural, ...conceptLimits];
-        const placedPaths = snapshot.files
-          .filter((file) => file.type === "source" && placementOf(file.path, config.srcRoot).placed)
-          .map((file) => file.path);
-        const imports = snapshot.compiler.projects.flatMap((project) =>
-          project.imports
-            .filter((edge) => !edge.typeOnly && edge.target !== null)
-            .map((edge) => ({ from: edge.file, to: edge.target })),
-        );
-        return { findings, placedPaths, imports };
-      },
-      root === engineRoot ? [] : [engineRoot],
-    );
+    const checkSnapshot = (snapshot) => {
+      const capability = capabilityCheck(snapshot);
+      const concepts = termModel(snapshot);
+      const topicSnapshot = {
+        ...snapshot,
+        claims: snapshot.claims.filter((claim) => !config.legacyAreas.includes(claim.file)),
+      };
+      const structural = [
+        ...[
+          ...moduleReferences(topicSnapshot),
+          ...claimProofBinder(topicSnapshot),
+          ...proofReach(topicSnapshot),
+        ].sort(byDebtKey),
+        ...nameCheck(snapshot),
+        ...commentCheck(snapshot),
+        ...referenceCheck(snapshot),
+        ...topicShape(snapshot),
+        ...termOrder(snapshot),
+        ...concepts.findings,
+      ].map((item) => ({
+        ...item,
+        category: "placed-violation",
+        status: "violation",
+        blocking: true,
+        limit: "",
+      }));
+      const conceptLimits = concepts.limits.map((item) => ({
+        ...item,
+        category: "checker-limit",
+        status: "unresolved",
+        blocking: true,
+        limit: item.fix,
+      }));
+      const findings = [...capability.findings, ...structural, ...conceptLimits];
+      const placedPaths = snapshot.files
+        .filter((file) => file.type === "source" && placementOf(file.path, config.srcRoot).placed)
+        .map((file) => file.path);
+      const imports = snapshot.compiler.projects.flatMap((project) =>
+        project.imports
+          .filter((edge) => !edge.typeOnly && edge.target !== null)
+          .map((edge) => ({ from: edge.file, to: edge.target })),
+      );
+      return { findings, placedPaths, imports };
+    };
+    const checked = await cachedKitCheck(root, config, readSnapshot, checkSnapshot, {
+      filesystem,
+      compiler: compilerWorkspace,
+    });
+    // A gate that wants proof the cache changed nothing extracts again and compares. The compiler numbers
+    // well-known symbols per process, so a second extraction in one process differs only in those numbers.
+    if (process.argv.includes("--fresh-compare")) {
+      const fresh = readSnapshot(root, config);
+      const comparable = (snapshot) => JSON.stringify(snapshot).replace(/"__@([\w$]+)@\d+"/g, '"__@$1"');
+      const same =
+        comparable(fresh) === comparable(checked.snapshot) &&
+        JSON.stringify(checkSnapshot(fresh)) === JSON.stringify(checked.result);
+      if (!same) {
+        process.stderr.write("Kit cache diverged: a fresh extraction differs from the cached one.\n");
+        process.exitCode = 2;
+        return;
+      }
+      process.stdout.write("Kit fresh-compare: the cached snapshot equals a fresh extraction.\n");
+    }
     const { findings, placedPaths, imports } = checked.result;
     if (process.argv.includes("--report")) {
       process.stdout.write(JSON.stringify({ findings, receipt: checked.receipt }, null, 2) + "\n");
@@ -119,9 +134,7 @@ async function main() {
       const key = item.category + ":" + item.debtKey.split(":")[1];
       counts[key] = (counts[key] ?? 0) + 1;
     }
-    process.stdout.write(
-      "Kit check " + JSON.stringify({ counts, receipt: checked.receipt }) + "\n",
-    );
+    process.stdout.write("Kit check " + JSON.stringify({ counts, receipt: checked.receipt }) + "\n");
     for (const item of findings.filter((item) => item.category === "checker-limit"))
       process.stdout.write("Kit limit " + item.debtKey + ": " + item.limit + "\n");
     for (const item of failures) process.stderr.write(item.debtKey + ": " + item.fix + "\n");

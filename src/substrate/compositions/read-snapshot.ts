@@ -11,8 +11,8 @@ import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
-import { compilerWorkspace } from "../adapters/compiler.js";
-import { filesystem } from "../adapters/filesystem.js";
+import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
+import { type FilesystemRead, filesystem } from "../adapters/filesystem.js";
 
 // The kit's only effect: read one snapshot of the codebase at `appRoot`. Only imports that resolve to a file
 // of the snapshot are recorded. Terms come only from the config's terms file, as lines
@@ -33,8 +33,21 @@ const DATA_COLLECTIONS: readonly string[] = [
   "ReadonlySet",
 ];
 
-export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG): Snapshot {
-  const paths = walk(appRoot).map((abs) => relative(appRoot, abs).split(sep).join("/"));
+// Every read lands in `trace`, so a cached snapshot can be reused exactly while each read would still return
+// the same. An ignored path is neither listed nor read, so an import into it is an error, never a lost edge.
+export function readSnapshot(
+  appRoot: string,
+  config: KitConfig = DEFAULT_CONFIG,
+  trace: { readonly filesystem: FilesystemRead[]; readonly compiler: CompilerRead[] } = {
+    filesystem: [],
+    compiler: [],
+  },
+): Snapshot {
+  const ignored = (path: string): boolean =>
+    (config.ignore ?? []).some((root) => path === root || path.startsWith(`${root}/`));
+  const paths = walk(appRoot, appRoot, ignored, trace.filesystem).map((abs) =>
+    relative(appRoot, abs).split(sep).join("/"),
+  );
   const files: SnapshotFile[] = paths.sort().map((path) => ({ path, type: typeOf(path, config) }));
   const known = new Set(paths);
   const imports: ImportEdge[] = [];
@@ -49,7 +62,7 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
   const semanticReferences: NonNullable<Snapshot["semanticReferences"]>[number][] = [];
   for (const { path, type } of files) {
     if (type === "other") continue;
-    const text = filesystem.readText(join(appRoot, path));
+    const text = filesystem.readText(join(appRoot, path), trace.filesystem);
     if (type === "spec") {
       const inventory = semanticReferenceInventory(text);
       semanticReferences.push(
@@ -81,14 +94,19 @@ export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG
     comments.push(...commentsOf(path, text));
     const seen = new Set<string>();
     for (const m of text.matchAll(IMPORT)) {
-      const to = resolve(path, m[1] ?? "", known);
+      const specifier = m[1] ?? "";
+      if (specifier.startsWith(".")) {
+        const target = posix.normalize(posix.join(posix.dirname(path), specifier));
+        if (ignored(target)) throw ignoredImport(path, target);
+      }
+      const to = resolve(path, specifier, known);
       if (to !== undefined && !seen.has(to)) {
         seen.add(to);
         imports.push({ from: path, to });
       }
     }
   }
-  const compiler = readCompiler(appRoot, paths, files, config);
+  const compiler = readCompiler(appRoot, paths, files, config, ignored, trace.compiler);
   return {
     files,
     imports,
@@ -113,6 +131,8 @@ function readCompiler(
   paths: readonly string[],
   files: readonly SnapshotFile[],
   config: KitConfig,
+  ignored: (path: string) => boolean,
+  trace: CompilerRead[],
 ): CompilerFacts {
   const source = new Set(files.filter((file) => file.type === "source").map((file) => file.path));
   const local = (file: string): string => relative(appRoot, file).split(sep).join("/");
@@ -137,11 +157,14 @@ function readCompiler(
     .filter((path) => /^tsconfig(?:\.[\w-]+)*\.json$/.test(basename(path)))
     .map((file): Project => {
       const absolute = join(appRoot, file);
-      const { parsed, readError, program } = compilerWorkspace.load(absolute);
+      const { parsed, readError, program } = compilerWorkspace.load(absolute, trace);
       const checker = program.getTypeChecker();
       const importTarget = (specifier: string, containingFile: string): string | null => {
-        const resolved = compilerWorkspace.resolve(specifier, containingFile, parsed.options);
-        return resolved === undefined ? null : local(resolved.resolvedFileName);
+        const resolved = compilerWorkspace.resolve(specifier, containingFile, parsed.options, trace);
+        if (resolved === undefined) return null;
+        const target = local(resolved.resolvedFileName);
+        if (ignored(target)) throw ignoredImport(local(containingFile), target);
+        return target;
       };
       const diagnostics = ts
         .sortAndDeduplicateDiagnostics([
@@ -1283,12 +1306,24 @@ function commentsOf(file: string, text: string): SnapshotComment[] {
     }));
 }
 
-function walk(dir: string): string[] {
-  return filesystem.entries(dir).flatMap((entry) => {
+function walk(
+  root: string,
+  dir: string,
+  ignored: (path: string) => boolean,
+  trace: FilesystemRead[],
+): string[] {
+  return filesystem.entries(dir, trace).flatMap((entry) => {
     const abs = join(dir, entry.name);
-    if (entry.directory) return SKIP_DIR.test(entry.name) ? [] : walk(abs);
+    if (ignored(relative(root, abs).split(sep).join("/"))) return [];
+    if (entry.directory) return SKIP_DIR.test(entry.name) ? [] : walk(root, abs, ignored, trace);
     return entry.file ? [abs] : [];
   });
+}
+
+function ignoredImport(from: string, to: string): Error {
+  return new Error(
+    `${from} imports ${to}, which the config ignores; an ignored path must hold no importable source.`,
+  );
 }
 
 function typeOf(path: string, config: KitConfig): FileType {

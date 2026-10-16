@@ -14,6 +14,8 @@ legacy-areas: []
 packages:
   - name: mdast-util-from-markdown
     capabilities: []
+  - name: node:crypto
+    capabilities: []
   - name: node:fs
     capabilities: [filesystem]
   - name: node:path
@@ -47,4 +49,4 @@ adapters:
     contract: {type: CompilerWorkspace}
 ```
 
-Filesystem and process-environment are real requirements of the native compiler host. Compiler includes the broader native compiler/host/sys authority, not merely the two methods selected by this adapter. TypeScript and Node packages are not declared pure. The Markdown parser declaration describes its supplied-text default parsing, not immunity from effects in supplied extension callbacks.
+Filesystem and process-environment are real requirements of the native compiler host. Compiler includes the broader native compiler/host/sys authority, not merely the two methods selected by this adapter. Hashing with `node:crypto` reads nothing, so it is declared pure; TypeScript and the other Node packages are not. The Markdown parser declaration describes its supplied-text default parsing, not immunity from effects in supplied extension callbacks.

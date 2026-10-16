@@ -18,6 +18,9 @@ export interface KitConfig {
     readonly zone: "core" | "shell" | "substrate";
   }[];
   readonly exceptions?: readonly string[];
+  // Paths under the app root the kit never lists or reads, such as generated evidence. Nothing may import
+  // from them, since an import into a path the kit cannot see would be a lost edge.
+  readonly ignore?: readonly string[];
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
   readonly layerNames?: {
