@@ -489,7 +489,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           "type-escape",
           escape.file,
           "Express this value through its checked type without an escape hatch.",
-          `${escape.kind}:${escape.start}`,
+          `${escape.kind}:${escape.site ?? escape.start}`,
         );
     for (const diagnostic of project.diagnostics)
       if (

@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { configuredKit, kitCheckPaths, kitConfig } from "./kit-config.mjs";
-import { withKit } from "./kit-load.mjs";
+import { isKitMain, withKit } from "./kit-load.mjs";
 import { cachedKitCheck } from "./kit-snapshot-cache.mjs";
 
 export function startupCheckRoots(config) {
@@ -124,5 +124,4 @@ async function main() {
   });
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
-  await main();
+if (isKitMain(import.meta.url)) await main();

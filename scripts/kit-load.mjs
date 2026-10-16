@@ -1,4 +1,12 @@
+import { realpathSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/** Resolve both paths so a CLI invoked through an installed symlink still runs once. */
+export function isKitMain(moduleUrl, entry = process.argv[1]) {
+  if (entry === undefined) return false;
+  return realpathSync(entry) === realpathSync(fileURLToPath(moduleUrl));
+}
 
 /** Runs `use` with a loader for the Kit's TypeScript source, then releases the loader. */
 export async function withKit(engineRoot, use) {
