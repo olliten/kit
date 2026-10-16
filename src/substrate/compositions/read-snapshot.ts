@@ -23,6 +23,15 @@ const IMPORT = /\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
 const EXPORT =
   /^export\s+(?:async\s+)?(?:function\*?|const|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm;
 const SOURCE = /\.(?:ts|tsx|mts|js|mjs)$/;
+/** The built-in collections whose own methods are data access, not behaviour a caller supplies. */
+const DATA_COLLECTIONS: readonly string[] = [
+  "Array",
+  "ReadonlyArray",
+  "Map",
+  "ReadonlyMap",
+  "Set",
+  "ReadonlySet",
+];
 
 export function readSnapshot(appRoot: string, config: KitConfig = DEFAULT_CONFIG): Snapshot {
   const paths = walk(appRoot).map((abs) => relative(appRoot, abs).split(sep).join("/"));
@@ -335,6 +344,12 @@ function readCompiler(
           ).values(),
         ],
       });
+      const libCollection = (symbol: ts.Symbol | undefined): boolean =>
+        symbol !== undefined &&
+        DATA_COLLECTIONS.includes(symbol.name) &&
+        symbol.declarations?.some((node) =>
+          program.isSourceFileDefaultLibrary(node.getSourceFile()),
+        ) === true;
       const typeFacts = (
         type: ts.Type,
         seen = new Set<ts.Type>(),
@@ -367,11 +382,12 @@ function readCompiler(
         } else if (
           checker.isArrayLikeType(type) ||
           checker.isTupleType(type) ||
-          symbol?.name === "ReadonlyArray"
+          libCollection(symbol)
         ) {
           const element = checker.getIndexTypeOfType(type, ts.IndexKind.Number);
           children = [
             ...(element === undefined ? [] : [element]),
+            ...(referenceType(type) ? checker.getTypeArguments(type) : []),
             ...type.getProperties().flatMap((property) => {
               const declaration = property.valueDeclaration ?? property.declarations?.[0];
               if (
@@ -379,7 +395,7 @@ function readCompiler(
                 (supplied && program.isSourceFileDefaultLibrary(declaration.getSourceFile())) ||
                 (ts.isMethodSignature(declaration) &&
                   ts.isInterfaceDeclaration(declaration.parent) &&
-                  ["Array", "ReadonlyArray"].includes(declaration.parent.name.text) &&
+                  DATA_COLLECTIONS.includes(declaration.parent.name.text) &&
                   /^lib\.es[\w.]*\.d\.ts$/.test(basename(declaration.getSourceFile().fileName)))
               )
                 return [];
