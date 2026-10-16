@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
+import { proofReach } from "../../src/core/readings/proof-reach.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { bindingFindings } from "../lib/bindingFindings.js";
 
@@ -24,4 +25,5 @@ test("the kit's own imports obey R2", () => {
 test("the kit's claims, modules and tests bind with no finding", () => {
   expect(kit.claims?.length ?? 0).toBeGreaterThan(0);
   expect(bindingFindings(kit)).toEqual([]);
+  expect(proofReach(kit)).toEqual([]);
 });

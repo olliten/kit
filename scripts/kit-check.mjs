@@ -42,6 +42,7 @@ async function main() {
     const { capabilityCheck } = await load("src/core/readings/capability-check.ts");
     const { moduleReferences } = await load("src/core/readings/module-references.ts");
     const { claimProofBinder } = await load("src/core/readings/claim-proof-binder.ts");
+    const { proofReach } = await load("src/core/readings/proof-reach.ts");
     const { byDebtKey } = await load("src/core/readings/finding.ts");
     const { nameCheck } = await load("src/core/readings/name-check.ts");
     const { commentCheck } = await load("src/core/readings/comment-check.ts");
@@ -62,7 +63,11 @@ async function main() {
           claims: snapshot.claims.filter((claim) => !config.legacyAreas.includes(claim.file)),
         };
         const structural = [
-          ...[...moduleReferences(topicSnapshot), ...claimProofBinder(topicSnapshot)].sort(byDebtKey),
+          ...[
+            ...moduleReferences(topicSnapshot),
+            ...claimProofBinder(topicSnapshot),
+            ...proofReach(topicSnapshot),
+          ].sort(byDebtKey),
           ...nameCheck(snapshot),
           ...commentCheck(snapshot),
           ...referenceCheck(snapshot),

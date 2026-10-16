@@ -11,7 +11,7 @@ why the code is built the way it is.
 - Each list in the terms file is in alphabetical order, so agents adding different terms edit different
   lines ({{term-inventory}}, {{term-model}}). · {#terms-are-alphabetical}
 - An app without its configured terms file has a finding naming that file; an empty terms file is enough
-  ({{name-check}}). · {#terms-file-is-required}
+  ({{term-model}}). · {#terms-file-is-required}
 - A retired word in a name, an exported symbol, spec prose or a placed file's comment is a finding whose fix
   names the term that replaced it ({{name-check}}). · {#retired-words-are-findings}
 
