@@ -125,7 +125,7 @@ contradicts the spec.
 **R4, proof.**
 
 - A topic is a title, a short intro, sections and claims; nothing else.
-- Every claim in the spec has a test.
+- Every claim in the spec has a test, and its tests reach the modules it names.
 - Every test names a claim.
 - Every placed module is named by a claim.
 

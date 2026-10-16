@@ -93,6 +93,10 @@
   - Role: derived
   - Zone: core
   - From: {{layer}}, {{zone}}
+- **proof-reach** — the check that a claim's tests together reach, through their imports, every placed module the claim names.
+  - Role: derived
+  - Zone: core
+  - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
