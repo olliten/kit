@@ -201,20 +201,38 @@ test.each(["ReadonlyMap<string, number>", "ReadonlySet<number>"])(
   },
 );
 
-test("a reading's public Map input still violates the plain-data rule", () => {
+test("a reading's public Map, Set or array of data is data, like an array", () => {
   const result = inspect({
-    "src/core/readings/value.ts":
-      "export function value(data: ReadonlyMap<string, number>): number { return data.get('value') ?? 0; }\n",
+    "src/core/readings/total.ts":
+      "export function total(values: ReadonlyMap<string, number>): number { let sum = 0; for (const value of values.values()) sum += value; return sum; }\n",
+    "src/core/readings/count.ts":
+      "export function count(names: ReadonlySet<string>): number { return names.size; }\n",
+    "src/core/readings/sum.ts":
+      "export function sum(values: readonly number[]): number { return values.reduce((left, right) => left + right, 0); }\n",
+    "src/core/readings/first.ts":
+      "export function first(values: Map<string, number>, names: Set<string>): number { return names.has('a') ? (values.get('a') ?? 0) : 0; }\n",
   });
-  expect(result.findings).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        debtKey: "R1:reading-callable:src/core/readings/value.ts:data",
-        status: "violation",
-      }),
-    ]),
+  expect(result.findings.filter((finding) => finding.debtKey.includes("reading-callable"))).toEqual(
+    [],
   );
 });
+
+test.each(["ReadonlyMap<string, () => number>", "ReadonlySet<() => number>"])(
+  "a reading's public %s input still carries supplied behaviour",
+  (parameter) => {
+    const result = inspect({
+      "src/core/readings/value.ts": `export function value(data: ${parameter}): number { return 0; }\n`,
+    });
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          debtKey: "R1:reading-callable:src/core/readings/value.ts:data",
+          status: "violation",
+        }),
+      ]),
+    );
+  },
+);
 
 test("a Map of clock callbacks still cannot enter Core", () => {
   const result = inspect({
