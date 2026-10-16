@@ -219,13 +219,27 @@ without naming the app.
   both there; the change was written against that app's pinned Kit and kept on `leeloo/startup-boundaries`,
   and is ported here so every app gets it.
 
+## 2026-10-16 · A cache keyed by what extraction read, and ignored paths
+
+- **Decision:** the snapshot cache records every read extraction makes, through the filesystem adapter and one
+  traced compiler system: file bytes as digests, directory listings, existence probes that found nothing,
+  realpaths, directory reads and environment reads. An entry is reused while each read returns the same, under a
+  header of the Kit's source, the TypeScript version, the platform, the working directory and the config. Entries
+  live in the common Git directory, so worktrees share them, and are evicted least recently used past 2 GB
+  (`KIT_CACHE_MAX_BYTES`). An app may declare `ignore` paths the walk never lists; an import into one is an error.
+  `kit check --fresh-compare` extracts again and fails on any difference. This replaces the whole-tree
+  fingerprint.
+- **Why:** on the first app the fingerprint hashed every byte under the root and every package declaration, so a
+  generated evidence file written each commit missed the cache and cold extraction, about four minutes, ran
+  again. A trace misses only on a change extraction could see.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.
 - Incremental extraction, which pre-commit use waits on.
 - A published command and build: `scripts/kit-check.mjs` runs the TypeScript source through vite-node.
-- Validation of the config: the runner reads roots, terms, claim separator, legacy areas and zones, adapters and
-  packages. Other keys are ignored silently, and `layerNames` is not passed through from the config file.
+- Validation of the config: the runner reads roots, terms, claim separator, legacy areas and zones, ignored paths,
+  adapters and packages. Other keys are ignored silently, and `layerNames` is not passed through from the config file.
 - A check that each claim's test reaches the modules the claim names. Today a claim's names are trusted.
 - `kit partition`, choosing each test's environment from what its imports reach; harnesses that connect a
   contract to a real or a fake implementation; one contract suite run against both.

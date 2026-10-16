@@ -29,9 +29,41 @@ export function configuredKit(defaults, declaration) {
     legacyAreas: declaration["legacy-areas"] ?? [],
     legacyZones: declaration["legacy-zones"] ?? [],
     exceptions: declaration.exceptions ?? [],
+    ignore: ignoredPaths(declaration.ignore),
     adapters: declaration.adapters ?? [],
     packages: declaration.packages ?? [],
   };
+}
+
+/** An ignored path is exact and inside the app, so the walk can skip it by prefix without reading it.
+ * @param {unknown} declared
+ * @returns {string[]}
+ */
+export function ignoredPaths(declared) {
+  if (declared === undefined || declared === null) return [];
+  const paths = typeof declared === "string" ? [declared] : declared;
+  if (!Array.isArray(paths)) throw new Error("The Kit configuration's ignore must list relative paths.");
+  return [
+    ...new Set(
+      paths.map((path) => {
+        const normalized = typeof path === "string" ? posix.normalize(path).replace(/\/$/, "") : "";
+        if (
+          typeof path !== "string" ||
+          !normalized ||
+          normalized === "." ||
+          path.includes("\\") ||
+          /^[a-z]:/i.test(path) ||
+          /[*?{}[\]!]/.test(path) ||
+          posix.isAbsolute(path) ||
+          normalized.split("/").includes("..")
+        )
+          throw new Error(
+            `The Kit configuration's ignore entry ${JSON.stringify(path)} must be a relative path inside the app, without patterns.`,
+          );
+        return normalized;
+      }),
+    ),
+  ].sort();
 }
 
 /** Paths the caller gives resolve against where the caller runs; the defaults check the Kit itself. */
