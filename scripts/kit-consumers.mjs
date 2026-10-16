@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isKitMain } from "./kit-load.mjs";
 
 // Each app pins a Kit commit, so a change to the Kit reaches an app only when the app moves its pin. This
 // checks the apps against the Kit checked out here before that happens, so the findings a change brings
@@ -71,4 +72,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) await main();
+if (isKitMain(import.meta.url)) await main();

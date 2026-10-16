@@ -679,6 +679,56 @@ function readCompiler(
         const path = local(sf.fileName);
         if (!source.has(path)) continue;
         const comments = new Map<number, ts.CommentRange>();
+        const escapeOccurrences = new Map<string, number>();
+        const syntaxOf = (node: ts.Node): readonly (readonly [string, string])[] => {
+          const tokens: [string, string][] = [];
+          const visitToken = (child: ts.Node): void => {
+            if (ts.isJSDoc(child)) return;
+            const children = child.getChildren(sf);
+            if (children.length === 0) tokens.push([ts.SyntaxKind[child.kind], child.getText(sf)]);
+            else for (const nested of children) visitToken(nested);
+          };
+          visitToken(node);
+          return tokens;
+        };
+        const escapeSite = (
+          node: ts.Node,
+          kind: Project["escapes"][number]["kind"],
+          syntax: unknown = syntaxOf(node),
+        ): string => {
+          const scope: (readonly [string, readonly (readonly [string, string])[]])[] = [];
+          for (let parent: ts.Node | undefined = node.parent; parent !== undefined; parent = parent.parent) {
+            const name =
+              ts.isVariableDeclaration(parent) ||
+              ts.isBindingElement(parent) ||
+              ts.isFunctionDeclaration(parent) ||
+              ts.isFunctionExpression(parent) ||
+              ts.isClassDeclaration(parent) ||
+              ts.isClassExpression(parent) ||
+              ts.isInterfaceDeclaration(parent) ||
+              ts.isTypeAliasDeclaration(parent) ||
+              ts.isTypeParameterDeclaration(parent) ||
+              ts.isParameter(parent) ||
+              ts.isMethodDeclaration(parent) ||
+              ts.isMethodSignature(parent) ||
+              ts.isPropertyDeclaration(parent) ||
+              ts.isPropertySignature(parent) ||
+              ts.isPropertyAssignment(parent) ||
+              ts.isGetAccessorDeclaration(parent) ||
+              ts.isSetAccessorDeclaration(parent) ||
+              ts.isEnumDeclaration(parent) ||
+              ts.isEnumMember(parent) ||
+              ts.isModuleDeclaration(parent)
+                ? parent.name
+                : undefined;
+            if (name !== undefined)
+              scope.unshift([ts.SyntaxKind[parent.kind], syntaxOf(name)]);
+          }
+          const identity = JSON.stringify([kind, scope, syntax]);
+          const occurrence = (escapeOccurrences.get(identity) ?? 0) + 1;
+          escapeOccurrences.set(identity, occurrence);
+          return JSON.stringify([scope, syntax, occurrence]);
+        };
         const visit = (node: ts.Node): void => {
           let runtime = true;
           for (let parent: ts.Node | undefined = node; parent !== undefined; parent = parent.parent)
@@ -1025,7 +1075,8 @@ function readCompiler(
                 : ts.isNonNullExpression(node) && !ts.isElementAccessExpression(node.expression)
                   ? "non-null"
                   : null;
-          if (kind !== null) escapes.push({ file: path, start: node.getStart(sf), kind });
+          if (kind !== null)
+            escapes.push({ file: path, start: node.getStart(sf), kind, site: escapeSite(node, kind) });
           ts.forEachChild(node, visit);
         };
         visit(sf);
@@ -1132,8 +1183,26 @@ function readCompiler(
             .slice(comment.pos, comment.end)
             .matchAll(/@ts-(ignore|nocheck|expect-error)\b/g)) {
             const kind = match[1];
-            if (kind === "ignore" || kind === "nocheck" || kind === "expect-error")
-              escapes.push({ file: path, start: comment.pos + match.index, kind });
+            if (kind === "ignore" || kind === "nocheck" || kind === "expect-error") {
+              let target: ts.Node = sf;
+              const following = (node: ts.Node): void => {
+                if (node.getFullStart() <= comment.pos && node.end >= comment.end) {
+                  target = node;
+                  if (!ts.isSourceFile(node) && node.getStart(sf) >= comment.end) return;
+                  ts.forEachChild(node, following);
+                }
+              };
+              if (kind !== "nocheck") following(sf);
+              escapes.push({
+                file: path,
+                start: comment.pos + match.index,
+                kind,
+                site: escapeSite(target, kind, [
+                  sf.text.slice(comment.pos, comment.end).replace(/\s+/g, " ").trim(),
+                  ts.isSourceFile(target) ? [] : syntaxOf(target),
+                ]),
+              });
+            }
           }
         }
       }

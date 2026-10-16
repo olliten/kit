@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { configuredKit, kitConfig } from "./kit-config.mjs";
-import { withKit } from "./kit-load.mjs";
+import { isKitMain, withKit } from "./kit-load.mjs";
 
 // A module's claims are derived from the claims that name it, so they are listed here rather than written
 // into the module, where they would go stale and make parallel edits collide.
@@ -108,5 +108,4 @@ async function main() {
   );
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
-  await main();
+if (isKitMain(import.meta.url)) await main();

@@ -370,26 +370,26 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           name,
         );
       }
-      if (
-        externalAdapterPaths.has(global.file) ||
-        !adapters.some((adapter) => adapter.globals?.includes(global.name))
-      )
+      const declaredAdapters = adapters.filter((adapter) =>
+        adapter.globals?.includes(global.name),
+      );
+      const owners = declaredAdapters.filter((adapter) => pathOf(adapter.module) === global.file);
+      if (externalAdapterPaths.has(global.file) || declaredAdapters.length === 0)
         for (const authority of global.nativeAuthority ?? [])
           recordNative(global.file, nativeKey(authority.root));
-      for (const adapter of adapters)
-        if (adapter.globals?.includes(global.name)) {
-          direct.get(global.file)?.add(adapter.capability);
-          if (global.file !== pathOf(adapter.module)) {
-            rawFailures.add(`${global.file}:${adapter.capability}`);
-            add(
-              "R1",
-              "raw-primitive",
-              global.file,
-              "Acquire this ambient authority only through its declared capability adapter.",
-              adapter.capability,
-            );
-          }
+      for (const adapter of owners.length > 0 ? owners : declaredAdapters) {
+        direct.get(global.file)?.add(adapter.capability);
+        if (global.file !== pathOf(adapter.module)) {
+          rawFailures.add(`${global.file}:${adapter.capability}`);
+          add(
+            "R1",
+            "raw-primitive",
+            global.file,
+            "Acquire this ambient authority only through its declared capability adapter.",
+            adapter.capability,
+          );
         }
+      }
     }
     for (const edge of project.imports) {
       const from = placement(edge.file);
@@ -489,7 +489,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           "type-escape",
           escape.file,
           "Express this value through its checked type without an escape hatch.",
-          `${escape.kind}:${escape.start}`,
+          `${escape.kind}:${escape.site ?? escape.start}`,
         );
     for (const diagnostic of project.diagnostics)
       if (

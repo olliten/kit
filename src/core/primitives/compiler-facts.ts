@@ -114,6 +114,7 @@ export interface CompilerFacts {
     readonly escapes: readonly {
       readonly file: string;
       readonly start: number;
+      readonly site?: string;
       readonly kind: "any" | "assertion" | "non-null" | "ignore" | "nocheck" | "expect-error";
     }[];
   }[];
