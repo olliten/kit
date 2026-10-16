@@ -219,6 +219,16 @@ without naming the app.
   both there; the change was written against that app's pinned Kit and kept on `leeloo/startup-boundaries`,
   and is ported here so every app gets it.
 
+## 2026-10-16 · A claim's tests reach the modules it names
+
+- **Decision:** the modules a claim names must be reached, through imports, by the claim's tests taken
+  together; a named placed module none of them reaches is a placed violation. Reach is the import closure from
+  each test file, helpers included, so a type-only import counts and a module loaded only by a spawned process
+  does not. A name that is no placed module is left to the reference check.
+- **Why:** a claim's names are how `kit refs` and an agent find what a module promises, and nothing proved
+  them. Run on the Kit, the check found a claim naming the module that doesn't produce its finding, and a
+  named module its test never touched. Each test alone would be too strict: variants prove parts of a claim.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.
@@ -226,7 +236,6 @@ without naming the app.
 - A published command and build: `scripts/kit-check.mjs` runs the TypeScript source through vite-node.
 - Validation of the config: the runner reads roots, terms, claim separator, legacy areas and zones, adapters and
   packages. Other keys are ignored silently, and `layerNames` is not passed through from the config file.
-- A check that each claim's test reaches the modules the claim names. Today a claim's names are trusted.
 - `kit partition`, choosing each test's environment from what its imports reach; harnesses that connect a
   contract to a real or a fake implementation; one contract suite run against both.
 - Declared test-only observation hooks, with an undeclared hook as a finding.

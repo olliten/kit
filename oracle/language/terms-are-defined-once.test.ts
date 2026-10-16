@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { nameCheck } from "../../src/core/readings/name-check.js";
+import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { snapshotOf } from "../lib/snapshotOf.js";
 
 test("a term defined once has no finding", () => {
@@ -24,4 +25,12 @@ test("case and repeated spaces do not create another global definition identity"
 
 test("punctuation distinguishes global definition identities", () => {
   expect(nameCheck(snapshotOf({ terms: ["Not before", "not-before"] }))).toEqual([]);
+});
+
+test("definitions read from a terms file keep their lines, so the finding names both", () => {
+  const terms = termInventory("# Terms\n\n- **step** — One move.\n- **Step** — Another move.\n").terms;
+  const [finding, ...rest] = nameCheck({ ...snapshotOf({}), terms });
+  expect(rest).toEqual([]);
+  expect(finding?.debtKey).toBe("R3:duplicate-term:step");
+  expect(finding?.fix).toContain("lines 3, 4");
 });
