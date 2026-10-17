@@ -83,6 +83,8 @@ export interface CompilerFacts {
       readonly file: string;
       readonly start: number;
       readonly target: string | null;
+      // The called function is declared in this file and no other file can name it.
+      readonly local?: boolean;
       readonly callableOrigins: readonly (string | null)[];
       readonly callableBindings?: readonly {
         readonly source: { readonly file: string; readonly start: number } | null;
