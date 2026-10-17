@@ -66,8 +66,10 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     if (!path.startsWith(prefix)) return undefined;
     const zone = path.slice(prefix.length).split("/")[0];
     if (zone === "core" || zone === "shell" || zone === "substrate") return zone;
-    return snapshot.config.legacyZones?.find(({ root }) =>
-      path.startsWith(`${root.replace(/\/$/, "")}/`),
+    return snapshot.config.legacyZones?.find((row) =>
+      "files" in row
+        ? row.files.includes(path) && placement(path) === null
+        : path.startsWith(`${row.root.replace(/\/$/, "")}/`),
     )?.zone;
   };
   const adapters = snapshot.config.adapters ?? [];
@@ -184,6 +186,27 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     }
     startups.add(path);
   }
+  // A files row zones only what it lists, and each listed file is debt, so the baseline records the row's
+  // set: dropping a file shrinks it, and a file added to it is new debt the ratchet rejects.
+  for (const row of snapshot.config.legacyZones ?? [])
+    if ("files" in row)
+      for (const path of row.files)
+        if (files.includes(path) && placement(path) === null)
+          add(
+            "R1",
+            "legacy-zone",
+            path,
+            "Place this module, then remove it from its legacy zone row.",
+            row.zone,
+          );
+        else
+          add(
+            "R1",
+            "legacy-zone-row",
+            path,
+            "List only existing legacy source files in a legacy zone row.",
+            row.zone,
+          );
   if (projects.length === 0)
     for (const path of files)
       unresolved("compiler-boundary", path, "No compiler project covers the source.");
@@ -468,7 +491,29 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ? edge.specifier.split("/").slice(0, 2).join("/")
           : edge.specifier.split("/")[0];
         const declaration = snapshot.config.packages?.find((row) => row.name === packageName);
-        if (
+        const bound = adapters.filter(
+          (adapter) =>
+            adapter.kind === "external" &&
+            packageName !== undefined &&
+            adapter.packages?.includes(packageName) === true,
+        );
+        const owners = bound.filter((adapter) => pathOf(adapter.module) === edge.file);
+        if (bound.length > 0 && !edge.specifier.startsWith(".") && !edge.specifier.startsWith("#")) {
+          // An adapter's package is its raw operation: binding it to the adapter's row is what keeps
+          // the core and the adapter's neighbours from reaching it, whatever a package row says.
+          for (const adapter of owners.length > 0 ? owners : bound) {
+            direct.get(edge.file)?.add(adapter.capability);
+            if (owners.length === 0) rawFailures.add(`${edge.file}:${adapter.capability}`);
+          }
+          if (owners.length === 0)
+            add(
+              "R1",
+              "package-import",
+              edge.file,
+              "Import this package only in the capability adapter that declares it, and use that adapter's contract here.",
+              packageName,
+            );
+        } else if (
           declaration !== undefined &&
           !edge.specifier.startsWith(".") &&
           !edge.specifier.startsWith("#")

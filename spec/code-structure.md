@@ -34,6 +34,9 @@ compositions wire the others into behaviour.
   holding only the adapter's plain contract holds no native authority ({{capability-check}}). · {#declared-globals-cover-their-handles}
 - An ambient host global such as `process` is authority: used outside an adapter that declares it, also as
   `globalThis.<name>` or through a cast of `globalThis`, it is a limit ({{capability-check}}). · {#host-globals-need-an-adapter}
+- A package an adapter declares in its `packages` is that adapter's to import: there the import grants the
+  adapter's capability, and anywhere else, the core included, a runtime import of it is a finding even where a
+  package row declares it; a package no row declares stays a limit ({{capability-check}}). · {#declared-packages-stay-in-their-adapter}
 - A namespace such as `Window` grants only what is reached through it, and a constructor selected from it
   keeps its own authority ({{capability-check}}). · {#namespaces-grant-what-is-reached}
 - A type, a type alias or a declaration merge grants no runtime authority; the value it describes still does

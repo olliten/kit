@@ -13,10 +13,12 @@ export interface KitConfig {
   readonly anchor: string;
   readonly claimSeparator?: string;
   readonly legacyAreas?: readonly string[];
-  readonly legacyZones?: readonly {
-    readonly root: string;
-    readonly zone: "core" | "shell" | "substrate";
-  }[];
+  // A prefix row zones every legacy file under its root; a files row zones exactly the files it lists, each
+  // recorded as debt, so the row can only shrink.
+  readonly legacyZones?: readonly (
+    | { readonly root: string; readonly zone: "core" | "shell" | "substrate" }
+    | { readonly files: readonly string[]; readonly zone: "core" | "shell" | "substrate" }
+  )[];
   readonly exceptions?: readonly string[];
   // Paths under the app root the kit never lists or reads, such as generated evidence. Nothing may import
   // from them, since an import into a path the kit cannot see would be a lost edge.
@@ -42,6 +44,8 @@ export interface KitConfig {
     readonly contract?: { readonly type: string } | { readonly parameter: number };
     readonly primitives?: readonly ("clock" | "randomness")[];
     readonly globals?: readonly string[];
+    // Packages only this adapter's module may import at runtime, granting its capability there.
+    readonly packages?: readonly string[];
   }[];
 }
 

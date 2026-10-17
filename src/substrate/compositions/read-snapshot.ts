@@ -23,7 +23,10 @@ const IMPORT = /\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
 const EXPORT =
   /^export\s+(?:async\s+)?(?:function\*?|const|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm;
 const SOURCE = /\.(?:ts|tsx|mts|js|mjs)$/;
-/** The built-in collections whose own methods are data access, not behaviour a caller supplies. */
+/**
+ * The built-in collections whose own methods are data access, not behaviour a caller supplies. Binary data is
+ * one of them: a typed array, its buffer and a view over it only read and write their own memory.
+ */
 const DATA_COLLECTIONS: readonly string[] = [
   "Array",
   "ReadonlyArray",
@@ -31,6 +34,20 @@ const DATA_COLLECTIONS: readonly string[] = [
   "ReadonlyMap",
   "Set",
   "ReadonlySet",
+  "ArrayBuffer",
+  "SharedArrayBuffer",
+  "DataView",
+  "Int8Array",
+  "Uint8Array",
+  "Uint8ClampedArray",
+  "Int16Array",
+  "Uint16Array",
+  "Int32Array",
+  "Uint32Array",
+  "Float32Array",
+  "Float64Array",
+  "BigInt64Array",
+  "BigUint64Array",
 ];
 /** The host types that are values: they parse, format or transcode what they are given and do no I/O. */
 const VALUE_TYPES: readonly string[] = ["URL", "URLSearchParams", "TextEncoder", "TextDecoder"];
