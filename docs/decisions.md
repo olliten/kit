@@ -243,6 +243,57 @@ without naming the app.
   them. Run on the Kit, the check found a claim naming the module that doesn't produce its finding, and a
   named module its test never touched. Each test alone would be too strict: variants prove parts of a claim.
 
+## 2026-10-17 · Binary data is data
+
+- **Decision:** the typed arrays (`Int8Array` through `BigUint64Array`, `Uint8ClampedArray` included),
+  `ArrayBuffer`, `SharedArrayBuffer` and `DataView` join `Array`, `Map` and `Set` as built-in data collections:
+  their default-library members are data access, so a reading or a Core composition may take them. Their type
+  arguments are still read, and a subclass that adds a method is supplied behaviour. Node's `Buffer` is not one
+  of them: it stays supplied behaviour as a parameter and an ambient global as a value.
+- **Why:** each only reads and writes its own memory. `SharedArrayBuffer` is included because sharing it needs
+  `postMessage`, which is authority of its own, and `Uint8Array`'s buffer type argument names it. `Buffer`
+  carries Node's encoding, pooling and allocation semantics, and the maintainer ruled it authority.
+
+## 2026-10-17 · A package an adapter declares is that adapter's
+
+- **Decision:** an external adapter row may list `packages`, as it lists `globals`. Only that adapter's module
+  may import a listed package at runtime, and the import grants it the row's capability. A runtime import of it
+  anywhere else, the core included, is a `package-import` finding, also when a package row declares the
+  package, so a row with no capabilities cannot open it to the core. A type-only import costs nothing, and a
+  package no row declares stays an external-boundary limit. Package rows keep their meaning for every other
+  package.
+- **Why:** a package row grants its capabilities to whichever module imports it, so a row for `node:fs` let
+  any substrate composition read files beside its adapter, and a row declaring none let the core import
+  `node:crypto`. The first app's Sign-in work has adapters over `node:crypto`, `node:child_process`, `node:fs`,
+  `node:os` and `better-sqlite3` that no row could tie to them, and `js-yaml` used outside any adapter. The
+  `process` and `Buffer` globals needed no change: an adapter's `globals` already bind them to it.
+
+## 2026-10-17 · A legacy zone row of exact files, which only shrinks
+
+- **Decision:** a `legacy-zones` row may list `files` instead of a `root`. Only the listed legacy files take its
+  zone; a file added beside them takes none and keeps its migration-zone limit. Each listed file is a
+  `legacy-zone` debt finding, so the app's baseline records the row's set like any debt: removing a file from the
+  row shrinks it, and listing a file the baseline lacks is new debt the ratchet rejects. A listed placed module
+  or missing file is a `legacy-zone-row` finding and gets no zone. Prefix rows are unchanged.
+- **Why:** the first app's top-level legacy files (thirteen in `src/` and those of `src/readwise/`) had no zone,
+  which left 53 migration-zone limits on its Sign-in work. A prefix row of `src/` would clear them, but it zones
+  every file later added at the top level and the startup file with them, and nothing would record which files
+  it was meant for.
+
+## 2026-10-17 · URLs and text codecs are values
+
+- **Decision:** `URL`, `URLSearchParams`, `TextEncoder` and `TextDecoder`, as the host declares them (the DOM
+  library or Node's types), are value types: holding, constructing or using one grants no native authority, is
+  no ambient global and is not supplied behaviour to a reading. `URL.canParse` and `URL.parse` are part of the
+  value; the object-URL registry (`URL.createObjectURL`, `URL.revokeObjectURL`) is not, and a method a project
+  merges into one of these types is behaviour like any other. A host function declared by the DOM library, such
+  as `fetch`, now carries the native handles it returns, so calling it is authority even when the caller reads
+  no member of the result. `Request`, `Response`, `Headers` and `WebSocket` stay native handles.
+- **Why:** they parse, format or transcode what they are given and do no I/O, yet each was a native root, so
+  every placed module that parsed a query string or built a form body was a limit. On the first app's sign-in
+  work they were most of the reachable native-authority limits. A core `fetch(url)` was caught only through its
+  `URL` argument; making the URL a value would have let `fetch` through, so the host function carries its own.
+
 ## 2026-10-17 · A handle passed within one composition file needs no contract
 
 - **Decision:** when a placed composition passes a handle or a callback to a function declared in the same file

@@ -34,6 +34,9 @@ compositions wire the others into behaviour.
   holding only the adapter's plain contract holds no native authority ({{capability-check}}). · {#declared-globals-cover-their-handles}
 - An ambient host global such as `process` is authority: used outside an adapter that declares it, also as
   `globalThis.<name>` or through a cast of `globalThis`, it is a limit ({{capability-check}}). · {#host-globals-need-an-adapter}
+- A package an adapter declares in its `packages` is that adapter's to import: there the import grants the
+  adapter's capability, and anywhere else, the core included, a runtime import of it is a finding even where a
+  package row declares it; a package no row declares stays a limit ({{capability-check}}). · {#declared-packages-stay-in-their-adapter}
 - A namespace such as `Window` grants only what is reached through it, and a constructor selected from it
   keeps its own authority ({{capability-check}}). · {#namespaces-grant-what-is-reached}
 - A type, a type alias or a declaration merge grants no runtime authority; the value it describes still does
@@ -41,7 +44,8 @@ compositions wire the others into behaviour.
 - A function carries the authority of the module that made it: a callback, getter or method that holds the
   clock can't enter the core, while an imported pure callback can ({{capability-check}}). · {#functions-carry-their-authority}
 - A native handle or event handler passed as an argument stays authority: it can't enter a reading or a core
-  composition ({{capability-check}}). · {#native-handles-stay-in-adapters}
+  composition. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
+  host function it is handed to, such as `fetch`, stays authority ({{capability-check}}). · {#native-handles-stay-in-adapters}
 - Registering a handler or carrying a record passes on no authority the caller lacks: a clock closure, a map
   of callbacks or a native handle can't reach the core through a registration, a record or a private
   endpoint. A composition handing a handle to a function only its own file can name crosses no boundary; a
