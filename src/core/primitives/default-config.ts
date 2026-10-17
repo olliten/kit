@@ -44,6 +44,8 @@ export interface KitConfig {
     readonly contract?: { readonly type: string } | { readonly parameter: number };
     readonly primitives?: readonly ("clock" | "randomness")[];
     readonly globals?: readonly string[];
+    // Packages only this adapter's module may import at runtime, granting its capability there.
+    readonly packages?: readonly string[];
   }[];
 }
 

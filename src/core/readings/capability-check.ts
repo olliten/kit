@@ -490,7 +490,29 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ? edge.specifier.split("/").slice(0, 2).join("/")
           : edge.specifier.split("/")[0];
         const declaration = snapshot.config.packages?.find((row) => row.name === packageName);
-        if (
+        const bound = adapters.filter(
+          (adapter) =>
+            adapter.kind === "external" &&
+            packageName !== undefined &&
+            adapter.packages?.includes(packageName) === true,
+        );
+        const owners = bound.filter((adapter) => pathOf(adapter.module) === edge.file);
+        if (bound.length > 0 && !edge.specifier.startsWith(".") && !edge.specifier.startsWith("#")) {
+          // An adapter's package is its raw operation: binding it to the adapter's row is what keeps
+          // the core and the adapter's neighbours from reaching it, whatever a package row says.
+          for (const adapter of owners.length > 0 ? owners : bound) {
+            direct.get(edge.file)?.add(adapter.capability);
+            if (owners.length === 0) rawFailures.add(`${edge.file}:${adapter.capability}`);
+          }
+          if (owners.length === 0)
+            add(
+              "R1",
+              "package-import",
+              edge.file,
+              "Import this package only in the capability adapter that declares it, and use that adapter's contract here.",
+              packageName,
+            );
+        } else if (
           declaration !== undefined &&
           !edge.specifier.startsWith(".") &&
           !edge.specifier.startsWith("#")
