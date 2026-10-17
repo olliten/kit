@@ -243,6 +243,20 @@ without naming the app.
   them. Run on the Kit, the check found a claim naming the module that doesn't produce its finding, and a
   named module its test never touched. Each test alone would be too strict: variants prove parts of a claim.
 
+## 2026-10-17 · A package an adapter declares is that adapter's
+
+- **Decision:** an external adapter row may list `packages`, as it lists `globals`. Only that adapter's module
+  may import a listed package at runtime, and the import grants it the row's capability. A runtime import of it
+  anywhere else, the core included, is a `package-import` finding, also when a package row declares the
+  package, so a row with no capabilities cannot open it to the core. A type-only import costs nothing, and a
+  package no row declares stays an external-boundary limit. Package rows keep their meaning for every other
+  package.
+- **Why:** a package row grants its capabilities to whichever module imports it, so a row for `node:fs` let
+  any substrate composition read files beside its adapter, and a row declaring none let the core import
+  `node:crypto`. The first app's Sign-in work has adapters over `node:crypto`, `node:child_process`, `node:fs`,
+  `node:os` and `better-sqlite3` that no row could tie to them, and `js-yaml` used outside any adapter. The
+  `process` and `Buffer` globals needed no change: an adapter's `globals` already bind them to it.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.
