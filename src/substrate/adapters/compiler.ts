@@ -31,6 +31,7 @@ export interface CompilerWorkspace {
     containingFile: string,
     options: ts.CompilerOptions,
     trace: CompilerRead[],
+    mode?: ts.ResolutionMode,
   ): ts.ResolvedModuleFull | undefined;
   reread(read: CompilerRead): CompilerRead;
 }
@@ -166,8 +167,9 @@ export const compilerWorkspace: CompilerWorkspace = {
     });
     return { parsed, readError: read.error, program };
   },
-  resolve: (specifier, containingFile, options, trace) =>
-    ts.resolveModuleName(specifier, containingFile, options, systemOf(trace)).resolvedModule,
+  resolve: (specifier, containingFile, options, trace, mode) =>
+    ts.resolveModuleName(specifier, containingFile, options, systemOf(trace), undefined, undefined, mode)
+      .resolvedModule,
   reread(read) {
     const again: CompilerRead[] = [];
     const system = tracedSystem(again);
