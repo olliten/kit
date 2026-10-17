@@ -109,13 +109,31 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     `native:${identity.file}:${identity.name}`;
   const nativeAuthorities = new Map(
     projects.flatMap((project) =>
-      [...project.parameters, ...project.accesses, ...project.globals].flatMap((entry) =>
+      [
+        ...project.parameters,
+        ...project.accesses,
+        ...project.globals,
+        ...project.connections.flatMap((connection) =>
+          (connection.callableBindings ?? []).flatMap((binding) =>
+            binding.capture === undefined ? [] : [binding.capture],
+          ),
+        ),
+      ].flatMap((entry) =>
         (entry.nativeAuthority ?? []).map(
           (authority) => [nativeKey(authority.root), authority] as const,
         ),
       ),
     ),
   );
+  // Each capability a fact grants at its position, so a callable is charged only the code it reaches.
+  const positioned = new Map<string, string[]>();
+  const grantAt = (file: string, start: number, capability: string): void => {
+    const key = `${file}:${start}`;
+    const list = positioned.get(key);
+    if (list === undefined) positioned.set(key, [capability]);
+    else list.push(capability);
+  };
+
   const direct = new Map(files.map((path) => [path, new Set<string>()]));
   const internalNative = new Map(
     [...externalAdapterPaths].map((path) => [path, new Set<string>()]),
@@ -284,16 +302,20 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             project.file,
           );
     for (const parameter of project.parameters) {
-      for (const authority of parameter.nativeAuthority ?? [])
+      for (const authority of parameter.nativeAuthority ?? []) {
         recordNative(parameter.file, nativeKey(authority.root));
+        grantAt(parameter.file, parameter.start, nativeKey(authority.root));
+      }
       for (const contract of contractTypes)
         if (
           (contract.kind !== "produce" || parameter.callable || parameter.accessor) &&
           parameter.types.some(
             (type) => type.file === contract.type.file && type.name === contract.type.name,
           )
-        )
+        ) {
           direct.get(parameter.file)?.add(contract.capability);
+          grantAt(parameter.file, parameter.start, contract.capability);
+        }
       if (
         parameter.exported !== false &&
         placement(parameter.file)?.[2] === "readings" &&
@@ -308,6 +330,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
     }
     for (const access of project.accesses) {
+      if (access.kind === "native")
+        for (const authority of access.nativeAuthority ?? [])
+          grantAt(access.file, access.start, nativeKey(authority.root));
       if (!direct.has(access.file)) continue;
       if (access.kind === "native") {
         for (const authority of access.nativeAuthority ?? [])
@@ -329,6 +354,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
         if (adapter === undefined) {
           direct.get(access.file)?.add(access.kind);
+          grantAt(access.file, access.start, access.kind);
           rawFailures.add(`${access.file}:${access.kind}`);
           add(
             "R1",
@@ -375,10 +401,13 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       );
       const owners = declaredAdapters.filter((adapter) => pathOf(adapter.module) === global.file);
       if (externalAdapterPaths.has(global.file) || declaredAdapters.length === 0)
-        for (const authority of global.nativeAuthority ?? [])
+        for (const authority of global.nativeAuthority ?? []) {
           recordNative(global.file, nativeKey(authority.root));
+          grantAt(global.file, global.start, nativeKey(authority.root));
+        }
       for (const adapter of owners.length > 0 ? owners : declaredAdapters) {
         direct.get(global.file)?.add(adapter.capability);
+        grantAt(global.file, global.start, adapter.capability);
         if (global.file !== pathOf(adapter.module)) {
           rawFailures.add(`${global.file}:${adapter.capability}`);
           add(
@@ -639,13 +668,24 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     );
   const keyOf = (input: { readonly file: string; readonly start: number }): string =>
     `${input.file}:${input.start}`;
+  const bindingOf = (
+    connection: (typeof connections)[number],
+    index: number,
+  ): {
+    readonly origin: string | null;
+    readonly source: { readonly file: string; readonly start: number } | null;
+    readonly target: { readonly file: string; readonly start: number } | null;
+    readonly supported: boolean;
+    readonly capture: NonNullable<typeof connection.callableBindings>[number]["capture"];
+  } => ({
+    origin: connection.callableOrigins[index] ?? null,
+    source: connection.callableBindings?.[index]?.source ?? null,
+    target: connection.callableBindings?.[index]?.target ?? null,
+    supported: connection.callableBindings?.[index] !== undefined,
+    capture: connection.callableBindings?.[index]?.capture,
+  });
   const bindings = connections.flatMap((connection) =>
-    connection.callableOrigins.map((origin, index) => ({
-      origin,
-      source: connection.callableBindings?.[index]?.source ?? null,
-      target: connection.callableBindings?.[index]?.target ?? null,
-      supported: connection.callableBindings?.[index] !== undefined,
-    })),
+    connection.callableOrigins.map((_, index) => bindingOf(connection, index)),
   );
   const parameterExecutability = new Map(
     projects.flatMap((project) =>
@@ -682,16 +722,72 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       ? known.has(keyOf(binding.source))
       : binding.origin !== null &&
         inherited.has(binding.origin) &&
-        [...inputs].every(([key, file]) => file !== binding.origin || known.has(key)));
+        (binding.capture === undefined
+          ? [...inputs].every(([key, file]) => file !== binding.origin || known.has(key))
+          : binding.capture.parameters.every(
+              (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
+            )));
+  // A file a callable reaches only in part grants what its reached code grants; an adapter's file, or
+  // one the capture could not follow, is charged whole.
+  const adapterPaths = new Set(adapters.map((adapter) => pathOf(adapter.module)));
+  const capturedCapabilities = new Map<object, readonly string[]>();
+  const captured = (capture: NonNullable<(typeof bindings)[number]["capture"]>): readonly string[] => {
+    const cached = capturedCapabilities.get(capture);
+    if (cached !== undefined) return cached;
+    const whole = (file: string): readonly string[] => [...(inherited.get(file) ?? [])];
+    const grants = (position: { readonly file: string; readonly start: number }): readonly string[] =>
+      positioned.get(`${position.file}:${position.start}`) ?? [];
+    const result = [
+      ...new Set([
+        ...capture.reached.filter((file) => adapterPaths.has(file)).flatMap(whole),
+        ...capture.positions
+          .filter((position) => !adapterPaths.has(position.file))
+          .flatMap(grants),
+        ...capture.whole.flatMap(whole),
+        ...capture.packages.flatMap(
+          (specifier) =>
+            snapshot.config.packages?.find(
+              (row) =>
+                row.name ===
+                (specifier.startsWith("@")
+                  ? specifier.split("/").slice(0, 2).join("/")
+                  : specifier.split("/")[0]),
+            )?.capabilities ?? [],
+        ),
+        ...capture.parameters.flatMap(grants),
+        ...contractTypes
+          .filter(
+            (contract) =>
+              contract.kind !== "produce" &&
+              capture.types.some(
+                (type) => type.file === contract.type.file && type.name === contract.type.name,
+              ),
+          )
+          .map((contract) => contract.capability),
+        ...capture.nativeAuthority.map((authority) => nativeKey(authority.root)),
+      ]),
+    ];
+    capturedCapabilities.set(capture, result);
+    return result;
+  };
   const bindingCapabilities = (binding: (typeof bindings)[number]): Set<string> =>
-    new Set([
-      ...(inherited.get(binding.origin ?? "") ?? []),
-      ...(binding.source !== null
-        ? (suppliedCapabilities.get(keyOf(binding.source)) ?? [])
-        : [...inputs]
-            .filter(([, file]) => file === binding.origin)
-            .flatMap(([key]) => [...(suppliedCapabilities.get(key) ?? [])])),
-    ]);
+    new Set(
+      binding.source === null && binding.capture !== undefined
+        ? [
+            ...captured(binding.capture),
+            ...binding.capture.parameters.flatMap((parameter) => [
+              ...(suppliedCapabilities.get(keyOf(parameter)) ?? []),
+            ]),
+          ]
+        : [
+            ...(inherited.get(binding.origin ?? "") ?? []),
+            ...(binding.source !== null
+              ? (suppliedCapabilities.get(keyOf(binding.source)) ?? [])
+              : [...inputs]
+                  .filter(([, file]) => file === binding.origin)
+                  .flatMap(([key]) => [...(suppliedCapabilities.get(key) ?? [])])),
+          ],
+    );
   changed = true;
   while (changed) {
     changed = false;
@@ -836,12 +932,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         : connection.file;
       const detail = `${relocated ? `${connection.file}:` : ""}${connection.target}:${connection.start}`;
       for (const [index, origin] of connection.callableOrigins.entries()) {
-        const binding = {
-          origin,
-          source: connection.callableBindings?.[index]?.source ?? null,
-          target: connection.callableBindings?.[index]?.target ?? null,
-          supported: connection.callableBindings?.[index] !== undefined,
-        };
+        const binding = bindingOf(connection, index);
         if (!established(binding) && restricted(connection.target))
           unresolved(
             "callable-binding",
@@ -851,7 +942,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
               : "The supplied executable input has no established capability boundary.",
             detail,
           );
-        if (origin === null) continue;
+        if (origin === null && binding.capture === undefined) continue;
         for (const capability of bindingCapabilities(binding)) {
           if (nativeAuthorities.has(capability)) {
             if (
