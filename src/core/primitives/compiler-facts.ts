@@ -89,6 +89,19 @@ export interface CompilerFacts {
       readonly callableBindings?: readonly {
         readonly source: { readonly file: string; readonly start: number } | null;
         readonly target: { readonly file: string; readonly start: number } | null;
+        // What the callable reaches when it is no parameter: absent, its whole origin file is charged.
+        readonly capture?: {
+          // Authority facts inside the code it reaches, and the files that code is in.
+          readonly positions: readonly { readonly file: string; readonly start: number }[];
+          readonly reached: readonly string[];
+          // Files it reaches in ways that can't be followed, charged whole.
+          readonly whole: readonly string[];
+          readonly packages: readonly string[];
+          // Its own module's parameters it captures, and the types of other modules' it reaches.
+          readonly parameters: readonly { readonly file: string; readonly start: number }[];
+          readonly types: readonly { readonly file: string; readonly name: string }[];
+          readonly nativeAuthority: readonly NativeAuthority[];
+        };
       }[];
       readonly builtin: boolean;
     }[];

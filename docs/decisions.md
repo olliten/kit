@@ -307,6 +307,29 @@ without naming the app.
   files. On the first app's sign-in work, compositions passing their own store, cipher and port handles to their
   own helpers were about a third of the reachable callable-binding limits.
 
+## 2026-10-17 · A callable carries what it captures
+
+- **Decision:** a callable handed to another module is charged the authority of what it captures, not its
+  file's whole import cone. Extraction follows the callable's free names to the code they name, in any
+  file and through re-exports and default exports: functions, classes with their methods and getters,
+  object literals, variables with their initializers. `this` reaches its class or object literal. For a
+  binding that can change (a `let`, or a value whose type is not deeply readonly) it follows, within the
+  binding's own module, every write into it: assignments, method calls on it, arguments it is passed as,
+  copies into other holders, and the callers of a function that returns it. The check charges the
+  capabilities granted at positions inside the reached code, an adapter's file whole, every captured
+  parameter what its type grants, and the callable's own module's captured parameters also what their
+  callers supply. A callable a reading hands on is established only when every input of the reading's file
+  is, as before. What can't be followed is charged its whole file, as before: `this` outside a class member or
+  object-literal method, a namespace or dynamic import, an unresolved import, a value returned by an
+  unnamed function that is not a callback, and code outside the snapshot's sources. A callable whose
+  origin is a library function, such as a bound method, is now charged its capture too.
+- **Why:** on the first app's sign-in branch every closure an inline port object or startup handed on was
+  charged its file's whole cone, so modules whose own cones hold no native carried hundreds of limits from
+  their callers. A limit should name authority the callable can reach. Writes from another module into a
+  binding are left to the checks where that module passes a handle or a callable: following them made a
+  closure carry code outside its file's cone, about twenty times the limits. The planted cases in the
+  oracle keep the reach that matters.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

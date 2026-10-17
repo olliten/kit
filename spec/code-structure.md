@@ -41,8 +41,11 @@ compositions wire the others into behaviour.
   keeps its own authority ({{capability-check}}). · {#namespaces-grant-what-is-reached}
 - A type, a type alias or a declaration merge grants no runtime authority; the value it describes still does
   ({{capability-check}}, {{compiler-facts}}). · {#erased-types-grant-no-authority}
-- A function carries the authority of the module that made it: a callback, getter or method that holds the
-  clock can't enter the core, while an imported pure callback can ({{capability-check}}). · {#functions-carry-their-authority}
+- A function carries the authority of what it captures: the code its names reach through the declarations
+  they name, the writes a mutable value it holds receives in that value's module, and the parameters it
+  captures; what can't be followed is charged its whole module. So a callback, getter or method that
+  holds the clock can't enter the core, while one that reaches only pure code can, even from a module that
+  imports authority ({{capability-check}}, {{compiler-facts}}). · {#functions-carry-their-authority}
 - A native handle or event handler passed as an argument stays authority: it can't enter a reading or a core
   composition. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
   host function it is handed to, such as `fetch`, stays authority ({{capability-check}}). · {#native-handles-stay-in-adapters}
