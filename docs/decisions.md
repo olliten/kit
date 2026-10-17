@@ -330,6 +330,22 @@ without naming the app.
   closure carry code outside its file's cone, about twenty times the limits. The planted cases in the
   oracle keep the reach that matters.
 
+## 2026-10-17 · A startup only wires
+
+- **Decision:** a declared startup's top-level statements may only be imports, including type-only ones;
+  `const` bindings, destructuring included; expression statements; and exports of these, including export lists
+  and re-exports. Each value in them is wiring: an imported binding or an earlier top-level constant, a literal,
+  a property access, a call or `new` of wiring with wiring arguments, an object or array literal of wiring,
+  `await` of wiring, or `as`, `satisfies` or a non-null assertion around wiring, which stay type escapes where
+  they already were. Any other node, such as a branch, loop, `try`, `throw` or label, `let` or `var`, a
+  function, class, enum or namespace declaration, an arrow or function expression, an operator, a template with
+  substitutions, an assignment, `delete`, `typeof`, `void` or an element access with a computed key, is one
+  `startup-wiring` placed violation at its outermost node, which a baseline cannot keep. An invalid exception
+  gets only its `startup-placement` limit. Olli, the maintainer, approved the rule as worded on this date.
+- **Why:** a startup may connect contracts no zone may connect, and nothing imports it, so logic placed there
+  is held to no zone's rules and proved by no test. Allowing only wiring keeps every decision in a module the
+  check can see, and a startup's findings would otherwise be legacy debt, since it sits outside every zone.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

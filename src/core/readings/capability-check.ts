@@ -204,6 +204,22 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     }
     startups.add(path);
   }
+  // Startup is outside every zone, so its findings would otherwise be legacy debt a baseline could keep.
+  for (const logic of projects.flatMap((project) => project.startupLogic))
+    if (startups.has(logic.file))
+      findings.push({
+        ...finding(
+          "R2",
+          "startup-wiring",
+          logic.file,
+          "Move this logic into the module it wires and pass it by name; a startup only wires.",
+          `${logic.kind}:${logic.start}`,
+        ),
+        status: "violation",
+        blocking: true,
+        limit: "",
+        category: "placed-violation",
+      });
   // A files row zones only what it lists, and each listed file is debt, so the baseline records the row's
   // set: dropping a file shrinks it, and a file added to it is new debt the ratchet rejects.
   for (const row of snapshot.config.legacyZones ?? [])
