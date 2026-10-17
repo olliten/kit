@@ -51,6 +51,10 @@ export function readSnapshot(
   const files: SnapshotFile[] = paths.sort().map((path) => ({ path, type: typeOf(path, config) }));
   const known = new Set(paths);
   const imports: ImportEdge[] = [];
+  const specifiers: {
+    readonly path: string;
+    readonly found: readonly { readonly specifier: string; readonly dynamic: boolean }[];
+  }[] = [];
   const terms: SpecTerm[] = [];
   const termSyntax: NonNullable<Snapshot["termSyntax"]>[number][] = [];
   const termOrder: NonNullable<Snapshot["termOrder"]>[number][] = [];
@@ -92,21 +96,32 @@ export function readSnapshot(
       for (const m of text.matchAll(EXPORT)) symbols.push({ file: path, name: m[1] ?? "" });
     }
     comments.push(...commentsOf(path, text));
+    specifiers.push({
+      path,
+      found: [...text.matchAll(IMPORT)].map((m) => ({
+        specifier: m[1] ?? "",
+        dynamic: /^import\s*\(/.test(m[0]),
+      })),
+    });
+  }
+  const { facts: compiler, scopes } = readCompiler(appRoot, paths, files, config, ignored, trace.compiler);
+  for (const { path, found } of specifiers) {
     const seen = new Set<string>();
-    for (const m of text.matchAll(IMPORT)) {
-      const specifier = m[1] ?? "";
+    const scope = scopeOf(path, scopes, appRoot);
+    for (const { specifier, dynamic } of found) {
       if (specifier.startsWith(".")) {
         const target = posix.normalize(posix.join(posix.dirname(path), specifier));
         if (ignored(target)) throw ignoredImport(path, target);
       }
-      const to = resolve(path, specifier, known);
+      const to = specifier.startsWith(".")
+        ? resolve(path, specifier, known)
+        : aliasTarget(appRoot, path, specifier, dynamic, scope, ignored, known, trace.compiler);
       if (to !== undefined && !seen.has(to)) {
         seen.add(to);
         imports.push({ from: path, to });
       }
     }
   }
-  const compiler = readCompiler(appRoot, paths, files, config, ignored, trace.compiler);
   return {
     files,
     imports,
@@ -126,6 +141,63 @@ export function readSnapshot(
 
 type Project = CompilerFacts["projects"][number];
 
+// A project's compiler options and program, which decide how its files' non-relative imports resolve.
+interface Scope {
+  readonly directory: string;
+  readonly file: string;
+  readonly options: ts.CompilerOptions;
+  readonly program: ts.Program;
+}
+
+// A file's imports resolve as the compiler resolves them in the project that compiles it: the one whose
+// project file is nearest above it, `tsconfig.json` before its siblings. A file no project compiles has no
+// compiler resolution, so its non-relative imports reach nothing.
+function scopeOf(path: string, scopes: readonly Scope[], appRoot: string): Scope | undefined {
+  const absolute = join(appRoot, path);
+  const depth = (scope: Scope): number => scope.directory.split("/").length;
+  return scopes
+    .filter((scope) => {
+      const source = scope.program.getSourceFile(absolute);
+      return (
+        source !== undefined &&
+        !source.isDeclarationFile &&
+        (scope.directory === "." || path.startsWith(`${scope.directory}/`))
+      );
+    })
+    .sort(
+      (a, b) =>
+        depth(b) - depth(a) ||
+        Number(basename(b.file) === "tsconfig.json") - Number(basename(a.file) === "tsconfig.json") ||
+        a.file.localeCompare(b.file),
+    )[0];
+}
+
+// A non-relative specifier resolves through the compiler's own module resolution, so `paths`, `baseUrl` and
+// `extends` mean what they mean to tsc; only a resolution to a file of the snapshot is an edge. A dynamic
+// import is always an ECMAScript import; any other takes the module format of the file it is in.
+function aliasTarget(
+  appRoot: string,
+  path: string,
+  specifier: string,
+  dynamic: boolean,
+  scope: Scope | undefined,
+  ignored: (path: string) => boolean,
+  known: ReadonlySet<string>,
+  trace: CompilerRead[],
+): string | undefined {
+  if (scope === undefined) return undefined;
+  const containing = join(appRoot, path);
+  const mode = dynamic
+    ? ts.ModuleKind.ESNext
+    : scope.program.getSourceFile(containing)?.impliedNodeFormat;
+  const resolved = compilerWorkspace.resolve(specifier, containing, scope.options, trace, mode);
+  if (resolved === undefined) return undefined;
+  const target = relative(appRoot, resolved.resolvedFileName).split(sep).join("/");
+  if (target.startsWith("../")) return undefined;
+  if (ignored(target)) throw ignoredImport(path, target);
+  return known.has(target) ? target : undefined;
+}
+
 function readCompiler(
   appRoot: string,
   paths: readonly string[],
@@ -133,7 +205,8 @@ function readCompiler(
   config: KitConfig,
   ignored: (path: string) => boolean,
   trace: CompilerRead[],
-): CompilerFacts {
+): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[] } {
+  const scopes: Scope[] = [];
   const source = new Set(files.filter((file) => file.type === "source").map((file) => file.path));
   const local = (file: string): string => relative(appRoot, file).split(sep).join("/");
   const shellPrefix = `${config.srcRoot}/shell/${config.layerNames?.compositions ?? "compositions"}/`;
@@ -158,6 +231,7 @@ function readCompiler(
     .map((file): Project => {
       const absolute = join(appRoot, file);
       const { parsed, readError, program } = compilerWorkspace.load(absolute, trace);
+      scopes.push({ directory: posix.dirname(file), file, options: parsed.options, program });
       const checker = program.getTypeChecker();
       const importTarget = (specifier: string, containingFile: string): string | null => {
         const resolved = compilerWorkspace.resolve(specifier, containingFile, parsed.options, trace);
@@ -1280,7 +1354,7 @@ function readCompiler(
         termFacts: { sources: termSources, types: termTypes },
       };
     });
-  return { version: ts.version, projects };
+  return { facts: { version: ts.version, projects }, scopes };
 }
 
 // Every comment the parser attaches before or after a node, each once, in file order.
