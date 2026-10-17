@@ -39,6 +39,10 @@ const wired =
   "import type { Options } from './substrate/compositions/server.js';\n" +
   "import * as server from './substrate/compositions/server.js';\n" +
   "import { Server, routes, settings } from './substrate/compositions/server.js';\n" +
+  "interface Local { readonly name: string; }\n" +
+  "type Alias = Local | Options;\n" +
+  "export interface Exported { readonly alias: Alias; }\n" +
+  "export type Started = string;\n" +
   "const { serve, handles: { home } = { home: '/' } } = server;\n" +
   "const options: Options = {\n" +
   "  name: 'kit', port: 8080, on: true, off: false, none: null, nothing: undefined, path: `/`,\n" +
@@ -49,14 +53,14 @@ const wired =
   "const list = [view, listening, options.name, (server.routes)] as const;\n" +
   "serve(view, options satisfies Options, list);\n" +
   "await instance.listen(listening);\n" +
-  "export const started: string = server.serve(view, instance.options, [routes[0]]);\n" +
+  "export const started: Started = server.serve(view, instance.options, [routes[0]]);\n" +
   "export { instance, listening };\n" +
   "export type { Options };\n" +
   "export { view as page } from './shell/readings/view.js';\n" +
   "export * from './substrate/compositions/server.js';\n" +
   "export default instance;\n";
 
-test("a startup that only imports, names, calls and exports what it wires has no finding", () => {
+test("a startup that only imports, declares types, names, calls and exports what it wires has no finding", () => {
   expect(inspect(wired)).toEqual([]);
 });
 
@@ -97,6 +101,8 @@ const forbidden: readonly { readonly kind: string; readonly source: string; read
   { kind: "VarKeyword", source: "var count = port;\nserve(view, { count }, list);\n" },
   { kind: "FunctionDeclaration", source: "function make(): string { return name; }\nserve(make, settings, list);\n" },
   { kind: "ClassDeclaration", source: "class Local {}\nserve(view, { local: new Local() }, list);\n" },
+  { kind: "DeclareKeyword", source: "declare const flag: boolean;\nserve(view, { flag }, list);\n" },
+  { kind: "DeclareKeyword", source: "declare interface Ambient { readonly name: string; }\n" },
   { kind: "EnumDeclaration", source: "enum Mode { On }\nserve(view, { mode: Mode.On }, list);\n" },
   { kind: "ModuleDeclaration", source: "namespace Space { export const value = 1; }\nserve(view, { value: Space.value }, list);\n" },
   { kind: "ArrowFunction", source: "serve(() => name, settings, list);\n", at: "() =>" },

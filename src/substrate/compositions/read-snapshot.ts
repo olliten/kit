@@ -1654,6 +1654,12 @@ function logicOf(sf: ts.SourceFile): { readonly start: number; readonly kind: st
       const bindings = clause?.namedBindings;
       if (bindings !== undefined && ts.isNamespaceImport(bindings)) named.add(bindings.name.text);
       else for (const element of bindings?.elements ?? []) named.add(element.name.text);
+    } else if (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) {
+      // A type declaration emits nothing, so it decides nothing; a declare form asserts a runtime value.
+      const ambient = statement.modifiers?.find(
+        (candidate) => candidate.kind === ts.SyntaxKind.DeclareKeyword,
+      );
+      if (ambient !== undefined) report(ambient);
     } else if (ts.isExpressionStatement(statement) || ts.isExportAssignment(statement))
       wiring(statement.expression);
     else if (ts.isVariableStatement(statement)) {

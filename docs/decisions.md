@@ -333,15 +333,17 @@ without naming the app.
 ## 2026-10-17 · A startup only wires
 
 - **Decision:** a declared startup's top-level statements may only be imports, including type-only ones;
-  `const` bindings, destructuring included; expression statements; and exports of these, including export lists
-  and re-exports. Each value in them is wiring: an imported binding or an earlier top-level constant, a literal,
+  `const` bindings, destructuring included; expression statements; interface and type alias declarations; and
+  exports of these, including export lists and re-exports. Each value in them is wiring: an imported binding or an earlier top-level constant, a literal,
   a property access, a call or `new` of wiring with wiring arguments, an object or array literal of wiring,
   `await` of wiring, or `as`, `satisfies` or a non-null assertion around wiring, which stay type escapes where
   they already were. Any other node, such as a branch, loop, `try`, `throw` or label, `let` or `var`, a
-  function, class, enum or namespace declaration, an arrow or function expression, an operator, a template with
+  function, class, enum or namespace declaration, a `declare` form, an arrow or function expression, an operator, a template with
   substitutions, an assignment, `delete`, `typeof`, `void` or an element access with a computed key, is one
   `startup-wiring` placed violation at its outermost node, which a baseline cannot keep. An invalid exception
-  gets only its `startup-placement` limit. Olli, the maintainer, approved the rule as worded on this date.
+  gets only its `startup-placement` limit. Olli, the maintainer, approved the rule as worded on this date, and
+  on review ruled that type-only declarations are allowed: they emit nothing, while an enum emits runtime code
+  and a `declare` form asserts a runtime value nothing provides.
 - **Why:** a startup may connect contracts no zone may connect, and nothing imports it, so logic placed there
   is held to no zone's rules and proved by no test. Allowing only wiring keeps every decision in a module the
   check can see, and a startup's findings would otherwise be legacy debt, since it sits outside every zone.

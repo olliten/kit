@@ -68,11 +68,11 @@ compositions wire the others into behaviour.
   Substrate contracts and use the core's, no module imports it, and its permission does not pass to what it
   imports or exempt it from the capability, write, compiler and cycle checks. A directory, a pattern, a missing
   file or a placed module declared as startup grants nothing ({{capability-check}}, {{default-config}}). · {#startup-assembles-outer-zones}
-- A startup only wires. Its top-level statements are imports, constants and expression statements, and exports
-  of them, built from imported bindings, earlier constants, literals, property access, calls, `new`, object and
-  array literals, `await` and type assertions. Anything else, such as a branch, a loop, a declaration, a
-  function, an operator or an assignment, is a placed violation at its node; an exception that grants no startup
-  is not checked ({{capability-check}}, {{compiler-facts}}). · {#startup-only-wires}
+- A startup only wires. Its top-level statements are imports, constants, expression statements, interfaces and
+  type aliases, and exports of them, built from imported bindings, earlier constants, literals, property access,
+  calls, `new`, object and array literals, `await` and type assertions. Anything else, such as a branch, a loop,
+  a runtime or `declare` declaration, a function, an operator or an assignment, is a placed violation at its
+  node; an exception that grants no startup is not checked ({{capability-check}}, {{compiler-facts}}). · {#startup-only-wires}
 
 ## Writes
 
