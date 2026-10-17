@@ -230,7 +230,17 @@ function readCompiler(
 ): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[] } {
   const scopes: Scope[] = [];
   const source = new Set(files.filter((file) => file.type === "source").map((file) => file.path));
-  const local = (file: string): string => relative(appRoot, file).split(sep).join("/");
+  // The visitor asks for a file's local path at every declaration it reads; computing it each time with
+  // path.relative cost about a seventh of a cold extraction.
+  const localPaths = new Map<string, string>();
+  const local = (file: string): string => {
+    let path = localPaths.get(file);
+    if (path === undefined) {
+      path = relative(appRoot, file).split(sep).join("/");
+      localPaths.set(file, path);
+    }
+    return path;
+  };
   const shellPrefix = `${config.srcRoot}/shell/${config.layerNames?.compositions ?? "compositions"}/`;
   const shellCompositions = new Set(
     [...source].filter(
