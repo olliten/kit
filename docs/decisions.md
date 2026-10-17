@@ -243,6 +243,17 @@ without naming the app.
   them. Run on the Kit, the check found a claim naming the module that doesn't produce its finding, and a
   named module its test never touched. Each test alone would be too strict: variants prove parts of a claim.
 
+## 2026-10-17 · Binary data is data
+
+- **Decision:** the typed arrays (`Int8Array` through `BigUint64Array`, `Uint8ClampedArray` included),
+  `ArrayBuffer`, `SharedArrayBuffer` and `DataView` join `Array`, `Map` and `Set` as built-in data collections:
+  their default-library members are data access, so a reading or a Core composition may take them. Their type
+  arguments are still read, and a subclass that adds a method is supplied behaviour. Node's `Buffer` is not one
+  of them: it stays supplied behaviour as a parameter and an ambient global as a value.
+- **Why:** each only reads and writes its own memory. `SharedArrayBuffer` is included because sharing it needs
+  `postMessage`, which is authority of its own, and `Uint8Array`'s buffer type argument names it. `Buffer`
+  carries Node's encoding, pooling and allocation semantics, and the maintainer ruled it authority.
+
 ## 2026-10-17 · A package an adapter declares is that adapter's
 
 - **Decision:** an external adapter row may list `packages`, as it lists `globals`. Only that adapter's module
