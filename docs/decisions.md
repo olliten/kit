@@ -280,6 +280,20 @@ without naming the app.
   every file later added at the top level and the startup file with them, and nothing would record which files
   it was meant for.
 
+## 2026-10-17 · URLs and text codecs are values
+
+- **Decision:** `URL`, `URLSearchParams`, `TextEncoder` and `TextDecoder`, as the host declares them (the DOM
+  library or Node's types), are value types: holding, constructing or using one grants no native authority, is
+  no ambient global and is not supplied behaviour to a reading. `URL.canParse` and `URL.parse` are part of the
+  value; the object-URL registry (`URL.createObjectURL`, `URL.revokeObjectURL`) is not, and a method a project
+  merges into one of these types is behaviour like any other. A host function declared by the DOM library, such
+  as `fetch`, now carries the native handles it returns, so calling it is authority even when the caller reads
+  no member of the result. `Request`, `Response`, `Headers` and `WebSocket` stay native handles.
+- **Why:** they parse, format or transcode what they are given and do no I/O, yet each was a native root, so
+  every placed module that parsed a query string or built a form body was a limit. On the first app's sign-in
+  work they were most of the reachable native-authority limits. A core `fetch(url)` was caught only through its
+  `URL` argument; making the URL a value would have let `fetch` through, so the host function carries its own.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

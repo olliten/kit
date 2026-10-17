@@ -44,7 +44,8 @@ compositions wire the others into behaviour.
 - A function carries the authority of the module that made it: a callback, getter or method that holds the
   clock can't enter the core, while an imported pure callback can ({{capability-check}}). · {#functions-carry-their-authority}
 - A native handle or event handler passed as an argument stays authority: it can't enter a reading or a core
-  composition ({{capability-check}}). · {#native-handles-stay-in-adapters}
+  composition. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
+  host function it is handed to, such as `fetch`, stays authority ({{capability-check}}). · {#native-handles-stay-in-adapters}
 - Registering a handler or carrying a record passes on no authority the caller lacks: a clock closure, a map
   of callbacks or a native handle can't reach the core through a registration, a record or a private
   endpoint ({{capability-check}}). · {#registration-passes-no-authority}

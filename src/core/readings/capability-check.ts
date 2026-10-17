@@ -380,6 +380,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       const declared = global.declarationFile ?? "";
       if (
         !name.includes(".") &&
+        global.value !== true &&
         /(?:^|\/)node_modules\//.test(declared) &&
         !/(?:^|\/)node_modules\/typescript\/lib\//.test(declared) &&
         !adapters.some((adapter) => adapter.globals?.includes(name)) &&
