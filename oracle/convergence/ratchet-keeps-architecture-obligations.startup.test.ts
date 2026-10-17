@@ -107,7 +107,7 @@ test("a startup's transitive legacy external boundary remains required", () => {
 test("an unreachable legacy external boundary stays reported without failing startup", () => {
   const legacy = "src/unreachable.ts";
   const result = inspect({
-    [startup]: "void 0;\n",
+    [startup]: "export {};\n",
     [legacy]: "import { wire } from 'unregistered'; export function read(): void { wire(); }\n",
     "src/vendor.d.ts": vendor,
   });

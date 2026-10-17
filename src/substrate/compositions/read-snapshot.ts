@@ -305,6 +305,8 @@ function readCompiler(
       const contracts: Project["contracts"][number][] = [];
       const accesses: Project["accesses"][number][] = [];
       const constructions: Project["constructions"][number][] = [];
+      const startupLogic: Project["startupLogic"][number][] = [];
+      const startups = new Set(config.exceptions ?? []);
       const connections: Project["connections"][number][] = [];
       const termSources: NonNullable<Project["termFacts"]>["sources"][number][] = [];
       const termTypes: NonNullable<Project["termFacts"]>["types"][number][] = [];
@@ -1359,6 +1361,8 @@ function readCompiler(
           ts.forEachChild(node, visit);
         };
         visit(sf);
+        if (startups.has(path))
+          for (const logic of logicOf(sf)) startupLogic.push({ file: path, ...logic });
         const module = checker.getSymbolAtLocation(sf);
         termSources.push({
           file: path,
@@ -1572,10 +1576,136 @@ function readCompiler(
         accesses,
         constructions,
         connections,
+        startupLogic,
         termFacts: { sources: termSources, types: termTypes },
       };
     });
   return { facts: { version: ts.version, projects }, scopes };
+}
+
+// A startup only wires what it imports, so anything that decides is logic. Each such node is reported at its
+// outermost point, once, and nothing inside it is read: a function holding a branch is one finding.
+function logicOf(sf: ts.SourceFile): { readonly start: number; readonly kind: string }[] {
+  const logic: { readonly start: number; readonly kind: string }[] = [];
+  const named = new Set<string>();
+  // Range markers such as LastStatement share a kind's number, and the reverse lookup would return them.
+  const nameOf = (kind: ts.SyntaxKind): string =>
+    Object.entries(ts.SyntaxKind).find(
+      ([name, value]) => value === kind && !/^(?:First|Last)/.test(name),
+    )?.[0] ?? ts.SyntaxKind[kind];
+  const report = (node: ts.Node, kind: string = nameOf(node.kind)): void => {
+    logic.push({ start: node.getStart(sf), kind });
+  };
+  const literal = (node: ts.Expression): boolean =>
+    ts.isStringLiteral(node) ||
+    ts.isNumericLiteral(node) ||
+    ts.isNoSubstitutionTemplateLiteral(node) ||
+    node.kind === ts.SyntaxKind.TrueKeyword ||
+    node.kind === ts.SyntaxKind.FalseKeyword ||
+    node.kind === ts.SyntaxKind.NullKeyword ||
+    (ts.isIdentifier(node) && node.text === "undefined" && !named.has(node.text));
+  const propertyName = (node: ts.PropertyName): void => {
+    if (ts.isComputedPropertyName(node) && !literal(node.expression)) report(node);
+  };
+  const wiring = (node: ts.Expression): void => {
+    if (literal(node)) return;
+    if (ts.isIdentifier(node)) {
+      if (!named.has(node.text)) report(node);
+    } else if (
+      ts.isParenthesizedExpression(node) ||
+      ts.isPropertyAccessExpression(node) ||
+      ts.isAwaitExpression(node) ||
+      ts.isAsExpression(node) ||
+      ts.isSatisfiesExpression(node) ||
+      ts.isNonNullExpression(node) ||
+      ts.isTypeAssertionExpression(node)
+    )
+      wiring(node.expression);
+    else if (ts.isElementAccessExpression(node)) {
+      if (literal(node.argumentExpression) && !ts.isIdentifier(node.argumentExpression))
+        wiring(node.expression);
+      else report(node);
+    } else if (
+      (ts.isCallExpression(node) || ts.isNewExpression(node)) &&
+      node.expression.kind !== ts.SyntaxKind.ImportKeyword &&
+      node.expression.kind !== ts.SyntaxKind.SuperKeyword
+    ) {
+      wiring(node.expression);
+      for (const argument of node.arguments ?? []) wiring(argument);
+    } else if (ts.isObjectLiteralExpression(node))
+      for (const property of node.properties) {
+        if (ts.isPropertyAssignment(property)) {
+          propertyName(property.name);
+          wiring(property.initializer);
+        } else if (ts.isShorthandPropertyAssignment(property)) wiring(property.name);
+        else if (ts.isSpreadAssignment(property)) wiring(property.expression);
+        else report(property);
+      }
+    else if (ts.isArrayLiteralExpression(node))
+      for (const element of node.elements) wiring(element);
+    else report(node);
+  };
+  const bind = (name: ts.BindingName): void => {
+    if (ts.isIdentifier(name)) {
+      named.add(name.text);
+      return;
+    }
+    for (const element of name.elements) {
+      if (ts.isOmittedExpression(element)) continue;
+      if (element.propertyName !== undefined) propertyName(element.propertyName);
+      if (element.initializer !== undefined) wiring(element.initializer);
+      bind(element.name);
+    }
+  };
+  for (const statement of sf.statements) {
+    if (ts.isImportDeclaration(statement)) {
+      const clause = statement.importClause;
+      if (clause?.name !== undefined) named.add(clause.name.text);
+      const bindings = clause?.namedBindings;
+      if (bindings !== undefined && ts.isNamespaceImport(bindings)) named.add(bindings.name.text);
+      else for (const element of bindings?.elements ?? []) named.add(element.name.text);
+    } else if (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) {
+      // A type declaration emits nothing, so it decides nothing; a declare form asserts a runtime value.
+      const ambient = statement.modifiers?.find(
+        (candidate) => candidate.kind === ts.SyntaxKind.DeclareKeyword,
+      );
+      if (ambient !== undefined) report(ambient);
+    } else if (ts.isExpressionStatement(statement) || ts.isExportAssignment(statement))
+      wiring(statement.expression);
+    else if (ts.isVariableStatement(statement)) {
+      const list = statement.declarationList;
+      const scoped = list.flags & ts.NodeFlags.BlockScoped;
+      const modifier = statement.modifiers?.find(
+        (candidate) => candidate.kind !== ts.SyntaxKind.ExportKeyword,
+      );
+      if (scoped !== ts.NodeFlags.Const)
+        report(
+          list,
+          scoped === ts.NodeFlags.Let ? "LetKeyword" : scoped === 0 ? "VarKeyword" : "UsingKeyword",
+        );
+      else if (modifier !== undefined) report(modifier);
+      for (const declaration of list.declarations) {
+        if (scoped === ts.NodeFlags.Const && modifier === undefined) {
+          if (declaration.initializer === undefined) report(declaration);
+          else wiring(declaration.initializer);
+        }
+        bind(declaration.name);
+      }
+    } else if (!ts.isExportDeclaration(statement)) {
+      report(statement);
+      // A name the logic declares is reported with it, not again at each use.
+      if (
+        (ts.isFunctionDeclaration(statement) ||
+          ts.isClassDeclaration(statement) ||
+          ts.isEnumDeclaration(statement) ||
+          ts.isModuleDeclaration(statement)) &&
+        statement.name !== undefined &&
+        ts.isIdentifier(statement.name)
+      )
+        named.add(statement.name.text);
+    }
+  }
+  return logic;
 }
 
 // Every comment the parser attaches before or after a node, each once, in file order.

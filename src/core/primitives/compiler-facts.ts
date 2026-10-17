@@ -134,5 +134,11 @@ export interface CompilerFacts {
       readonly site?: string;
       readonly kind: "any" | "assertion" | "non-null" | "ignore" | "nocheck" | "expect-error";
     }[];
+    // Read only for the files the config declares as startup, the only files held to wiring.
+    readonly startupLogic: readonly {
+      readonly file: string;
+      readonly start: number;
+      readonly kind: string;
+    }[];
   }[];
 }

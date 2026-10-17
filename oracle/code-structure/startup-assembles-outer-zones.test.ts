@@ -216,10 +216,9 @@ test.each(["invoke", "construct"])(
         [startup]:
           files[startup] +
           "import type { Write } from './core/primitives/write.js';\nimport { produce } from './core/compositions/produce.js';\n" +
-          "function carry(write: Write): Write { return write; }\n" +
           (operation === "invoke"
-            ? "carry(produce('key', 7));\n"
-            : "void produce; const write: Write = { key: 'key', value: 7 }; carry(write);\n"),
+            ? "export const write: Write = produce('key', 7);\n"
+            : "export const write: Write = { key: 'key', value: 7 };\nexport { produce };\n"),
       },
       {
         adapters: [
