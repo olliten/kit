@@ -243,6 +243,70 @@ without naming the app.
   them. Run on the Kit, the check found a claim naming the module that doesn't produce its finding, and a
   named module its test never touched. Each test alone would be too strict: variants prove parts of a claim.
 
+## 2026-10-17 · Binary data is data
+
+- **Decision:** the typed arrays (`Int8Array` through `BigUint64Array`, `Uint8ClampedArray` included),
+  `ArrayBuffer`, `SharedArrayBuffer` and `DataView` join `Array`, `Map` and `Set` as built-in data collections:
+  their default-library members are data access, so a reading or a Core composition may take them. Their type
+  arguments are still read, and a subclass that adds a method is supplied behaviour. Node's `Buffer` is not one
+  of them: it stays supplied behaviour as a parameter and an ambient global as a value.
+- **Why:** each only reads and writes its own memory. `SharedArrayBuffer` is included because sharing it needs
+  `postMessage`, which is authority of its own, and `Uint8Array`'s buffer type argument names it. `Buffer`
+  carries Node's encoding, pooling and allocation semantics, and the maintainer ruled it authority.
+
+## 2026-10-17 · A package an adapter declares is that adapter's
+
+- **Decision:** an external adapter row may list `packages`, as it lists `globals`. Only that adapter's module
+  may import a listed package at runtime, and the import grants it the row's capability. A runtime import of it
+  anywhere else, the core included, is a `package-import` finding, also when a package row declares the
+  package, so a row with no capabilities cannot open it to the core. A type-only import costs nothing, and a
+  package no row declares stays an external-boundary limit. Package rows keep their meaning for every other
+  package.
+- **Why:** a package row grants its capabilities to whichever module imports it, so a row for `node:fs` let
+  any substrate composition read files beside its adapter, and a row declaring none let the core import
+  `node:crypto`. The first app's Sign-in work has adapters over `node:crypto`, `node:child_process`, `node:fs`,
+  `node:os` and `better-sqlite3` that no row could tie to them, and `js-yaml` used outside any adapter. The
+  `process` and `Buffer` globals needed no change: an adapter's `globals` already bind them to it.
+
+## 2026-10-17 · A legacy zone row of exact files, which only shrinks
+
+- **Decision:** a `legacy-zones` row may list `files` instead of a `root`. Only the listed legacy files take its
+  zone; a file added beside them takes none and keeps its migration-zone limit. Each listed file is a
+  `legacy-zone` debt finding, so the app's baseline records the row's set like any debt: removing a file from the
+  row shrinks it, and listing a file the baseline lacks is new debt the ratchet rejects. A listed placed module
+  or missing file is a `legacy-zone-row` finding and gets no zone. Prefix rows are unchanged.
+- **Why:** the first app's top-level legacy files (thirteen in `src/` and those of `src/readwise/`) had no zone,
+  which left 53 migration-zone limits on its Sign-in work. A prefix row of `src/` would clear them, but it zones
+  every file later added at the top level and the startup file with them, and nothing would record which files
+  it was meant for.
+
+## 2026-10-17 · URLs and text codecs are values
+
+- **Decision:** `URL`, `URLSearchParams`, `TextEncoder` and `TextDecoder`, as the host declares them (the DOM
+  library or Node's types), are value types: holding, constructing or using one grants no native authority, is
+  no ambient global and is not supplied behaviour to a reading. `URL.canParse` and `URL.parse` are part of the
+  value; the object-URL registry (`URL.createObjectURL`, `URL.revokeObjectURL`) is not, and a method a project
+  merges into one of these types is behaviour like any other. A host function declared by the DOM library, such
+  as `fetch`, now carries the native handles it returns, so calling it is authority even when the caller reads
+  no member of the result. `Request`, `Response`, `Headers` and `WebSocket` stay native handles.
+- **Why:** they parse, format or transcode what they are given and do no I/O, yet each was a native root, so
+  every placed module that parsed a query string or built a form body was a limit. On the first app's sign-in
+  work they were most of the reachable native-authority limits. A core `fetch(url)` was caught only through its
+  `URL` argument; making the URL a value would have let `fetch` through, so the host function carries its own.
+
+## 2026-10-17 · A handle passed within one composition file needs no contract
+
+- **Decision:** when a placed composition passes a handle or a callback to a function declared in the same file
+  that no other file can name, the pass is not a callable-binding boundary and needs no contract. A function
+  another file can name is a boundary as before: one it exports, by declaration, by name or as the default; one
+  held by an exported record; a public or unprotected method of an exported class. An imported function stays in
+  the file it was declared in, so a pass to it, re-exported or not, is checked as before. Readings keep every
+  binding, and the file's own authority is still checked at the file.
+- **Why:** the authority such a handle carries is already the file's own, and every way out of the file is a
+  connection the check still sees: the call into the file's exported function, and the file's calls into other
+  files. On the first app's sign-in work, compositions passing their own store, cipher and port handles to their
+  own helpers were about a third of the reachable callable-binding limits.
+
 ## 2026-10-17 · A callable carries what it captures
 
 - **Decision:** a callable handed to another module is charged the authority of what it captures, not its
@@ -252,9 +316,10 @@ without naming the app.
   binding that can change (a `let`, or a value whose type is not deeply readonly) it follows, within the
   binding's own module, every write into it: assignments, method calls on it, arguments it is passed as,
   copies into other holders, and the callers of a function that returns it. The check charges the
-  capabilities granted at positions inside the reached code, an adapter's file whole, the callable's own
-  module's captured parameters what their callers supply, and another module's parameter what its type
-  grants. What can't be followed is charged its whole file, as before: `this` outside a class member or
+  capabilities granted at positions inside the reached code, an adapter's file whole, every captured
+  parameter what its type grants, and the callable's own module's captured parameters also what their
+  callers supply. A callable a reading hands on is established only when every input of the reading's file
+  is, as before. What can't be followed is charged its whole file, as before: `this` outside a class member or
   object-literal method, a namespace or dynamic import, an unresolved import, a value returned by an
   unnamed function that is not a callback, and code outside the snapshot's sources. A callable whose
   origin is a library function, such as a bound method, is now charged its capture too.

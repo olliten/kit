@@ -23,7 +23,10 @@ const IMPORT = /\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
 const EXPORT =
   /^export\s+(?:async\s+)?(?:function\*?|const|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm;
 const SOURCE = /\.(?:ts|tsx|mts|js|mjs)$/;
-/** The built-in collections whose own methods are data access, not behaviour a caller supplies. */
+/**
+ * The built-in collections whose own methods are data access, not behaviour a caller supplies. Binary data is
+ * one of them: a typed array, its buffer and a view over it only read and write their own memory.
+ */
 const DATA_COLLECTIONS: readonly string[] = [
   "Array",
   "ReadonlyArray",
@@ -31,7 +34,26 @@ const DATA_COLLECTIONS: readonly string[] = [
   "ReadonlyMap",
   "Set",
   "ReadonlySet",
+  "ArrayBuffer",
+  "SharedArrayBuffer",
+  "DataView",
+  "Int8Array",
+  "Uint8Array",
+  "Uint8ClampedArray",
+  "Int16Array",
+  "Uint16Array",
+  "Int32Array",
+  "Uint32Array",
+  "Float32Array",
+  "Float64Array",
+  "BigInt64Array",
+  "BigUint64Array",
 ];
+/** The host types that are values: they parse, format or transcode what they are given and do no I/O. */
+const VALUE_TYPES: readonly string[] = ["URL", "URLSearchParams", "TextEncoder", "TextDecoder"];
+/** The static members of a value type's constructor that are as pure as its instances. */
+const VALUE_STATICS: readonly string[] = ["canParse", "parse"];
+const HOST_DECLARATIONS = /(?:^|\/)node_modules\/@types\/node\//;
 
 // Every read lands in `trace`, so a cached snapshot can be reused exactly while each read would still return
 // the same. An ignored path is neither listed nor read, so an import into it is an error, never a lost edge.
@@ -289,6 +311,61 @@ function readCompiler(
           symbol = checker.getAliasedSymbol(symbol);
         return symbol?.valueDeclaration ?? symbol?.declarations?.[0];
       };
+      const exportedDeclarations = new Map<ts.SourceFile, ReadonlySet<ts.Node>>();
+      const exportedFrom = (sf: ts.SourceFile): ReadonlySet<ts.Node> => {
+        const known = exportedDeclarations.get(sf);
+        if (known !== undefined) return known;
+        const module = checker.getSymbolAtLocation(sf);
+        const found = new Set<ts.Node>(
+          (module === undefined ? [] : checker.getExportsOfModule(module)).flatMap((exported) =>
+            ((exported.flags & ts.SymbolFlags.Alias) !== 0
+              ? checker.getAliasedSymbol(exported)
+              : exported
+            ).declarations ?? [],
+          ),
+        );
+        exportedDeclarations.set(sf, found);
+        return found;
+      };
+      // Whether another file can name this function: through its own export, its exported class or the
+      // exported record that holds it. A function nested in another's body, a private method and an unexported
+      // declaration are reached only from their own file.
+      const nameable = (node: ts.Node): boolean => {
+        if (exportedFrom(node.getSourceFile()).has(node)) return true;
+        if (
+          ts.isFunctionDeclaration(node) ||
+          ts.isVariableDeclaration(node) ||
+          ts.isClassDeclaration(node)
+        ) {
+          const statement = ts.isVariableDeclaration(node) ? node.parent.parent : node;
+          return !(
+            ts.isSourceFile(statement.parent) ||
+            ts.findAncestor(node.parent, ts.isFunctionLike) !== undefined
+          );
+        }
+        if (ts.isObjectLiteralExpression(node.parent)) {
+          const holder = ts.findAncestor(node.parent, (parent) => !ts.isObjectLiteralExpression(parent));
+          return (
+            holder === undefined ||
+            !(ts.isVariableDeclaration(holder) || ts.isPropertyAssignment(holder)) ||
+            nameable(holder)
+          );
+        }
+        if (ts.isClassElement(node)) {
+          if (
+            (node.name !== undefined && ts.isPrivateIdentifier(node.name)) ||
+            (ts.canHaveModifiers(node) &&
+              ts.getModifiers(node)?.some(
+                (modifier) =>
+                  modifier.kind === ts.SyntaxKind.PrivateKeyword ||
+                  modifier.kind === ts.SyntaxKind.ProtectedKeyword,
+              ) === true)
+          )
+            return false;
+          return !ts.isClassDeclaration(node.parent) || nameable(node.parent);
+        }
+        return true;
+      };
       type TypeFacts = {
         readonly callable: boolean;
         readonly accessor: boolean;
@@ -306,10 +383,44 @@ function readCompiler(
       const nativeLibrary = (node: ts.Node): boolean =>
         program.isSourceFileDefaultLibrary(node.getSourceFile()) &&
         /^lib\.dom(?:\.[\w-]+)*\.d\.ts$/.test(basename(node.getSourceFile().fileName));
+      const hostDeclaration = (node: ts.Node): boolean =>
+        program.isSourceFileDefaultLibrary(node.getSourceFile()) ||
+        HOST_DECLARATIONS.test(node.getSourceFile().fileName);
+      // Only the host's own declaration of a value type is a value; a project's own augmentation of it is
+      // behaviour like any other.
+      const hostValue = (symbol: ts.Symbol | undefined): boolean =>
+        symbol !== undefined &&
+        VALUE_TYPES.includes(symbol.name) &&
+        symbol.declarations?.some(hostDeclaration) === true;
+      // A value type's own members, and the pure statics of its constructor, are data access. Every other
+      // static, such as the object-URL registry on URL, stays native.
+      const valueMember = (node: ts.Node): boolean => {
+        if (!hostDeclaration(node)) return false;
+        const owner = node.parent;
+        if (ts.isInterfaceDeclaration(owner) || ts.isClassDeclaration(owner))
+          return (
+            VALUE_TYPES.includes(owner.name?.text ?? "") &&
+            (!ts.canHaveModifiers(node) ||
+              !ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword) ||
+              (ts.isMethodDeclaration(node) &&
+                ts.isIdentifier(node.name) &&
+                VALUE_STATICS.includes(node.name.text)))
+          );
+        return (
+          ts.isTypeLiteralNode(owner) &&
+          ts.isVariableDeclaration(owner.parent) &&
+          ts.isIdentifier(owner.parent.name) &&
+          VALUE_TYPES.includes(owner.parent.name.text) &&
+          (ts.isMethodSignature(node) || ts.isPropertySignature(node)) &&
+          ts.isIdentifier(node.name) &&
+          VALUE_STATICS.includes(node.name.text)
+        );
+      };
       const nativeMember = (symbol: ts.Symbol): boolean =>
         symbol.declarations?.some(
           (node) =>
             nativeLibrary(node) &&
+            !valueMember(node) &&
             (ts.isMethodSignature(node) ||
               ts.isMethodDeclaration(node) ||
               ts.isGetAccessorDeclaration(node) ||
@@ -317,6 +428,7 @@ function readCompiler(
         ) === true;
       const nativeType = (type: ts.Type): NativeType | null => {
         const symbol = type.symbol;
+        if (hostValue(symbol)) return null;
         const declaration = symbol?.declarations?.find(
           (node) =>
             nativeLibrary(node) && (ts.isInterfaceDeclaration(node) || ts.isClassDeclaration(node)),
@@ -486,7 +598,8 @@ function readCompiler(
         } else if (
           checker.isArrayLikeType(type) ||
           checker.isTupleType(type) ||
-          libCollection(symbol)
+          libCollection(symbol) ||
+          hostValue(symbol)
         ) {
           const element = checker.getIndexTypeOfType(type, ts.IndexKind.Number);
           children = [
@@ -497,6 +610,7 @@ function readCompiler(
               if (
                 declaration === undefined ||
                 (supplied && program.isSourceFileDefaultLibrary(declaration.getSourceFile())) ||
+                (hostValue(symbol) && property.declarations?.every(valueMember) === true) ||
                 (ts.isMethodSignature(declaration) &&
                   ts.isInterfaceDeclaration(declaration.parent) &&
                   DATA_COLLECTIONS.includes(declaration.parent.name.text) &&
@@ -527,15 +641,17 @@ function readCompiler(
         const result: TypeFacts = {
           callable: type.getCallSignatures().length > 0 || facts.some((fact) => fact.callable),
           accessor:
-            symbol?.declarations?.some(
-              (node) => ts.isClassDeclaration(node) || ts.isClassExpression(node),
-            ) === true ||
+            (!hostValue(symbol) &&
+              symbol?.declarations?.some(
+                (node) => ts.isClassDeclaration(node) || ts.isClassExpression(node),
+              ) === true) ||
             type
               .getProperties()
               .some((property) =>
                 property.declarations?.some(
                   (node) =>
                     ts.isGetAccessorDeclaration(node) &&
+                    !valueMember(node) &&
                     (supplied !== "adapter" ||
                       !program.isSourceFileDefaultLibrary(node.getSourceFile())),
                 ),
@@ -1042,6 +1158,11 @@ function readCompiler(
                   declaration === undefined || declaration.getSourceFile().isDeclarationFile
                     ? null
                     : local(declaration.getSourceFile().fileName),
+                ...(declaration !== undefined &&
+                declaration.getSourceFile() === sf &&
+                !nameable(declaration)
+                  ? { local: true }
+                  : {}),
                 callableOrigins: callableArguments.map((argument) => argument.origin),
                 callableBindings: callableArguments.map(({ binding }) => binding),
                 builtin:
@@ -1159,15 +1280,42 @@ function readCompiler(
               declaration !== undefined &&
               !(ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) &&
               !(ts.isPropertyAssignment(node.parent) && node.parent.name === node)
-            )
+            ) {
+              const type = checker.getTypeAtLocation(node);
+              // A host function such as fetch hands out the native handles it returns, so calling it is
+              // their authority even when the caller never touches a member of the result.
+              const returned =
+                ts.isFunctionDeclaration(declaration) && nativeLibrary(declaration)
+                  ? type
+                      .getCallSignatures()
+                      .flatMap((signature) =>
+                        nativeAuthorityOf(checker.getReturnTypeOfSignature(signature)),
+                      )
+                  : [];
+              const reached =
+                ts.isPropertyAccessExpression(node.parent) && node.parent.expression === node
+                  ? node.parent.name.text
+                  : null;
               globals.push({
                 file: path,
                 name: node.text,
                 start: node.getStart(sf),
                 declarationFile: local(declaration.getSourceFile().fileName),
                 runtime,
-                nativeAuthority: nativeAuthorityOf(checker.getTypeAtLocation(node)),
+                nativeAuthority: [
+                  ...new Map(
+                    [...nativeAuthorityOf(type), ...returned].map((authority) => [
+                      `${authority.root.file}:${authority.root.name}`,
+                      authority,
+                    ]),
+                  ).values(),
+                ],
+                ...(hostValue(symbol) &&
+                (reached === null || reached === "prototype" || VALUE_STATICS.includes(reached))
+                  ? { value: true }
+                  : {}),
               });
+            }
           }
           if (ts.isPropertyAccessExpression(node)) {
             const symbol = checker.getSymbolAtLocation(node.name);
@@ -2163,17 +2311,16 @@ function captures(
       else if (value.kind === "package") packages.add(value.name);
       else if (value.kind === "parameter") {
         const sf = value.parameter.getSourceFile();
-        if (sf === home) {
-          // The callable's own module's inputs: what its callers supply is carried too.
+        // A captured parameter holds what its declared type grants, also when a handle reached it by a
+        // call inside this module that crossed no boundary. Its own module's inputs also carry what their
+        // callers supply.
+        if (sf === home)
           parameters.push({ file: local(sf.fileName), start: value.parameter.getStart(sf) });
-        } else {
-          // Another module's parameter holds what its declared type grants.
-          const type = checker.getTypeAtLocation(value.parameter);
-          for (const authority of helpers.nativeAuthorityOf(type))
-            natives.set(`${authority.root.file}:${authority.root.name}`, authority);
-          for (const identity of helpers.typesOf(type))
-            types.set(`${identity.file}:${identity.name}`, identity);
-        }
+        const type = checker.getTypeAtLocation(value.parameter);
+        for (const authority of helpers.nativeAuthorityOf(type))
+          natives.set(`${authority.root.file}:${authority.root.name}`, authority);
+        for (const identity of helpers.typesOf(type))
+          types.set(`${identity.file}:${identity.name}`, identity);
       }
     }
     const position = (

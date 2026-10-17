@@ -217,6 +217,19 @@ test("a handle the enclosing function writes into a captured argument is carried
   ).toContain("Document");
 });
 
+test("a handle passed to a function of the same file reaches a closure that captures its parameter", () => {
+  expect(
+    carried(
+      probe(
+        "let held: (() => unknown) | null = null;\n" +
+          "function keep(element: HTMLElement): void { held = () => element; }\n" +
+          "keep(document.body);\n" +
+          "export const result = run(() => held?.());\n",
+      ),
+    ),
+  ).toContain("HTMLElement");
+});
+
 test("a closure in a file whose cone has natives carries none when it captures only pure code", () => {
   expect(
     carried(

@@ -66,8 +66,10 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     if (!path.startsWith(prefix)) return undefined;
     const zone = path.slice(prefix.length).split("/")[0];
     if (zone === "core" || zone === "shell" || zone === "substrate") return zone;
-    return snapshot.config.legacyZones?.find(({ root }) =>
-      path.startsWith(`${root.replace(/\/$/, "")}/`),
+    return snapshot.config.legacyZones?.find((row) =>
+      "files" in row
+        ? row.files.includes(path) && placement(path) === null
+        : path.startsWith(`${row.root.replace(/\/$/, "")}/`),
     )?.zone;
   };
   const adapters = snapshot.config.adapters ?? [];
@@ -202,6 +204,27 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     }
     startups.add(path);
   }
+  // A files row zones only what it lists, and each listed file is debt, so the baseline records the row's
+  // set: dropping a file shrinks it, and a file added to it is new debt the ratchet rejects.
+  for (const row of snapshot.config.legacyZones ?? [])
+    if ("files" in row)
+      for (const path of row.files)
+        if (files.includes(path) && placement(path) === null)
+          add(
+            "R1",
+            "legacy-zone",
+            path,
+            "Place this module, then remove it from its legacy zone row.",
+            row.zone,
+          );
+        else
+          add(
+            "R1",
+            "legacy-zone-row",
+            path,
+            "List only existing legacy source files in a legacy zone row.",
+            row.zone,
+          );
   if (projects.length === 0)
     for (const path of files)
       unresolved("compiler-boundary", path, "No compiler project covers the source.");
@@ -383,6 +406,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       const declared = global.declarationFile ?? "";
       if (
         !name.includes(".") &&
+        global.value !== true &&
         /(?:^|\/)node_modules\//.test(declared) &&
         !/(?:^|\/)node_modules\/typescript\/lib\//.test(declared) &&
         !adapters.some((adapter) => adapter.globals?.includes(name)) &&
@@ -496,7 +520,29 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ? edge.specifier.split("/").slice(0, 2).join("/")
           : edge.specifier.split("/")[0];
         const declaration = snapshot.config.packages?.find((row) => row.name === packageName);
-        if (
+        const bound = adapters.filter(
+          (adapter) =>
+            adapter.kind === "external" &&
+            packageName !== undefined &&
+            adapter.packages?.includes(packageName) === true,
+        );
+        const owners = bound.filter((adapter) => pathOf(adapter.module) === edge.file);
+        if (bound.length > 0 && !edge.specifier.startsWith(".") && !edge.specifier.startsWith("#")) {
+          // An adapter's package is its raw operation: binding it to the adapter's row is what keeps
+          // the core and the adapter's neighbours from reaching it, whatever a package row says.
+          for (const adapter of owners.length > 0 ? owners : bound) {
+            direct.get(edge.file)?.add(adapter.capability);
+            if (owners.length === 0) rawFailures.add(`${edge.file}:${adapter.capability}`);
+          }
+          if (owners.length === 0)
+            add(
+              "R1",
+              "package-import",
+              edge.file,
+              "Import this package only in the capability adapter that declares it, and use that adapter's contract here.",
+              packageName,
+            );
+        } else if (
           declaration !== undefined &&
           !edge.specifier.startsWith(".") &&
           !edge.specifier.startsWith("#")
@@ -722,7 +768,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       ? known.has(keyOf(binding.source))
       : binding.origin !== null &&
         inherited.has(binding.origin) &&
-        (binding.capture === undefined
+        // A reading keeps every binding: what it hands on is checked by its file's inputs, captured or not.
+        (binding.capture === undefined || placement(binding.origin)?.[2] === "readings"
           ? [...inputs].every(([key, file]) => file !== binding.origin || known.has(key))
           : binding.capture.parameters.every(
               (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
@@ -744,16 +791,21 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           .filter((position) => !adapterPaths.has(position.file))
           .flatMap(grants),
         ...capture.whole.flatMap(whole),
-        ...capture.packages.flatMap(
-          (specifier) =>
-            snapshot.config.packages?.find(
-              (row) =>
-                row.name ===
-                (specifier.startsWith("@")
-                  ? specifier.split("/").slice(0, 2).join("/")
-                  : specifier.split("/")[0]),
-            )?.capabilities ?? [],
-        ),
+        ...capture.packages.flatMap((specifier) => {
+          const name = specifier.startsWith("@")
+            ? specifier.split("/").slice(0, 2).join("/")
+            : specifier.split("/")[0];
+          // A package an adapter declares is that adapter's capability, as at its import.
+          const bound = adapters.filter(
+            (adapter) =>
+              adapter.kind === "external" &&
+              name !== undefined &&
+              adapter.packages?.includes(name) === true,
+          );
+          return bound.length > 0
+            ? bound.map((adapter) => adapter.capability)
+            : (snapshot.config.packages?.find((row) => row.name === name)?.capabilities ?? []);
+        }),
         ...capture.parameters.flatMap(grants),
         ...contractTypes
           .filter(
@@ -919,6 +971,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     for (const connection of project.connections) {
       if (!direct.has(connection.file)) continue;
       if (connection.target === null || placement(connection.target) === null) continue;
+      // A composition handing a handle to a function only it can name crosses no boundary: the handle's
+      // authority is already the file's own, and every way out of the file is a connection checked here.
+      if (connection.local === true && placement(connection.file)?.[2] === "compositions") continue;
       const invocation = adapters.some(
         (adapter) => adapter.kind === "external" && pathOf(adapter.module) === connection.target,
       )

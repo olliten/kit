@@ -83,6 +83,8 @@ export interface CompilerFacts {
       readonly file: string;
       readonly start: number;
       readonly target: string | null;
+      // The called function is declared in this file and no other file can name it.
+      readonly local?: boolean;
       readonly callableOrigins: readonly (string | null)[];
       readonly callableBindings?: readonly {
         readonly source: { readonly file: string; readonly start: number } | null;
@@ -123,6 +125,8 @@ export interface CompilerFacts {
       readonly declarationFile: string | null;
       readonly runtime: boolean;
       readonly nativeAuthority?: readonly NativeAuthority[];
+      // A host value type such as URL, used as a value: it parses or transcodes and reaches no host.
+      readonly value?: boolean;
     }[];
     readonly escapes: readonly {
       readonly file: string;
