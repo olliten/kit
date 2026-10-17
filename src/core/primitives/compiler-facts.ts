@@ -110,6 +110,8 @@ export interface CompilerFacts {
       readonly declarationFile: string | null;
       readonly runtime: boolean;
       readonly nativeAuthority?: readonly NativeAuthority[];
+      // A host value type such as URL, used as a value: it parses or transcodes and reaches no host.
+      readonly value?: boolean;
     }[];
     readonly escapes: readonly {
       readonly file: string;
