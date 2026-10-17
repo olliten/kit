@@ -823,6 +823,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     for (const connection of project.connections) {
       if (!direct.has(connection.file)) continue;
       if (connection.target === null || placement(connection.target) === null) continue;
+      // A composition handing a handle to a function only it can name crosses no boundary: the handle's
+      // authority is already the file's own, and every way out of the file is a connection checked here.
+      if (connection.local === true && placement(connection.file)?.[2] === "compositions") continue;
       const invocation = adapters.some(
         (adapter) => adapter.kind === "external" && pathOf(adapter.module) === connection.target,
       )

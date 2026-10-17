@@ -282,6 +282,61 @@ function readCompiler(
           symbol = checker.getAliasedSymbol(symbol);
         return symbol?.valueDeclaration ?? symbol?.declarations?.[0];
       };
+      const exportedDeclarations = new Map<ts.SourceFile, ReadonlySet<ts.Node>>();
+      const exportedFrom = (sf: ts.SourceFile): ReadonlySet<ts.Node> => {
+        const known = exportedDeclarations.get(sf);
+        if (known !== undefined) return known;
+        const module = checker.getSymbolAtLocation(sf);
+        const found = new Set<ts.Node>(
+          (module === undefined ? [] : checker.getExportsOfModule(module)).flatMap((exported) =>
+            ((exported.flags & ts.SymbolFlags.Alias) !== 0
+              ? checker.getAliasedSymbol(exported)
+              : exported
+            ).declarations ?? [],
+          ),
+        );
+        exportedDeclarations.set(sf, found);
+        return found;
+      };
+      // Whether another file can name this function: through its own export, its exported class or the
+      // exported record that holds it. A function nested in another's body, a private method and an unexported
+      // declaration are reached only from their own file.
+      const nameable = (node: ts.Node): boolean => {
+        if (exportedFrom(node.getSourceFile()).has(node)) return true;
+        if (
+          ts.isFunctionDeclaration(node) ||
+          ts.isVariableDeclaration(node) ||
+          ts.isClassDeclaration(node)
+        ) {
+          const statement = ts.isVariableDeclaration(node) ? node.parent.parent : node;
+          return !(
+            ts.isSourceFile(statement.parent) ||
+            ts.findAncestor(node.parent, ts.isFunctionLike) !== undefined
+          );
+        }
+        if (ts.isObjectLiteralExpression(node.parent)) {
+          const holder = ts.findAncestor(node.parent, (parent) => !ts.isObjectLiteralExpression(parent));
+          return (
+            holder === undefined ||
+            !(ts.isVariableDeclaration(holder) || ts.isPropertyAssignment(holder)) ||
+            nameable(holder)
+          );
+        }
+        if (ts.isClassElement(node)) {
+          if (
+            (node.name !== undefined && ts.isPrivateIdentifier(node.name)) ||
+            (ts.canHaveModifiers(node) &&
+              ts.getModifiers(node)?.some(
+                (modifier) =>
+                  modifier.kind === ts.SyntaxKind.PrivateKeyword ||
+                  modifier.kind === ts.SyntaxKind.ProtectedKeyword,
+              ) === true)
+          )
+            return false;
+          return !ts.isClassDeclaration(node.parent) || nameable(node.parent);
+        }
+        return true;
+      };
       type TypeFacts = {
         readonly callable: boolean;
         readonly accessor: boolean;
@@ -1031,6 +1086,11 @@ function readCompiler(
                   declaration === undefined || declaration.getSourceFile().isDeclarationFile
                     ? null
                     : local(declaration.getSourceFile().fileName),
+                ...(declaration !== undefined &&
+                declaration.getSourceFile() === sf &&
+                !nameable(declaration)
+                  ? { local: true }
+                  : {}),
                 callableOrigins: callableArguments.map((argument) => argument.origin),
                 callableBindings: callableArguments.map(({ source, target }) => ({
                   source,

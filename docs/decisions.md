@@ -243,6 +243,19 @@ without naming the app.
   them. Run on the Kit, the check found a claim naming the module that doesn't produce its finding, and a
   named module its test never touched. Each test alone would be too strict: variants prove parts of a claim.
 
+## 2026-10-17 · A handle passed within one composition file needs no contract
+
+- **Decision:** when a placed composition passes a handle or a callback to a function declared in the same file
+  that no other file can name, the pass is not a callable-binding boundary and needs no contract. A function
+  another file can name is a boundary as before: one it exports, by declaration, by name or as the default; one
+  held by an exported record; a public or unprotected method of an exported class. An imported function stays in
+  the file it was declared in, so a pass to it, re-exported or not, is checked as before. Readings keep every
+  binding, and the file's own authority is still checked at the file.
+- **Why:** the authority such a handle carries is already the file's own, and every way out of the file is a
+  connection the check still sees: the call into the file's exported function, and the file's calls into other
+  files. On the first app's sign-in work, compositions passing their own store, cipher and port handles to their
+  own helpers were about a third of the reachable callable-binding limits.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

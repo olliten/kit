@@ -44,7 +44,9 @@ compositions wire the others into behaviour.
   composition ({{capability-check}}). · {#native-handles-stay-in-adapters}
 - Registering a handler or carrying a record passes on no authority the caller lacks: a clock closure, a map
   of callbacks or a native handle can't reach the core through a registration, a record or a private
-  endpoint ({{capability-check}}). · {#registration-passes-no-authority}
+  endpoint. A composition handing a handle to a function only its own file can name crosses no boundary; a
+  function another file can name, through an export, an exported record or a public method of an exported
+  class, is one ({{capability-check}}). · {#registration-passes-no-authority}
 - A native capability contract is usable in any outer zone its registered adapter permits, where its operation
   contract establishes the access; the core stays forbidden, and undeclared native authority stays a limit
   ({{capability-check}}). · {#native-contracts-follow-permitted-zones}
