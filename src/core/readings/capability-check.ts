@@ -66,8 +66,10 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     if (!path.startsWith(prefix)) return undefined;
     const zone = path.slice(prefix.length).split("/")[0];
     if (zone === "core" || zone === "shell" || zone === "substrate") return zone;
-    return snapshot.config.legacyZones?.find(({ root }) =>
-      path.startsWith(`${root.replace(/\/$/, "")}/`),
+    return snapshot.config.legacyZones?.find((row) =>
+      "files" in row
+        ? row.files.includes(path) && placement(path) === null
+        : path.startsWith(`${row.root.replace(/\/$/, "")}/`),
     )?.zone;
   };
   const adapters = snapshot.config.adapters ?? [];
@@ -184,6 +186,27 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     }
     startups.add(path);
   }
+  // A files row zones only what it lists, and each listed file is debt, so the baseline records the row's
+  // set: dropping a file shrinks it, and a file added to it is new debt the ratchet rejects.
+  for (const row of snapshot.config.legacyZones ?? [])
+    if ("files" in row)
+      for (const path of row.files)
+        if (files.includes(path) && placement(path) === null)
+          add(
+            "R1",
+            "legacy-zone",
+            path,
+            "Place this module, then remove it from its legacy zone row.",
+            row.zone,
+          );
+        else
+          add(
+            "R1",
+            "legacy-zone-row",
+            path,
+            "List only existing legacy source files in a legacy zone row.",
+            row.zone,
+          );
   if (projects.length === 0)
     for (const path of files)
       unresolved("compiler-boundary", path, "No compiler project covers the source.");

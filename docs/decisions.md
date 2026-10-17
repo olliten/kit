@@ -243,6 +243,18 @@ without naming the app.
   them. Run on the Kit, the check found a claim naming the module that doesn't produce its finding, and a
   named module its test never touched. Each test alone would be too strict: variants prove parts of a claim.
 
+## 2026-10-17 · A legacy zone row of exact files, which only shrinks
+
+- **Decision:** a `legacy-zones` row may list `files` instead of a `root`. Only the listed legacy files take its
+  zone; a file added beside them takes none and keeps its migration-zone limit. Each listed file is a
+  `legacy-zone` debt finding, so the app's baseline records the row's set like any debt: removing a file from the
+  row shrinks it, and listing a file the baseline lacks is new debt the ratchet rejects. A listed placed module
+  or missing file is a `legacy-zone-row` finding and gets no zone. Prefix rows are unchanged.
+- **Why:** the first app's top-level legacy files (thirteen in `src/` and those of `src/readwise/`) had no zone,
+  which left 53 migration-zone limits on its Sign-in work. A prefix row of `src/` would clear them, but it zones
+  every file later added at the top level and the startup file with them, and nothing would record which files
+  it was meant for.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.
