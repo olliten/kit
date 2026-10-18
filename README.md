@@ -133,7 +133,9 @@ So the spec is only promises that are proved, no test exists without saying what
 exists without a promise it keeps.
 
 A change that breaks a rule fails the check. Existing code is legacy until it's moved into place; its findings
-are debt that may only shrink.
+are debt that may only shrink, and so is its size. A change may add at most five statements to a legacy
+module, each only a call into a placed module; anything larger is placed first, so nothing new lands in the old
+shape.
 
 ## Headless and modular
 
@@ -172,7 +174,8 @@ git clone <this repo> ../kit && (cd ../kit && npm install)
 ```
 
 Add `kit/config.md` mapping your folders to zones, `spec/terms.md` with your domain's words, and a baseline of
-today's findings. Run `kit check` in CI. Nothing users see changes. For the read hook, point a `PostToolUse`
+today's findings and legacy sizes. Run `kit check` in CI, and `kit check --tighten` after a change lands, so
+paid debt and shrunk modules leave the baseline. Nothing users see changes. For the read hook, point a `PostToolUse`
 hook on `Read` at `kit-refs.mjs --hook --root . --config kit/config.md`.
 
 ## This repository

@@ -330,6 +330,27 @@ without naming the app.
   closure carry code outside its file's cone, about twenty times the limits. The planted cases in the
   oracle keep the reach that matters.
 
+## 2026-10-18 · Legacy does not grow
+
+- **Decision:** a legacy module's size is debt that may only shrink. Size is counted in TypeScript statements,
+  wherever they are nested, never in lines; a block or an empty statement is not counted, so reformatting,
+  braces and semicolons move nothing. Each legacy source file under the source root is a `legacy-size` debt
+  finding carrying its statements and how many of them do nothing but import, re-export or call a placed
+  module, as the compiler resolves the callee. The baseline records both under the finding's key. A change may
+  add at most five statements to a legacy module, and its other statements may not grow at all, so the only
+  growth is a few calls into placed code. A module with no recorded size is new debt; a declared startup file is
+  an exception, not legacy. `kit check --tighten` rewrites the baseline so it only shrinks: a paid key leaves,
+  and a size entry takes the smaller of what it records and what the module holds, for each count, so allowed
+  growth is never recorded. The allowance is the Kit's (`legacyGrowth` beside the debt markers), not an app's
+  config value.
+- **Why:** findings in legacy code were debt, but legacy code itself was not. A feature could add or rewrite
+  hundreds of clean lines inside a legacy module and the check passed, because no new finding appeared, while
+  the app's rule was that nothing lands in the old shape. Lines would let formatting decide; statements don't.
+  The allowance is a Kit constant because rules are absolute in every app; a config that could raise it would
+  waive the rule. Counting can't see a rewrite that keeps a module's size, since the snapshot holds no earlier
+  version: an edit in place stays a reviewer's to catch. Adopting it needs each app's pin bump and a one-time
+  baseline refresh that records every legacy module's size.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

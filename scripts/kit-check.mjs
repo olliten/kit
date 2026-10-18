@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { configuredKit, kitCheckPaths, kitConfig } from "./kit-config.mjs";
@@ -9,8 +9,44 @@ export function startupCheckRoots(config) {
   return (config.exceptions ?? []).filter((path) => path.startsWith(`${config.srcRoot}/`));
 }
 
-export function ratchetFindings(findings, baselineKeys, placedPaths, imports, requiredRoots = []) {
-  const baseline = new Set(baselineKeys);
+// A baseline names each debt key it holds; it is a record, or a plain list of keys in a test. A legacy module's
+// size entry records its statements and how many of them only call into placed code.
+function recorded(baseline) {
+  return Array.isArray(baseline) ? Object.fromEntries(baseline.map((key) => [key, null])) : baseline;
+}
+
+function recordedSize(entry) {
+  const statements = entry?.statements;
+  const calls = entry?.calls;
+  return Number.isInteger(statements) && Number.isInteger(calls) && calls >= 0 && calls <= statements
+    ? { statements, calls }
+    : undefined;
+}
+
+// A legacy module may grow by at most `growth` statements, and only by calls into placed code: its other
+// statements may not grow at all. A module the baseline holds no size for is new debt.
+function sizeFailure(item, baseline, growth) {
+  const base = Object.hasOwn(baseline, item.debtKey) ? recordedSize(baseline[item.debtKey]) : undefined;
+  if (base === undefined)
+    return {
+      ...item,
+      fix: `This legacy module has no recorded size, so its ${item.statements} statements are new debt: place it.`,
+    };
+  const grown = item.statements - base.statements;
+  const unplaced = item.statements - item.calls - (base.statements - base.calls);
+  if (grown <= growth && unplaced <= 0) return undefined;
+  return {
+    ...item,
+    fix:
+      `This legacy module has ${item.statements} statements, ${item.calls} of them calls into placed modules; ` +
+      `its baseline records ${base.statements} and ${base.calls}. A change may add at most ${growth}, each only ` +
+      "a call into a placed module: move the new code into a placed module and call it from here.",
+  };
+}
+
+export function ratchetFindings(findings, baseline, placedPaths, imports, requiredRoots = [], growth = 0) {
+  const entries = recorded(baseline);
+  const keys = new Set(Object.keys(entries));
   const reachable = new Set([...placedPaths, ...requiredRoots]);
   const pending = [...reachable];
   const edges = new Map();
@@ -25,10 +61,31 @@ export function ratchetFindings(findings, baselineKeys, placedPaths, imports, re
         reachable.add(target);
         pending.push(target);
       }
-  return findings.filter((item) =>
-    item.category === "checker-limit"
-      ? reachable.has(item.path)
-      : item.category === "placed-violation" || !baseline.has(item.debtKey),
+  return findings.flatMap((item) => {
+    if (item.category === "checker-limit") return reachable.has(item.path) ? [item] : [];
+    if (item.category === "placed-violation") return [item];
+    if (typeof item.statements === "number") return sizeFailure(item, entries, growth) ?? [];
+    return keys.has(item.debtKey) ? [] : [item];
+  });
+}
+
+// The baseline only shrinks: a key whose debt is paid leaves it, and a legacy module's size entry takes the
+// smaller of what it records and what the module holds now, for its statements and for those that are not
+// calls into placed code. Nothing is added, so growth a change was allowed is never recorded.
+export function tightenedBaseline(baseline, findings) {
+  const current = new Map(
+    findings.filter((item) => item.category === "legacy-debt").map((item) => [item.debtKey, item]),
+  );
+  return Object.fromEntries(
+    Object.entries(recorded(baseline)).flatMap(([key, entry]) => {
+      const now = current.get(key);
+      if (now === undefined) return [];
+      const base = typeof now.statements === "number" ? recordedSize(entry) : undefined;
+      if (base === undefined) return [[key, entry]];
+      const statements = Math.min(base.statements, now.statements);
+      const unplaced = Math.min(base.statements - base.calls, now.statements - now.calls);
+      return [[key, { ...entry, statements, calls: statements - unplaced }]];
+    }),
   );
 }
 
@@ -52,6 +109,7 @@ async function main() {
     const { termModel, termOrder } = await load("src/core/readings/term-model.ts");
     const { placementOf } = await load("src/core/readings/placement-of.ts");
     const { topicShape } = await load("src/core/readings/topic-shape.ts");
+    const { legacySize } = await load("src/core/readings/legacy-size.ts");
     const config = configuredKit(DEFAULT_CONFIG, declared);
     const checkSnapshot = (snapshot) => {
       const capability = capabilityCheck(snapshot);
@@ -86,7 +144,12 @@ async function main() {
         blocking: true,
         limit: item.fix,
       }));
-      const findings = [...capability.findings, ...structural, ...conceptLimits];
+      const findings = [
+        ...capability.findings,
+        ...legacySize(snapshot),
+        ...structural,
+        ...conceptLimits,
+      ];
       const placedPaths = snapshot.files
         .filter((file) => file.type === "source" && placementOf(file.path, config.srcRoot).placed)
         .map((file) => file.path);
@@ -124,11 +187,16 @@ async function main() {
     const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
     const failures = ratchetFindings(
       findings,
-      Object.keys(baseline),
+      baseline,
       placedPaths,
       imports,
       startupCheckRoots(config),
+      config.legacyGrowth,
     );
+    if (process.argv.includes("--tighten")) {
+      const tightened = JSON.stringify(tightenedBaseline(baseline, findings), null, 2) + "\n";
+      if (tightened !== JSON.stringify(baseline, null, 2) + "\n") writeFileSync(baselinePath, tightened);
+    }
     const counts = {};
     for (const item of findings) {
       const key = item.category + ":" + item.debtKey.split(":")[1];

@@ -81,6 +81,10 @@
   - Role: derived
   - Zone: core
   - From: []
+- **legacy-size** — the size of each legacy module as debt: its statements, and how many of them only call into placed modules.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
 - **module-references** — the check that every placed module is named by a claim it keeps, and the claims each module keeps.
   - Role: derived
   - Zone: core
@@ -160,4 +164,5 @@
 - **rule** — one of R1–R4; every check serves one.
 - **semantic** — identifying a defined meaning rather than matching an ordinary word.
 - **spec** — the prose the maintainer ratifies.
+- **statement** — one TypeScript statement, wherever it is nested; a block or an empty statement is not counted.
 - **workspace** — the project files and settings a compiler loads.
