@@ -25,6 +25,9 @@ export interface KitConfig {
   readonly ignore?: readonly string[];
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
+  // How many statements one change may add to a legacy module, each only a call into placed code. It is
+  // the Kit's, like the words above: an app's config can't raise it, since the rule holds in every app.
+  readonly legacyGrowth: number;
   readonly layerNames?: {
     readonly primitives: string;
     readonly readings: string;
@@ -58,4 +61,5 @@ export const DEFAULT_CONFIG: KitConfig = {
   plurals: ["s", "es"],
   anchor: "\\{#[\\w-]+\\}",
   debtMarkers: ["TODO", "FIXME", "XXX", "HACK"],
+  legacyGrowth: 5,
 };
