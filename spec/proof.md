@@ -20,6 +20,7 @@ a claim depends on are named in it, so each module's claims are found from its n
 - In a configured legacy area, an anchored paragraph followed by explanatory bullets, or a
   `### law · id — explanation` heading, declares a claim; new topics keep the strict grammar
   ({{claim-inventory}}). · {#legacy-claims-keep-their-grammar}
-- A claim's tests together reach, through their imports, every placed module the claim names; a named module
-  none of them reaches is a finding, so a claim's names are proved rather than trusted ({{proof-reach}},
-  {{claim-proof-binder}}). · {#proofs-reach-named-modules}
+- A claim's tests together reach every placed module the claim names through the code they use, followed
+  into helpers and modules as a capture is, and the modules of only types that code is written in; a named
+  module none of them reaches is a finding, so a claim's names are proved rather than trusted ({{proof-reach}},
+  {{claim-proof-binder}}, {{read-snapshot}}). · {#proofs-reach-named-modules}

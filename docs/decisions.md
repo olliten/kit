@@ -351,6 +351,21 @@ without naming the app.
   version: an edit in place stays a reviewer's to catch. Adopting it needs each app's pin bump and a one-time
   baseline refresh that records every legacy module's size.
 
+## 2026-10-18 · A test reaches what its code uses
+
+- **Decision:** a claim's tests reach the modules their code uses, not every module their imports could load.
+  Each test file's code is followed as a callable's capture is, into helpers and modules through the
+  declarations its names lead to, and a literal dynamic import or an import for its effect alone reaches its
+  module whole. A file reached whole lends everything it imports, and the code a test uses reaches the modules
+  of only types it is written in. A test no project compiles keeps the import walk, so an app whose project
+  file leaves its tests out sees no change until it includes them.
+- **Why:** the import walk let one helper decide every test's reach. A test helper that imported every module
+  so tests could load them made every claim reach every module, and the check passed while tests never touched
+  modules their claims named; an app that kept its loader readable instead got a finding for every claim. The
+  capture already says what code uses for authority (A callable carries what it captures), so the proof uses
+  the same relation instead of a second one. It proves a test can run a module, not that a test would notice
+  the module break: that is mutation testing's, and slow enough to stay out of the check.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

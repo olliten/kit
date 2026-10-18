@@ -97,7 +97,7 @@
   - Role: derived
   - Zone: core
   - From: {{layer}}, {{zone}}
-- **proof-reach** — the check that a claim's tests together reach, through their imports, every placed module the claim names.
+- **proof-reach** — the check that a claim's tests together reach, through the code they use, every placed module the claim names.
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}

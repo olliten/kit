@@ -236,6 +236,7 @@ function readCompiler(
 ): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[] } {
   const scopes: Scope[] = [];
   const source = new Set(files.filter((file) => file.type === "source").map((file) => file.path));
+  const tests = new Set(files.filter((file) => file.type === "test").map((file) => file.path));
   // The visitor asks for a file's local path at every declaration it reads; computing it each time with
   // path.relative cost about a seventh of a cold extraction.
   const localPaths = new Map<string, string>();
@@ -1546,6 +1547,31 @@ function readCompiler(
         facts,
       );
       for (const { argument, binding } of pendingCaptures) binding.capture = captureOf(argument);
+      // A test reaches what its code uses, followed into helpers and modules as a capture is, so a helper that
+      // imports many modules lends a test only the ones the code it calls uses.
+      const proofOf = captures(
+        program,
+        checker,
+        new Set([...source, ...tests]),
+        local,
+        { nativeAuthorityOf, importTarget, typesOf: (type: ts.Type) => typeFacts(type).types },
+        facts,
+      );
+      const proofs = program
+        .getSourceFiles()
+        .filter((sf) => !sf.isDeclarationFile && tests.has(local(sf.fileName)))
+        .map((sf) => {
+          const { reached, whole } = proofOf(sf);
+          // An import for its effect alone runs the module it names.
+          const run = sf.statements.flatMap((statement) =>
+            ts.isImportDeclaration(statement) &&
+            statement.importClause === undefined &&
+            ts.isStringLiteral(statement.moduleSpecifier)
+              ? [importTarget(statement.moduleSpecifier.text, sf.fileName) ?? []].flat()
+              : [],
+          );
+          return { file: local(sf.fileName), reached, whole: [...new Set([...whole, ...run])].sort() };
+        });
       const zone = /^tsconfig\.(core|shell|substrate)\.json$/.exec(basename(file))?.[1];
       return {
         file,
@@ -1578,6 +1604,7 @@ function readCompiler(
         accesses,
         constructions,
         connections,
+        proofs,
         termFacts: { sources: termSources, types: termTypes },
       };
     });
@@ -1732,7 +1759,7 @@ function captures(
   },
   // Per file, in order, each fact that can grant authority and the first position of its kind there.
   facts: ReadonlyMap<string, readonly { readonly start: number; readonly position: number }[]>,
-): (argument: ts.Expression) => Capture {
+): (argument: ts.Node) => Capture {
   const unaliased = (symbol: ts.Symbol): ts.Symbol => {
     if ((symbol.flags & ts.SymbolFlags.Alias) === 0) return symbol;
     const target = checker.getAliasedSymbol(symbol);
