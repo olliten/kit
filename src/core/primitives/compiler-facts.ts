@@ -105,6 +105,13 @@ export interface CompilerFacts {
       }[];
       readonly builtin: boolean;
     }[];
+    // What each test file's code uses, followed as a callable's capture is: the files whose code it reaches, and
+    // the files it reaches in ways that can't be followed, charged whole.
+    readonly proofs?: readonly {
+      readonly file: string;
+      readonly reached: readonly string[];
+      readonly whole: readonly string[];
+    }[];
     readonly exports: readonly {
       readonly file: string;
       readonly name: string;

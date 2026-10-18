@@ -4,20 +4,41 @@ import { type Finding, byDebtKey, finding } from "./finding.js";
 import { placementOf } from "./placement-of.js";
 
 // A claim's names are what a reader trusts about which modules keep it, so its tests must reach each one.
-// Variants prove parts of a claim, so the tests reach the named modules together, not each alone.
+// Variants prove parts of a claim, so the tests reach the named modules together, not each alone. A test
+// reaches what its code uses, as the compiler follows it into helpers and modules, everything a file it can't
+// follow precisely imports, and the modules of only types that code is written in; a test no project compiles
+// reaches everything its imports do.
 export function proofReach(snapshot: Snapshot): Finding[] {
   const { oracleRoot, specRoot, srcRoot, plurals } = snapshot.config;
   const edges = new Map<string, string[]>();
   for (const { from, to } of snapshot.imports) edges.set(from, [...(edges.get(from) ?? []), to]);
-  const reach = (start: string): Set<string> => {
-    const seen = new Set([start]);
-    const pending = [start];
-    for (let next = pending.pop(); next !== undefined; next = pending.pop())
-      for (const target of edges.get(next) ?? [])
-        if (!seen.has(target)) {
-          seen.add(target);
-          pending.push(target);
-        }
+  const uses = new Map<string, { reached: Set<string>; whole: Set<string> }>();
+  for (const project of snapshot.compiler?.projects ?? [])
+    for (const { file, reached, whole } of project.proofs ?? []) {
+      const known = uses.get(file) ?? { reached: new Set<string>(), whole: new Set<string>() };
+      for (const path of reached) known.reached.add(path);
+      for (const path of whole) known.whole.add(path);
+      uses.set(file, known);
+    }
+  const facts = new Set(
+    (snapshot.compiler?.projects ?? []).flatMap((project) =>
+      (project.termFacts?.sources ?? []).filter((source) => source.factOnly).map((source) => source.file),
+    ),
+  );
+  const reach = (test: string): Set<string> => {
+    const used = uses.get(test);
+    const seen = new Set(used === undefined ? [test] : [...used.reached, ...used.whole]);
+    const follow = (pending: string[], only?: ReadonlySet<string>): void => {
+      for (let next = pending.pop(); next !== undefined; next = pending.pop())
+        for (const target of edges.get(next) ?? [])
+          if (!seen.has(target) && (only === undefined || only.has(target))) {
+            seen.add(target);
+            pending.push(target);
+          }
+    };
+    follow(used === undefined ? [test] : [...used.whole]);
+    // A module of only types has no code to run: the code a test uses reaches the types it is written in.
+    follow([...seen], facts);
     return seen;
   };
   const homes = new Map<string, string[]>();
