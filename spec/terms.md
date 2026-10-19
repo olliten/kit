@@ -50,6 +50,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **verification** — the supplied checks, input identities, execution contracts, evidence and resource state of a verification request.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **zone** — what code may do: core, shell or substrate.
   - Role: fact
   - Zone: core
@@ -117,6 +121,15 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}
+
+- **verification-partition** — disjoint worker assignments derived from required checks, supplied durations and initial worker loads.
+  - Role: derived
+  - Zone: core
+  - From: {{verification}}
+- **verification-plan** — missing checks, reusable evidence and executable work derived from requirements, results and capacity.
+  - Role: derived
+  - Zone: core
+  - From: {{verification}}
 
 ## Adapter contracts
 
