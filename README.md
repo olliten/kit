@@ -2,6 +2,13 @@
 
 Architecture as a check, for codebases that agents write.
 
+Verification planning is also portable. `scripts/kit-verification.mjs` exports `verification()` to load the
+pure evidence planner and duration-aware partitioner, and `runVerification(checks, io)` to execute a dependency
+graph with supplied effects and resource capacity. Checks declare stable identities, input fingerprints,
+execution contracts and required strength. The caller supplies discovery, input tracking, evidence storage
+and policy. A fresh policy runs every required check; an incremental policy reuses only matching successful
+evidence. No branch name, Git provider or test framework is built into the planner.
+
 ## Why
 
 Most conventions in a codebase exist so a person can read it. Agents don't read that way: an agent starts each
