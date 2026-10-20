@@ -55,7 +55,8 @@ the two questions. Where a module lives is answered by what it may do, `src/<zon
 once and mechanically. What it's for is answered by the claims that name it, in any topic.
 
 The spec is a set of topics, one file each, usually one thing a user does. A topic has one shape: a title,
-an intro of at most three sentences, then sections and claims. Each claim names the modules it depends on:
+an intro of at most three sentences, then sections and claims. Each claim names the production modules
+that implement it and the shared test modules that construct its proof:
 
 ```markdown
 # Review an article
@@ -64,11 +65,15 @@ A reviewer reads each waiting reading and accepts or declines it.
 
 ## Declining
 
-- A decline cannot be saved without a reason in the reviewer's own words ({{decline}}, {{surface}}). · {#decline-needs-reason}
+- A decline cannot be saved without a reason in the reviewer's own words ({{decline}}, {{surface}}, {{decline-cases}}). · {#decline-needs-reason}
 ```
 
-`{{decline}}` and `{{surface}}` are terms, each defined once in `spec/terms.md` and bound to one file, such as
-`src/shell/adapters/surface.ts`. The anchor binds the claim to
+`{{decline}}`, `{{surface}}` and `{{decline-cases}}` are terms, each defined once in `spec/terms.md` and bound
+to one file. The first two name production modules, such as `src/shell/adapters/surface.ts`;
+`{{decline-cases}}` names shared proof data in `oracle/core/primitives/decline-cases.ts` when `oracle/`
+is a governed code root. Name the modules the proof actually uses, including shared generators,
+reference models, comparisons or drivers; a module reused by several topics is named by each relevant
+claim. These use the same term syntax and glossary as production modules. The anchor binds the claim to
 `oracle/review-an-article/decline-needs-reason.test.ts`. A claim with no test, a test that names no claim, a
 module no claim names, prose outside a claim: each fails. So a topic is a map of its feature that the check
 keeps accurate: what it promises, what implements it, what proves it.
@@ -173,6 +178,21 @@ kit/
   config.md                    the app's declarations
   debt/legacy.json             what isn't placed yet; only shrinks
 ```
+
+To govern shared test modules too, declare a list in `kit/config.md`:
+
+```yaml
+roots:
+  src: [src, oracle]
+  spec: spec
+  oracle: oracle
+```
+
+Each code root uses the same zones and layers. Module identities in this configuration include the
+root, for example `oracle/core/primitives/decline-cases`; adapter registrations use those identities
+too. Term names stay globally unique. `roots.oracle` still selects claim proof files; adding a code
+root does not yet give test entrypoints or framework calls new permissions. Existing scalar
+`roots.src: src` configurations keep their identities and findings.
 
 ## Adopt
 

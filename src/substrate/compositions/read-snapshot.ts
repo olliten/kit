@@ -9,6 +9,7 @@ import type { ImportEdge } from "../../core/primitives/import.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
+import { moduleFileOf, placementOf, rootOf } from "../../core/readings/placement-of.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
@@ -65,8 +66,7 @@ export function readSnapshot(
     compiler: [],
   },
 ): Snapshot {
-  if (typeof config.srcRoot !== "string")
-    throw new Error("Multiple code roots are not supported by snapshot extraction yet.");
+  rootOf("", config.srcRoot);
   const ignored = (path: string): boolean =>
     (config.ignore ?? []).some((root) => path === root || path.startsWith(`${root}/`));
   const paths = walk(appRoot, appRoot, ignored, trace.filesystem).map((abs) =>
@@ -119,7 +119,7 @@ export function readSnapshot(
     }
     if (type === "source") {
       for (const m of text.matchAll(EXPORT)) symbols.push({ file: path, name: m[1] ?? "" });
-      if (path.startsWith(`${config.srcRoot}/`)) sources.set(path, text);
+      if (rootOf(path, config.srcRoot) !== undefined) sources.set(path, text);
     }
     comments.push(...commentsOf(path, text));
     specifiers.push({
@@ -250,21 +250,18 @@ function readCompiler(
     }
     return path;
   };
-  const shellPrefix = `${config.srcRoot}/shell/${config.layerNames?.compositions ?? "compositions"}/`;
   const shellCompositions = new Set(
-    [...source].filter(
-      (path) => path.startsWith(shellPrefix) && !path.slice(shellPrefix.length).includes("/"),
-    ),
+    [...source].filter((path) => {
+      const at = placementOf(path, config.srcRoot, config.layerNames);
+      return at.placed && at.zone === "shell" && at.layer === "compositions";
+    }),
   );
   const externalAdapters = new Set(
     (config.adapters ?? []).flatMap((adapter) => {
-      const [zone, layer, name] = adapter.module.split("/");
-      return adapter.kind === "external" &&
-        (zone === "shell" || zone === "substrate") &&
-        layer === "adapters" &&
-        name !== undefined
-        ? [`${config.srcRoot}/${zone}/${config.layerNames?.adapters ?? layer}/${name}.ts`]
-        : [];
+      if (adapter.kind !== "external") return [];
+      const path = moduleFileOf(adapter.module, config.srcRoot, config.layerNames);
+      const at = placementOf(path, config.srcRoot, config.layerNames);
+      return at.placed && at.zone !== "core" && at.layer === "adapters" ? [path] : [];
     }),
   );
   const projects = paths
