@@ -194,3 +194,56 @@ test("a reading passing a callback to its own helper is still a boundary", () =>
   });
   expect(binding(result)).toEqual([expect.stringMatching(/^R1:callable-binding:src\/core\/readings\/value\.ts:/)]);
 });
+
+test.each([
+  ["private", "", false],
+  ["exported", "export ", true],
+] as const)("a registered adapter's %s helper respects its module boundary", (_, visibility, rejected) => {
+  const result = inspect({
+    "src/substrate/adapters/clock.ts":
+      "export interface Clock { now(): number; }\n" +
+      "export const clock: Clock = { now: () => Date.now() };\n" +
+      `${visibility}function apply(read: () => number): number { return read(); }\n` +
+      "export function run(read: () => number): number { return apply(read); }\n",
+  });
+  if (rejected)
+    expect(binding(result)).toEqual([expect.stringMatching(/^R1:callable-binding:src\/substrate\/adapters\/clock\.ts:/)]);
+  else expect(binding(result)).toEqual([]);
+});
+
+test("an unregistered adapter's private helper still requires an established callback", () => {
+  const result = inspect({
+    "src/substrate/adapters/unknown.ts":
+      "function apply(read: () => number): number { return read(); }\n" +
+      "export function run(read: () => number): number { return apply(read); }\n",
+  });
+  expect(binding(result)).toEqual([expect.stringMatching(/^R1:callable-binding:src\/substrate\/adapters\/unknown\.ts:/)]);
+});
+
+test("a registered adapter cannot acquire another adapter's authority through a private helper", () => {
+  const result = inspect({
+    "src/substrate/adapters/clock.ts":
+      "export interface Clock { now(): number; }\n" +
+      "function apply(read: () => number): number { return read(); }\n" +
+      "export const clock: Clock = { now: () => apply(() => document.createElement('button').childElementCount) };\n",
+  });
+  expect(result.findings.map((finding) => finding.debtKey)).toContain(
+    "R1:raw-primitive:src/substrate/adapters/clock.ts:dom.render",
+  );
+});
+
+test("a caller supplying unknown behavior to a registered adapter still crosses a checked boundary", () => {
+  const result = inspect({
+    "src/substrate/adapters/clock.ts":
+      "export interface Clock { now(): number; }\n" +
+      "function apply(read: () => number): number { return read(); }\n" +
+      "export const clock: Clock = { now: () => Date.now() };\n" +
+      "export function run(read: () => number): number { return apply(read); }\n",
+    [store]:
+      "import { run } from '../adapters/clock.js';\n" +
+      "export function use(read: () => number): number { return run(read); }\n",
+  });
+  expect(binding(result)).toEqual([
+    expect.stringMatching(/^R1:callable-binding:src\/substrate\/compositions\/store\.ts:src\/substrate\/adapters\/clock\.ts:/),
+  ]);
+});
