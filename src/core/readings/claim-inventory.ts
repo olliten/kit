@@ -9,7 +9,7 @@ export interface ClaimInventory {
 
 // Only these two exact metadata rows may follow a claim's closing paragraph. They describe
 // relationships to modules, independently of where those modules live.
-export function claimModules(node: Nodes): Pick<ClaimMarker, "implementation" | "proof"> | null {
+export function claimModules(node: Nodes, text: string): Pick<ClaimMarker, "implementation" | "proof"> | null {
   if (node.type !== "listItem" || node.children.length !== 2) return null;
   const [paragraph, list] = node.children;
   if (paragraph?.type !== "paragraph" || list?.type !== "list" || list.ordered) return null;
@@ -22,8 +22,12 @@ export function claimModules(node: Nodes): Pick<ClaimMarker, "implementation" | 
       row.children.some((child) => child.type !== "text")
     )
       return null;
-    const value = row.children.map((child) => (child.type === "text" ? child.value : "")).join("");
-    const match = /^(Implementation|Proof):\s*(\{\{[^{}]+\}\}(?:\s*,\s*\{\{[^{}]+\}\})*)\s*$/.exec(
+    const start = row.position?.start.offset;
+    const end = row.position?.end.offset;
+    if (start === undefined || end === undefined) return null;
+    // Reference resolution uses literal source notation, not decoded escapes or HTML entities.
+    const value = text.slice(start, end);
+    const match = /^(Implementation|Proof):\s*(\{\{[^{}\\]+\}\}(?:\s*,\s*\{\{[^{}\\]+\}\})*)\s*$/.exec(
       value,
     );
     if (match === null) return null;
@@ -93,7 +97,7 @@ export function claimInventory(
   const visit = (node: Nodes): void => {
     if (node.type === "code") return;
     if (node.type === "listItem") {
-      const modules = claimModules(node);
+      const modules = claimModules(node, text);
       const paragraph =
         options.legacy || modules !== null ? node.children[0] : node.children.at(-1);
       if (paragraph?.type === "paragraph") close(paragraph, modules ?? {});
