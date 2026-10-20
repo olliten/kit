@@ -34,7 +34,8 @@ compositions wire the others into behaviour.
   never purity ({{capability-check}}, {{compiler-facts}}). · {#authority-is-derived}
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
-  hosts no external adapter ({{capability-check}}). · {#adapters-create-authority}
+  hosts no external adapter. In an explicit root set, a registration names the root-qualified module
+  identity rather than choosing a default root ({{capability-check}}). · {#adapters-create-authority}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
   holding only the adapter's plain contract holds no native authority ({{capability-check}}). · {#declared-globals-cover-their-handles}
 - An ambient host global such as `process` is authority: used outside an adapter that declares it, also as

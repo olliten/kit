@@ -21,6 +21,25 @@ const LEGACY: Legacy = { placed: false };
 
 const isZone = (s: string): s is Zone => ZONES.some((zone) => zone === s);
 
+export function moduleFileOf(
+  module: string,
+  roots: string | readonly string[],
+  layerNames?: Readonly<Partial<Record<Layer, string>>>,
+): string {
+  const root = typeof roots === "string" ? roots : rootOf(module, roots);
+  if (root === undefined)
+    throw new Error("Qualify the module identity with one of the declared code roots.");
+  const relative = typeof roots === "string" ? module : module.slice(root.length + 1);
+  const [zone, layer = "", name, ...deeper] = relative.split("/");
+  if (
+    typeof roots !== "string" &&
+    (!zone || !layer || !name || deeper.length > 0)
+  )
+    throw new Error("Declare a canonical module identity under one of the code roots.");
+  const physical = Object.entries(layerNames ?? {}).find(([logical]) => logical === layer)?.[1] ?? layer;
+  return `${root}/${zone ?? ""}/${physical}/${name ?? ""}.ts`;
+}
+
 export function rootOf(
   path: string,
   roots: string | readonly string[],
@@ -28,7 +47,7 @@ export function rootOf(
   if (
     typeof roots !== "string" &&
     (roots.length === 0 ||
-      roots.some(
+      Array.from(roots).some(
         (root, index) =>
           typeof root !== "string" ||
           root.trim() !== root ||
