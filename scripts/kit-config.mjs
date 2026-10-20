@@ -19,6 +19,19 @@ export function kitConfig(text) {
  * @returns {import("../src/core/primitives/default-config.js").KitConfig}
  */
 export function configuredKit(defaults, declaration) {
+  const roots = declaration.roots;
+  if (
+    !roots ||
+    typeof roots !== "object" ||
+    Array.isArray(roots) ||
+    Object.keys(roots).some((name) => !["src", "spec", "oracle"].includes(name)) ||
+    ["src", "spec", "oracle"].some(
+      (name) => typeof roots[name] !== "string" || !roots[name].trim(),
+    )
+  )
+    throw new Error(
+      "Declare roots.src, roots.spec and roots.oracle as single paths; additional code roots are not supported yet.",
+    );
   return {
     ...defaults,
     srcRoot: declaration.roots.src.replace(/\/$/, ""),

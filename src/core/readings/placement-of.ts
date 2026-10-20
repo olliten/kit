@@ -9,7 +9,7 @@ export interface Placed {
   readonly name: string;
   // What follows the name, without the leading dot: `ts`, `law.test.ts`.
   readonly rest: string;
-  // `<zone>/<layer>/<name>`: the artifact's name in spec and code.
+  // Single-root callers keep their debt keys; explicit root sets distinguish module homes.
   readonly artifact: string;
 }
 
@@ -23,9 +23,31 @@ const isZone = (s: string): s is Zone => ZONES.some((zone) => zone === s);
 
 export function placementOf(
   path: string,
-  root: string,
+  roots: string | readonly string[],
   layerNames?: Readonly<Partial<Record<Layer, string>>>,
 ): Placed | Legacy {
+  if (
+    typeof roots !== "string" &&
+    (roots.length === 0 ||
+      roots.some(
+        (root, index) =>
+          typeof root !== "string" ||
+          root.trim() !== root ||
+          /[\\*?{}[\]]/.test(root) ||
+          /^[a-z]:/i.test(root) ||
+          root.split("/").some((part) => part === "" || part === "." || part === "..") ||
+          roots.some(
+            (other, otherIndex) =>
+              index !== otherIndex && (root === other || root.startsWith(`${other}/`)),
+          ),
+      ))
+  )
+    throw new Error("Declare nonempty, distinct, non-overlapping relative code roots.");
+  const root =
+    typeof roots === "string"
+      ? roots
+      : roots.find((candidate) => path.startsWith(`${candidate}/`));
+  if (root === undefined) return LEGACY;
   const prefix = `${root}/`;
   if (!path.startsWith(prefix)) return LEGACY;
   const [zone, physical, file, ...deeper] = path.slice(prefix.length).split("/");
@@ -46,6 +68,6 @@ export function placementOf(
     layer,
     name,
     rest: file.slice(dot + 1),
-    artifact: `${zone}/${layer}/${name}`,
+    artifact: `${typeof roots === "string" ? "" : `${root}/`}${zone}/${layer}/${name}`,
   };
 }

@@ -5,6 +5,8 @@ its config, and its debt in its own baseline.
 
 ## Reading an app
 
+- A root declaration the checks do not support is an error, never an ignored root; configuration
+  accepts only the supported root fields and shapes. · {#declared-roots-are-checked}
 - {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
   {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
