@@ -13,6 +13,7 @@ its config, and its debt in its own baseline.
 
 - {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
   {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
+  - Proof: {{binding-findings}}
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
 - A cache hit reuses extraction and reruns the check; a corrupt cache is rebuilt, and a source change during
@@ -32,8 +33,9 @@ its config, and its debt in its own baseline.
 
 ## Checking itself
 
-- Every Kit source file is placed, its imports obey the dependency rules, and its claims, modules and tests
-  bind with no finding. · {#kit-checks-itself}
-- The Kit's terms are each defined once, and its names and prose use no retired word. · {#kit-terms-are-defined-once}
-- The Kit's placed modules bind to their terms without supporting-word terms. · {#kit-modules-bind-to-terms}
-- The Kit's comments cite nothing and carry no debt. · {#kit-comments-cite-nothing}
+- Kit's production source is placed and its imports obey the dependency rules; its claims, modules and
+  tests bind with no finding, its placed modules bind to terms without supporting-word terms, its terms
+  are defined once, its names and prose use no retired word, and its comments cite nothing and carry no
+  debt. These checks use one snapshot of the actual configured repository. · {#kit-checks-itself}
+  - Implementation: {{comment-check}}, {{dependency-check}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
+  - Proof: {{binding-findings}}

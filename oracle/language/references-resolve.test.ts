@@ -12,7 +12,7 @@ import {
   semanticReferences,
 } from "../../src/core/readings/semantic-references.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { bindingFindings } from "../lib/bindingFindings.js";
+import { bindingFindings } from "../core/readings/binding-findings.js";
 
 function snapshot(
   documents: Readonly<Record<string, string>>,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { claimsKeptBy } from "../../src/core/readings/module-references.js";
-import { bindingFindings } from "../lib/bindingFindings.js";
+import { bindingFindings } from "../core/readings/binding-findings.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const keys = (s: Parameters<typeof bindingFindings>[0]) => bindingFindings(s).map((f) => f.debtKey);
