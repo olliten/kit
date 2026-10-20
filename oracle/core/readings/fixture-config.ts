@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
+import { DEFAULT_CONFIG, type KitConfig } from "../../../src/core/primitives/default-config.js";
 
 export const fixtureConfig: KitConfig = {
   ...DEFAULT_CONFIG,

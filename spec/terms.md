@@ -2,6 +2,10 @@
 
 ## Primitive contracts
 
+- **case-inventory** — the independently supplied identities, conditions and input paths of the structural fixture cases.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **claim** — a promise declared once in its topic and proved by tests.
   - Role: fact
   - Zone: core
@@ -89,6 +93,10 @@
   - Role: derived
   - Zone: core
   - From: []
+- **fixture-config** — the adapter boundaries of the structural fixture derived by extending the default configuration.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}
 - **fixture-snapshot** — a headless snapshot derived from supplied case descriptions for structural proofs.
   - Role: derived
   - Zone: core

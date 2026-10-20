@@ -279,7 +279,8 @@ assertions. Production imports of oracle code, including types, are forbidden.
 The oracle adoption inventory was taken at `83ffb2a`, with the second code root enabled and adapter
 identities qualified by root. It contained six legacy modules: 91 executable statements and 21 calls.
 Moving the snapshot builder pays its 24 statements and seven calls; the claim-binding reading pays
-another six statements and four calls, leaving four legacy modules with 61 statements and ten calls
+another six statements and four calls. The fixture inventory and configuration pay four statements and one
+call, leaving two legacy modules with 57 statements and nine calls
 in `self-debt/legacy.json`. That inventory adds no source-module waivers or
 checker-limit waivers. The remaining infrastructure stays under the ratchet until its capability is
 migrated. Claim-test entrypoints retain the existing compiler and claim-reach checks; opt-in framework
