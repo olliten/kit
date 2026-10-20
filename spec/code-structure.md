@@ -8,7 +8,9 @@ compositions wire the others into behaviour.
 ## Placement
 
 - A source file is placed when its path is `<root>/<zone>/<layer>/<name>.ts`, read once by
-  {{placement-of}} from {{zone}} and {{layer}}; any other path, an old kind folder included, is legacy. · {#placement-is-read-from-the-path}
+  {{placement-of}} from {{zone}} and {{layer}}. The name before the first dot and the suffix after the
+  last dot are both nonempty; a multi-part suffix does not change the name. Placement and authority use
+  this same filename rule. Any other path, an old kind folder included, is legacy. · {#placement-is-read-from-the-path}
 - Without a directory mapping in the config, the four layers keep their own names as folders
   ({{default-config}}, {{layer}}). · {#layers-default-to-their-names}
 

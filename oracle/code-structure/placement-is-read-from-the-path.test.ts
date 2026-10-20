@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
+import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
+import { sourceFixture } from "../lib/source-fixture.js";
 
 describe("placementOf reads zone and layer from <root>/<zone>/<layer>/<name>", () => {
   test("a placed source file", () => {
@@ -18,6 +20,14 @@ describe("placementOf reads zone and layer from <root>/<zone>/<layer>/<name>", (
     expect(at.placed && [at.artifact, at.rest]).toEqual(["shell/compositions/paint", "tsx"]);
   });
 
+  test("a multi-part suffix keeps the name before the first dot", () => {
+    const at = placementOf("src/core/readings/total.property.test.ts", "src");
+    expect(at.placed && [at.artifact, at.rest]).toEqual([
+      "core/readings/total",
+      "property.test.ts",
+    ]);
+  });
+
   test.each([
     ["outside the root", "lib/core/primitives/x.ts"],
     ["directly under the root", "src/main.ts"],
@@ -30,7 +40,46 @@ describe("placementOf reads zone and layer from <root>/<zone>/<layer>/<name>", (
     ["an obsolete data kind", "src/core/data/x.ts"],
     ["an obsolete effect kind", "src/shell/effect/x.ts"],
     ["no name before the dot", "src/core/primitives/.hidden"],
+    ["a dot-prefixed source name", "src/core/primitives/.hidden.ts"],
+    ["an empty suffix", "src/core/primitives/value."],
+    ["an empty final suffix", "src/core/primitives/value.ts."],
   ])("legacy: %s", (_why, path) => {
     expect(placementOf(path, "src")).toEqual({ placed: false });
   });
+});
+
+test("placement and authority classify the same source filenames", () => {
+  const paths = ["value.ts", "value.extra.ts", ".hidden.ts"].map(
+    (name) => `src/core/readings/${name}`,
+  );
+  const snapshot = sourceFixture({
+    "tsconfig.json": JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        strict: true,
+        types: [],
+        lib: ["ES2022"],
+      },
+      files: paths,
+    }),
+    ...Object.fromEntries(
+      paths.map((path) => [path, "export function value(): number { return Date.now(); }\n"]),
+    ),
+  });
+  expect(snapshot.compiler?.projects).toHaveLength(1);
+  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
+  const findings = capabilityCheck(snapshot).findings;
+  for (const path of paths) {
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        debtKey: `R1:raw-primitive:${path}:clock`,
+        category: placementOf(path, snapshot.config.srcRoot).placed
+          ? "placed-violation"
+          : "legacy-debt",
+        blocking: true,
+      }),
+    );
+  }
 });

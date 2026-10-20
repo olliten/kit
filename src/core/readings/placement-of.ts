@@ -21,36 +21,24 @@ const LEGACY: Legacy = { placed: false };
 
 const isZone = (s: string): s is Zone => ZONES.some((zone) => zone === s);
 
-export interface ModulePath {
-  readonly zone: Zone;
-  readonly layer: Layer;
-  readonly file: string;
-}
-
-export function modulePathOf(
+export function placementOf(
   path: string,
   root: string,
   layerNames?: Readonly<Partial<Record<Layer, string>>>,
-): ModulePath | null {
+): Placed | Legacy {
   const prefix = `${root}/`;
-  if (!path.startsWith(prefix)) return null;
+  if (!path.startsWith(prefix)) return LEGACY;
   const [zone, physical, file, ...deeper] = path.slice(prefix.length).split("/");
   if (zone === undefined || !isZone(zone) || file === undefined || deeper.length > 0) {
-    return null;
+    return LEGACY;
   }
   const directories = Object.entries(layerNames ?? {});
   const layer = LAYERS.find(
     (name) => (directories.find(([role]) => role === name)?.[1] ?? name) === physical,
   );
-  return layer === undefined ? null : { zone, layer, file };
-}
-
-export function placementOf(path: string, root: string): Placed | Legacy {
-  const at = modulePathOf(path, root);
-  if (at === null) return LEGACY;
-  const { zone, layer, file } = at;
+  if (layer === undefined) return LEGACY;
   const dot = file.indexOf(".");
-  if (dot <= 0) return LEGACY;
+  if (dot <= 0 || file.endsWith(".")) return LEGACY;
   const name = file.slice(0, dot);
   return {
     placed: true,
