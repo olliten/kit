@@ -24,6 +24,12 @@ compositions wire the others into behaviour.
   {{import}}). · {#imports-point-inward}
 - Imports have no cycles; a cycle, a self-import included, is one finding at its first module that names
   every member ({{dependency-check}}). · {#imports-have-no-cycles}
+- An explicit dependency exclusion selects existing origin and target code by relative file or directory
+  paths, chooses all or runtime imports and direct or transitive reach, and follows compiler-resolved
+  aliases and re-exports. Runtime separation ignores only established erased edges. Direct boundaries may
+  use classified package contracts; transitive separation requires checked import evidence throughout,
+  including through helpers. Missing evidence remains a blocking limit, and a baseline cannot waive an
+  explicit exclusion or its limits ({{dependency-check}}, {{default-config}}). · {#dependency-exclusions-are-checked}
 - An adapter is a module like any other: its path is its identity and its imports may not form a cycle
   ({{dependency-check}}). · {#adapters-follow-the-same-rules}
 

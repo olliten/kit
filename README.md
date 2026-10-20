@@ -222,6 +222,26 @@ members of an exported API.
 
 ## Adopt
 
+Use dependency exclusions for boundaries that imports must not cross:
+
+```yaml
+dependency-exclusions:
+  - from: src
+    to: oracle
+    imports: all
+    reach: direct
+  - from: oracle/core/readings/reference.ts
+    to: src/core/readings/actual.ts
+    imports: runtime
+    reach: transitive
+```
+
+Selectors name existing files or directories, without patterns. The first rule forbids direct
+production imports of oracle code, including types. The second follows runtime dependencies through
+helpers and re-exports to keep a reference model separate from the implementation it judges. Erased
+type contracts remain allowed. Transitive checks retain uncertainty at opaque boundaries, even when
+a package is declared pure. These checks establish dependency separation, not model correctness.
+
 ```sh
 git clone <this repo> ../kit && (cd ../kit && npm install)
 ```

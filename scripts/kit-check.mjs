@@ -100,6 +100,7 @@ async function main() {
     const { filesystem } = await load("src/substrate/adapters/filesystem.ts");
     const { compilerWorkspace } = await load("src/substrate/adapters/compiler.ts");
     const { capabilityCheck } = await load("src/core/readings/capability-check.ts");
+    const { dependencyExclusions } = await load("src/core/readings/dependency-check.ts");
     const { moduleReferences } = await load("src/core/readings/module-references.ts");
     const { claimProofBinder } = await load("src/core/readings/claim-proof-binder.ts");
     const { proofReach } = await load("src/core/readings/proof-reach.ts");
@@ -114,12 +115,14 @@ async function main() {
     const config = configuredKit(DEFAULT_CONFIG, declared);
     const checkSnapshot = (snapshot) => {
       const capability = capabilityCheck(snapshot);
+      const exclusions = dependencyExclusions(snapshot);
       const concepts = termModel(snapshot);
       const topicSnapshot = {
         ...snapshot,
         claims: snapshot.claims.filter((claim) => !config.legacyAreas.includes(claim.file)),
       };
       const structural = [
+        ...exclusions.findings,
         ...[
           ...moduleReferences(topicSnapshot),
           ...claimProofBinder(topicSnapshot),
@@ -138,18 +141,21 @@ async function main() {
         blocking: true,
         limit: "",
       }));
-      const conceptLimits = concepts.limits.map((item) => ({
+      const limitOf = (item) => ({
         ...item,
         category: "checker-limit",
         status: "unresolved",
         blocking: true,
         limit: item.fix,
-      }));
+      });
+      const conceptLimits = concepts.limits.map(limitOf);
+      const requiredLimits = exclusions.limits.map(limitOf);
       const findings = [
         ...capability.findings,
         ...legacySize(snapshot),
         ...structural,
         ...conceptLimits,
+        ...requiredLimits,
       ];
       const placedPaths = snapshot.files
         .filter((file) => file.type === "source" && placementOf(file.path, config.srcRoot).placed)
@@ -159,7 +165,7 @@ async function main() {
           .filter((edge) => !edge.typeOnly && edge.target !== null)
           .map((edge) => ({ from: edge.file, to: edge.target })),
       );
-      return { findings, placedPaths, imports };
+      return { findings, placedPaths, imports, requiredLimits };
     };
     const checked = await cachedKitCheck(root, config, readSnapshot, checkSnapshot, {
       filesystem,
@@ -180,13 +186,13 @@ async function main() {
       }
       process.stdout.write("Kit fresh-compare: the cached snapshot equals a fresh extraction.\n");
     }
-    const { findings, placedPaths, imports } = checked.result;
+    const { findings, placedPaths, imports, requiredLimits } = checked.result;
     if (process.argv.includes("--report")) {
       process.stdout.write(JSON.stringify({ findings, receipt: checked.receipt }, null, 2) + "\n");
       return;
     }
     const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
-    const failures = ratchetFindings(
+    const ratcheted = ratchetFindings(
       findings,
       baseline,
       placedPaths,
@@ -194,6 +200,7 @@ async function main() {
       startupCheckRoots(config),
       config.legacyGrowth,
     );
+    const failures = [...new Map([...ratcheted, ...requiredLimits].map((item) => [item.debtKey, item])).values()];
     if (process.argv.includes("--tighten")) {
       const tightened = JSON.stringify(tightenedBaseline(baseline, findings), null, 2) + "\n";
       if (tightened !== JSON.stringify(baseline, null, 2) + "\n") writeFileSync(baselinePath, tightened);

@@ -49,6 +49,7 @@ export function configuredKit(defaults, declaration) {
     legacyAreas: declaration["legacy-areas"] ?? [],
     legacyZones: declaration["legacy-zones"] ?? [],
     exceptions: declaration.exceptions ?? [],
+    dependencyExclusions: declaration["dependency-exclusions"] ?? [],
     ignore: ignoredPaths(declaration.ignore),
     adapters: declaration.adapters ?? [],
     packages: declaration.packages ?? [],
