@@ -10,7 +10,10 @@ compositions wire the others into behaviour.
 - A source file is placed when its path is `<root>/<zone>/<layer>/<name>.ts`, read once by
   {{placement-of}} from {{zone}} and {{layer}}. The name before the first dot and the suffix after the
   last dot are both nonempty; a multi-part suffix does not change the name. Placement and authority use
-  this same filename rule. Any other path, an old kind folder included, is legacy. · {#placement-is-read-from-the-path}
+  this same filename rule. Any other path, an old kind folder included, is legacy. The reader also
+  accepts an explicit set of roots: those identities include the root, and the roots must be nonempty,
+  distinct, non-overlapping relative directory paths without patterns or dot segments. An invalid set
+  is an error; the existing single-root form keeps its identities unchanged. · {#placement-is-read-from-the-path}
 - Without a directory mapping in the config, the four layers keep their own names as folders
   ({{default-config}}, {{layer}}). · {#layers-default-to-their-names}
 
