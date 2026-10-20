@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { expect, test } from "vitest";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
@@ -36,6 +36,21 @@ test("a failed fixture write removes the partially written project", () => {
   const root = dirname(path);
   expect(basename(root)).toMatch(/^kit-zone-boundary-/);
   expect(existsSync(root)).toBe(false);
+});
+
+test.each(["relative", "absolute"])("a %s path cannot write outside its project", (kind) => {
+  const project = temporaryProjects.open("kit-project-boundary-");
+  const outside = temporaryProjects.open("kit-project-neighbor-");
+  try {
+    outside.write({ "sentinel.txt": "unchanged" });
+    const destination = join(outside.root, "sentinel.txt");
+    const path = kind === "relative" ? relative(project.root, destination) : destination;
+    expect(() => project.write({ [path]: "changed" })).toThrow(/inside the temporary project/);
+    expect(readFileSync(destination, "utf8")).toBe("unchanged");
+  } finally {
+    project.dispose();
+    outside.dispose();
+  }
 });
 
 test("source fixtures preserve multiple code roots and compiler path mappings", () => {
