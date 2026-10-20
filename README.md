@@ -65,7 +65,9 @@ A reviewer reads each waiting reading and accepts or declines it.
 
 ## Declining
 
-- A decline cannot be saved without a reason in the reviewer's own words ({{decline}}, {{surface}}, {{decline-cases}}). · {#decline-needs-reason}
+- A decline cannot be saved without a reason in the reviewer's own words. · {#decline-needs-reason}
+  - Implementation: {{decline}}, {{surface}}
+  - Proof: {{decline-cases}}
 ```
 
 `{{decline}}`, `{{surface}}` and `{{decline-cases}}` are terms, each defined once in `spec/terms.md` and bound
@@ -77,6 +79,18 @@ claim. These use the same term syntax and glossary as production modules. The an
 `oracle/review-an-article/decline-needs-reason.test.ts`. A claim with no test, a test that names no claim, a
 module no claim names, prose outside a claim: each fails. So a topic is a map of its feature that the check
 keeps accurate: what it promises, what implements it, what proves it.
+
+`Implementation` names modules providing the claimed behavior; `Proof` names reusable machinery used
+to establish it. These are relationships to this claim, independently of code root: an oracle helper
+can implement a claim about test infrastructure. Both lists use the same resolver and checked reach.
+Each row appears at most once and contains only distinct, comma-separated references. Omit a row when
+there are no modules to name. Existing inline references remain supported without assigning them an
+implicit role.
+
+The claim test is the outer proof entrypoint: it registers cases, wires modules and asserts results.
+Reusable proof modules use the same adapters, primitives, readings and compositions as production
+code. They do not repeat the claim anchor. A straightforward test needs no separate composition merely
+to conform to the structure.
 
 The reverse view is derived, never written into the module: `kit refs src/shell/adapters/surface.ts` lists
 every claim that names the surface, in any topic, with its tests. Run as a Claude Code read hook

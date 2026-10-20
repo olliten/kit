@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { proofReach } from "../../src/core/readings/proof-reach.js";
+import { claimInventory } from "../../src/core/readings/claim-inventory.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const claim = (terms: string[], anchor = "total-sums") => ({
@@ -10,6 +11,37 @@ const claim = (terms: string[], anchor = "total-sums") => ({
 });
 const keys = (parts: Parameters<typeof snapshotOf>[0]) =>
   proofReach(snapshotOf(parts)).map((finding) => finding.debtKey);
+
+test.each([false, true])(
+  "named proof modules must be reached alongside implementation modules, used=%s",
+  (used) => {
+    const declarations = claimInventory(
+      "- A total sums its inputs. · {#total-sums}\n" +
+        "  - Implementation: {{total}}\n  - Proof: {{total-cases}}\n",
+    ).declarations;
+    const snapshot = snapshotOf({
+      files: [
+        "src/core/readings/total.ts",
+        "oracle/core/primitives/total-cases.ts",
+        "oracle/topic/total-sums.test.ts",
+      ],
+      imports: [
+        "oracle/topic/total-sums.test.ts > src/core/readings/total.ts",
+        ...(used
+          ? ["oracle/topic/total-sums.test.ts > oracle/core/primitives/total-cases.ts"]
+          : []),
+      ],
+      claims: declarations.map((claim) => ({ ...claim, file: "spec/topic.md" })),
+    });
+    const result = proofReach({
+      ...snapshot,
+      config: { ...snapshot.config, srcRoot: ["src", "oracle"] },
+    });
+    expect(result.map((finding) => finding.debtKey)).toEqual(
+      used ? [] : ["R4:unreached-module:spec/topic.md:total-sums:total-cases"],
+    );
+  },
+);
 
 test("a test that imports the named module reaches it", () => {
   expect(
