@@ -190,9 +190,20 @@ roots:
 
 Each code root uses the same zones and layers. Module identities in this configuration include the
 root, for example `oracle/core/primitives/decline-cases`; adapter registrations use those identities
-too. Term names stay globally unique. `roots.oracle` still selects claim proof files; adding a code
-root does not yet give test entrypoints or framework calls new permissions. Existing scalar
-`roots.src: src` configurations keep their identities and findings.
+too. Term names stay globally unique. `roots.oracle` still selects claim proof files. Existing scalar
+`roots.src: src` configurations keep their module identities.
+
+An exact proof path inside a governed code root may use the same entrypoint declaration as application startup:
+
+```yaml
+exceptions:
+  - oracle/review-an-article/decline-needs-reason.test.ts
+```
+
+The declared file retains its topic binding and is checked for authority and compiler failures. It may
+wire outer contracts, but no module may import it, and its dependencies gain no permission. Violations
+in a declared entrypoint cannot be waived as legacy debt. A test suffix alone grants nothing. Framework
+imports still need supported contracts; declaring a proof does not declare Vitest or another runner pure.
 
 ## Adopt
 

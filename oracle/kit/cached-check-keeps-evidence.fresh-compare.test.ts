@@ -9,9 +9,11 @@ afterEach(removeCacheApps);
 const engine = resolve(import.meta.dirname, "../..");
 const { kitRefs } = await import(new URL("../../scripts/kit-refs.mjs", import.meta.url).href);
 
-test("--fresh-compare keeps evidence for both code roots and cannot waive their failures", async () => {
+test("--fresh-compare keeps evidence for code roots and proof entrypoints without waiving failures", async () => {
   const base = scratch("kit-fresh-compare-");
   const app = join(base, "app");
+  const proofSource =
+    "import { actual } from '../../src/core/readings/actual.js';\nimport { reference } from '../../oracle/core/readings/reference.js';\nif (actual(1) !== reference(1)) throw new Error('Mismatch');\n";
   writeApp(app, {
     "package.json": JSON.stringify({ type: "module" }),
     "tsconfig.json": JSON.stringify({
@@ -33,10 +35,9 @@ test("--fresh-compare keeps evidence for both code roots and cannot waive their 
       "# Terms\n\n- **actual** — the implementation.\n  - Role: derived\n  - Zone: core\n  - From: []\n- **reference** — the independent expectation.\n  - Role: derived\n  - Zone: core\n  - From: []\n",
     "spec/count.md":
       "# Count\n\nCounting.\n\n## Increment\n\n- The implementation agrees with the reference ({{actual}}, {{reference}}). · {#increments}\n",
-    "proof/count/increments.test.ts":
-      "import { actual } from '../../src/core/readings/actual.js';\nimport { reference } from '../../oracle/core/readings/reference.js';\nif (actual(1) !== reference(1)) throw new Error('Mismatch');\n",
+    "proof/count/increments.test.ts": proofSource,
     "kit/config.md":
-      "```yaml\napp: numbers\nroots:\n  src: [src/, oracle/]\n  spec: spec/\n  oracle: proof/\nterms: spec/terms.md\n```\n",
+      "```yaml\napp: numbers\nroots:\n  src: [src/, oracle/, proof/]\n  spec: spec/\n  oracle: proof/\nterms: spec/terms.md\nexceptions: [proof/count/increments.test.ts]\n```\n",
     "kit/debt/legacy.json": "{}",
   });
   // Own the Git cache boundary instead of inheriting a parent checkout's store.
@@ -104,6 +105,19 @@ test("--fresh-compare keeps evidence for both code roots and cannot waive their 
   }
 
   writeApp(app, {
+    "src/core/readings/actual.ts": "export function actual(n: number): number { return n + 1; }\n",
+    "proof/count/increments.test.ts": proofSource + "void Date.now();\n",
+    "kit/debt/legacy.json": JSON.stringify({
+      "R1:raw-primitive:proof/count/increments.test.ts:clock": null,
+    }),
+  });
+  const proofRed = run();
+  expect(proofRed.status, proofRed.stdout + proofRed.stderr).toBe(1);
+  expect(proofRed.stdout).toMatch(/the cached snapshot equals a fresh extraction/);
+  expect(proofRed.stderr).toContain("R1:raw-primitive:proof/count/increments.test.ts:clock");
+
+  writeApp(app, {
+    "proof/count/increments.test.ts": proofSource,
     "src/core/readings/actual.ts": "export function actual(n: number): number { return n + 1; }\n",
     "oracle/core/readings/reference.ts":
       "import { read } from 'mystery';\nexport function reference(n: number): number { return read(); }\n",

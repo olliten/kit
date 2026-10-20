@@ -70,10 +70,11 @@ compositions wire the others into behaviour.
 
 ## Startup
 
-- An app may declare one exact, existing source file outside every zone as its startup: it may connect Shell and
-  Substrate contracts and use the core's, no module imports it, and its permission does not pass to what it
-  imports or exempt it from the capability, write, compiler and cycle checks. A directory, a pattern, a missing
-  file or a placed module declared as startup grants nothing ({{capability-check}}, {{default-config}}). · {#startup-assembles-outer-zones}
+- An app may declare exact, existing executable entrypoints outside every zone, including claim proofs:
+  each may connect Shell and Substrate contracts and use the core's, no module imports it, and its permission
+  does not pass to what it imports or exempt it from the capability, write, compiler and cycle checks.
+  A proof keeps its topic binding; a test suffix grants no permission. A directory, a pattern, a missing file
+  or a zoned module declared as an entrypoint grants nothing ({{capability-check}}, {{default-config}}). · {#startup-assembles-outer-zones}
 
 ## Writes
 
