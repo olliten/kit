@@ -5,12 +5,18 @@ The Kit app's declarations. Roots are relative to this app, independently of any
 ```yaml
 app: kit
 roots:
-  src: src/
+  src: [src/, oracle/]
   spec: spec/
   oracle: oracle/
 terms: spec/terms.md
 claim-separator: "·"
 legacy-areas: []
+exceptions: []
+dependency-exclusions:
+  - from: src
+    to: oracle
+    imports: all
+    reach: direct
 packages:
   - name: mdast-util-from-markdown
     capabilities: []
@@ -23,25 +29,25 @@ packages:
   - name: typescript
     capabilities: [compiler, filesystem, process-environment]
 adapters:
-  - module: substrate/adapters/filesystem
+  - module: src/substrate/adapters/filesystem
     export: filesystem
     capability: filesystem
     kind: external
     zones: [substrate]
     contract: {type: Filesystem}
-  - module: substrate/adapters/compiler
+  - module: src/substrate/adapters/compiler
     export: compilerWorkspace
     capability: compiler
     kind: external
     zones: [substrate]
     contract: {type: CompilerWorkspace}
-  - module: substrate/adapters/compiler
+  - module: src/substrate/adapters/compiler
     export: compilerWorkspace
     capability: filesystem
     kind: external
     zones: [substrate]
     contract: {type: CompilerWorkspace}
-  - module: substrate/adapters/compiler
+  - module: src/substrate/adapters/compiler
     export: compilerWorkspace
     capability: process-environment
     kind: external

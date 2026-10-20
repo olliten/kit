@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { proofReach } from "../../src/core/readings/proof-reach.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const claim = (terms: string[], anchor = "total-sums") => ({
   file: "spec/topic.md",

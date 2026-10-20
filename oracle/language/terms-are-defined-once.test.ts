@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { nameCheck } from "../../src/core/readings/name-check.js";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 test("a term defined once has no finding", () => {
   expect(nameCheck(snapshotOf({ terms: ["step", "running-total"] }))).toEqual([]);

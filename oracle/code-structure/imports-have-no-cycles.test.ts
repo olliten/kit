@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const keysOf = (...imports: string[]) =>
   dependencyCheck(snapshotOf({ imports })).map((f) => f.debtKey);

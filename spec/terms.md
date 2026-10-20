@@ -85,6 +85,10 @@
   - Role: derived
   - Zone: core
   - From: []
+- **fixture-snapshot** — a headless snapshot derived from supplied case descriptions for structural proofs.
+  - Role: derived
+  - Zone: core
+  - From: {{comment}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}
 - **legacy-size** — the size of each legacy module as debt: its statements, and how many of them only call into placed modules.
   - Role: derived
   - Zone: core

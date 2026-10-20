@@ -1,12 +1,19 @@
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { nameCheck } from "../../src/core/readings/name-check.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
+import { configuredKit, kitConfig } from "../../scripts/kit-config.mjs";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 test("a supporting exported type needs no glossary entries for its ordinary words", () => {
-  const snapshot = readSnapshot(fileURLToPath(new URL("../..", import.meta.url)));
+  const config = configuredKit(
+    DEFAULT_CONFIG,
+    kitConfig(readFileSync(new URL("../../self-config.md", import.meta.url), "utf8")),
+  );
+  const snapshot = readSnapshot(fileURLToPath(new URL("../..", import.meta.url)), config);
   expect(snapshot.symbols).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ file: "src/core/primitives/term.ts", name: "TermSyntaxIssue" }),

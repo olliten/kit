@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termOrder } from "../../src/core/readings/term-model.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const order = (text: string) =>
   termOrder({ ...snapshotOf({}), termOrder: termInventory(text).order }).map((row) => [

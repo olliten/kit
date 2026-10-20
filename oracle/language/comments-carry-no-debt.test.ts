@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { commentCheck } from "../../src/core/readings/comment-check.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 test("a debt marker in a comment is a finding whose fix moves it to a debt list", () => {
   const [f, ...rest] = commentCheck(

@@ -21,9 +21,9 @@ compositions wire the others into behaviour.
 
 - Within a zone, a module imports its own layer or an earlier one; across zones, imports point inward to the
   core; an import with a legacy end is not held, and a repeated import is one finding ({{dependency-check}},
-  {{import}}). · {#imports-point-inward}
+  {{import}}, {{fixture-snapshot}}). · {#imports-point-inward}
 - Imports have no cycles; a cycle, a self-import included, is one finding at its first module that names
-  every member ({{dependency-check}}). · {#imports-have-no-cycles}
+  every member ({{dependency-check}}, {{fixture-snapshot}}). · {#imports-have-no-cycles}
 - An explicit dependency exclusion selects existing origin and target code by relative file or directory
   paths, chooses all or runtime imports and direct or transitive reach, and follows compiler-resolved
   aliases and re-exports. Runtime separation ignores only established erased edges. Direct boundaries may
@@ -31,7 +31,7 @@ compositions wire the others into behaviour.
   including through helpers. Missing evidence remains a blocking limit, and a baseline cannot waive an
   explicit exclusion or its limits ({{dependency-check}}, {{default-config}}). · {#dependency-exclusions-are-checked}
 - An adapter is a module like any other: its path is its identity and its imports may not form a cycle
-  ({{dependency-check}}). · {#adapters-follow-the-same-rules}
+  ({{dependency-check}}, {{fixture-snapshot}}). · {#adapters-follow-the-same-rules}
 
 ## Authority
 
