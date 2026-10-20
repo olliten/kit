@@ -5,7 +5,7 @@ import type { ScoredValue } from "../../fixture/capabilities/src/core/primitives
 import { transformedValue } from "../../fixture/capabilities/src/core/readings/data-input.js";
 import { valueOrder } from "../../fixture/capabilities/src/core/readings/value-order.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { cases } from "../lib/case-inventory.js";
+import { cases } from "../core/primitives/case-inventory.js";
 
 const fixtureRoot = fileURLToPath(new URL("../../fixture/capabilities/", import.meta.url));
 

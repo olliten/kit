@@ -1,6 +1,4 @@
 {
   "R1:legacy-size:oracle/lib/cache-fixture.ts": { "statements": 40, "calls": 6 },
-  "R1:legacy-size:oracle/lib/case-inventory.ts": { "statements": 2, "calls": 0 },
-  "R1:legacy-size:oracle/lib/fixture-config.ts": { "statements": 2, "calls": 1 },
   "R1:legacy-size:oracle/lib/source-fixture.ts": { "statements": 17, "calls": 3 }
 }

@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, test } from "vitest";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { fixtureConfig } from "../lib/fixture-config.js";
+import { fixtureConfig } from "../core/readings/fixture-config.js";
 
 const fixtureRoot = fileURLToPath(new URL("../../fixture/capabilities/", import.meta.url));
 const snapshot = readSnapshot(fixtureRoot, fixtureConfig);

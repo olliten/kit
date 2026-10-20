@@ -44,6 +44,7 @@ compositions wire the others into behaviour.
 - A module's authority is derived from its actual inputs: runtime imports, ambient globals and parameters
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
   never purity ({{capability-check}}, {{compiler-facts}}). · {#authority-is-derived}
+  - Proof: {{fixture-config}}
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
   hosts no external adapter. In an explicit root set, a registration names the root-qualified module
