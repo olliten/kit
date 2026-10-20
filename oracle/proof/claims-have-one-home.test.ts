@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
 import { claimInventory } from "../../src/core/readings/claim-inventory.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { bindingFindings } from "../lib/bindingFindings.js";
+import { bindingFindings } from "../core/readings/binding-findings.js";
 
 test.each(["· ", ""])(
   "a closing marker after a claim sentence declares it with separator %j",

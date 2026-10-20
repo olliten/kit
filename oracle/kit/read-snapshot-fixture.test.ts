@@ -4,7 +4,7 @@ import { commentCheck } from "../../src/core/readings/comment-check.js";
 import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
 import { nameCheck } from "../../src/core/readings/name-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { bindingFindings } from "../lib/bindingFindings.js";
+import { bindingFindings } from "../core/readings/binding-findings.js";
 
 const FIXTURE = fileURLToPath(new URL("../../fixture", import.meta.url));
 

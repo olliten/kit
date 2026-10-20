@@ -61,6 +61,10 @@
 
 ## Reading contracts
 
+- **binding-findings** — findings from comparing claim homes, executable proofs and named modules in a supplied snapshot.
+  - Role: derived
+  - Zone: core
+  - From: {{claim-proof-binder}}, {{finding}}, {{module-references}}, {{snapshot}}
 - **capability-check** — capability requirements, structural findings and explicit limits derived from supplied compiler and configuration facts.
   - Role: derived
   - Zone: core

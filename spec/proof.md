@@ -15,7 +15,7 @@ a claim depends on are named in it, so each module's claims are found from its n
 - Every placed module is named as `{{name}}` by at least one claim, in any topic; a module no claim names is
   a finding, and a module's claims are derived from those names, never written into the module. · {#modules-are-named-by-claims}
   - Implementation: {{module-references}}
-  - Proof: {{fixture-snapshot}}
+  - Proof: {{fixture-snapshot}}, {{binding-findings}}
 
 ## Claims
 
@@ -26,6 +26,7 @@ a claim depends on are named in it, so each module's claims are found from its n
   {{claim-inventory}}, {{claim-proof-binder}}). Implementation names modules providing the claimed
   behavior, and Proof names shared proof machinery; neither relationship assigns a code root, and both
   contribute to the same reference inventory. · {#claims-have-one-home}
+  - Proof: {{binding-findings}}
 - In a configured legacy area, an anchored paragraph followed by explanatory bullets, or a
   `### law · id — explanation` heading, declares a claim; new topics keep the strict grammar
   ({{claim-inventory}}). · {#legacy-claims-keep-their-grammar}

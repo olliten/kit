@@ -46,10 +46,11 @@ why the code is built the way it is.
 - `[[topic]]` and `{{term}}` each resolve to exactly one target in their own namespace; a missing or
   ambiguous target is a finding, and code, inline code and escaped examples are not references
   ({{semantic-references}}, {{reference}}, {{topic}}). · {#references-resolve}
+  - Proof: {{binding-findings}}
 - Claims in several topics may name one module, and regrouping topics changes no import permission or
   source binding. · {#topics-share-modules}
   - Implementation: {{semantic-references}}
-  - Proof: {{fixture-snapshot}}
+  - Proof: {{fixture-snapshot}}, {{binding-findings}}
 
 ## Comments
 

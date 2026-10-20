@@ -5,7 +5,7 @@ import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
 import { semanticReferences } from "../../src/core/readings/semantic-references.js";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termModel } from "../../src/core/readings/term-model.js";
-import { bindingFindings } from "../lib/bindingFindings.js";
+import { bindingFindings } from "../core/readings/binding-findings.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const declaration = (name: string, role = "derived", zone = "core", owners = "[]") =>
