@@ -283,8 +283,10 @@ another six statements and four calls. The fixture inventory and configuration p
 call, leaving two legacy modules with 57 statements and nine calls
 in `self-debt/legacy.json`. That inventory adds no source-module waivers or
 checker-limit waivers. The remaining infrastructure stays under the ratchet until its capability is
-migrated. Claim-test entrypoints retain the existing compiler and claim-reach checks; opt-in framework
-authority checking is a separate adoption step.
+migrated. The `imports-point-inward` and `imports-have-no-cycles` claim tests are also declared as checked
+entrypoints. Their Vitest contract permits only `describe`, `test` and `expect`; their shared snapshot reading
+has no runner permission. Other claim-test files retain their existing compiler and claim-reach checks
+until their infrastructure is adopted.
 
 The self-conformance claim runs its six cases over one real configured repository snapshot. Its term,
 comment, binding, placement and import assertions share that input; ordinary language and structural
