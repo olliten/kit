@@ -1,12 +1,14 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import type { CompilerOptions } from "typescript";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 
 export function sourceFixture(
   files: Readonly<Record<string, string>>,
   config: Partial<KitConfig> = {},
+  compilerOptions: Pick<CompilerOptions, "paths" | "skipLibCheck"> = {},
 ) {
   const root = mkdtempSync(join(tmpdir(), "kit-zone-boundary-"));
   try {
@@ -24,6 +26,7 @@ export function sourceFixture(
           noEmit: true,
           declaration: true,
           isolatedDeclarations: true,
+          ...compilerOptions,
         },
         include: roots.map((path) => `${path}/**/*.ts`),
       }),

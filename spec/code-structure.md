@@ -43,6 +43,11 @@ compositions wire the others into behaviour.
 - A package an adapter declares in its `packages` is that adapter's to import: there the import grants the
   adapter's capability, and anywhere else, the core included, a runtime import of it is a finding even where a
   package row declares it; a package no row declares stays a limit ({{capability-check}}). · {#declared-packages-stay-in-their-adapter}
+- An effectful package contract may restrict runtime imports to selected named exports in exact declared
+  entrypoints. Aliases retain the original export name and erased imports grant no authority; other access
+  forms, subpaths and missing import evidence stay limits. The permission does not extend to helpers or
+  remove captured callback authority, and adapter package ownership takes precedence
+  ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#entrypoint-package-exports-are-checked}
 - A namespace such as `Window` grants only what is reached through it, and a constructor selected from it
   keeps its own authority ({{capability-check}}). · {#namespaces-grant-what-is-reached}
 - A type, a type alias or a declaration merge grants no runtime authority; the value it describes still does

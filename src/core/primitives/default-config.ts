@@ -39,6 +39,9 @@ export interface KitConfig {
   readonly packages?: readonly {
     readonly name: string;
     readonly capabilities: readonly string[];
+    // An effectful package boundary restricted to exact entrypoints and these named runtime exports.
+    // This is not a purity declaration; callbacks retain the package's capabilities.
+    readonly entrypointExports?: readonly string[];
   }[];
   readonly adapters?: readonly {
     readonly module: string;

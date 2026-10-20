@@ -19,7 +19,11 @@ const files = {
     "# Count\n\nCounting.\n\n## Increment\n\n- A count increments. · {#increments}\n",
 };
 
-function inspect(extra: Readonly<Record<string, string>> = {}, config: Partial<KitConfig> = {}) {
+function inspect(
+  extra: Readonly<Record<string, string>> = {},
+  config: Partial<KitConfig> = {},
+  compilerOptions: Parameters<typeof sourceFixture>[2] = {},
+) {
   const snapshot = sourceFixture(
     { ...files, ...extra },
     {
@@ -27,6 +31,7 @@ function inspect(extra: Readonly<Record<string, string>> = {}, config: Partial<K
       exceptions: [proof],
       ...config,
     },
+    compilerOptions,
   );
   return { snapshot, result: capabilityCheck(snapshot) };
 }
@@ -136,7 +141,9 @@ test.each([
       expect(result.findings).toContainEqual(
         expect.objectContaining({
           path: "src/core/compositions/run.ts",
-          debtKey: expect.stringContaining(`R1:closure-binding:src/core/compositions/run.ts:${proof}:`),
+          debtKey: expect.stringContaining(
+            `R1:closure-binding:src/core/compositions/run.ts:${proof}:`,
+          ),
           category: "placed-violation",
           blocking: true,
         }),
@@ -173,29 +180,22 @@ test("an imported undeclared test file remains an unresolved boundary", () => {
 });
 
 test("real Vitest registration stays an unresolved boundary until its framework contract is declared", () => {
-  const { result, snapshot } = inspect({
-    "package.json": JSON.stringify({ type: "module" }),
-    "tsconfig.json": JSON.stringify({
-      compilerOptions: {
-        target: "ES2022",
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        strict: true,
-        skipLibCheck: true,
-        types: [],
-        lib: ["ES2022"],
-        noEmit: true,
-        paths: {
-          vitest: [
-            fileURLToPath(new URL("../../node_modules/vitest/dist/index.d.ts", import.meta.url)),
-          ],
-        },
+  const { result, snapshot } = inspect(
+    {
+      "package.json": JSON.stringify({ type: "module" }),
+      [proof]:
+        "import { test, expect } from 'vitest'; test('increments', () => { expect(1 + 1).toBe(2); });\n",
+    },
+    {},
+    {
+      skipLibCheck: true,
+      paths: {
+        vitest: [
+          fileURLToPath(new URL("../../node_modules/vitest/dist/index.d.ts", import.meta.url)),
+        ],
       },
-      include: ["src/**/*.ts", "oracle/**/*.ts"],
-    }),
-    [proof]:
-      "import { test, expect } from 'vitest'; test('increments', () => { expect(1 + 1).toBe(2); });\n",
-  });
+    },
+  );
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
   expect(result.findings).toContainEqual(
     expect.objectContaining({

@@ -204,6 +204,21 @@ The declared file retains its topic binding and is checked for authority and com
 wire outer contracts, but no module may import it, and its dependencies gain no permission. Violations
 in a declared entrypoint cannot be waived as legacy debt. A test suffix alone grants nothing. Framework
 imports still need supported contracts; declaring a proof does not declare Vitest or another runner pure.
+For direct registration and assertions, a package contract can select the named runtime exports:
+
+```yaml
+packages:
+  - name: vitest
+    capabilities: [test-runner]
+    entrypointExports: [test, expect]
+```
+
+This effectful boundary is available only in exact declared entrypoints. Aliases and type-only imports
+are supported; namespace imports, dynamic imports, re-exports and package subpaths stay unresolved.
+Test bodies and captured callbacks remain checked. Shared comparisons can return plain data to the
+entrypoint's assertions; helpers gain no runner permission from a proof that calls them. A package owned
+by an adapter still belongs to that adapter. This contract restricts top-level exports, not individual
+members of an exported API.
 
 ## Adopt
 
