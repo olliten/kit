@@ -1,5 +1,4 @@
 import { expect, test } from "vitest";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { commentCheck } from "../../src/core/readings/comment-check.js";
 import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
 import { legacySize } from "../../src/core/readings/legacy-size.js";
@@ -128,8 +127,7 @@ test("a global module term cannot silently choose a same-named home in another r
   expect(result.findings.map((item) => item.debtKey)).toContain("R3:term-home:value:2");
 });
 
-test("components not yet routed across roots reject the set instead of returning partial results", () => {
+test("extraction rejects root sets until it can supply complete facts", () => {
   const snapshot = multi({});
-  expect(() => capabilityCheck(snapshot)).toThrow(/Multiple code roots/);
   expect(() => readSnapshot("/must-not-be-read", snapshot.config)).toThrow(/Multiple code roots/);
 });

@@ -1,6 +1,6 @@
 import { cycles } from "./dependency-check.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { placementOf } from "./placement-of.js";
+import { moduleFileOf, placementOf, rootOf } from "./placement-of.js";
 
 export interface CapabilityFinding extends Finding {
   readonly status: "violation" | "unresolved" | "review-held";
@@ -19,9 +19,8 @@ export interface CapabilityResult {
 }
 
 export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
-  if (typeof snapshot.config.srcRoot !== "string")
-    throw new Error("Multiple code roots are not supported by authority checking yet.");
-  const prefix = `${snapshot.config.srcRoot}/`;
+  const roots = snapshot.config.srcRoot;
+  rootOf("", roots);
   const layers: readonly string[] = LAYERS;
   const directory = (layer: string): string =>
     Object.entries(snapshot.config.layerNames ?? {}).find(([name]) => name === layer)?.[1] ?? layer;
@@ -37,7 +36,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ...finding(
             "R1",
             "layer-config",
-            snapshot.config.srcRoot,
+            typeof roots === "string" ? roots : roots.join(","),
             "Declare one distinct directory name for each of the four layers.",
           ),
           status: "unresolved",
@@ -52,11 +51,12 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     return at.placed ? at : null;
   };
   const files = snapshot.files
-    .filter((file) => file.type === "source" && file.path.startsWith(prefix))
+    .filter((file) => file.type === "source" && rootOf(file.path, roots) !== undefined)
     .map((file) => file.path);
   const zoneOf = (path: string): string | undefined => {
-    if (!path.startsWith(prefix)) return undefined;
-    const zone = path.slice(prefix.length).split("/")[0];
+    const root = rootOf(path, roots);
+    if (root === undefined) return undefined;
+    const zone = path.slice(root.length + 1).split("/")[0];
     if (zone === "core" || zone === "shell" || zone === "substrate") return zone;
     return snapshot.config.legacyZones?.find((row) =>
       "files" in row
@@ -65,10 +65,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     )?.zone;
   };
   const adapters = snapshot.config.adapters ?? [];
-  const pathOf = (module: string): string => {
-    const [zone, layer, name] = module.split("/");
-    return `${prefix}${zone ?? ""}/${directory(layer ?? "")}/${name ?? ""}.ts`;
-  };
+  const pathOf = (module: string): string => moduleFileOf(module, roots, snapshot.config.layerNames);
   const projects = snapshot.compiler?.projects ?? [];
   const contracts = new Map(
     adapters.map((adapter) => {
@@ -174,7 +171,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     );
   const startups = new Set<string>();
   for (const path of snapshot.config.exceptions ?? []) {
-    if (!path.startsWith(prefix)) continue;
+    if (rootOf(path, roots) === undefined) continue;
     if (
       !files.includes(path) ||
       /[*?{}[\]\\]/.test(path) ||
