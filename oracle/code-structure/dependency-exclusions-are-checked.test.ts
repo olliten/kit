@@ -134,6 +134,50 @@ test("direct import direction can use a classified external package boundary", (
   expect(result).toEqual({ findings: [], limits: [] });
 });
 
+test("direct direction uses ambient module declarations without claiming runtime purity", () => {
+  const { snapshot, result } = inspect(
+    {
+      [actual]: "import { read } from 'node:fs'; export function actual(n: number): number { return read(n); }\n",
+      "src/sdk.d.ts": "declare module 'node:fs' { export function read(n: number): number; }\n",
+    },
+    [{ from: "src", to: "oracle", imports: "all", reach: "direct" }],
+  );
+  expect(result).toEqual({ findings: [], limits: [] });
+  const transitive = dependencyExclusions({
+    ...snapshot,
+    config: {
+      ...snapshot.config,
+      dependencyExclusions: [{ from: actual, to: model, imports: "runtime", reach: "transitive" }],
+    },
+  });
+  expect(transitive.limits).toContainEqual(expect.objectContaining({ path: actual }));
+});
+
+test("an ambient declaration in the forbidden root is still a direct dependency", () => {
+  const { result } = inspect(
+    {
+      [actual]: "import { read } from 'node:fs'; export function actual(n: number): number { return read(n); }\n",
+      "oracle/sdk.d.ts": "declare module 'node:fs' { export function read(n: number): number; }\n",
+    },
+    [{ from: "src", to: "oracle", imports: "all", reach: "direct" }],
+  );
+  expect(result.findings).toContainEqual(expect.objectContaining({
+    debtKey: `R2:dependency-exclusion:${actual}:all:direct:oracle/sdk.d.ts`,
+  }));
+});
+
+test("ambient declarations with multiple homes retain explicit boundary uncertainty", () => {
+  const { result } = inspect(
+    {
+      [actual]: "import { read } from 'node:fs'; export function actual(n: number): number { return read(n); }\n",
+      "src/sdk.d.ts": "declare module 'node:fs' { export function read(n: number): number; }\n",
+      "oracle/sdk.d.ts": "declare module 'node:fs' { export interface Metadata { readonly size: number; } }\n",
+    },
+    [{ from: "src", to: "oracle", imports: "all", reach: "direct" }],
+  );
+  expect(result.limits).toContainEqual(expect.objectContaining({ path: actual }));
+});
+
 test("a model's opaque external dependency remains a limit even with a package purity declaration", () => {
   const { snapshot } = inspect();
   const next = sourceFixture(

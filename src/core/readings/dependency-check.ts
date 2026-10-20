@@ -106,17 +106,18 @@ export function dependencyExclusions(snapshot: Snapshot): {
         }
         for (const edge of edges.get(file) ?? []) {
           if (rule.imports === "runtime" && edge.typeOnly === true) continue;
+          const target = edge.target ?? (rule.reach === "direct" ? edge.declarationTarget ?? null : null);
           const packageName = edge.specifier.startsWith("@")
             ? edge.specifier.split("/").slice(0, 2).join("/")
             : edge.specifier.split("/")[0];
           const classifiedPackage =
             rule.reach === "direct" &&
-            edge.target === null &&
+            target === null &&
             !/^[.#/]/.test(edge.specifier) &&
             (snapshot.config.packages?.some((row) => row.name === packageName) ||
               snapshot.config.adapters?.some((row) => row.packages?.includes(packageName ?? "")));
           if (classifiedPackage && (rule.imports === "all" || edge.typeOnly === false)) continue;
-          if (edge.target === null || (rule.imports === "runtime" && edge.typeOnly !== false)) {
+          if (target === null || (rule.imports === "runtime" && edge.typeOnly !== false)) {
             limits.push(
               finding(
                 "R2",
@@ -128,15 +129,15 @@ export function dependencyExclusions(snapshot: Snapshot): {
             );
             continue;
           }
-          const next = [...route, edge.target];
-          if (selects(to, edge.target)) {
+          const next = [...route, target];
+          if (selects(to, target)) {
             findings.push(
               finding(
                 "R2",
                 "dependency-exclusion",
                 origin,
                 `Remove the forbidden ${rule.imports} dependency ${next.join(" → ")}.`,
-                `${rule.imports}:${rule.reach}:${edge.target}`,
+                `${rule.imports}:${rule.reach}:${target}`,
               ),
             );
           } else if (rule.reach === "transitive") pending.push(next);
