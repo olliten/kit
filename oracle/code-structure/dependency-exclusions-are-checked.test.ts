@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { dependencyExclusions } from "../../src/core/readings/dependency-check.js";
-import { sourceFixture } from "../lib/source-fixture.js";
+import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const actual = "src/core/readings/actual.ts";
 const model = "oracle/core/readings/reference.ts";

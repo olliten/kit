@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../lib/source-fixture.js";
+import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const LEGACY = "src/legacy/value.ts";
 const PLACED = "src/core/readings/value.ts";

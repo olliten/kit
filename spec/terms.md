@@ -157,6 +157,10 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
+- **temporary-project** — ownership of an isolated temporary directory, its fixture file writes and its disposal.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 
 ## Composition contracts
 
@@ -164,6 +168,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
+- **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{default-config}}, {{read-snapshot}}, {{temporary-project}}
 
 ## Supporting vocabulary and roles
 

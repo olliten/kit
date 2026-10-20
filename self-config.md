@@ -14,6 +14,7 @@ legacy-areas: []
 exceptions:
   - oracle/code-structure/imports-point-inward.test.ts
   - oracle/code-structure/imports-have-no-cycles.test.ts
+  - oracle/kit/source-fixtures-own-their-files.test.ts
 dependency-exclusions:
   - from: src
     to: oracle
@@ -31,9 +32,23 @@ packages:
     capabilities: [filesystem]
   - name: node:path
     capabilities: [process-environment]
+  - name: node:os
+    capabilities: [process-environment]
   - name: typescript
     capabilities: [compiler, filesystem, process-environment]
 adapters:
+  - module: oracle/substrate/adapters/temporary-project
+    export: temporaryProjects
+    capability: filesystem
+    kind: external
+    zones: [substrate]
+    contract: {type: TemporaryProjects}
+  - module: oracle/substrate/adapters/temporary-project
+    export: temporaryProjects
+    capability: process-environment
+    kind: external
+    zones: [substrate]
+    contract: {type: TemporaryProjects}
   - module: src/substrate/adapters/filesystem
     export: filesystem
     capability: filesystem
@@ -62,5 +77,8 @@ adapters:
 
 Filesystem and process-environment are real requirements of the native compiler host. Compiler includes the broader native compiler/host/sys authority, not merely the two methods selected by this adapter. Hashing with `node:crypto` reads nothing, so it is declared pure; TypeScript and the other Node packages are not. The Markdown parser declaration describes its supplied-text default parsing, not immunity from effects in supplied extension callbacks.
 
-The two dependency proofs are checked entrypoints, not rule waivers. Their test registration and assertions
+The dependency and source-fixture proofs are checked entrypoints, not rule waivers. Their test registration and assertions
 use only the declared Vitest exports. The runner is effectful; shared proof modules gain no runner permission.
+
+The temporary-project adapter owns temporary directories and writes. Locating the operating system's
+temporary directory uses process-environment authority; `node:os` is not declared pure.

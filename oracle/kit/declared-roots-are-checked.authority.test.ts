@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../lib/source-fixture.js";
+import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const clock: NonNullable<KitConfig["adapters"]>[number] = {
   module: "substrate/adapters/clock",

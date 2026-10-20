@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { claimProofBinder } from "../../src/core/readings/claim-proof-binder.js";
-import { sourceFixture } from "../lib/source-fixture.js";
+import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const proof = "oracle/count/increments.test.ts";
 const reading = "src/core/readings/increment.ts";
