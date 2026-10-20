@@ -20,6 +20,16 @@ describe("legacy declarations retain their structural scope without changing top
     });
   });
 
+  test("legacy explanatory children retain the same module relationships as topic metadata", () => {
+    const metadata = "  - Implementation: {{value}}\n  - Proof: {{value-cases}}\n";
+    const strict = claimInventory("- A standing claim · {#value-stays}\n" + metadata);
+    expect(claimInventory(nested + metadata, { legacy: true })).toEqual(strict);
+    expect(claimInventory(nested + metadata)).toEqual({
+      declarations: [],
+      references: [{ anchor: "value-stays", line: 1 }],
+    });
+  });
+
   test("an annotated legacy law heading declares its identity without mistaking its description for the anchor", () => {
     expect(
       claimInventory("### law · value-stays — a standing rule\n", { legacy: true, separator: "·" }),

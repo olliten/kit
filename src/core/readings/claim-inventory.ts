@@ -9,24 +9,25 @@ export interface ClaimInventory {
 
 // Only these two exact metadata rows may follow a claim's closing paragraph. They describe
 // relationships to modules, independently of where those modules live.
-export function claimModules(node: Nodes, text: string): Pick<ClaimMarker, "implementation" | "proof"> | null {
+export function claimModules(node: Nodes, text: string, legacy = false): Pick<ClaimMarker, "implementation" | "proof"> | null {
   if (node.type !== "listItem" || node.children.length !== 2) return null;
   const [paragraph, list] = node.children;
   if (paragraph?.type !== "paragraph" || list?.type !== "list" || list.ordered) return null;
   const roles: { implementation?: readonly string[]; proof?: readonly string[] } = {};
   for (const item of list.children) {
     const row = item.children[0];
+    const start = row?.position?.start.offset;
+    const end = row?.position?.end.offset;
+    const value = start === undefined || end === undefined ? "" : text.slice(start, end);
+    if (legacy && !/^(Implementation|Proof):/.test(value)) continue;
     if (
       item.children.length !== 1 ||
       row?.type !== "paragraph" ||
       row.children.some((child) => child.type !== "text")
     )
       return null;
-    const start = row.position?.start.offset;
-    const end = row.position?.end.offset;
     if (start === undefined || end === undefined) return null;
     // Reference resolution uses literal source notation, not decoded escapes or HTML entities.
-    const value = text.slice(start, end);
     const match = /^(Implementation|Proof):\s*(\{\{[^{}\\]+\}\}(?:\s*,\s*\{\{[^{}\\]+\}\})*)\s*$/.exec(
       value,
     );
@@ -43,7 +44,7 @@ export function claimModules(node: Nodes, text: string): Pick<ClaimMarker, "impl
       return null;
     roles[role] = terms;
   }
-  return list.children.length === 0 ? null : roles;
+  return Object.keys(roles).length === 0 ? null : roles;
 }
 
 export function claimInventory(
@@ -97,7 +98,7 @@ export function claimInventory(
   const visit = (node: Nodes): void => {
     if (node.type === "code") return;
     if (node.type === "listItem") {
-      const modules = claimModules(node, text);
+      const modules = claimModules(node, text, options.legacy);
       const paragraph =
         options.legacy || modules !== null ? node.children[0] : node.children.at(-1);
       if (paragraph?.type === "paragraph") close(paragraph, modules ?? {});
