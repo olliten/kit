@@ -70,6 +70,28 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     )?.zone;
   };
   const adapters = snapshot.config.adapters ?? [];
+  const packages = snapshot.config.packages ?? [];
+  for (const row of packages) {
+    if (row.entrypointExports === undefined) continue;
+    if (
+      !row.name ||
+      row.name.trim() !== row.name ||
+      /^[.#/]/.test(row.name) ||
+      !Array.isArray(row.capabilities) ||
+      row.capabilities.length === 0 ||
+      Array.from(row.capabilities).some(
+        (capability) => typeof capability !== "string" || !capability.trim(),
+      ) ||
+      !Array.isArray(row.entrypointExports) ||
+      row.entrypointExports.length === 0 ||
+      Array.from(row.entrypointExports).some(
+        (name) => typeof name !== "string" || !/^[A-Za-z_$][\w$]*$/.test(name),
+      ) ||
+      new Set(row.entrypointExports).size !== row.entrypointExports.length ||
+      packages.filter((other) => other.name === row.name).length !== 1
+    )
+      throw new Error("Declare one effectful entrypoint package contract with distinct named exports.");
+  }
   const pathOf = (module: string): string => moduleFileOf(module, roots, snapshot.config.layerNames);
   const projects = snapshot.compiler?.projects ?? [];
   const contracts = new Map(
@@ -536,6 +558,23 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
               "Import this package only in the capability adapter that declares it, and use that adapter's contract here.",
               packageName,
             );
+        } else if (declaration?.entrypointExports !== undefined) {
+          if (
+            startups.has(edge.file) &&
+            edge.specifier === declaration.name &&
+            edge.namedImports !== undefined &&
+            edge.namedImports !== null &&
+            edge.namedImports.length > 0 &&
+            Array.from(edge.namedImports).every((name) => declaration.entrypointExports?.includes(name))
+          ) {
+            for (const capability of declaration.capabilities) direct.get(edge.file)?.add(capability);
+          } else
+            unresolved(
+              "entrypoint-package",
+              edge.file,
+              "This package contract permits only selected named runtime exports in an exact declared entrypoint.",
+              edge.specifier,
+            );
         } else if (
           declaration !== undefined &&
           !edge.specifier.startsWith(".") &&
@@ -615,6 +654,11 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     (adapter.primitives?.length ?? 0) === 0 &&
     (adapter.globals?.length ?? 0) === 0;
   const permits = (path: string, capability: string): boolean => {
+    if (
+      startups.has(path) &&
+      packages.some((row) => row.entrypointExports !== undefined && row.capabilities.includes(capability))
+    )
+      return true;
     const zone = zoneOf(path);
     const permittedZones = startups.has(path)
       ? ["shell", "substrate"]

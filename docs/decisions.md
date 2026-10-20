@@ -379,6 +379,18 @@ without naming the app.
   registering a proof does not make a framework package pure. This does not yet classify all proof
   files or support nested claim paths inside a zone.
 
+## 2026-10-20 · Selected package exports at executable entrypoints
+
+- **Decision:** an effectful package declaration may select `entrypointExports`. Only exact declared
+  entrypoints may import those named runtime exports, with aliases resolved to their original names.
+  Namespace, default, side-effect, re-export and dynamic forms do not establish that boundary, nor do
+  subpaths or missing compiler import facts. A package owned by an adapter stays that adapter's.
+- **Why:** test registration and reporting are effects at an executable boundary, like application
+  startup; they do not require declaring a framework pure or writing forwarding wrappers for its API.
+  Callbacks retain runner authority, bodies stay checked, and shared comparisons can return plain
+  data to entrypoint assertions. This selects top-level exports, not individual members of exported
+  objects. It does not classify browser handles or a property-testing package's generation semantics.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

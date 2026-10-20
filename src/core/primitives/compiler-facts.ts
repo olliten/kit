@@ -32,6 +32,9 @@ export interface CompilerFacts {
       readonly specifier: string;
       readonly target: string | null;
       readonly typeOnly: boolean;
+      // Original names of named runtime imports. Null is a namespace, default, re-export or dynamic edge;
+      // an absent fact cannot establish a restricted package boundary.
+      readonly namedImports?: readonly string[] | null;
     }[];
     readonly termFacts?: {
       readonly sources: readonly { readonly file: string; readonly factOnly: boolean }[];

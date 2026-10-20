@@ -995,6 +995,8 @@ function readCompiler(
               ts.isTypeNode(parent) ||
               ts.isInterfaceDeclaration(parent) ||
               ts.isTypeAliasDeclaration(parent) ||
+              ts.isImportDeclaration(parent) ||
+              ts.isExportDeclaration(parent) ||
               (ts.isImportClause(parent) && parent.isTypeOnly)
             )
               runtime = false;
@@ -1013,6 +1015,14 @@ function readCompiler(
               specifier: node.moduleSpecifier.text,
               target: importTarget(node.moduleSpecifier.text, sf.fileName),
               typeOnly: typeOnlyOf(node),
+              namedImports: ts.isImportDeclaration(node) &&
+                node.importClause?.name === undefined &&
+                node.importClause?.namedBindings !== undefined &&
+                ts.isNamedImports(node.importClause.namedBindings)
+                ? node.importClause.namedBindings.elements
+                  .filter((binding) => !binding.isTypeOnly)
+                  .map((binding) => (binding.propertyName ?? binding.name).text)
+                : null,
             });
           }
           if (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node))
@@ -1087,6 +1097,7 @@ function readCompiler(
                   specifier: specifier.text,
                   target: importTarget(specifier.text, sf.fileName),
                   typeOnly: false,
+                  namedImports: null,
                 });
               } else accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
             }
