@@ -1551,27 +1551,44 @@ function readCompiler(
         if (list === undefined) facts.set(fact.file, [{ start: fact.start, position }]);
         else list.push({ start: fact.start, position });
       }
-      const captureOf = captures(
+      const captureOf = captureReach(
         program,
         checker,
         source,
         local,
-        {
-          nativeAuthorityOf,
-          importTarget,
-          typesOf: (type: ts.Type) => typeFacts(type).types,
-        },
+        importTarget,
         facts,
       );
-      for (const { argument, binding } of pendingCaptures) binding.capture = captureOf(argument);
+      for (const { argument, binding } of pendingCaptures) {
+        const { heldParameters, ...capture } = captureOf(argument);
+        const natives = new Map<string, CapturedNative>();
+        const types = new Map<string, { readonly file: string; readonly name: string }>();
+        // Authority enrichment belongs to compiler fact extraction; proof reachability needs only reach.
+        for (const parameter of heldParameters) {
+          const type = checker.getTypeAtLocation(parameter);
+          for (const authority of nativeAuthorityOf(type))
+            natives.set(`${authority.root.file}:${authority.root.name}`, authority);
+          for (const identity of typeFacts(type).types)
+            types.set(`${identity.file}:${identity.name}`, identity);
+        }
+        binding.capture = {
+          ...capture,
+          types: [...types.values()].sort(
+            (a, b) => a.file.localeCompare(b.file) || a.name.localeCompare(b.name),
+          ),
+          nativeAuthority: [...natives.values()].sort((a, b) =>
+            `${a.root.file}:${a.root.name}`.localeCompare(`${b.root.file}:${b.root.name}`),
+          ),
+        };
+      }
       // A test reaches what its code uses, followed into helpers and modules as a capture is, so a helper that
       // imports many modules lends a test only the ones the code it calls uses.
-      const proofOf = captures(
+      const proofOf = captureReach(
         program,
         checker,
         new Set([...source, ...tests]),
         local,
-        { nativeAuthorityOf, importTarget, typesOf: (type: ts.Type) => typeFacts(type).types },
+        importTarget,
         facts,
       );
       const proofs = program
@@ -1759,24 +1776,23 @@ type Capture = NonNullable<
   >[number]["capture"]
 >;
 type CapturedNative = Capture["nativeAuthority"][number];
+type CaptureReach = Omit<Capture, "types" | "nativeAuthority"> & {
+  readonly heldParameters: readonly ts.ParameterDeclaration[];
+};
 
 // A callable carries what it can run or hold: the code its free names reach, followed through the
 // declarations they name, and every statement that can change a mutable value it holds, since a handle
 // stored there later is held too. What cannot be followed to a declaration is charged as its whole file.
 // Each piece of code is read once; a callable's reach is the union over the pieces it leads to.
-function captures(
+function captureReach(
   program: ts.Program,
   checker: ts.TypeChecker,
   source: ReadonlySet<string>,
   local: (file: string) => string,
-  helpers: {
-    readonly nativeAuthorityOf: (type: ts.Type) => readonly CapturedNative[];
-    readonly typesOf: (type: ts.Type) => readonly { readonly file: string; readonly name: string }[];
-    readonly importTarget: (specifier: string, containingFile: string) => string | null;
-  },
+  importTarget: (specifier: string, containingFile: string) => string | null,
   // Per file, in order, each fact that can grant authority and the first position of its kind there.
   facts: ReadonlyMap<string, readonly { readonly start: number; readonly position: number }[]>,
-): (argument: ts.Node) => Capture {
+): (argument: ts.Node) => CaptureReach {
   const unaliased = (symbol: ts.Symbol): ts.Symbol => {
     if ((symbol.flags & ts.SymbolFlags.Alias) === 0) return symbol;
     const target = checker.getAliasedSymbol(symbol);
@@ -2256,7 +2272,7 @@ function captures(
       if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
         const specifier = node.arguments[0];
         if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
-          const target = helpers.importTarget(specifier.text, sf.fileName);
+          const target = importTarget(specifier.text, sf.fileName);
           if (target !== null) piece.whole.add(target);
           else piece.packages.add(specifier.text);
         }
@@ -2426,8 +2442,7 @@ function captures(
     const whole = new Set<string>();
     const packages = new Set<string>();
     const parameters: { file: string; start: number }[] = [];
-    const natives = new Map<string, CapturedNative>();
-    const types = new Map<string, { readonly file: string; readonly name: string }>();
+    const heldParameters: ts.ParameterDeclaration[] = [];
     const home = argument.getSourceFile();
     for (let index = 0; index < bits.length; index++) {
       if (bits[bits.length - 1 - index] !== "1") continue;
@@ -2444,11 +2459,7 @@ function captures(
         // callers supply.
         if (sf === home)
           parameters.push({ file: local(sf.fileName), start: value.parameter.getStart(sf) });
-        const type = checker.getTypeAtLocation(value.parameter);
-        for (const authority of helpers.nativeAuthorityOf(type))
-          natives.set(`${authority.root.file}:${authority.root.name}`, authority);
-        for (const identity of helpers.typesOf(type))
-          types.set(`${identity.file}:${identity.name}`, identity);
+        heldParameters.push(value.parameter);
       }
     }
     const position = (
@@ -2461,12 +2472,7 @@ function captures(
       whole: [...whole].sort(),
       packages: [...packages].sort(),
       parameters: parameters.sort(position),
-      types: [...types.values()].sort(
-        (a, b) => a.file.localeCompare(b.file) || a.name.localeCompare(b.name),
-      ),
-      nativeAuthority: [...natives.values()].sort((a, b) =>
-        `${a.root.file}:${a.root.name}`.localeCompare(`${b.root.file}:${b.root.name}`),
-      ),
+      heldParameters,
     };
   };
 }
