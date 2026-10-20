@@ -6,7 +6,7 @@ import { moduleReferences } from "../../src/core/readings/module-references.js";
 import { nameCheck } from "../../src/core/readings/name-check.js";
 import { proofReach } from "../../src/core/readings/proof-reach.js";
 import { termModel } from "../../src/core/readings/term-model.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const gateSource =
   process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 function inspect(srcRoot: string, ...edges: readonly [string, string][]) {
   const snapshot = snapshotOf({

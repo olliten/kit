@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termModel } from "../../src/core/readings/term-model.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const keys = (files: readonly string[], terms = "") =>
   termModel({

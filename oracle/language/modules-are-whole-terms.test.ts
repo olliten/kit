@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termModel } from "../../src/core/readings/term-model.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 function concept(name: string, role = "derived", zone = "core"): string {
   return `- **${name}** — The entire module concept.\n  - Role: ${role}\n  - Zone: ${zone}\n  - ${role === "derived" ? "From" : "Of"}: []\n`;

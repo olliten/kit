@@ -8,7 +8,7 @@ import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const roots: string[] = [];
 afterEach(() => {

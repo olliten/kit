@@ -6,7 +6,7 @@ import { semanticReferences } from "../../src/core/readings/semantic-references.
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { bindingFindings } from "../lib/bindingFindings.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const declaration = (name: string, role = "derived", zone = "core", owners = "[]") =>
   `- **${name}** — The ${name} concept.\n  - Role: ${role}\n  - Zone: ${zone}\n  - ${role === "derived" ? "From" : "Of"}: ${owners}\n`;

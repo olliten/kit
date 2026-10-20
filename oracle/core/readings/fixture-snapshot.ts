@@ -1,15 +1,11 @@
-import type { SnapshotComment } from "../../src/core/primitives/comment.js";
-import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import type { ExportedSymbol } from "../../src/core/primitives/exported-symbol.js";
-import type { SpecProse } from "../../src/core/primitives/file.js";
-import type { ImportEdge } from "../../src/core/primitives/import.js";
-import type { Snapshot } from "../../src/core/primitives/snapshot.js";
-import type { SpecTerm } from "../../src/core/primitives/term.js";
+import type { SnapshotComment } from "../../../src/core/primitives/comment.js";
+import { DEFAULT_CONFIG } from "../../../src/core/primitives/default-config.js";
+import type { ExportedSymbol } from "../../../src/core/primitives/exported-symbol.js";
+import type { SpecProse } from "../../../src/core/primitives/file.js";
+import type { ImportEdge } from "../../../src/core/primitives/import.js";
+import type { Snapshot } from "../../../src/core/primitives/snapshot.js";
+import type { SpecTerm } from "../../../src/core/primitives/term.js";
 
-// The one snapshot builder for headless tests: source files under src/, tests (`*.test.ts`) under
-// oracle/, imports as "from > to", terms as
-// "<term>" or "<term> · retired: <word>, <word>" (one terms-file line each), prose as the text of
-// spec/topic.md, exported symbols as "file#name", and comments as "file#text" (each on line 1).
 export function snapshotOf(parts: {
   files?: readonly string[];
   imports?: readonly string[];

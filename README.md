@@ -256,3 +256,16 @@ hook on `Read` at `kit-refs.mjs --hook --root . --config kit/config.md`.
 Kit is written in its own structure and checks itself. Rules: `spec/`. Reasons: `docs/decisions.md`. `npm test`,
 `npm run check`, `npm run refs -- <module>`, and `npm run consumers -- ../app …` to see what a change to the Kit
 means for each app that uses it.
+
+The shared oracle infrastructure is being adopted one capability at a time. Both `src/` and `oracle/`
+are governed code roots. The headless snapshot builder is a Core reading at
+`oracle/core/readings/fixture-snapshot.ts`; its 17 claim-test consumers keep their topic filenames and
+assertions. Production imports of oracle code, including types, are forbidden.
+
+The oracle adoption inventory was taken at `83ffb2a`, with the second code root enabled and adapter
+identities qualified by root. It contained six legacy modules: 91 executable statements and 21 calls.
+Moving the snapshot builder pays its 24 statements and seven calls, leaving five legacy modules with
+67 statements and 14 calls in `self-debt/legacy.json`. That inventory adds no source-module waivers or
+checker-limit waivers. The remaining infrastructure stays under the ratchet until its capability is
+migrated. Claim-test entrypoints retain the existing compiler and claim-reach checks; opt-in framework
+authority checking is a separate adoption step.

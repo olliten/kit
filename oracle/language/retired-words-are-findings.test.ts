@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { nameCheck } from "../../src/core/readings/name-check.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const keys = (parts: Parameters<typeof snapshotOf>[0]) =>
   nameCheck(snapshotOf({ terms: ["amount · retired: total", "sub"], ...parts })).map(

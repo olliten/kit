@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { topicShape } from "../../src/core/readings/topic-shape.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const shape = (text: string) =>
   topicShape(snapshotOf({ prose: [text] })).map((row) => row.debtKey.split(":").slice(0, 2).join(":") + ":" + row.debtKey.split(":").at(-1));

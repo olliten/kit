@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { commentCheck } from "../../src/core/readings/comment-check.js";
-import { snapshotOf } from "../lib/snapshotOf.js";
+import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const keys = (...comments: string[]) =>
   commentCheck(snapshotOf({ comments })).map((f) => f.debtKey);
