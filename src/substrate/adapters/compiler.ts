@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import ts from "typescript";
 
 // One host read as a cache replays it: the operation, its arguments and what came back, file text as its
@@ -17,7 +17,13 @@ export interface CompilerRead {
   readonly result: string | boolean | readonly string[] | null | { readonly error: string };
 }
 
+interface WorkerHost {
+  readonly types: readonly string[];
+  readonly globals: readonly string[];
+}
+
 export interface CompilerWorkspace {
+  workerHost(trace: CompilerRead[]): WorkerHost;
   load(
     path: string,
     trace: CompilerRead[],
@@ -126,7 +132,30 @@ const list = (value: CompilerRead["arguments"][number] | undefined): readonly st
 const count = (value: CompilerRead["arguments"][number] | undefined): number | undefined =>
   typeof value === "number" ? value : undefined;
 
+let workerHostCache: { readonly text: string; readonly host: WorkerHost } | undefined;
+
 export const compilerWorkspace: CompilerWorkspace = {
+  workerHost(trace) {
+    const path = join(dirname(ts.getDefaultLibFilePath({})), "lib.webworker.d.ts");
+    const text = systemOf(trace).readFile(path);
+    if (text === undefined) throw new Error("The compiler's worker host declarations are missing.");
+    // Every snapshot traces the SDK read; only parsing its unchanged bytes is reused.
+    if (workerHostCache?.text === text) return workerHostCache.host;
+    const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest);
+    const host: WorkerHost = {
+      types: source.statements.flatMap((node) =>
+        (ts.isInterfaceDeclaration(node) || ts.isClassDeclaration(node)) && node.name !== undefined
+          ? [node.name.text]
+          : []),
+      globals: source.statements.flatMap((node) =>
+        ts.isVariableStatement(node)
+          ? node.declarationList.declarations.flatMap((item) =>
+              ts.isIdentifier(item.name) ? [item.name.text] : [])
+          : ts.isFunctionDeclaration(node) && node.name !== undefined ? [node.name.text] : []),
+    };
+    workerHostCache = { text, host };
+    return host;
+  },
   load(path, trace) {
     const system = systemOf(trace);
     const read = ts.readConfigFile(path, (file) => system.readFile(file));

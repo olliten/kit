@@ -1,6 +1,8 @@
 interface NativeAuthority {
   readonly root: { readonly file: string; readonly name: string };
   readonly bases: readonly { readonly file: string; readonly name: string }[];
+  // A DOM host type unavailable in the compiler's worker host declarations.
+  readonly windowOnly?: true;
 }
 
 export interface CompilerFacts {

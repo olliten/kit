@@ -145,11 +145,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   );
   // Each capability a fact grants at its position, so a callable is charged only the code it reaches.
   const positioned = new Map<string, string[]>();
+  const windowAuthority = "host:window";
   const grantAt = (file: string, start: number, capability: string): void => {
     const key = `${file}:${start}`;
     const list = positioned.get(key);
-    if (list === undefined) positioned.set(key, [capability]);
-    else list.push(capability);
+    const granted = nativeAuthorities.get(capability)?.windowOnly === true
+      ? [capability, windowAuthority]
+      : [capability];
+    if (list === undefined) positioned.set(key, granted);
+    else list.push(...granted);
   };
 
   const direct = new Map(files.map((path) => [path, new Set<string>()]));
@@ -158,6 +162,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   );
   const recordNative = (path: string, capability: string): void => {
     (internalNative.get(path) ?? direct.get(path))?.add(capability);
+    if (nativeAuthorities.get(capability)?.windowOnly === true)
+      direct.get(path)?.add(windowAuthority);
   };
   const findings: CapabilityFinding[] = [];
   const startups = new Set<string>();
@@ -666,7 +672,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         ? []
         : [zone];
     if (permittedZones.length === 0) return false;
+    if (capability === windowAuthority) return permittedZones.includes("shell");
     const native = nativeAuthorities.get(capability);
+    if (native?.windowOnly === true && !permittedZones.includes("shell")) return false;
     if (native !== undefined)
       return (
         permittedZones.some((allowed) => allowed !== "core") &&
@@ -854,7 +862,10 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
               ),
           )
           .map((contract) => contract.capability),
-        ...capture.nativeAuthority.map((authority) => nativeKey(authority.root)),
+        ...capture.nativeAuthority.flatMap((authority) => [
+          nativeKey(authority.root),
+          ...(authority.windowOnly === true ? [windowAuthority] : []),
+        ]),
       ]),
     ];
     capturedCapabilities.set(capture, result);
@@ -915,6 +926,13 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   for (const [path, caps] of inherited) {
     if (placement(path) === null && !startups.has(path)) continue;
     for (const capability of caps) {
+      if (capability === windowAuthority && !permits(path, capability)) {
+        add(
+          "R1", "window-authority", path,
+          "Keep Window-only host authority in Shell; adapter declarations cannot grant it to another zone.",
+        );
+        continue;
+      }
       if (nativeAuthorities.has(capability)) {
         if (!permits(path, capability)) {
           nativeFailures.add(`${path}:${capability}`);

@@ -119,6 +119,10 @@ An agent gets the task *decline a whole article with one reason*.
 - `shell` renders and turns input into data.
 - `substrate` does I/O.
 
+Window-only host authority belongs to shell, regardless of adapter permissions. Kit derives that
+boundary from the compiler's DOM and worker declarations; shared HTTP and cancellation APIs remain
+available to substrate. Imports and callbacks retain the requirement. Plain supplied options are data.
+
 Each zone has four layers:
 
 - `primitives`: types and constants.

@@ -15,6 +15,7 @@ exceptions:
   - oracle/code-structure/imports-point-inward.test.ts
   - oracle/code-structure/imports-have-no-cycles.test.ts
   - oracle/kit/source-fixtures-own-their-files.test.ts
+  - oracle/code-structure/window-authority-stays-in-shell.test.ts
 dependency-exclusions:
   - from: src
     to: oracle

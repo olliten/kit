@@ -12,11 +12,11 @@ const clock: NonNullable<KitConfig["adapters"]>[number] = {
   primitives: ["clock"],
 };
 const focus: NonNullable<KitConfig["adapters"]>[number] = {
-  module: "substrate/adapters/focus",
+  module: "shell/adapters/focus",
   export: "focus",
   capability: "dom.focus",
   kind: "external",
-  zones: ["substrate"],
+  zones: ["shell"],
   contract: { type: "Focus" },
 };
 
@@ -136,9 +136,9 @@ const focusSource =
 test("a native handle can reach its permitted adapter in another root", () => {
   const snapshot = inspect(
     {
-      "oracle/substrate/adapters/focus.ts": focusSource,
-      "src/substrate/compositions/probe.ts":
-        "import { focus } from '../../../oracle/substrate/adapters/focus.js';\nexport function probe(element: HTMLElement): void { focus.act(element); }\n",
+      "oracle/shell/adapters/focus.ts": focusSource,
+      "src/shell/compositions/probe.ts":
+        "import { focus } from '../../../oracle/shell/adapters/focus.js';\nexport function probe(element: HTMLElement): void { focus.act(element); }\n",
     },
     [focus],
   );
@@ -148,8 +148,8 @@ test("a native handle can reach its permitted adapter in another root", () => {
 test("a native handle captured across roots cannot enter a core callback", () => {
   const snapshot = inspect(
     {
-      "oracle/substrate/adapters/focus.ts": focusSource,
-      "src/substrate/compositions/probe.ts":
+      "oracle/shell/adapters/focus.ts": focusSource,
+      "src/shell/compositions/probe.ts":
         "import { run } from '../../../oracle/core/compositions/run.js';\nexport function probe(element: HTMLElement): number { return run(() => { element.focus(); return 7; }); }\n",
     },
     [focus],
