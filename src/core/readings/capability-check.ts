@@ -51,7 +51,12 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     return at.placed ? at : null;
   };
   const files = snapshot.files
-    .filter((file) => file.type === "source" && rootOf(file.path, roots) !== undefined)
+    .filter(
+      (file) =>
+        (file.type === "source" ||
+          (file.type === "test" && snapshot.config.exceptions?.includes(file.path))) &&
+        rootOf(file.path, roots) !== undefined,
+    )
     .map((file) => file.path);
   const zoneOf = (path: string): string | undefined => {
     const root = rootOf(path, roots);
@@ -133,6 +138,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     (internalNative.get(path) ?? direct.get(path))?.add(capability);
   };
   const findings: CapabilityFinding[] = [];
+  const startups = new Set<string>();
   const rawFailures = new Set<string>();
   const crossZoneFailures = new Set<string>();
   const add = (
@@ -153,7 +159,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       category:
         status !== "violation"
           ? "checker-limit"
-          : placement(path) === null
+          : placement(path) === null && !startups.has(path)
             ? "legacy-debt"
             : "placed-violation",
     });
@@ -169,7 +175,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       true,
       limit,
     );
-  const startups = new Set<string>();
   for (const path of snapshot.config.exceptions ?? []) {
     if (rootOf(path, roots) === undefined) continue;
     if (
@@ -183,11 +188,11 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         "R2",
         "startup-placement",
         path,
-        "Declare only an exact existing application startup source outside every zone.",
+        "Declare only an exact existing executable entrypoint outside every zone.",
         path,
         "unresolved",
         true,
-        "Directory, pattern, missing-source and zoned-module exceptions grant no startup permission.",
+        "Directory, pattern, missing-code and zoned-module exceptions grant no entrypoint permission.",
       );
       continue;
     }
@@ -441,7 +446,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           "R2",
           "startup-import",
           edge.file,
-          "Keep application startup outside the imported application module graph.",
+          "Keep executable entrypoints outside the imported module graph.",
           edge.target,
         );
       if (

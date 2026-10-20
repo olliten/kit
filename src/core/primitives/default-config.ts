@@ -19,6 +19,8 @@ export interface KitConfig {
     | { readonly root: string; readonly zone: "core" | "shell" | "substrate" }
     | { readonly files: readonly string[]; readonly zone: "core" | "shell" | "substrate" }
   )[];
+  // Exact executable entrypoints outside zones, including claim proofs. This grants wiring permission
+  // only to each named file; its authority and dependencies remain checked.
   readonly exceptions?: readonly string[];
   // Paths under the app root the kit never lists or reads, such as generated evidence. Nothing may import
   // from them, since an import into a path the kit cannot see would be a lost edge.

@@ -366,6 +366,19 @@ without naming the app.
   the same relation instead of a second one. It proves a test can run a module, not that a test would notice
   the module break: that is mutation testing's, and slow enough to stay out of the check.
 
+## 2026-10-20 · A claim proof can be a checked executable entrypoint
+
+- **Decision:** reuse exact startup declarations (`exceptions`) for proof entrypoints outside zones.
+  The proof keeps its topic/anchor identity while compiler and authority extraction check its body.
+  Nothing imports an entrypoint; its wiring permission does not spread to helpers. Violations in any
+  declared entrypoint, including application startup, cannot be recorded as legacy debt. Existing
+  startup finding keys remain stable.
+- **Why:** being a claim proof and being executable are separate facts. Reusing entrypoint checks avoids
+  a second zone or authority engine and lets adoption proceed one proof at a time. A filename grants no
+  permission. Framework imports remain unresolved until an operation contract establishes them;
+  registering a proof does not make a framework package pure. This does not yet classify all proof
+  files or support nested claim paths inside a zone.
+
 ## Not yet built
 
 - `kit ledger`, `kit partition` and `kit rename`; only `kit check`, `kit refs` and `kit consumers` exist.

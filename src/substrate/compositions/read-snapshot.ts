@@ -237,7 +237,14 @@ function readCompiler(
   trace: CompilerRead[],
 ): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[] } {
   const scopes: Scope[] = [];
-  const source = new Set(files.filter((file) => file.type === "source").map((file) => file.path));
+  const source = new Set(
+    files
+      .filter(
+        (file) => file.type === "source" ||
+          (file.type === "test" && config.exceptions?.includes(file.path)),
+      )
+      .map((file) => file.path),
+  );
   const tests = new Set(files.filter((file) => file.type === "test").map((file) => file.path));
   // The visitor asks for a file's local path at every declaration it reads; computing it each time with
   // path.relative cost about a seventh of a cold extraction.
