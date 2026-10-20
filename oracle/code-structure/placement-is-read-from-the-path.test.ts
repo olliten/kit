@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
-import { sourceFixture } from "../lib/source-fixture.js";
+import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 describe("placementOf reads zone and layer from <root>/<zone>/<layer>/<name>", () => {
   test("a placed source file", () => {

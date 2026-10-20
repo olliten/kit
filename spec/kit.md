@@ -9,7 +9,7 @@ its config, and its debt in its own baseline.
   accepts only the supported root fields and shapes. `roots.src` accepts one code-root path or a set of
   paths, checked together in one snapshot and graph; extraction, authority, structural checks, references
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
-  - Proof: {{fixture-snapshot}}
+  - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
 - {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
   {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
@@ -33,6 +33,11 @@ its config, and its debt in its own baseline.
 - Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. · {#paths-from-the-caller}
 
 ## Checking itself
+
+- Source fixtures own separate temporary directories, write supplied relative paths only inside their
+  directory with the declared compiler settings and roots, and dispose the directory on return or
+  failure. · {#source-fixtures-own-their-files}
+  - Implementation: {{source-fixture}}, {{temporary-project}}
 
 - Kit's production source is placed and its imports obey the dependency rules; its claims, modules and
   tests bind with no finding, its placed modules bind to terms without supporting-word terms, its terms

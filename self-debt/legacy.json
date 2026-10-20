@@ -1,4 +1,3 @@
 {
-  "R1:legacy-size:oracle/lib/cache-fixture.ts": { "statements": 40, "calls": 6 },
-  "R1:legacy-size:oracle/lib/source-fixture.ts": { "statements": 17, "calls": 3 }
+  "R1:legacy-size:oracle/lib/cache-fixture.ts": { "statements": 40, "calls": 6 }
 }

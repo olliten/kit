@@ -280,13 +280,19 @@ The oracle adoption inventory was taken at `83ffb2a`, with the second code root 
 identities qualified by root. It contained six legacy modules: 91 executable statements and 21 calls.
 Moving the snapshot builder pays its 24 statements and seven calls; the claim-binding reading pays
 another six statements and four calls. The fixture inventory and configuration pay four statements and one
-call, leaving two legacy modules with 57 statements and nine calls
+call. Moving the source-fixture workflow and its temporary-project adapter pays another 17 statements
+and three calls, leaving only the cache fixture with 40 statements and six calls
 in `self-debt/legacy.json`. That inventory adds no source-module waivers or
 checker-limit waivers. The remaining infrastructure stays under the ratchet until its capability is
 migrated. The `imports-point-inward` and `imports-have-no-cycles` claim tests are also declared as checked
 entrypoints. Their Vitest contract permits only `describe`, `test` and `expect`; their shared snapshot reading
 has no runner permission. Other claim-test files retain their existing compiler and claim-reach checks
 until their infrastructure is adopted.
+
+Compiler fixtures use `oracle/substrate/compositions/source-fixture.ts` to prepare the input, run Kit and
+dispose the project in `finally`. The `temporary-project` adapter owns directory creation, file writes
+and disposal; its resource can be reused by other fixture workflows without importing a runner. A
+checked claim covers isolation, failed-write cleanup and compiler root/path settings.
 
 The self-conformance claim runs its six cases over one real configured repository snapshot. Its term,
 comment, binding, placement and import assertions share that input; ordinary language and structural
