@@ -2,6 +2,7 @@ import type { Nodes, Root } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
+import { claimModules } from "./claim-inventory.js";
 
 // A topic has one shape, so a requirement has nowhere to hide but a claim, and every claim is tested.
 // The shape: a title, an intro of at most three sentences, then only section headings and lists whose
@@ -59,8 +60,15 @@ export function topicShape(snapshot: Snapshot): Finding[] {
       if (node.type === "list") {
         for (const item of node.children) {
           const [paragraph, ...more] = item.children;
-          if (paragraph?.type !== "paragraph" || more.length > 0 || !closes.test(textOf(paragraph)))
-            add(item, "Make this list item one claim that ends with its anchor, or move it out of the topic.");
+          if (
+            paragraph?.type !== "paragraph" ||
+            (more.length > 0 && claimModules(item) === null) ||
+            !closes.test(textOf(paragraph))
+          )
+            add(
+              item,
+              "Close the claim paragraph with its anchor; only Implementation and Proof module-reference rows may follow it.",
+            );
         }
         continue;
       }

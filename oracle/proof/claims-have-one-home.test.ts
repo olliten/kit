@@ -70,6 +70,48 @@ function inspect(inputs: Readonly<Record<string, string>>, legacyAreas: readonly
 const topic = "# value\n\n- A supplied value stays unchanged. · {#value-stays}\n";
 const proof = "import { test, expect } from 'vitest'; test('value', () => expect(7).toBe(7));\n";
 
+test.each([false, true])("module relationships preserve the claim identity, legacy=%s", (legacy) => {
+  const actual = claimInventory(
+    "- A decline needs a reason. · {#decline-needs-reason}\n" +
+      "  - Implementation: {{decline}}, {{surface}}\n" +
+      "  - Proof: {{decline-cases}}\n",
+    { legacy },
+  );
+  expect(actual).toEqual({
+    declarations: [
+      {
+        anchor: "decline-needs-reason",
+        line: 1,
+        implementation: ["decline", "surface"],
+        proof: ["decline-cases"],
+        terms: ["decline", "surface", "decline-cases"],
+      },
+    ],
+    references: [],
+  });
+});
+
+test.each(["Implementation", "Proof"])("a claim may name only its %s modules", (role) => {
+  const actual = claimInventory(
+    `- The helper behaves as promised. · {#helper}\n  - ${role}: {{helper}}\n`,
+  );
+  expect(actual.declarations).toEqual([
+    {
+      anchor: "helper",
+      line: 1,
+      terms: ["helper"],
+      [role.toLowerCase()]: ["helper"],
+    },
+  ]);
+  expect(actual.references).toEqual([]);
+});
+
+test("inline references keep their existing meaning without an inferred relationship", () => {
+  expect(claimInventory("- A value stays. {{value}} · {#value-stays}\n").declarations).toEqual([
+    { anchor: "value-stays", line: 1, terms: ["value"] },
+  ]);
+});
+
 test("a claim can have several proofs, including a filename without a variant", () => {
   const actual = inspect({
     "spec/value.md": topic,

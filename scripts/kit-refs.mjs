@@ -63,8 +63,16 @@ export async function kitRefs({ engineRoot, root, configPath, target }) {
             .filter((test) => test.startsWith(`${anchor}.`) && test.endsWith(".test.ts"))
             .map((test) => `${config.oracleRoot}/${topic}/${test}`)
         : [];
-      const line = claims.find((claim) => claim.file === file && claim.anchor === anchor)?.line ?? 1;
-      return { file, anchor, text: claimText(texts.get(file) ?? [], line), tests };
+      const claim = claims.find((claim) => claim.file === file && claim.anchor === anchor);
+      const line = claim?.line ?? 1;
+      return {
+        file,
+        anchor,
+        text: claimText(texts.get(file) ?? [], line),
+        tests,
+        ...(claim?.implementation === undefined ? {} : { implementation: claim.implementation }),
+        ...(claim?.proof === undefined ? {} : { proof: claim.proof }),
+      };
     });
     return { module, claims: rows };
   });
@@ -74,8 +82,16 @@ export function describeRefs({ module, claims }) {
   if (claims.length === 0) return `${module} is named by no claim.`;
   return [
     `${module} keeps ${claims.length === 1 ? "1 claim" : `${claims.length} claims`}:`,
-    ...claims.flatMap(({ file, anchor, text, tests }) => [
+    ...claims.flatMap(({ file, anchor, text, tests, implementation, proof }) => [
       `- ${file}#${anchor}: ${text}`,
+      ...(implementation === undefined
+        ? []
+        : [
+            `  Implementation (${implementation.length}): ${implementation.map((term) => `{{${term}}}`).join(", ")}`,
+          ]),
+      ...(proof === undefined
+        ? []
+        : [`  Proof (${proof.length}): ${proof.map((term) => `{{${term}}}`).join(", ")}`]),
       ...tests.map((test) => `  ${test}`),
     ]),
   ].join("\n");

@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, expect, test } from "vitest";
+import { describeRefs, kitRefs } from "../../scripts/kit-refs.mjs";
 
 const engine = resolve(import.meta.dirname, "../..");
 const fixture = join(engine, "fixture");
@@ -20,6 +21,26 @@ const refs = (args: string[], input?: string): string =>
     [join(engine, "scripts/kit-refs.mjs"), "--root", fixture, "--config", config, ...args],
     { encoding: "utf8", ...(input === undefined ? {} : { input }) },
   );
+
+test("Kit's oracle module view distinguishes implementation and proof relationships", async () => {
+  const result = await kitRefs({
+    engineRoot: engine,
+    root: engine,
+    configPath: join(engine, "self-config.md"),
+    target: "oracle/core/readings/fixture-snapshot.ts",
+  });
+  const claim = result?.claims.find(
+    (row: { readonly anchor: string }) => row.anchor === "imports-point-inward",
+  );
+  expect(claim).toMatchObject({
+    implementation: ["dependency-check", "import"],
+    proof: ["fixture-snapshot"],
+    tests: ["oracle/code-structure/imports-point-inward.test.ts"],
+  });
+  const output = describeRefs({ module: result!.module, claims: [claim!] });
+  expect(output).toContain("Implementation (2): {{dependency-check}}, {{import}}");
+  expect(output).toContain("Proof (1): {{fixture-snapshot}}");
+});
 
 test("a module's claims are listed with their topic, text and tests", () => {
   expect(refs(["src/core/readings/total.ts"])).toBe(

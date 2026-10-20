@@ -5,6 +5,31 @@ import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 const shape = (text: string) =>
   topicShape(snapshotOf({ prose: [text] })).map((row) => row.debtKey.split(":").slice(0, 2).join(":") + ":" + row.debtKey.split(":").at(-1));
 
+test.each([
+  "  - Implementation: {{total}}\n  - Proof: {{total-cases}}\n",
+  "  - Proof: {{total-cases}}\n  - Implementation: {{total}}\n",
+  "  - Proof: {{total-cases}}, {{comparison}}\n",
+  "  - Implementation: {{total}}\n",
+])("a claim may declare exact module relationship rows: %s", (rows) => {
+  expect(shape("# Tally\n\n- A total is exact. · {#total}\n" + rows)).toEqual([]);
+});
+
+test.each([
+  "  - Implementation: {{total}}\n  - Implementation: {{other}}\n",
+  "  - Proof: {{total-cases}}, {{total-cases}}\n",
+  "  - Proof: {{total-cases}}, {{Total-cases}}\n",
+  "  - Proof:\n",
+  "  - Proof: {{ }}\n",
+  "  - Helpers: {{total-cases}}\n",
+  "  - Proof: `{{total-cases}}`\n",
+  "  - Proof: {{total-cases}} and more behavior.\n",
+  "  - Proof: {{total-cases}}\n    - Another requirement. · {#hidden}\n",
+  "  1. Proof: {{total-cases}}\n",
+  "\n  Further unanchored behavior.\n",
+])("module metadata cannot hide extra claims or malformed references: %s", (rows) => {
+  expect(shape("# Tally\n\n- A total is exact. · {#total}\n" + rows)).toEqual(["R4:topic-shape:3"]);
+});
+
 test("a title, a short intro, sections and claims make a topic", () => {
   expect(
     shape(

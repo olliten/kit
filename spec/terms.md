@@ -65,7 +65,7 @@
   - Role: derived
   - Zone: core
   - From: {{dependency-check}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
-- **claim-inventory** — claim declarations and references interpreted from supplied Markdown.
+- **claim-inventory** — claim declarations, module relationships and references interpreted from supplied Markdown.
   - Role: derived
   - Zone: core
   - From: {{claim}}
@@ -121,10 +121,10 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{term}}, {{finding}}, {{placement-of}}
-- **topic-shape** — the check that a topic is a title, a short intro, then only section headings, described module headings and claims.
+- **topic-shape** — the check that a topic is a title, a short intro, then only section headings and claims with optional module relationships.
   - Role: derived
   - Zone: core
-  - From: {{snapshot}}, {{finding}}
+  - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
 
 - **verification-partition** — disjoint worker assignments derived from required checks, supplied durations and initial worker loads.
   - Role: derived
