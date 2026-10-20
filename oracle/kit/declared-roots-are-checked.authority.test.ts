@@ -49,18 +49,14 @@ function inspect(
         "import { model } from '../../../oracle/core/readings/model.js';\nexport const value: number = model();\n",
       ...files,
     },
-    { srcRoot: "oracle", adapters: [clock, ...extra] },
-  );
-  expect(snapshot.compiler?.projects).toHaveLength(1);
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return {
-    ...snapshot,
-    config: {
-      ...snapshot.config,
+    {
       srcRoot: ["src", "oracle"],
       adapters: [clock, ...extra].map((row) => ({ ...row, module: `oracle/${row.module}` })),
     },
-  };
+  );
+  expect(snapshot.compiler?.projects).toHaveLength(1);
+  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
+  return snapshot;
 }
 
 const base = inspect();

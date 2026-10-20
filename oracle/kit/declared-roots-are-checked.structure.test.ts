@@ -6,7 +6,6 @@ import { moduleReferences } from "../../src/core/readings/module-references.js";
 import { nameCheck } from "../../src/core/readings/name-check.js";
 import { proofReach } from "../../src/core/readings/proof-reach.js";
 import { termModel } from "../../src/core/readings/term-model.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { snapshotOf } from "../lib/snapshotOf.js";
 
 const gateSource =
@@ -125,9 +124,4 @@ test("a global module term cannot silently choose a same-named home in another r
     ],
   });
   expect(result.findings.map((item) => item.debtKey)).toContain("R3:term-home:value:2");
-});
-
-test("extraction rejects root sets until it can supply complete facts", () => {
-  const snapshot = multi({});
-  expect(() => readSnapshot("/must-not-be-read", snapshot.config)).toThrow(/Multiple code roots/);
 });

@@ -6,7 +6,8 @@ import { isKitMain, withKit } from "./kit-load.mjs";
 import { cachedKitCheck } from "./kit-snapshot-cache.mjs";
 
 export function startupCheckRoots(config) {
-  return (config.exceptions ?? []).filter((path) => path.startsWith(`${config.srcRoot}/`));
+  const roots = typeof config.srcRoot === "string" ? [config.srcRoot] : config.srcRoot;
+  return (config.exceptions ?? []).filter((path) => roots.some((root) => path.startsWith(`${root}/`)));
 }
 
 // A baseline names each debt key it holds; it is a record, or a plain list of keys in a test. A legacy module's

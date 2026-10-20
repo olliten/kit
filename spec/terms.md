@@ -147,7 +147,7 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
 
 ## Supporting vocabulary and roles
 

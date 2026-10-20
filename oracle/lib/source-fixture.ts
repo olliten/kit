@@ -10,6 +10,8 @@ export function sourceFixture(
 ) {
   const root = mkdtempSync(join(tmpdir(), "kit-zone-boundary-"));
   try {
+    const declared = config.srcRoot ?? DEFAULT_CONFIG.srcRoot;
+    const roots = typeof declared === "string" ? [declared] : declared;
     const inputs = {
       "tsconfig.json": JSON.stringify({
         compilerOptions: {
@@ -23,7 +25,7 @@ export function sourceFixture(
           declaration: true,
           isolatedDeclarations: true,
         },
-        include: ["src/**/*.ts"],
+        include: roots.map((path) => `${path}/**/*.ts`),
       }),
       ...files,
     };

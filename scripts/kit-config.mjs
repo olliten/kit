@@ -25,16 +25,23 @@ export function configuredKit(defaults, declaration) {
     typeof roots !== "object" ||
     Array.isArray(roots) ||
     Object.keys(roots).some((name) => !["src", "spec", "oracle"].includes(name)) ||
-    ["src", "spec", "oracle"].some(
-      (name) => typeof roots[name] !== "string" || !roots[name].trim(),
+    ["spec", "oracle"].some((name) => typeof roots[name] !== "string" || !roots[name].trim()) ||
+    !(
+      (typeof roots.src === "string" && roots.src.trim()) ||
+      (Array.isArray(roots.src) &&
+        roots.src.length > 0 &&
+        roots.src.every((path) => typeof path === "string" && path.trim()))
     )
   )
     throw new Error(
-      "Declare roots.src, roots.spec and roots.oracle as single paths; additional code roots are not supported yet.",
+      "Declare roots.src as one path or a list of code roots, and roots.spec and roots.oracle as single paths.",
     );
   return {
     ...defaults,
-    srcRoot: declaration.roots.src.replace(/\/$/, ""),
+    srcRoot:
+      typeof roots.src === "string"
+        ? roots.src.replace(/\/$/, "")
+        : roots.src.map((path) => path.replace(/\/$/, "")).sort(),
     specRoot: declaration.roots.spec.replace(/\/$/, ""),
     oracleRoot: declaration.roots.oracle.replace(/\/$/, ""),
     termsFile: declaration.terms,

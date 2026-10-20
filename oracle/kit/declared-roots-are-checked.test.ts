@@ -12,7 +12,7 @@ test("the existing single-root declaration keeps its configuration", () => {
 });
 
 test.each([
-  { ...roots, src: ["src/", "oracle/"] },
+  { ...roots, src: [] },
   { ...roots, code: ["src/", "oracle/"] },
   { ...roots, extra: "oracle/" },
   { ...roots, src: "" },
@@ -20,4 +20,11 @@ test.each([
   expect(() => configuredKit(DEFAULT_CONFIG, { roots: declared, terms: "spec/terms.md" })).toThrow(
     /root.*single paths|single paths.*root/,
   );
+});
+
+test("a root set is normalized without choosing a primary root", () => {
+  const declaration = { roots: { ...roots, src: ["src/", "oracle/"] }, terms: "spec/terms.md" };
+  const config = configuredKit(DEFAULT_CONFIG, declaration);
+  expect(config.srcRoot).toEqual(["oracle", "src"]);
+  expect(declaration.roots.src).toEqual(["src/", "oracle/"]);
 });
