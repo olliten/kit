@@ -43,6 +43,13 @@ compositions wire the others into behaviour.
 
 ## Authority
 
+- Window-only host authority stays in Shell, even if an adapter declaration permits another zone.
+  The compiler's DOM and worker declarations distinguish Window-only types and globals from shared
+  host APIs; HTTP and cancellation remain available to Substrate. Imports and captured callbacks retain
+  this requirement. · {#window-authority-stays-in-shell}
+  - Implementation: {{capability-check}}, {{compiler-facts}}, {{compiler}}, {{read-snapshot}}
+  - Proof: {{source-fixture}}
+
 - A module's authority is derived from its actual inputs: runtime imports, ambient globals and parameters
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
   never purity ({{capability-check}}, {{compiler-facts}}). · {#authority-is-derived}
@@ -85,8 +92,9 @@ compositions wire the others into behaviour.
   can name crosses no boundary; the module's own authority stays checked. A
   function another file can name, through an export, an exported record or a public method of an exported
   class, is one ({{capability-check}}). · {#registration-passes-no-authority}
-- A native capability contract is usable in any outer zone its registered adapter permits, where its operation
-  contract establishes the access; the core stays forbidden, and undeclared native authority stays a limit
+- A native capability contract is usable in an outer zone only when both its host boundary and its
+  registered adapter permit it, and its operation contract establishes the access. Window-only authority
+  stays in Shell; the core stays forbidden, and undeclared native authority stays a limit
   ({{capability-check}}). · {#native-contracts-follow-permitted-zones}
   - Proof: {{source-fixture}}
 - An import between legacy and placed code obeys zone boundaries and carries capabilities transitively,

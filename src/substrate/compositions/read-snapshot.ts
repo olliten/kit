@@ -237,6 +237,9 @@ function readCompiler(
   trace: CompilerRead[],
 ): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[] } {
   const scopes: Scope[] = [];
+  const workerHost = compilerWorkspace.workerHost(trace);
+  const workerTypes = new Set(workerHost.types);
+  const workerGlobals = new Set(workerHost.globals);
   const source = new Set(
     files
       .filter(
@@ -456,8 +459,12 @@ function readCompiler(
           (node) =>
             nativeLibrary(node) && (ts.isInterfaceDeclaration(node) || ts.isClassDeclaration(node)),
         );
+        // Constructor-backed Window objects can mutate the document through properties alone. Plain
+        // option dictionaries have no host value declaration and remain supplied data.
+        const windowObject = symbol !== undefined && !workerTypes.has(symbol.name) &&
+          symbol.declarations?.some((node) => nativeLibrary(node) && ts.isVariableDeclaration(node)) === true;
         return declaration !== undefined &&
-          type
+          (windowObject || type
             .getProperties()
             .some((property) =>
               property.declarations?.some(
@@ -468,7 +475,7 @@ function readCompiler(
                     ts.isGetAccessorDeclaration(node) ||
                     ts.isSetAccessorDeclaration(node)),
               ),
-            )
+            ))
           ? { file: local(declaration.getSourceFile().fileName), name: symbol?.name ?? "" }
           : null;
       };
@@ -499,7 +506,11 @@ function readCompiler(
             if (identity !== null) bases.push(identity);
             queue.push(...baseTypes(base));
           }
-          result = [{ root, bases }];
+          result = [{
+            root,
+            bases,
+            ...(!workerTypes.has(root.name) ? { windowOnly: true as const } : {}),
+          }];
         } else {
           const constraint =
             (type.flags & ts.TypeFlags.TypeParameter) !== 0
@@ -551,7 +562,12 @@ function readCompiler(
         receiver: ts.Type,
         location: ts.Node,
       ): readonly NativeAuthority[] => {
-        if (nativeMember(member)) return nativeAuthorityOf(receiver);
+        const windowReceiver = (receiver.isUnionOrIntersection() ? receiver.types : [receiver])
+          .some((type) => {
+            const identity = nativeType(type);
+            return identity !== null && !workerTypes.has(identity.name);
+          });
+        if (nativeMember(member) || windowReceiver) return nativeAuthorityOf(receiver);
         const type = checker.getTypeOfSymbolAtLocation(member, location);
         return type.getConstructSignatures().length > 0 ? nativeAuthorityOf(type) : [];
       };
@@ -1330,6 +1346,14 @@ function readCompiler(
                 ts.isPropertyAccessExpression(node.parent) && node.parent.expression === node
                   ? node.parent.name.text
                   : null;
+              const windowAuthority: readonly NativeAuthority[] =
+                nativeLibrary(declaration) && !workerGlobals.has(node.text)
+                  ? [{
+                      root: { file: local(declaration.getSourceFile().fileName), name: "Window" },
+                      bases: [],
+                      windowOnly: true,
+                    }]
+                  : [];
               globals.push({
                 file: path,
                 name: node.text,
@@ -1338,7 +1362,7 @@ function readCompiler(
                 runtime,
                 nativeAuthority: [
                   ...new Map(
-                    [...nativeAuthorityOf(type), ...returned].map((authority) => [
+                    [...nativeAuthorityOf(type), ...returned, ...windowAuthority].map((authority) => [
                       `${authority.root.file}:${authority.root.name}`,
                       authority,
                     ]),
@@ -1363,6 +1387,14 @@ function readCompiler(
                 start: node.getStart(sf),
                 declarationFile: local(declaration.getSourceFile().fileName),
                 runtime,
+                ...(globalName(node.expression) === "globalThis" && nativeLibrary(declaration) &&
+                !workerGlobals.has(node.name.text)
+                  ? { nativeAuthority: [{
+                      root: { file: local(declaration.getSourceFile().fileName), name: "Window" },
+                      bases: [],
+                      windowOnly: true as const,
+                    }] }
+                  : {}),
               });
           }
           const kind =
