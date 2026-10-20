@@ -9,6 +9,7 @@ test.each([
   "  - Implementation: {{total}}\n  - Proof: {{total-cases}}\n",
   "  - Proof: {{total-cases}}\n  - Implementation: {{total}}\n",
   "  - Proof: {{total-cases}}, {{comparison}}\n",
+  "  - Proof: {{total-cases}},\n    {{comparison}}\n",
   "  - Implementation: {{total}}\n",
 ])("a claim may declare exact module relationship rows: %s", (rows) => {
   expect(shape("# Tally\n\n- A total is exact. · {#total}\n" + rows)).toEqual([]);
@@ -22,6 +23,8 @@ test.each([
   "  - Proof: {{ }}\n",
   "  - Helpers: {{total-cases}}\n",
   "  - Proof: `{{total-cases}}`\n",
+  "  - Proof: \\{{total-cases}}\n",
+  "  - Proof: &#123;&#123;total-cases&#125;&#125;\n",
   "  - Proof: {{total-cases}} and more behavior.\n",
   "  - Proof: {{total-cases}}\n    - Another requirement. · {#hidden}\n",
   "  1. Proof: {{total-cases}}\n",

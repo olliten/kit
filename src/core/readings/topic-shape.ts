@@ -62,7 +62,7 @@ export function topicShape(snapshot: Snapshot): Finding[] {
           const [paragraph, ...more] = item.children;
           if (
             paragraph?.type !== "paragraph" ||
-            (more.length > 0 && claimModules(item) === null) ||
+            (more.length > 0 && claimModules(item, text) === null) ||
             !closes.test(textOf(paragraph))
           )
             add(
