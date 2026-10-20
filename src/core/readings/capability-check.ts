@@ -1,5 +1,6 @@
 import { cycles } from "./dependency-check.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
+import { modulePathOf } from "./placement-of.js";
 
 export interface CapabilityFinding extends Finding {
   readonly status: "violation" | "unresolved" | "review-held";
@@ -44,20 +45,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         },
       ],
     };
-  const placement = (path: string): readonly string[] | null => {
-    if (!path.startsWith(prefix)) return null;
-    const [zone, physical, file, ...deeper] = path.slice(prefix.length).split("/");
-    const layer = layers.find((name) => directory(name) === physical);
-    if (
-      zone === undefined ||
-      !["core", "shell", "substrate"].includes(zone) ||
-      layer === undefined ||
-      file === undefined ||
-      !/^[^/]+\.[^.]+$/.test(file) ||
-      deeper.length > 0
-    )
-      return null;
-    return [path.slice(prefix.length), zone, layer, file];
+  const placement = (path: string) => {
+    const at = modulePathOf(path, snapshot.config.srcRoot, snapshot.config.layerNames);
+    return at !== null && /^[^/]+\.[^.]+$/.test(at.file) ? at : null;
   };
   const files = snapshot.files
     .filter((file) => file.type === "source" && file.path.startsWith(prefix))
@@ -254,7 +244,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         "The declared adapter export is not resolved by the compiler.",
         adapter.export,
       );
-    if (adapter.kind === "external" && placement(path)?.[2] !== "adapters")
+    if (adapter.kind === "external" && placement(path)?.layer !== "adapters")
       add(
         "R1",
         "adapter-layer",
@@ -341,7 +331,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         }
       if (
         parameter.exported !== false &&
-        placement(parameter.file)?.[2] === "readings" &&
+        placement(parameter.file)?.layer === "readings" &&
         (parameter.callable || parameter.accessor)
       )
         add(
@@ -469,14 +459,14 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
       if (from !== null && to !== null) {
         if (
-          (from[2] === "adapters" && to[2] !== "primitives") ||
-          (from[1] === to[1]
+          (from.layer === "adapters" && to.layer !== "primitives") ||
+          (from.zone === to.zone
             ? !(
-                from[2] === "compositions" ||
-                to[2] === "primitives" ||
-                (from[2] === "readings" && to[2] === "readings")
+                from.layer === "compositions" ||
+                to.layer === "primitives" ||
+                (from.layer === "readings" && to.layer === "readings")
               )
-            : from[1] === "core" || to[1] !== "core")
+            : from.zone === "core" || to.zone !== "core")
         )
           add(
             "R2",
@@ -615,8 +605,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   }
   const coreProducer = (adapter: (typeof adapters)[number]): boolean =>
     adapter.kind === "produce" &&
-    placement(pathOf(adapter.module))?.[1] === "core" &&
-    placement(pathOf(adapter.module))?.[2] === "compositions" &&
+    placement(pathOf(adapter.module))?.zone === "core" &&
+    placement(pathOf(adapter.module))?.layer === "compositions" &&
     adapter.zones.includes("core") &&
     (adapter.primitives?.length ?? 0) === 0 &&
     (adapter.globals?.length ?? 0) === 0;
@@ -632,7 +622,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     if (native !== undefined)
       return (
         permittedZones.some((allowed) => allowed !== "core") &&
-        placement(path)?.[2] !== "readings" &&
+        placement(path)?.layer !== "readings" &&
         adapters.some(
           (adapter) =>
             adapter.kind === "external" &&
@@ -655,7 +645,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         adapter.capability === capability &&
         (adapter.kind === "produce"
           ? coreProducer(adapter) &&
-            (placement(path)?.[2] === "compositions" || placement(path) === null)
+            (placement(path)?.layer === "compositions" || placement(path) === null)
           : adapter.zones.some(
               (allowed) => allowed !== "core" && permittedZones.includes(allowed),
             )),
@@ -769,7 +759,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       : binding.origin !== null &&
         inherited.has(binding.origin) &&
         // A reading keeps every binding: what it hands on is checked by its file's inputs, captured or not.
-        (binding.capture === undefined || placement(binding.origin)?.[2] === "readings"
+        (binding.capture === undefined || placement(binding.origin)?.layer === "readings"
           ? [...inputs].every(([key, file]) => file !== binding.origin || known.has(key))
           : binding.capture.parameters.every(
               (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
@@ -870,8 +860,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   ]);
   const restricted = (path: string): boolean =>
     startups.has(path) ||
-    placement(path)?.[1] === "core" ||
-    placement(path)?.[2] === "readings" ||
+    placement(path)?.zone === "core" ||
+    placement(path)?.layer === "readings" ||
     [...capabilityUniverse].some((capability) => !permits(path, capability));
   const nativeFailures = new Set<string>();
   for (const [path, caps] of inherited) {
@@ -889,7 +879,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         }
         continue;
       }
-      if (placement(path)?.[2] === "readings")
+      if (placement(path)?.layer === "readings")
         add(
           "R1",
           "reading-authority",
@@ -901,7 +891,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
       if (
         !permits(path, capability) &&
-        placement(path)?.[2] !== "readings" &&
+        placement(path)?.layer !== "readings" &&
         !rawFailures.has(`${path}:${capability}`)
       )
         add(
@@ -973,7 +963,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       if (connection.target === null || placement(connection.target) === null) continue;
       // A composition handing a handle to a function only it can name crosses no boundary: the handle's
       // authority is already the file's own, and every way out of the file is a connection checked here.
-      if (connection.local === true && placement(connection.file)?.[2] === "compositions") continue;
+      if (connection.local === true && placement(connection.file)?.layer === "compositions")
+        continue;
       const invocation = adapters.some(
         (adapter) => adapter.kind === "external" && pathOf(adapter.module) === connection.target,
       )
@@ -1014,7 +1005,10 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
               );
             continue;
           }
-          if (!permits(invocation, capability) || placement(connection.target)?.[2] === "readings")
+          if (
+            !permits(invocation, capability) ||
+            placement(connection.target)?.layer === "readings"
+          )
             add(
               "R1",
               "closure-binding",

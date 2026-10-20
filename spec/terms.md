@@ -64,7 +64,7 @@
 - **capability-check** — capability requirements, structural findings and explicit limits derived from supplied compiler and configuration facts.
   - Role: derived
   - Zone: core
-  - From: {{dependency-check}}, {{finding}}, {{layer}}, {{snapshot}}
+  - From: {{dependency-check}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
 - **claim-inventory** — claim declarations and references interpreted from supplied Markdown.
   - Role: derived
   - Zone: core
