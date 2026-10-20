@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 
 export interface TemporaryProject {
   readonly root: string;
@@ -19,8 +19,11 @@ export const temporaryProjects: TemporaryProjects = {
       root,
       write(files) {
         for (const [path, text] of Object.entries(files)) {
-          mkdirSync(dirname(join(root, path)), { recursive: true });
-          writeFileSync(join(root, path), text);
+          const destination = resolve(root, path);
+          if (isAbsolute(path) || !destination.startsWith(`${root}${sep}`))
+            throw new Error("Write fixture files by a relative path inside the temporary project.");
+          mkdirSync(dirname(destination), { recursive: true });
+          writeFileSync(destination, text);
         }
       },
       dispose() {

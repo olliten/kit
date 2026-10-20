@@ -34,8 +34,9 @@ its config, and its debt in its own baseline.
 
 ## Checking itself
 
-- Source fixtures own separate temporary directories, write supplied files with the declared compiler
-  settings and roots, and dispose the directory on return or failure. · {#source-fixtures-own-their-files}
+- Source fixtures own separate temporary directories, write supplied relative paths only inside their
+  directory with the declared compiler settings and roots, and dispose the directory on return or
+  failure. · {#source-fixtures-own-their-files}
   - Implementation: {{source-fixture}}, {{temporary-project}}
 
 - Kit's production source is placed and its imports obey the dependency rules; its claims, modules and
