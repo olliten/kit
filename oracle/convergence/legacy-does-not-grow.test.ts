@@ -163,8 +163,15 @@ test("a formatting-only change moves neither number", () => {
 });
 
 test("a new legacy module, or one without a recorded size, is new debt", () => {
-  const added = measure({ [legacy]: report(), "src/legacy/new.ts": "export const value = 1;\n" });
-  expect(failures(added, baseline)).toEqual(["src/legacy/new.ts"]);
+  const added = measure({
+    [legacy]: report(),
+    "src/legacy/new.ts": "export const value = 1;\n",
+    "src/core/readings/.hidden.ts": "export const value = 1;\n",
+  });
+  expect(failures(added, baseline)).toEqual([
+    "src/core/readings/.hidden.ts",
+    "src/legacy/new.ts",
+  ]);
   const keysOnly = Object.keys(baseline);
   expect(failures(before, keysOnly as unknown as Baseline)).toEqual([
     "src/legacy/helper.ts",

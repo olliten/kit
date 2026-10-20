@@ -1,6 +1,6 @@
 import { cycles } from "./dependency-check.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { modulePathOf } from "./placement-of.js";
+import { placementOf } from "./placement-of.js";
 
 export interface CapabilityFinding extends Finding {
   readonly status: "violation" | "unresolved" | "review-held";
@@ -46,8 +46,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       ],
     };
   const placement = (path: string) => {
-    const at = modulePathOf(path, snapshot.config.srcRoot, snapshot.config.layerNames);
-    return at !== null && /^[^/]+\.[^.]+$/.test(at.file) ? at : null;
+    const at = placementOf(path, snapshot.config.srcRoot, snapshot.config.layerNames);
+    return at.placed ? at : null;
   };
   const files = snapshot.files
     .filter((file) => file.type === "source" && file.path.startsWith(prefix))
