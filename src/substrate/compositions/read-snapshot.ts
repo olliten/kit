@@ -65,6 +65,8 @@ export function readSnapshot(
     compiler: [],
   },
 ): Snapshot {
+  if (typeof config.srcRoot !== "string")
+    throw new Error("Multiple code roots are not supported by snapshot extraction yet.");
   const ignored = (path: string): boolean =>
     (config.ignore ?? []).some((root) => path === root || path.startsWith(`${root}/`));
   const paths = walk(appRoot, appRoot, ignored, trace.filesystem).map((abs) =>

@@ -21,11 +21,10 @@ const LEGACY: Legacy = { placed: false };
 
 const isZone = (s: string): s is Zone => ZONES.some((zone) => zone === s);
 
-export function placementOf(
+export function rootOf(
   path: string,
   roots: string | readonly string[],
-  layerNames?: Readonly<Partial<Record<Layer, string>>>,
-): Placed | Legacy {
+): string | undefined {
   if (
     typeof roots !== "string" &&
     (roots.length === 0 ||
@@ -47,9 +46,17 @@ export function placementOf(
     typeof roots === "string"
       ? roots
       : roots.find((candidate) => path.startsWith(`${candidate}/`));
+  return root !== undefined && path.startsWith(`${root}/`) ? root : undefined;
+}
+
+export function placementOf(
+  path: string,
+  roots: string | readonly string[],
+  layerNames?: Readonly<Partial<Record<Layer, string>>>,
+): Placed | Legacy {
+  const root = rootOf(path, roots);
   if (root === undefined) return LEGACY;
   const prefix = `${root}/`;
-  if (!path.startsWith(prefix)) return LEGACY;
   const [zone, physical, file, ...deeper] = path.slice(prefix.length).split("/");
   if (zone === undefined || !isZone(zone) || file === undefined || deeper.length > 0) {
     return LEGACY;

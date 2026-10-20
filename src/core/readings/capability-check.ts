@@ -19,6 +19,8 @@ export interface CapabilityResult {
 }
 
 export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
+  if (typeof snapshot.config.srcRoot !== "string")
+    throw new Error("Multiple code roots are not supported by authority checking yet.");
   const prefix = `${snapshot.config.srcRoot}/`;
   const layers: readonly string[] = LAYERS;
   const directory = (layer: string): string =>

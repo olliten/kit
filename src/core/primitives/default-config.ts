@@ -1,6 +1,6 @@
 // The config an app declares; every root is relative to the app root the snapshot was read from.
 export interface KitConfig {
-  readonly srcRoot: string;
+  readonly srcRoot: string | readonly string[];
   readonly oracleRoot: string;
   readonly specRoot: string;
   // The app's language: one `- **term** — meaning` line per domain term (R3, names).
