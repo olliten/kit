@@ -1,15 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { sourceFixture } from "../lib/source-fixture.js";
 
-function inspect(files: Readonly<Record<string, string>>) {
-  const root = mkdtempSync(join(tmpdir(), "kit-callback-boundary-"));
-  try {
-    const inputs = {
+function inspect(files: Readonly<Record<string, string>>, srcRoot = "src") {
+  const snapshot = sourceFixture(
+    {
       "tsconfig.json": JSON.stringify({
         compilerOptions: {
           target: "ES2022",
@@ -22,22 +17,18 @@ function inspect(files: Readonly<Record<string, string>>) {
           declaration: true,
           isolatedDeclarations: true,
         },
-        include: ["src/**/*.ts"],
+        include: [`${srcRoot}/**/*.ts`],
       }),
-      "src/core/compositions/run.ts":
+      [`${srcRoot}/core/compositions/run.ts`]:
         "export function run(read: () => number): number { return read(); }\n",
-      "src/core/readings/value.ts": "export function value(): number { return 7; }\n",
-      "src/substrate/adapters/clock.ts":
+      [`${srcRoot}/core/readings/value.ts`]: "export function value(): number { return 7; }\n",
+      [`${srcRoot}/substrate/adapters/clock.ts`]:
         "export interface Clock { now(): number; }\n" +
         "export const clock: Clock = { now: () => Date.now() };\n",
       ...files,
-    };
-    for (const [path, content] of Object.entries(inputs)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), content);
-    }
-    const snapshot = readSnapshot(root, {
-      ...DEFAULT_CONFIG,
+    },
+    {
+      srcRoot,
       adapters: [
         {
           module: "substrate/adapters/clock",
@@ -49,12 +40,11 @@ function inspect(files: Readonly<Record<string, string>>) {
           primitives: ["clock"],
         },
       ],
-    });
-    expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-    return capabilityCheck(snapshot);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+    },
+  );
+  expect(snapshot.compiler?.projects).toHaveLength(1);
+  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
+  return capabilityCheck(snapshot);
 }
 
 const coreImport = "import { run } from '../../core/compositions/run.js';\n";
@@ -63,6 +53,9 @@ const pureImport = "import { value } from '../../core/readings/value.js';\n";
 const relayImport = "import { relay } from './relay.js';\n";
 const recordRun =
   "export function run(input: { readonly read: () => number }): number { return input.read(); }\n";
+const rootRelayCases = ["src", "oracle"].flatMap((srcRoot) =>
+  [false, true].map((relay) => ({ srcRoot, relay })),
+);
 
 test("an extended array of plain data has no executable input capability", () => {
   expect(
@@ -124,19 +117,22 @@ test("a method-bearing instance carrying the clock cannot be invoked inside Core
   );
 });
 
-test.each([false, true])(
-  "a clock closure cannot enter Core through a plain callback, relay=%s",
-  (relay) => {
-    const result = inspect({
-      ...(relay
-        ? {
-            "src/substrate/compositions/relay.ts": `${coreImport}export function relay(read: () => number): number { return run(read); }\n`,
-          }
-        : {}),
-      "src/substrate/compositions/probe.ts":
-        `${relay ? relayImport : coreImport}${clockImport}` +
-        `export const result: number = ${relay ? "relay" : "run"}(() => clock.now());\n`,
-    });
+test.each(rootRelayCases)(
+  "$srcRoot: a clock closure cannot enter Core through a plain callback, relay=$relay",
+  ({ srcRoot, relay }) => {
+    const result = inspect(
+      {
+        ...(relay
+          ? {
+              [`${srcRoot}/substrate/compositions/relay.ts`]: `${coreImport}export function relay(read: () => number): number { return run(read); }\n`,
+            }
+          : {}),
+        [`${srcRoot}/substrate/compositions/probe.ts`]:
+          `${relay ? relayImport : coreImport}${clockImport}` +
+          `export const result: number = ${relay ? "relay" : "run"}(() => clock.now());\n`,
+      },
+      srcRoot,
+    );
     expect(result.findings).toEqual(
       expect.arrayContaining([expect.objectContaining({ status: "violation", blocking: true })]),
     );
@@ -172,20 +168,26 @@ test.each([false, true])("a clock method in a record cannot enter Core, relay=%s
   );
 });
 
-test.each([false, true])("an imported pure callback remains supported, relay=%s", (relay) => {
-  expect(
-    inspect({
-      ...(relay
-        ? {
-            "src/substrate/compositions/relay.ts": `${coreImport}export function relay(read: () => number): number { return run(read); }\n`,
-          }
-        : {}),
-      "src/substrate/compositions/probe.ts":
-        `${relay ? relayImport : coreImport}${pureImport}` +
-        `export const result: number = ${relay ? "relay" : "run"}(value);\n`,
-    }).findings,
-  ).toEqual([]);
-});
+test.each(rootRelayCases)(
+  "$srcRoot: an imported pure callback remains supported, relay=$relay",
+  ({ srcRoot, relay }) => {
+    expect(
+      inspect(
+        {
+          ...(relay
+            ? {
+                [`${srcRoot}/substrate/compositions/relay.ts`]: `${coreImport}export function relay(read: () => number): number { return run(read); }\n`,
+              }
+            : {}),
+          [`${srcRoot}/substrate/compositions/probe.ts`]:
+            `${relay ? relayImport : coreImport}${pureImport}` +
+            `export const result: number = ${relay ? "relay" : "run"}(value);\n`,
+        },
+        srcRoot,
+      ).findings,
+    ).toEqual([]);
+  },
+);
 
 test("a record containing an imported pure callback remains supported", () => {
   expect(
