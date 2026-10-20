@@ -77,7 +77,7 @@
   - Role: derived
   - Zone: core
   - From: {{zone}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{layer}}, {{snapshot}}
-- **dependency-check** — the check that imports follow permitted layers and point inward across zones.
+- **dependency-check** — findings from import direction, cycles and explicit separation of compiled dependencies.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}

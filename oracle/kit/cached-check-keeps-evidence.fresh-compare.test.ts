@@ -14,6 +14,8 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
   const app = join(base, "app");
   const proofSource =
     "import { actual } from '../../src/core/readings/actual.js';\nimport { reference } from '../../oracle/core/readings/reference.js';\nif (actual(1) !== reference(1)) throw new Error('Mismatch');\n";
+  const configSource =
+    "```yaml\napp: numbers\nroots:\n  src: [src/, oracle/, proof/]\n  spec: spec/\n  oracle: proof/\nterms: spec/terms.md\nexceptions: [proof/count/increments.test.ts]\n```\n";
   writeApp(app, {
     "package.json": JSON.stringify({ type: "module" }),
     "tsconfig.json": JSON.stringify({
@@ -36,13 +38,12 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
     "spec/count.md":
       "# Count\n\nCounting.\n\n## Increment\n\n- The implementation agrees with the reference ({{actual}}, {{reference}}). · {#increments}\n",
     "proof/count/increments.test.ts": proofSource,
-    "kit/config.md":
-      "```yaml\napp: numbers\nroots:\n  src: [src/, oracle/, proof/]\n  spec: spec/\n  oracle: proof/\nterms: spec/terms.md\nexceptions: [proof/count/increments.test.ts]\n```\n",
+    "kit/config.md": configSource,
     "kit/debt/legacy.json": "{}",
   });
   // Own the Git cache boundary instead of inheriting a parent checkout's store.
   mkdirSync(join(app, ".git"));
-  const run = () =>
+  const run = (flags: readonly string[] = []) =>
     spawnSync(
       process.execPath,
       [
@@ -51,6 +52,7 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
         "--config=kit/config.md",
         "--baseline=kit/debt/legacy.json",
         "--fresh-compare",
+        ...flags,
       ],
       {
         cwd: app,
@@ -137,4 +139,54 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
   expect(limit.stdout).toMatch(/the cached snapshot equals a fresh extraction/);
   expect(limit.stderr.trim().split("\n")).toHaveLength(1);
   expect(limit.stderr).toContain("R1:external-boundary:oracle/core/readings/reference.ts:mystery");
+
+  const legacy = "oracle/reference.ts";
+  writeApp(app, {
+    "oracle/core/readings/reference.ts":
+      "export function reference(n: number): number { return n + 1; }\n",
+    [legacy]:
+      "import { read } from 'mystery'; export function legacy(n: number): number { return read() + n; }\n",
+  });
+  const report = run(["--report"]);
+  expect(report.status, report.stderr).toBe(0);
+  const inventory = JSON.parse(report.stdout.slice(report.stdout.indexOf("{"))).findings;
+  const legacyBaseline = Object.fromEntries(
+    inventory
+      .filter((item: { category: string }) => item.category === "legacy-debt")
+      .map((item: { debtKey: string; statements?: number; calls?: number }) => [
+        item.debtKey,
+        typeof item.statements === "number"
+          ? { statements: item.statements, calls: item.calls }
+          : null,
+      ]),
+  );
+  const boundaryKey = `R2:dependency-boundary:${legacy}:node_modules/mystery/index.d.ts`;
+  const exclusionKey = `R2:dependency-exclusion:${legacy}:runtime:transitive:src/core/readings/actual.ts`;
+  writeApp(app, {
+    "kit/debt/legacy.json": JSON.stringify({
+      ...legacyBaseline,
+      [boundaryKey]: null,
+      [exclusionKey]: null,
+    }),
+  });
+  const unrelated = run();
+  expect(unrelated.status, unrelated.stdout + unrelated.stderr).toBe(0);
+  const policyConfig = configSource.replace(
+    "\n```",
+    `\ndependency-exclusions:\n  - from: ${legacy}\n    to: src/core/readings/actual.ts\n    imports: runtime\n    reach: transitive\n\`\`\``,
+  );
+  writeApp(app, { "kit/config.md": policyConfig });
+  const opaque = run();
+  expect(opaque.status, opaque.stdout + opaque.stderr).toBe(1);
+  expect(opaque.stdout).toMatch(/the cached snapshot equals a fresh extraction/);
+  expect(opaque.stderr).toContain(boundaryKey);
+  expect(opaque.stderr).not.toContain(`R1:external-boundary:${legacy}:mystery`);
+  writeApp(app, {
+    [legacy]:
+      "import { actual } from '../src/core/readings/actual.js'; export function legacy(n: number): number { return actual(n); }\n",
+  });
+  const dependent = run();
+  expect(dependent.status, dependent.stdout + dependent.stderr).toBe(1);
+  expect(dependent.stderr).toContain(exclusionKey);
+  expect(dependent.stdout).toMatch(/the cached snapshot equals a fresh extraction/);
 }, 600_000);

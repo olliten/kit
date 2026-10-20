@@ -1,5 +1,5 @@
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { type Placed, placementOf } from "./placement-of.js";
+import { type Placed, placementOf, rootOf } from "./placement-of.js";
 
 // R2, dependencies. Only imports between two placed artifacts are held; legacy files are not.
 // - Within a zone: imports point to the same layer or a lower one.
@@ -26,6 +26,127 @@ export function dependencyCheck(snapshot: Snapshot): Finding[] {
   }
   // One finding per debt key, however many times a file repeats an import.
   return [...new Map(findings.map((f) => [f.debtKey, f])).values()].sort(byDebtKey);
+}
+
+export function dependencyExclusions(snapshot: Snapshot): {
+  readonly findings: readonly Finding[];
+  readonly limits: readonly Finding[];
+} {
+  const rules = snapshot.config.dependencyExclusions ?? [];
+  const findings: Finding[] = [];
+  const limits: Finding[] = [];
+  if (rules.length === 0) return { findings, limits };
+  const local = new Set(
+    snapshot.files
+      .filter((file) => file.type === "source" || file.type === "test")
+      .map((file) => file.path),
+  );
+  const analyzed = new Set(
+    snapshot.files
+      .filter(
+        (file) =>
+          file.type === "source" ||
+          (file.type === "test" && snapshot.config.exceptions?.includes(file.path)),
+      )
+      .map((file) => file.path),
+  );
+  const projects = snapshot.compiler?.projects ?? [];
+  const covered = new Set(
+    projects.flatMap((project) => [...project.files, ...project.ambientFiles]),
+  );
+  const edges = new Map<
+    string,
+    NonNullable<Snapshot["compiler"]>["projects"][number]["imports"][number][]
+  >();
+  for (const edge of projects.flatMap((project) => project.imports)) {
+    const found = edges.get(edge.file) ?? [];
+    found.push(edge);
+    edges.set(edge.file, found);
+  }
+  const selects = (selector: string, path: string): boolean =>
+    path === selector || path.startsWith(`${selector}/`);
+  for (const rule of rules) {
+    if (
+      typeof rule.from !== "string" ||
+      typeof rule.to !== "string" ||
+      !["all", "runtime"].includes(rule.imports) ||
+      !["direct", "transitive"].includes(rule.reach)
+    )
+      throw new Error(
+        "Declare dependency exclusions with from, to, imports (all/runtime) and reach (direct/transitive).",
+      );
+    const from = rule.from.replace(/\/$/, "");
+    const to = rule.to.replace(/\/$/, "");
+    rootOf("", [from]);
+    rootOf("", [to]);
+    const origins = [...analyzed].filter((path) => selects(from, path));
+    if (origins.length === 0 || ![...local].some((path) => selects(to, path)))
+      throw new Error(
+        "Dependency exclusion selectors must match existing code; proof origins must be declared entrypoints.",
+      );
+    for (const origin of origins) {
+      const pending = [[origin]];
+      const visited = new Set<string>();
+      while (pending.length > 0) {
+        const route = pending.pop() ?? [];
+        const file = route[route.length - 1] ?? origin;
+        if (visited.has(file)) continue;
+        visited.add(file);
+        if (!analyzed.has(file) || !covered.has(file)) {
+          limits.push(
+            finding(
+              "R2",
+              "dependency-boundary",
+              origin,
+              `No checked import evidence establishes ${route.join(" → ")}.`,
+              file,
+            ),
+          );
+          continue;
+        }
+        for (const edge of edges.get(file) ?? []) {
+          if (rule.imports === "runtime" && edge.typeOnly === true) continue;
+          const packageName = edge.specifier.startsWith("@")
+            ? edge.specifier.split("/").slice(0, 2).join("/")
+            : edge.specifier.split("/")[0];
+          const classifiedPackage =
+            rule.reach === "direct" &&
+            edge.target === null &&
+            !/^[.#/]/.test(edge.specifier) &&
+            (snapshot.config.packages?.some((row) => row.name === packageName) ||
+              snapshot.config.adapters?.some((row) => row.packages?.includes(packageName ?? "")));
+          if (classifiedPackage && (rule.imports === "all" || edge.typeOnly === false)) continue;
+          if (edge.target === null || (rule.imports === "runtime" && edge.typeOnly !== false)) {
+            limits.push(
+              finding(
+                "R2",
+                "dependency-boundary",
+                origin,
+                `Establish the import boundary ${[...route, edge.specifier].join(" → ")}.`,
+                `${file}:${edge.specifier}`,
+              ),
+            );
+            continue;
+          }
+          const next = [...route, edge.target];
+          if (selects(to, edge.target)) {
+            findings.push(
+              finding(
+                "R2",
+                "dependency-exclusion",
+                origin,
+                `Remove the forbidden ${rule.imports} dependency ${next.join(" → ")}.`,
+                `${rule.imports}:${rule.reach}:${edge.target}`,
+              ),
+            );
+          } else if (rule.reach === "transitive") pending.push(next);
+        }
+      }
+    }
+  }
+  const unique = (items: readonly Finding[]) =>
+    [...new Map(items.map((item) => [item.debtKey, item])).values()].sort(byDebtKey);
+  return { findings: unique(findings), limits: unique(limits) };
 }
 
 function edgeFix(a: Placed, b: Placed): string | undefined {

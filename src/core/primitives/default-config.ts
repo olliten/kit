@@ -22,6 +22,13 @@ export interface KitConfig {
   // Exact executable entrypoints outside zones, including claim proofs. This grants wiring permission
   // only to each named file; its authority and dependencies remain checked.
   readonly exceptions?: readonly string[];
+  // Explicit separation of local code. Selectors are exact relative files or directory prefixes.
+  readonly dependencyExclusions?: readonly {
+    readonly from: string;
+    readonly to: string;
+    readonly imports: "all" | "runtime";
+    readonly reach: "direct" | "transitive";
+  }[];
   // Paths under the app root the kit never lists or reads, such as generated evidence. Nothing may import
   // from them, since an import into a path the kit cannot see would be a lost edge.
   readonly ignore?: readonly string[];
