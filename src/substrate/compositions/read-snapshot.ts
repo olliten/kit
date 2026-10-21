@@ -58,23 +58,15 @@ const HOST_DECLARATIONS = /(?:^|\/)node_modules\/@types\/node\//;
 
 // Every read lands in `trace`, so a cached snapshot can be reused exactly while each read would still return
 // the same. An ignored path is neither listed nor read, so an import into it is an error, never a lost edge.
-export function readSnapshot(
-  appRoot: string,
-  config: KitConfig = DEFAULT_CONFIG,
-  trace: { readonly filesystem: FilesystemRead[]; readonly compiler: CompilerRead[] } = {
-    filesystem: [],
-    compiler: [],
-  },
-): Snapshot {
+function readInventory(appRoot: string, config: KitConfig, trace: FilesystemRead[]) {
   rootOf("", config.srcRoot);
   const ignored = (path: string): boolean =>
     (config.ignore ?? []).some((root) => path === root || path.startsWith(`${root}/`));
-  const paths = walk(appRoot, appRoot, ignored, trace.filesystem).map((abs) =>
+  const paths = walk(appRoot, appRoot, ignored, trace).map((abs) =>
     relative(appRoot, abs).split(sep).join("/"),
   );
   const files: SnapshotFile[] = paths.sort().map((path) => ({ path, type: typeOf(path, config) }));
   const known = new Set(paths);
-  const imports: ImportEdge[] = [];
   const specifiers: {
     readonly path: string;
     readonly found: readonly { readonly specifier: string; readonly dynamic: boolean }[];
@@ -91,7 +83,7 @@ export function readSnapshot(
   const sources = new Map<string, string>();
   for (const { path, type } of files) {
     if (type === "other") continue;
-    const text = filesystem.readText(join(appRoot, path), trace.filesystem);
+    const text = filesystem.readText(join(appRoot, path), trace);
     if (type === "spec") {
       const inventory = semanticReferenceInventory(text);
       semanticReferences.push(
@@ -130,7 +122,52 @@ export function readSnapshot(
       })),
     });
   }
-  const { facts: compiler, scopes } = readCompiler(appRoot, paths, files, config, ignored, trace.compiler);
+  return {
+    snapshot: {
+      files,
+      imports: [],
+      terms,
+      termSyntax,
+      termOrder,
+      prose,
+      symbols,
+      comments,
+      config,
+      claims,
+      claimReferences,
+      semanticReferences,
+    },
+    paths,
+    known,
+    specifiers,
+    sources,
+    ignored,
+  };
+}
+
+export function readSnapshotMetadata(
+  appRoot: string,
+  config: KitConfig = DEFAULT_CONFIG,
+  trace: { readonly filesystem: FilesystemRead[] } = { filesystem: [] },
+): Snapshot {
+  return readInventory(appRoot, config, trace.filesystem).snapshot;
+}
+
+export function readSnapshot(
+  appRoot: string,
+  config: KitConfig = DEFAULT_CONFIG,
+  trace: { readonly filesystem: FilesystemRead[]; readonly compiler: CompilerRead[] } = {
+    filesystem: [],
+    compiler: [],
+  },
+): Snapshot {
+  const { snapshot, paths, known, specifiers, sources, ignored } = readInventory(
+    appRoot, config, trace.filesystem,
+  );
+  const imports: ImportEdge[] = [];
+  const { facts: compiler, scopes } = readCompiler(
+    appRoot, paths, snapshot.files, config, ignored, trace.compiler,
+  );
   for (const { path, found } of specifiers) {
     const seen = new Set<string>();
     const scope = scopeOf(path, scopes, appRoot);
@@ -152,20 +189,10 @@ export function readSnapshot(
     sizeOf(path, text, scopeOf(path, scopes, appRoot), appRoot, known),
   );
   return {
-    files,
+    ...snapshot,
     sizes,
     imports,
-    terms,
-    termSyntax,
-    termOrder,
-    prose,
-    symbols,
-    comments,
-    config,
     compiler,
-    claims,
-    claimReferences,
-    semanticReferences,
   };
 }
 

@@ -120,7 +120,7 @@ async function main() {
   const declared = kitConfig(readFileSync(configPath, "utf8"));
   await withKit(engineRoot, async (load) => {
     const { DEFAULT_CONFIG } = await load("src/core/primitives/default-config.ts");
-    const { readSnapshot } = await load("src/substrate/compositions/read-snapshot.ts");
+    const { readSnapshot, readSnapshotMetadata } = await load("src/substrate/compositions/read-snapshot.ts");
     const { filesystem } = await load("src/substrate/adapters/filesystem.ts");
     const { compilerWorkspace } = await load("src/substrate/adapters/compiler.ts");
     const { capabilityCheck } = await load("src/core/readings/capability-check.ts");
@@ -137,16 +137,30 @@ async function main() {
     const { topicShape } = await load("src/core/readings/topic-shape.ts");
     const { legacySize } = await load("src/core/readings/legacy-size.ts");
     const config = configuredKit(DEFAULT_CONFIG, declared);
+    const topicSnapshotOf = (snapshot) => ({
+      ...snapshot,
+      claims: snapshot.claims.filter((claim) =>
+        !config.legacyAreas.includes(claim.file) || claim.implementation || claim.proof,
+      ),
+    });
+    if (!process.argv.includes("--report") && !process.argv.includes("--tighten")) {
+      const metadata = readSnapshotMetadata(root, config);
+      const failures = [
+        ...claimProofBinder(topicSnapshotOf(metadata)),
+        ...topicShape(metadata),
+        ...commentCheck(metadata),
+      ].sort(byDebtKey);
+      if (failures.length > 0) {
+        for (const item of failures) process.stderr.write(item.debtKey + ": " + item.fix + "\n");
+        process.exitCode = 1;
+        return;
+      }
+    }
     const checkSnapshot = (snapshot) => {
       const capability = capabilityCheck(snapshot);
       const exclusions = dependencyExclusions(snapshot);
       const concepts = termModel(snapshot);
-      const topicSnapshot = {
-        ...snapshot,
-        claims: snapshot.claims.filter((claim) =>
-          !config.legacyAreas.includes(claim.file) || claim.implementation || claim.proof,
-        ),
-      };
+      const topicSnapshot = topicSnapshotOf(snapshot);
       const structural = [
         ...exclusions.findings,
         ...[
