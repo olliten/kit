@@ -98,3 +98,126 @@ test("a registered native callback cannot be retained and passed into Core", () 
     ]),
   );
 });
+
+const renderingAdapter = "src/shell/adapters/rendering.ts";
+const genericRendering =
+  "export interface Rendering { create<K extends keyof HTMLElementTagNameMap>(tag: K): HTMLElementTagNameMap[K]; }\n" +
+  "export const rendering: Rendering = { create: (tag) => document.createElement(tag) };\n";
+const renderingRegistration: NonNullable<KitConfig["adapters"]> = [
+  {
+    module: "shell/adapters/rendering",
+    export: "rendering",
+    capability: "rendering",
+    kind: "external",
+    zones: ["shell"],
+    contract: { type: "Rendering" },
+    globals: ["document"],
+  },
+];
+
+function inspectRendering(files: Readonly<Record<string, string>>, body = genericRendering) {
+  const snapshot = sourceFixture({ [renderingAdapter]: body, ...files }, { adapters: renderingRegistration });
+  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
+  return capabilityCheck(snapshot).findings;
+}
+
+test.each([
+  "export function text(): string { return rendering.create('p').textContent ?? ''; }\n",
+  "function paragraph(): HTMLParagraphElement { return rendering.create('p'); }\n" +
+    "export function text(): string { return paragraph().textContent ?? ''; }\n",
+])("a generic element factory establishes its concrete Shell handle contract: %s", (body) => {
+  expect(
+    inspectRendering({
+      "src/shell/compositions/text.ts": "import { rendering } from '../adapters/rendering.js';\n" + body,
+    }),
+  ).toEqual([]);
+});
+
+test.each(["src/core/compositions/text.ts", "src/shell/readings/text.ts"])(
+  "a generic Shell contract does not grant its native handles to %s",
+  (path) => {
+    expect(
+      inspectRendering({
+        [path]: "export function text(paragraph: HTMLParagraphElement): string { return paragraph.textContent ?? ''; }\n",
+      }),
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ path, blocking: true })]));
+  },
+);
+
+test.each([
+  { type: "Document", operation: "document" },
+  { type: "HTMLDivElement", operation: "document.createElement('div')" },
+])("a contract exposing only $type does not authorize an unrelated paragraph handle", ({ type, operation }) => {
+  const path = "src/shell/compositions/text.ts";
+  expect(
+    inspectRendering(
+      { [path]: "export function text(paragraph: HTMLParagraphElement): string { return paragraph.textContent ?? ''; }\n" },
+      `export interface Rendering { create(): ${type}; }\n` +
+        `export const rendering: Rendering = { create: () => ${operation} };\n`,
+    ),
+  ).toEqual(expect.arrayContaining([expect.objectContaining({ path, blocking: true })]));
+});
+
+test("an element factory does not authorize an escaped owner document", () => {
+  const path = "src/shell/compositions/text.ts";
+  expect(
+    inspectRendering({
+      [path]: "import { rendering } from '../adapters/rendering.js';\n" +
+        "export function owner(): string { return rendering.create('p').ownerDocument.documentElement.tagName; }\n",
+    }),
+  ).toEqual(expect.arrayContaining([expect.objectContaining({ path, blocking: true })]));
+});
+
+test("an unresolved indexed generic contract grants no native paragraph authority", () => {
+  const path = "src/shell/compositions/text.ts";
+  expect(
+    inspectRendering(
+      { [path]: "export function text(paragraph: HTMLParagraphElement): string { return paragraph.textContent ?? ''; }\n" },
+      "export interface Rendering { read<K extends string>(name: K): Record<K, unknown>[K]; }\n" +
+        "export const rendering: Rendering = { read: () => undefined };\n",
+    ),
+  ).toEqual(expect.arrayContaining([expect.objectContaining({ path, blocking: true })]));
+});
+
+test("an indexed mapped contract establishes its shared cancellation handle in Substrate", () => {
+  expect(
+    inspect({
+      [adapter]: "type HandleTypes = { signal: AbortSignal; controller: AbortController };\n" +
+        "type Handles = { [K in keyof HandleTypes]: HandleTypes[K] };\n" +
+        "export interface Cancellation { create<K extends keyof Handles>(kind: K): Handles[K]; }\n" +
+        "const handles: Handles = { signal: new AbortController().signal, controller: new AbortController() };\n" +
+        "export const cancellation: Cancellation = { create: (kind) => handles[kind] };\n",
+      "src/substrate/compositions/read.ts":
+        "import { cancellation } from '../adapters/cancellation.js';\n" +
+        "function signal(): AbortSignal { return cancellation.create('signal'); }\n" +
+        "export function read(): boolean { return signal().aborted; }\n",
+    }),
+  ).toEqual([]);
+});
+
+test("an indexed mapped Window contract stays forbidden in Substrate", () => {
+  const path = "src/substrate/compositions/read.ts";
+  const snapshot = sourceFixture({
+    "src/substrate/adapters/view.ts":
+      "type Handles = { [K in 'view']: Window };\n" +
+      "export interface View { create<K extends keyof Handles>(kind: K): Handles[K]; }\n" +
+      "const handles: Handles = { view: window };\n" +
+      "export const view: View = { create: (kind) => handles[kind] };\n",
+    [path]: "import { view } from '../adapters/view.js';\n" +
+      "export function read(): Window { return view.create('view'); }\n",
+  }, {
+    adapters: [{
+      module: "substrate/adapters/view",
+      export: "view",
+      capability: "view",
+      kind: "external",
+      zones: ["substrate"],
+      contract: { type: "View" },
+      globals: ["window"],
+    }],
+  });
+  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
+  expect(capabilityCheck(snapshot).findings).toEqual(
+    expect.arrayContaining([expect.objectContaining({ path, blocking: true })]),
+  );
+});
