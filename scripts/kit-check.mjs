@@ -10,6 +10,30 @@ export function startupCheckRoots(config) {
   return (config.exceptions ?? []).filter((path) => roots.some((root) => path.startsWith(`${root}/`)));
 }
 
+/** Compare shared snapshot graphs without expanding their references into JSON text. */
+export function sameSnapshot(first, second) {
+  const pairs = new WeakMap();
+  const name = (value) => value.replace(/^__@([\w$]+)@\d+$/, "__@$1");
+  const keys = (value) => Object.keys(value).filter((key) => value[key] !== undefined);
+  const same = (a, b) => {
+    if (Object.is(a, b)) return true;
+    if (typeof a === "string" && typeof b === "string") return name(a) === name(b);
+    if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    if (Array.isArray(a) && a.length !== b.length) return false;
+    const known = pairs.get(a);
+    if (known?.has(b)) return true;
+    if (known) known.add(b);
+    else pairs.set(a, new WeakSet([b]));
+    const ak = keys(a);
+    const bk = keys(b);
+    return ak.length === bk.length && ak.every((key, i) =>
+      name(key) === name(bk[i]) && same(a[key], b[bk[i]]),
+    );
+  };
+  return same(first, second);
+}
+
 // A baseline names each debt key it holds; it is a record, or a plain list of keys in a test. A legacy module's
 // size entry records its statements and how many of them only call into placed code.
 function recorded(baseline) {
@@ -177,9 +201,8 @@ async function main() {
     // well-known symbols per process, so a second extraction in one process differs only in those numbers.
     if (process.argv.includes("--fresh-compare")) {
       const fresh = readSnapshot(root, config);
-      const comparable = (snapshot) => JSON.stringify(snapshot).replace(/"__@([\w$]+)@\d+"/g, '"__@$1"');
       const same =
-        comparable(fresh) === comparable(checked.snapshot) &&
+        sameSnapshot(fresh, checked.snapshot) &&
         JSON.stringify(checkSnapshot(fresh)) === JSON.stringify(checked.result);
       if (!same) {
         process.stderr.write("Kit cache diverged: a fresh extraction differs from the cached one.\n");

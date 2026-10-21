@@ -19,7 +19,8 @@ its config, and its debt in its own baseline.
   - Proof: {{case-inventory}}
 - A cache hit reuses extraction and reruns the check; a corrupt cache is rebuilt, and a source change during
   extraction or checking rejects the result. `kit check --fresh-compare` also extracts afresh and fails when
-  the cached snapshot or its findings differ. · {#cached-check-keeps-evidence}
+  the cached snapshot or its findings differ. Snapshots too large for JSON remain reusable in their original
+  checkout. A storage failure is reported and leaves the fresh check authoritative. · {#cached-check-keeps-evidence}
 - A cached snapshot is reused only while every read its extraction made through {{filesystem}} and
   {{compiler}} returns the same: each file's bytes, each directory listing and each probe that found nothing.
   A change nothing read misses no entry, and worktrees of one repository share one cache. · {#cache-keys-on-what-was-read}

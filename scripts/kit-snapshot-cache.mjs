@@ -14,6 +14,7 @@ import {
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { deserialize, serialize } from "node:v8";
 import ts from "typescript";
 
 const VERSION = 2;
@@ -94,6 +95,7 @@ function headerOf(root, config, engineRoot) {
     JSON.stringify({
       version: VERSION,
       engine: engineHash(engineRoot),
+      node: process.version,
       typescript: ts.version,
       caseSensitive: ts.sys.useCaseSensitiveFileNames,
       cwd: cwd === root || cwd.startsWith(`${root}/`) ? relative(root, cwd) : cwd,
@@ -224,8 +226,8 @@ function putObject(store, text) {
   return { id, bytes: Buffer.byteLength(text) };
 }
 
-function getObject(store, id) {
-  const text = readFileSync(objectPath(store, id), "utf8");
+function getObject(store, id, encoding = "utf8") {
+  const text = readFileSync(objectPath(store, id), encoding);
   if (digest(text) !== id) throw new Error("Kit cache object is corrupt");
   return text;
 }
@@ -287,7 +289,9 @@ function lookup(store, header, root, adapters) {
     try {
       trace = JSON.parse(withRoot(getObject(store, entry.trace), root));
       if (!unchanged(trace, adapters)) continue;
-      snapshot = JSON.parse(withRoot(getObject(store, entry.payload), root));
+      snapshot = entry.encoding === "v8"
+        ? deserialize(getObject(store, entry.payload, null))
+        : JSON.parse(withRoot(getObject(store, entry.payload), root));
     } catch {
       forget(store, entry);
       continue;
@@ -301,11 +305,22 @@ function lookup(store, header, root, adapters) {
 }
 
 function remember(store, header, root, trace, snapshot, maxBytes) {
-  const payloadText = JSON.stringify(snapshot);
-  const { portable, externals } = portability(root, trace, payloadText);
+  let payload;
+  let encoding;
+  let portable = false;
+  let externals = [];
+  try {
+    payload = JSON.stringify(snapshot);
+    ({ portable, externals } = portability(root, trace, payload));
+  } catch {
+    // Binary encoding preserves shared graphs without expanding them into one enormous string.
+    // Its paths stay bound to this root; only the JSON format supports relocation.
+    payload = serialize(snapshot);
+    encoding = "v8";
+  }
   const stored = (text) => (portable ? withoutRoot(text, root) : text);
   const traceObject = putObject(store, stored(JSON.stringify(trace)));
-  const payloadObject = putObject(store, stored(payloadText));
+  const payloadObject = putObject(store, encoding === "v8" ? payload : stored(payload));
   const now = Date.now();
   const entry = {
     id: digest(JSON.stringify([header, traceObject.id, payloadObject.id, portable ? null : root])),
@@ -315,6 +330,7 @@ function remember(store, header, root, trace, snapshot, maxBytes) {
     externals,
     trace: traceObject.id,
     payload: payloadObject.id,
+    ...(encoding === undefined ? {} : { encoding }),
     bytes: traceObject.bytes + payloadObject.bytes,
     created: now,
     used: now,
@@ -351,6 +367,7 @@ export async function cachedSnapshot(root, config, readSnapshot, adapters, optio
   }
   let snapshot;
   let trace;
+  let storageError;
   if (found !== undefined) ({ snapshot, trace } = found);
   else {
     const recorded = { filesystem: [], compiler: [] };
@@ -364,8 +381,9 @@ export async function cachedSnapshot(root, config, readSnapshot, adapters, optio
     validate();
     try {
       remember(store, header, root, trace, snapshot, maxBytes);
-    } catch {
+    } catch (error) {
       // The cache is disposable; extraction remains the authority.
+      storageError = error instanceof Error ? error.message : String(error);
     }
   }
   return {
@@ -376,6 +394,7 @@ export async function cachedSnapshot(root, config, readSnapshot, adapters, optio
       reused: found !== undefined,
       inputs: trace.length,
       seconds: (performance.now() - started) / 1000,
+      ...(storageError === undefined ? {} : { storageError }),
     },
   };
 }
