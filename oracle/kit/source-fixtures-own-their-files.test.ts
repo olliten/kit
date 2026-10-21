@@ -53,6 +53,27 @@ test.each(["relative", "absolute"])("a %s path cannot write outside its project"
   }
 });
 
+test.each(["relative", "absolute"])("new fixture operations keep %s paths inside their project", (kind) => {
+  const project = temporaryProjects.open("kit-project-operations-");
+  const outside = temporaryProjects.open("kit-project-untouched-");
+  try {
+    outside.write({ "sentinel.txt": "unchanged" });
+    const destination = join(outside.root, "sentinel.txt");
+    const path = kind === "relative" ? relative(project.root, destination) : destination;
+    expect(() => project.directory(path)).toThrow(/inside the temporary project/);
+    expect(() => project.remove(path)).toThrow(/inside the temporary project/);
+    expect(() => project.symlink(path, "link")).toThrow(/inside the temporary project/);
+    expect(() => project.symlink("inside", path)).toThrow(/inside the temporary project/);
+    expect(() => project.remove(".")).toThrow(/inside the temporary project/);
+    expect(readFileSync(destination, "utf8")).toBe("unchanged");
+    expect(existsSync(join(project.root, "link"))).toBe(false);
+    expect(existsSync(project.root)).toBe(true);
+  } finally {
+    project.dispose();
+    outside.dispose();
+  }
+});
+
 test("source fixtures preserve multiple code roots and compiler path mappings", () => {
   const snapshot = sourceFixture(
     {
