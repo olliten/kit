@@ -18,6 +18,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **declared-input** — explicit file, suffix-filtered tree and path-kind inputs, separated into data and code with a supplied key format and runtime identity.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **default-config** — the target layout, as the config an app starts from.
   - Role: fact
   - Zone: core
@@ -153,6 +157,10 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
+- **declared-input-files** — access to binary file inputs, directory resolution and their deterministic declared keys.
+  - Role: adapter
+  - Zone: substrate
+  - Of: {{declared-input}}
 - **filesystem** — access to file text and directory entries.
   - Role: adapter
   - Zone: substrate
