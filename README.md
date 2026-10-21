@@ -87,6 +87,19 @@ Each row appears at most once and contains only distinct, comma-separated refere
 there are no modules to name. Existing inline references remain supported without assigning them an
 implicit role.
 
+Claims may also be table rows. Each data row is one claim, with its anchor closing the final cell:
+
+```markdown
+| Command | What it does | Available when |
+| --- | --- | --- |
+| Decline | Saves the reviewer's reason. | An article is open. · {#decline-needs-reason} |
+```
+
+All cells together state the claim and contribute their references. The same anchor binds the same
+proof file whether the claim is a list item or a row. Optional `Implementation` and `Proof` columns
+hold comma-separated module references; an empty cell omits that relationship. Headers declare no
+claims. If row order or table completeness is a promise, state and prove it as a separate claim.
+
 The claim test is the outer proof entrypoint: it registers cases, wires modules and asserts results.
 Reusable proof modules use the same adapters, primitives, readings and compositions as production
 code. They do not repeat the claim anchor. A straightforward test needs no separate composition merely
