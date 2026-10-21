@@ -20,7 +20,8 @@ compositions wire the others into behaviour.
 
 ## Dependencies
 
-- Within a zone, a module imports its own layer or an earlier one; across zones, imports point inward to the
+- Within a zone, primitives import primitives, readings import primitives or readings, and compositions may
+  import any layer. Adapters import only primitive data contracts. Across zones, imports point inward to the
   core; an import with a legacy end is not held, and a repeated import is one finding. · {#imports-point-inward}
   - Implementation: {{dependency-check}}, {{import}}
   - Proof: {{fixture-snapshot}}
