@@ -119,7 +119,9 @@ async function main() {
       const concepts = termModel(snapshot);
       const topicSnapshot = {
         ...snapshot,
-        claims: snapshot.claims.filter((claim) => !config.legacyAreas.includes(claim.file)),
+        claims: snapshot.claims.filter((claim) =>
+          !config.legacyAreas.includes(claim.file) || claim.implementation || claim.proof,
+        ),
       };
       const structural = [
         ...exclusions.findings,
