@@ -114,8 +114,8 @@ function inputKeyOf(declaration: InputDeclaration, root: string, context: KeyCon
   const directoriesOf = (declarations: readonly InputDecl[]): string[] =>
     declarations.flatMap((item) => "file" in item && kindOf(join(root, item.file)) === "dir" ? [item.file] : []);
   const kindsOf = (declarations: readonly InputDecl[]): [string, string][] =>
-    declarations.flatMap((item) => "present" in item
-      ? [[item.present, kindOf(join(root, item.present)) ?? "absent"] as [string, string]] : []);
+    declarations.flatMap<[string, string]>((item) => "present" in item
+      ? [[item.present, kindOf(join(root, item.present)) ?? "absent"]] : []);
   return keyOver(name, filesOf(inputs), filesOf(code), context,
     directoriesOf(inputs), directoriesOf(code), kindsOf(inputs), kindsOf(code));
 }
