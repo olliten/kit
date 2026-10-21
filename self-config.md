@@ -27,6 +27,10 @@ packages:
     entrypointExports: [describe, test, expect]
   - name: mdast-util-from-markdown
     capabilities: []
+  - name: mdast-util-gfm-table
+    capabilities: []
+  - name: micromark-extension-gfm-table
+    capabilities: []
   - name: node:crypto
     capabilities: []
   - name: node:fs

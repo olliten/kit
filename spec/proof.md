@@ -5,10 +5,11 @@ a claim depends on are named in it, so each module's claims are found from its n
 
 ## Topics
 
-- A topic is a `# ` title, an intro of at most three sentences, then only `## ` sections and claims; a
-  claim may follow its closing paragraph with one unordered list of plain `Implementation:` and `Proof:`
-  rows, each occurring at most once and containing a nonempty comma-separated list of distinct module
-  references. Other nested blocks, a module heading or prose after the intro are findings. · {#topics-have-one-shape}
+- A topic is a `# ` title, an intro of at most three sentences, then only `## ` sections and claims, presented
+  as list items or Markdown table rows. A list claim may follow its closing paragraph with one unordered
+  list of plain `Implementation:` and `Proof:` rows, each occurring at most once and containing a nonempty
+  comma-separated list of distinct module references. Other nested blocks, a module heading or prose after
+  the intro are findings. · {#topics-have-one-shape}
   - Implementation: {{topic-shape}}
   - Proof: {{fixture-snapshot}}
 
@@ -19,14 +20,29 @@ a claim depends on are named in it, so each module's claims are found from its n
 
 ## Claims
 
-- A claim is a list item whose promise paragraph closes with its anchor, declared once and proved by
-  one or more tests at
+- A claim is a list item whose promise paragraph closes with its anchor, or a table data row whose final
+  cell closes with its anchor. Either is declared once and proved by one or more tests at
   `oracle/<topic>/<anchor>.test.ts` or `oracle/<topic>/<anchor>.<variant>.test.ts`; a claim without a test,
   a repeated claim and a test that names no claim of its topic are findings ({{claim}},
   {{claim-inventory}}, {{claim-proof-binder}}). Implementation names modules providing the claimed
   behavior, and Proof names shared proof machinery; neither relationship assigns a code root, and both
   contribute to the same reference inventory. · {#claims-have-one-home}
   - Proof: {{binding-findings}}
+- A claim table has a header naming its fields and one claim per data row, with one cell for each header.
+  Every row has exactly one closing anchor; its cells together state that claim. Headers and separators declare no claims, and cells
+  are not separate claims. References and module names are read from every cell with the same rules as
+  list claims. Moving a claim between the two presentations keeps its anchor, proof binding and reference
+  relationships. A promise about row order or table completeness is a separate claim; layout alone declares
+  neither. · {#table-rows-present-claims}
+  - Implementation: {{topic-shape}}, {{claim-inventory}}
+  - Proof: {{fixture-snapshot}}, {{binding-findings}}
+- A claim table may have at most one `Implementation` column and one `Proof` column. A nonempty cell in
+  either holds the same nonempty comma-separated list of distinct module references as that list-claim
+  annotation; an empty cell omits the relationship for that row. The row's closing anchor is not part of an
+  annotation value. The two presentations give the same relationships to the same reference inventory.
+  · {#table-annotations-keep-claim-relationships}
+  - Implementation: {{topic-shape}}, {{claim-inventory}}
+  - Proof: {{fixture-snapshot}}, {{binding-findings}}
 - In a configured legacy area, an anchored paragraph followed by explanatory bullets, or a
   `### law · id — explanation` heading, declares a claim; new topics keep the strict grammar
   ({{claim-inventory}}). · {#legacy-claims-keep-their-grammar}

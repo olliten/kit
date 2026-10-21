@@ -66,7 +66,7 @@ test("a topic has no module headings; modules are named by the claims they keep"
   expect(shape("# Tally\n\n### Totals\n")).toEqual(["R4:topic-shape:3"]);
 });
 
-test("code, tables and quotes do not belong in a topic", () => {
+test("code blocks do not belong in a topic", () => {
   expect(shape("# Tally\n\n```ts\nconst x = 1;\n```\n")).toEqual(["R4:topic-shape:3"]);
 });
 
