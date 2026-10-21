@@ -143,7 +143,7 @@ async function main() {
         !config.legacyAreas.includes(claim.file) || claim.implementation || claim.proof,
       ),
     });
-    if (!process.argv.includes("--report") && !process.argv.includes("--tighten")) {
+    if (!["--report", "--tighten", "--fresh-compare"].some((flag) => process.argv.includes(flag))) {
       const metadata = readSnapshotMetadata(root, config);
       const failures = [
         ...claimProofBinder(topicSnapshotOf(metadata)),
