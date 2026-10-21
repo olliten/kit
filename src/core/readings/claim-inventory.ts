@@ -103,6 +103,7 @@ export function claimInventory(
   const references: ClaimMarker[] = [];
   const declared = new Map<Text, number>();
   let legacyHeading: string | null = null;
+  let legacyHeadingLine = 0;
   let headingMarkerConsumed = false;
   const pattern = options.anchor ?? "\\{#[\\w-]+\\}";
   const matches = (value: string): RegExpStringIterator<RegExpExecArray> =>
@@ -134,9 +135,15 @@ export function claimInventory(
       declared.set(tail, match.index);
       const claim =
         terms.length === 0 ? marker(tail, match) : { ...marker(tail, match), terms, ...modules };
-      if (options.legacy && legacyHeading === claim.anchor && !headingMarkerConsumed)
+      if (options.legacy && legacyHeading === claim.anchor && !headingMarkerConsumed) {
         headingMarkerConsumed = true;
-      else declarations.push(claim);
+        const index = declarations.findIndex(
+          (heading) => heading.anchor === legacyHeading && heading.line === legacyHeadingLine,
+        );
+        const heading = declarations[index];
+        if (heading !== undefined && terms.length > 0)
+          declarations[index] = { ...heading, terms, ...modules };
+      } else declarations.push(claim);
     }
   };
   const visit = (node: Nodes): void => {
@@ -168,6 +175,7 @@ export function claimInventory(
           : null;
         if (law?.[1]) {
           legacyHeading = law[1];
+          legacyHeadingLine = node.position?.start.line ?? 1;
           if (
             !declarations.some(
               (claim) => claim.anchor === law[1] && claim.line === node.position?.start.line,
