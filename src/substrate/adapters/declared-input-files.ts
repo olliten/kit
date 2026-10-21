@@ -16,7 +16,7 @@ export interface DeclaredInputFiles {
 
 function frame(hash: ReturnType<typeof createHash>, bytes: Uint8Array): void {
   const length = new Uint8Array(8);
-  new DataView(length.buffer).setBigUint64(0, BigInt(bytes.length), true);
+  new DataView(length.buffer).setBigUint64(0, BigInt(bytes.length), false);
   hash.update(length);
   hash.update(bytes);
 }
