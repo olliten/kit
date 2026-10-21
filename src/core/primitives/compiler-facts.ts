@@ -33,6 +33,8 @@ export interface CompilerFacts {
       readonly file: string;
       readonly specifier: string;
       readonly target: string | null;
+      // An ambient module's declaration home establishes a direct type boundary, not its runtime imports.
+      readonly declarationTarget?: string;
       readonly typeOnly: boolean;
       // Original names of named runtime imports. Null is a namespace, default, re-export or dynamic edge;
       // an absent fact cannot establish a restricted package boundary.

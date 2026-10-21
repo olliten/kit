@@ -273,6 +273,10 @@ helpers and re-exports to keep a reference model separate from the implementatio
 type contracts remain allowed. Transitive checks retain uncertainty at opaque boundaries, even when
 a package is declared pure. These checks establish dependency separation, not model correctness.
 
+Direct checks also use an ambient module's single declaration home, such as Node built-in declarations.
+That evidence does not classify the package as pure or establish its runtime dependencies. Multiple
+ambient declaration homes retain uncertainty; transitive checks still require runtime import evidence.
+
 ```sh
 git clone <this repo> ../kit && (cd ../kit && npm install)
 ```

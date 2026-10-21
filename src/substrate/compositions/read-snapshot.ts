@@ -281,6 +281,14 @@ function readCompiler(
       const { parsed, readError, program } = compilerWorkspace.load(absolute, trace);
       scopes.push({ directory: posix.dirname(file), file, options: parsed.options, program });
       const checker = program.getTypeChecker();
+      const ambientTargets = new Map<string, { readonly declarationTarget: string }>(
+        checker.getAmbientModules().flatMap((symbol) => {
+          const homes = [...new Set((symbol.declarations ?? []).map((node) => local(node.getSourceFile().fileName)))];
+          return homes.length === 1 && homes[0] !== undefined
+            ? [[symbol.name, { declarationTarget: homes[0] }] as const]
+            : [];
+        }),
+      );
       const importTarget = (specifier: string, containingFile: string): string | null => {
         const resolved = compilerWorkspace.resolve(specifier, containingFile, parsed.options, trace);
         if (resolved === undefined) return null;
@@ -1030,6 +1038,7 @@ function readCompiler(
               file: path,
               specifier: node.moduleSpecifier.text,
               target: importTarget(node.moduleSpecifier.text, sf.fileName),
+              ...ambientTargets.get(JSON.stringify(node.moduleSpecifier.text)),
               typeOnly: typeOnlyOf(node),
               namedImports: ts.isImportDeclaration(node) &&
                 node.importClause?.name === undefined &&
@@ -1112,6 +1121,7 @@ function readCompiler(
                   file: path,
                   specifier: specifier.text,
                   target: importTarget(specifier.text, sf.fileName),
+                  ...ambientTargets.get(JSON.stringify(specifier.text)),
                   typeOnly: false,
                   namedImports: null,
                 });
