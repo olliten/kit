@@ -521,7 +521,7 @@ function readCompiler(
           }];
         } else {
           const constraint =
-            (type.flags & ts.TypeFlags.TypeParameter) !== 0
+            (type.flags & (ts.TypeFlags.TypeParameter | ts.TypeFlags.IndexedAccess)) !== 0
               ? checker.getBaseConstraintOfType(type)
               : undefined;
           const contents = type.isUnionOrIntersection()
