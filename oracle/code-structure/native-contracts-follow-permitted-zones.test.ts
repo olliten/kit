@@ -182,9 +182,10 @@ test("an unresolved indexed generic contract grants no native paragraph authorit
 test("an indexed mapped contract establishes its shared cancellation handle in Substrate", () => {
   expect(
     inspect({
-      [adapter]: "type Handles = { [K in 'signal']: AbortSignal };\n" +
+      [adapter]: "type HandleTypes = { signal: AbortSignal; controller: AbortController };\n" +
+        "type Handles = { [K in keyof HandleTypes]: HandleTypes[K] };\n" +
         "export interface Cancellation { create<K extends keyof Handles>(kind: K): Handles[K]; }\n" +
-        "const handles: Handles = { signal: new AbortController().signal };\n" +
+        "const handles: Handles = { signal: new AbortController().signal, controller: new AbortController() };\n" +
         "export const cancellation: Cancellation = { create: (kind) => handles[kind] };\n",
       "src/substrate/compositions/read.ts":
         "import { cancellation } from '../adapters/cancellation.js';\n" +
