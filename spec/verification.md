@@ -5,6 +5,11 @@ prerequisites and resource needs, so evidence reuse and execution can be planned
 
 ## Evidence
 
+- Declared file inputs key the named data and code separately, with an explicit format and runtime identity.
+  File bytes and suffix-filtered trees include additions and removals; a presence declaration keys only a
+  path's absent, file or directory kind. Resolution follows symbolic links and preserves binary bytes;
+  unreadable inputs fail instead of producing a key. Declaration order and checkout location do not change
+  the key ({{declared-input}}, {{declared-input-files}}). · {#declared-inputs-determine-the-key}
 - A result satisfies a required check only when its identity, inputs and execution contract match, it passed,
   and its strength meets the requirement. Unknown inputs and a policy requiring fresh execution reuse
   nothing ({{verification}}, {{verification-plan}}). · {#evidence-matches-inputs}

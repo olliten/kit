@@ -9,6 +9,11 @@ execution contracts and required strength. The caller supplies discovery, input 
 and policy. A fresh policy runs every required check; an incremental policy reuses only matching successful
 evidence. No branch name, Git provider or test framework is built into the planner.
 
+For checks with declared filesystem inputs, `declaredInputFiles` in
+`src/substrate/adapters/declared-input-files.ts` resolves files, suffix-filtered trees and path-kind probes
+into an input key. Data and code are separate domains; the caller supplies the key format and runtime
+identity. This keys only declared inputs: it does not discover a check's reads or choose its cache policy.
+
 ## Why
 
 Most conventions in a codebase exist so a person can read it. Agents don't read that way: an agent starts each
