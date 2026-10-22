@@ -122,19 +122,24 @@ export function kitCheckPaths(args, engineRoot, cwd = process.cwd()) {
  * @returns {string[]}
  */
 export function testRoots(declaration) {
-  const oracle = declaration.roots?.oracle;
-  const normalized = typeof oracle === "string" ? posix.normalize(oracle).replace(/\/$/, "") : "";
-  if (
-    typeof oracle !== "string" ||
-    !oracle ||
-    oracle.trim() !== oracle ||
-    oracle.includes("\\") ||
-    /^[a-z]:/i.test(oracle) ||
-    /[*?{}[\]]/.test(oracle) ||
-    posix.isAbsolute(oracle) ||
-    oracle.split("/").includes("..") ||
-    normalized === "."
-  )
-    throw new Error("The Kit configuration must declare one relative oracle directory.");
-  return [...new Set(["spec", "src", "__tests__", normalized])];
+  const legacy = declaration["legacy-test-roots"] === undefined ? [] : declaration["legacy-test-roots"];
+  if (!Array.isArray(legacy))
+    throw new Error("The Kit configuration's legacy-test-roots must list relative directories.");
+  const roots = [...legacy, declaration.roots?.oracle].map((root) => {
+    const normalized = typeof root === "string" ? posix.normalize(root).replace(/\/$/, "") : "";
+    if (
+      typeof root !== "string" ||
+      !root ||
+      root.trim() !== root ||
+      root.includes("\\") ||
+      /^[a-z]:/i.test(root) ||
+      /[*?{}[\]!]/.test(root) ||
+      posix.isAbsolute(root) ||
+      root.split("/").some((part) => part === "." || part === "..") ||
+      normalized === "."
+    )
+      throw new Error("Proof roots must be relative directories without patterns or dot segments.");
+    return normalized;
+  });
+  return [...new Set(roots)];
 }
