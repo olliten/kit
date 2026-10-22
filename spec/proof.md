@@ -52,3 +52,12 @@ a claim depends on are named in it, so each module's claims are found from its n
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}
   - Implementation: {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}
   - Proof: {{fixture-snapshot}}
+
+## Changes
+
+- Given a base, `kit check --base <ref>` also checks what the change did since it left that ref. A claim's
+  test it edited is a finding unless the claim's topic changed too, or a commit says why in a line
+  `Test fix: <test path>: <reason>`. An added or deleted test, and a shared proof module, change no promise.
+  · {#tests-change-with-their-topic}
+  - Implementation: {{test-change-check}}, {{change-log}}, {{change-history}}
+  - Proof: {{fixture-snapshot}}, {{temporary-repository}}
