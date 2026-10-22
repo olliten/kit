@@ -116,7 +116,7 @@ export function tightenedBaseline(baseline, findings) {
 
 async function main() {
   const engineRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-  const { root, configPath, baselinePath } = kitCheckPaths(process.argv.slice(2), engineRoot);
+  const { root, configPath, baselinePath, base } = kitCheckPaths(process.argv.slice(2), engineRoot);
   const declared = kitConfig(readFileSync(configPath, "utf8"));
   await withKit(engineRoot, async (load) => {
     const { DEFAULT_CONFIG } = await load("src/core/primitives/default-config.ts");
@@ -136,6 +136,8 @@ async function main() {
     const { placementOf } = await load("src/core/readings/placement-of.ts");
     const { topicShape } = await load("src/core/readings/topic-shape.ts");
     const { legacySize } = await load("src/core/readings/legacy-size.ts");
+    const { testChangeCheck } = await load("src/core/readings/test-change-check.ts");
+    const { changeLog } = await load("src/substrate/adapters/change-log.ts");
     const config = configuredKit(DEFAULT_CONFIG, declared);
     const checkSnapshot = (snapshot) => {
       const capability = capabilityCheck(snapshot);
@@ -211,7 +213,19 @@ async function main() {
       }
       process.stdout.write("Kit fresh-compare: the cached snapshot equals a fresh extraction.\n");
     }
-    const { findings, placedPaths, imports, requiredLimits } = checked.result;
+    const { placedPaths, imports, requiredLimits } = checked.result;
+    // What a change did since its base is outside the snapshot, so it is never cached and never debt.
+    const changed =
+      base === undefined
+        ? []
+        : testChangeCheck(checked.snapshot, changeLog.since(root, base)).map((item) => ({
+            ...item,
+            category: "placed-violation",
+            status: "violation",
+            blocking: true,
+            limit: "",
+          }));
+    const findings = [...checked.result.findings, ...changed];
     if (process.argv.includes("--report")) {
       process.stdout.write(JSON.stringify({ findings, receipt: checked.receipt }, null, 2) + "\n");
       return;
@@ -225,7 +239,7 @@ async function main() {
       startupCheckRoots(config),
       config.legacyGrowth,
     );
-    const failures = [...new Map([...ratcheted, ...requiredLimits].map((item) => [item.debtKey, item])).values()];
+    const failures = [...new Map([...ratcheted, ...requiredLimits, ...changed].map((item) => [item.debtKey, item])).values()];
     if (process.argv.includes("--tighten")) {
       const tightened = JSON.stringify(tightenedBaseline(baseline, findings), null, 2) + "\n";
       if (tightened !== JSON.stringify(baseline, null, 2) + "\n") writeFileSync(baselinePath, tightened);
