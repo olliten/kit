@@ -9,7 +9,7 @@ import type { ImportEdge } from "../../core/primitives/import.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
-import { moduleFileOf, placementOf, rootOf } from "../../core/readings/placement-of.js";
+import { legacyCodeOf, moduleFileOf, placementOf, rootOf } from "../../core/readings/placement-of.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
@@ -119,7 +119,8 @@ export function readSnapshot(
     }
     if (type === "source") {
       for (const m of text.matchAll(EXPORT)) symbols.push({ file: path, name: m[1] ?? "" });
-      if (rootOf(path, config.srcRoot) !== undefined) sources.set(path, text);
+      if (rootOf(path, config.srcRoot) !== undefined || legacyCodeOf(path, config.layout?.legacy))
+        sources.set(path, text);
     }
     comments.push(...commentsOf(path, text));
     specifiers.push({

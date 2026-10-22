@@ -1,6 +1,6 @@
 import { cycles } from "./dependency-check.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { moduleFileOf, placementOf, rootOf } from "./placement-of.js";
+import { legacyCodeOf, moduleFileOf, placementOf, rootOf } from "./placement-of.js";
 
 export interface CapabilityFinding extends Finding {
   readonly status: "violation" | "unresolved" | "review-held";
@@ -55,13 +55,13 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       (file) =>
         (file.type === "source" ||
           (file.type === "test" && snapshot.config.exceptions?.includes(file.path))) &&
-        rootOf(file.path, roots) !== undefined,
+        (rootOf(file.path, roots) !== undefined || legacyCodeOf(file.path, snapshot.config.layout?.legacy)),
     )
     .map((file) => file.path);
   const zoneOf = (path: string): string | undefined => {
     const root = rootOf(path, roots);
-    if (root === undefined) return undefined;
-    const zone = path.slice(root.length + 1).split("/")[0];
+    if (root === undefined && !legacyCodeOf(path, snapshot.config.layout?.legacy)) return undefined;
+    const zone = root === undefined ? undefined : path.slice(root.length + 1).split("/")[0];
     if (zone === "core" || zone === "shell" || zone === "substrate") return zone;
     return snapshot.config.legacyZones?.find((row) =>
       "files" in row
@@ -204,7 +204,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       limit,
     );
   for (const path of snapshot.config.exceptions ?? []) {
-    if (rootOf(path, roots) === undefined) continue;
+    if (rootOf(path, roots) === undefined && !legacyCodeOf(path, snapshot.config.layout?.legacy)) continue;
     if (
       !files.includes(path) ||
       /[*?{}[\]\\]/.test(path) ||

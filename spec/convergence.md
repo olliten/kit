@@ -5,6 +5,13 @@ and its size are debt that may only shrink, and placed code is held to every rul
 
 ## Findings
 
+- Configured legacy code locations remain in extraction, authority and size accounting without becoming
+  module roots or acquiring layers. Existing unplaced code inside a target root remains ordinary debt;
+  location debt and architectural debt drain independently. Neither a legacy location nor its baseline
+  can waive a placed violation or reachable checker limit. · {#legacy-locations-stay-under-the-ratchet}
+  - Implementation: {{layout-check}}, {{legacy-size}}, {{capability-check}}, {{placement-of}}, {{read-snapshot}}
+  - Proof: {{source-fixture}}
+
 - A finding carries its rule, path and fix, and a debt key made of rule, check, path and detail
   ({{finding}}). · {#finding-debt-key}
 - The check rejects new legacy debt, every violation in placed code or a declared executable entrypoint,

@@ -1,6 +1,6 @@
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { placementOf, rootOf } from "./placement-of.js";
+import { legacyCodeOf, placementOf, rootOf } from "./placement-of.js";
 
 export interface LegacySizeFinding extends Finding {
   readonly status: "violation";
@@ -21,7 +21,7 @@ export function legacySize(snapshot: Snapshot): LegacySizeFinding[] {
   return (snapshot.sizes ?? [])
     .filter(
       ({ file }) =>
-        rootOf(file, srcRoot) !== undefined &&
+        (rootOf(file, srcRoot) !== undefined || legacyCodeOf(file, snapshot.config.layout?.legacy)) &&
         !placementOf(file, srcRoot).placed &&
         !exceptions.includes(file),
     )

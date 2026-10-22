@@ -16,6 +16,17 @@ its config, and its debt in its own baseline.
   without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy
   discovery grants no placement or capability permission. · {#proof-discovery-is-configured}
 
+- An app may opt into directory roles with `layout: { legacy: [...] }`. Source and shared proof code
+  belong in its governed code roots, tests in its proof root, and Markdown in its specification root
+  rather than code roots. The proof root is one governed code root; the specification root is separate.
+  Other Markdown and non-code assets are not specifications merely by existing in the repository.
+  Exact relative legacy files or directories retain their misplaced files as location debt; new location
+  debt fails the ratchet. Missing or malformed legacy locations fail configuration. Legacy locations
+  grant no module placement, capability or executable-entrypoint permission. Without a layout declaration,
+  existing configuration keeps its behavior. · {#directory-roles-are-configured}
+  - Implementation: {{layout-check}}, {{placement-of}}, {{read-snapshot}}
+  - Proof: {{source-fixture}}
+
 - {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
   {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
   - Proof: {{binding-findings}}

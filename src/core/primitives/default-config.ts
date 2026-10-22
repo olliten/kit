@@ -3,6 +3,8 @@ export interface KitConfig {
   readonly srcRoot: string | readonly string[];
   readonly oracleRoot: string;
   readonly specRoot: string;
+  // Opt in to directory roles; these existing locations remain checked legacy code, never extra module roots.
+  readonly layout?: { readonly legacy: readonly string[] };
   // The app's language: one `- **term** — meaning` line per domain term (R3, names).
   readonly termsFile: string;
   // The small words a name may carry without a term line (R3, names).
