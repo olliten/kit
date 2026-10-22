@@ -47,6 +47,25 @@ test("a changed config misses", async () => {
   expect(changed.receipt.reused).toBe(false);
 }, 120_000);
 
+test("legacy coverage and a new legacy helper invalidate cached size accounting", async () => {
+  const app = cacheApp();
+  app.put("historical/helper.ts", "export const value = 1;\n");
+  const initial = await app.run();
+  expect(initial.result.sizes?.some(({ file }) => file === "historical/helper.ts")).toBe(false);
+  const config = { ...CACHE_CONFIG, layout: { legacy: ["historical"] } };
+  const covered = await app.run(config);
+  expect(covered.receipt.reused).toBe(false);
+  expect(covered.result.sizes).toContainEqual(expect.objectContaining({ file: "historical/helper.ts" }));
+  app.put("historical/new.ts", "export const value = 2;\n");
+  const changed = await app.run(config);
+  expect(changed.receipt.reused).toBe(false);
+  expect(changed.result.sizes).toContainEqual(expect.objectContaining({ file: "historical/new.ts" }));
+  const unchanged = await app.run(config);
+  expect(unchanged.receipt.reused).toBe(true);
+  expect(unchanged.result).toEqual(readSnapshot(app.root, config));
+  expect(app.counts()).toEqual({ extractions: 3, checks: 4 });
+}, 120_000);
+
 // None of these is a read extraction made, so none can change the snapshot.
 const HITS: Readonly<Record<string, (app: ReturnType<typeof cacheApp>) => void>> = {
   "a new file in an ignored path": (app) => app.put("evidence/read-cost/2.json", "{}\n"),
