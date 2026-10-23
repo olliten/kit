@@ -266,7 +266,9 @@ test.each(["factory-options", "typed-literal"])("an acquired SDK handle retains 
   ]));
 });
 
-test.each([false, true])("an SDK method's returned handle retains its receiver's callback state: %s", (mutated) => {
+test.each([false, true].flatMap((mutated) => [false, true].map((indexed) => ({ mutated, indexed }))))(
+  "an SDK method's returned handle retains its receiver's callback state: $mutated/$indexed",
+  ({ mutated, indexed }) => {
   const findings = inspectSdk({
     ...sdkFactoryFiles,
     "node_modules/browser-sdk/index.d.ts":
@@ -277,7 +279,7 @@ test.each([false, true])("an SDK method's returned handle retains its receiver's
       "import { clock } from '../adapters/clock.js';\n" +
       "export function boot(): Page { const page = lease.open(); " +
       (mutated ? "page.title = () => String(clock.now()); " : "") +
-      "return page.clone(); }\n",
+      (indexed ? "return page['clone'](); }\n" : "return page.clone(); }\n"),
     "legacy/helper.ts": sdkCall +
       "import { boot } from '../src/shell/compositions/boot.js';\n" +
       "export function read(): string { return title(boot()); }\n",
@@ -293,7 +295,8 @@ test.each([false, true])("an SDK method's returned handle retains its receiver's
       "R1:migration-zone:legacy/helper.ts:src/shell/compositions/boot.ts",
     ]);
   }
-});
+  },
+);
 
 test("a later spread cannot hide the retained callbacks of the selected SDK handle", () => {
   expect(inspectSdk({
