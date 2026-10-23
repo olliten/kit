@@ -2043,6 +2043,15 @@ function captureReach(
     parameters: new Set(),
   });
   const pieces = new Map<Key, Piece>();
+  const aliases = new Map<ts.Symbol, Map<string, Selected>>();
+  const selectedOf = (symbol: ts.Symbol, path: readonly string[] = [], result = false): Selected => {
+    let paths = aliases.get(symbol);
+    if (paths === undefined) aliases.set(symbol, paths = new Map());
+    const identity = JSON.stringify([path, result]);
+    let key = paths.get(identity);
+    if (key === undefined) paths.set(identity, key = { selected: symbol, path, result });
+    return key;
+  };
   const retainedKeys = new Map<ts.Node, Map<string, Retained>>();
   const retainedOf = (node: ts.Node, path: readonly string[] = []): Retained => {
     let paths = retainedKeys.get(node);
@@ -2333,6 +2342,115 @@ function captureReach(
     for (const reference of homeReferences(symbol)) flow(reference, piece, seen);
     return piece;
   };
+  // A container holds its members; a member does not hold its container or its siblings. Retained
+  // native values follow the slot that aliases them, distinguishing replacement from a write through it.
+  const selected = ({ selected: symbol, path, result }: Selected): Piece => {
+    const piece = empty();
+    const seen = new Map<ts.Node, Set<string>>();
+    const follow = (node: ts.Node, selection: readonly string[]): void => {
+      let paths = seen.get(node);
+      if (paths === undefined) seen.set(node, paths = new Set());
+      const identity = JSON.stringify(selection);
+      if (paths.has(identity)) return;
+      paths.add(identity);
+      let top = node;
+      const keys: string[] = [];
+      for (;;) {
+        const parent = top.parent;
+        if ((ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) && parent.expression === top) {
+          keys.push(ts.isPropertyAccessExpression(parent) ? parent.name.text :
+            ts.isStringLiteralLike(parent.argumentExpression) || ts.isNumericLiteral(parent.argumentExpression) ? parent.argumentExpression.text : "*");
+        } else if (!(ts.isParenthesizedExpression(parent) || ts.isNonNullExpression(parent) ||
+            ts.isAsExpression(parent) || ts.isSatisfiesExpression(parent))) break;
+        top = parent;
+      }
+      const parent = top.parent;
+      const call = ts.isCallExpression(parent) && parent.expression === top ? parent : undefined;
+      const method = call !== undefined && ts.isPropertyAccessExpression(top) ? top : undefined;
+      const declaration = call === undefined ? undefined : checker.getResolvedSignature(call)?.declaration;
+      const array = declaration !== undefined && ts.isMethodSignature(declaration) &&
+        ts.isInterfaceDeclaration(declaration.parent) && ["Array", "ReadonlyArray"].includes(declaration.parent.name.text) &&
+        program.isSourceFileDefaultLibrary(declaration.getSourceFile());
+      const overlap = (a: readonly string[], b: readonly string[]): boolean =>
+        a.length === b.length && a.every((key, index) => key === "*" || b[index] === "*" || key === b[index]);
+      const slot = selection.at(-1);
+      const indexed = slot !== undefined && (slot === "*" || /^\d+$/.test(slot));
+      if (indexed && assignment(parent) && within(top, parent.left) &&
+          overlap(keys.slice(0, -1), selection.slice(0, -1)) && checker.getTypeAtLocation(top).getCallSignatures().length > 0) {
+        piece.edges.push(parent.right);
+        return;
+      }
+      if (array && method !== undefined && indexed &&
+          overlap(keys.slice(0, -1), selection.slice(0, -1)) && ["map", "forEach"].includes(method.name.text)) {
+        const callback = call?.arguments[0];
+        const fn = callback === undefined ? undefined : ts.isFunctionLike(callback) ? callback :
+          checker.getTypeAtLocation(callback).getCallSignatures()[0]?.declaration;
+        if (fn !== undefined && !fn.getSourceFile().isDeclarationFile) {
+          const item = fn.parameters[0];
+          if (item !== undefined && !ts.isQualifiedName(item.name)) for (const held of bindingSymbols(item.name)) piece.edges.push(selectedOf(held));
+          const collection = fn.parameters[2];
+          if (collection !== undefined && !ts.isQualifiedName(collection.name)) for (const held of bindingSymbols(collection.name)) piece.edges.push(selectedOf(held, ["*"]));
+        } else if (callback !== undefined) piece.edges.push(callback);
+        return;
+      }
+      const shared = Math.min(keys.length, selection.length);
+      if (!overlap(keys.slice(0, shared), selection.slice(0, shared))) return;
+      if (keys.length > selection.length) {
+        flow(node, piece, new Set());
+        return;
+      }
+      const remaining = selection.slice(keys.length);
+      const bind = (name: ts.BindingName, suffix = remaining): void => {
+        for (const held of bindingSymbols(name)) piece.edges.push(selectedOf(held, suffix));
+      };
+      if (assignment(parent)) {
+        // Replacing an element only changes the slot, not the value formerly stored there.
+        if (!within(top, parent.left)) {
+          const holder = holderOf(parent.left);
+          if (holder !== undefined) piece.edges.push(selectedOf(holder, remaining));
+          else flow(node, piece, new Set());
+        }
+      } else if (ts.isVariableDeclaration(parent) && parent.initializer === top) bind(parent.name);
+      else if (ts.isCallExpression(parent) || ts.isNewExpression(parent)) {
+        const args = parent.arguments ?? [];
+        const index = args.findIndex((argument) => argument === top);
+        const called = checker.getResolvedSignature(parent)?.declaration;
+        const input = called !== undefined && ts.isFunctionLike(called) && !called.getSourceFile().isDeclarationFile
+          ? called.parameters[Math.min(index, called.parameters.length - 1)] : undefined;
+        const receiver = ts.isPropertyAccessExpression(parent.expression) ? parent.expression.expression : undefined;
+        const operation = called !== undefined && ts.isMethodSignature(called) && ts.isInterfaceDeclaration(called.parent) &&
+          ["Array", "ReadonlyArray"].includes(called.parent.name.text) && program.isSourceFileDefaultLibrary(called.getSourceFile());
+        if (input !== undefined && index >= 0) {
+          if (!nativeInputs.has(input)) bind(input.name);
+        } else if (operation && receiver !== undefined && ts.isPropertyAccessExpression(parent.expression) &&
+            ["push", "unshift"].includes(parent.expression.name.text)) {
+          const holder = holderOf(receiver);
+          if (holder !== undefined) piece.edges.push(selectedOf(holder, ["*", ...remaining]));
+          else flow(node, piece, new Set());
+        } else flow(node, piece, new Set());
+      } else if (ts.isShorthandPropertyAssignment(parent) || ts.isPropertyAssignment(parent)) {
+        const key = parent.name;
+        if (ts.isIdentifier(key) || ts.isStringLiteralLike(key) || ts.isNumericLiteral(key)) follow(parent.parent, [key.text, ...remaining]);
+        else flow(node, piece, new Set());
+      } else if (ts.isSpreadAssignment(parent) || ts.isSpreadElement(parent)) follow(parent.parent, remaining);
+      else if (ts.isArrayLiteralExpression(parent)) follow(parent, [String(parent.elements.findIndex((entry) => entry === top)), ...remaining]);
+      else if (ts.isReturnStatement(parent) || (ts.isArrowFunction(parent) && parent.body === top)) {
+        const fn = functionOf(top);
+        const named = fn === undefined ? undefined : nameSymbolOf(fn);
+        if (named !== undefined) piece.edges.push(selectedOf(named, remaining, true));
+        else flow(node, piece, new Set());
+      } else if (ts.isForOfStatement(parent) && parent.expression === top && remaining[0] === "*" && ts.isVariableDeclarationList(parent.initializer)) {
+        for (const entry of parent.initializer.declarations) bind(entry.name, remaining.slice(1));
+      } else if (ts.isAwaitExpression(parent) || ts.isConditionalExpression(parent) || ts.isBinaryExpression(parent)) follow(parent, remaining);
+    };
+    for (const reference of homeReferences(symbol)) {
+      if (result) {
+        const top = chainTop(reference);
+        if (ts.isCallExpression(top.parent) && top.parent.expression === top) follow(top.parent, path);
+      } else follow(reference, path);
+    }
+    return piece;
+  };
   // Where a function's result goes: each call is a holder of what it returns.
   const results = (symbol: ts.Symbol): Piece => {
     const piece = empty();
@@ -2434,14 +2552,17 @@ function captureReach(
       for (const declaration of declarations) {
         if (ts.isVariableDeclaration(declaration) && declaration.initializer !== undefined) {
           next(declaration.initializer);
-          piece.edges.push(...bindingSymbols(declaration.name));
+          for (const symbol of bindingSymbols(declaration.name)) piece.edges.push(selectedOf(symbol, path));
         } else if (ts.isBindingElement(declaration)) {
           let binding: ts.Node = declaration.parent;
           while (ts.isBindingElement(binding) || ts.isObjectBindingPattern(binding) || ts.isArrayBindingPattern(binding)) binding = binding.parent;
           if (ts.isVariableDeclaration(binding) && binding.initializer !== undefined && ts.isIdentifier(declaration.name)) {
             next(binding.initializer, [declaration.propertyName?.getText() ?? declaration.name.text, ...path]);
-            piece.edges.push(...bindingSymbols(declaration.name));
+            for (const symbol of bindingSymbols(declaration.name)) piece.edges.push(selectedOf(symbol, path));
           } else piece.edges.push(node);
+        } else if (ts.isParameter(declaration)) {
+          piece.parameters.add(declaration);
+          for (const symbol of bindingSymbols(declaration.name)) piece.edges.push(selectedOf(symbol, path));
         } else reach(declaration, piece);
       }
     } else if (ts.isObjectLiteralExpression(node) && path.length > 0) {
@@ -2485,7 +2606,7 @@ function captureReach(
   const pieceOf = (key: Key): Piece => {
     let piece = pieces.get(key);
     if (piece === undefined) {
-      piece = isRetained(key) ? retained(key) : isResults(key) ? results(key.results) : isSymbol(key) ? changes(key) : code(key);
+      piece = isSelected(key) ? selected(key) : isRetained(key) ? retained(key) : isResults(key) ? results(key.results) : isSymbol(key) ? changes(key) : code(key);
       pieces.set(key, piece);
     }
     return piece;
@@ -2535,7 +2656,7 @@ function captureReach(
   };
   const own = (key: Key, piece: Piece): bigint => {
     let bits = 0n;
-    if (!isRetained(key) && !isResults(key) && !isSymbol(key)) {
+    if (!isSelected(key) && !isRetained(key) && !isResults(key) && !isSymbol(key)) {
       const file = local(key.getSourceFile().fileName);
       bits |= bit(`r:${file}`, { kind: "reached", name: file });
       for (const start of positionsOf(key, file))
@@ -2658,7 +2779,12 @@ function captureReach(
 // A piece is keyed by its code, by a binding whose changes it holds, or by a function whose results it holds.
 type Results = { readonly results: ts.Symbol };
 type Retained = { readonly retained: ts.Node; readonly path: readonly string[] };
-type Key = ts.Node | ts.Symbol | Results | Retained;
+type Selected = { readonly selected: ts.Symbol; readonly path: readonly string[]; readonly result: boolean };
+type Key = ts.Node | ts.Symbol | Results | Retained | Selected;
+
+function isSelected(key: Key): key is Selected {
+  return "selected" in key;
+}
 
 function isRetained(key: Key): key is Retained {
   return "retained" in key;
