@@ -419,6 +419,25 @@ test("an Array.map result retains callbacks actually stored in its returned SDK 
   ]));
 });
 
+test("an overwritten collection method is not treated as the standard nonretaining callback operation", () => {
+  expect(inspectSdk({
+    ...sdkFactoryFiles,
+    "legacy/boot.ts": sdkImport +
+      "import { lease } from '../src/shell/adapters/lease.js';\n" +
+      "import { clock } from '../src/shell/adapters/clock.js';\n" +
+      "export function boot(): { page: Page } { const page = lease.open(); const pool: Page[] = [page]; " +
+      "pool.forEach = () => { page.title = () => String(clock.now()); }; " +
+      "pool.forEach(() => {}); return { page }; }\n",
+    "legacy/helper.ts": sdkCall + "import { boot } from './boot.js';\n" +
+      "export function read(): string { return title(boot().page); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      path: sdkAdapter, blocking: true,
+      debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+    }),
+  ]));
+});
+
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
   expect(
     inspect({
