@@ -34,6 +34,66 @@ test("an exact root-level legacy script receives accounting too", () => {
   expect(legacySize(snapshot)).toEqual([expect.objectContaining({ path, statements: 1 })]);
 });
 
+test.each(["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"])(
+  "legacy .%s helpers keep their location, size and clock obligations",
+  (extension) => {
+    const path = `old-tests/clock.${extension}`;
+    const snapshot = sourceFixture({
+      [path]: "const stamp = Date.now();",
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext",
+          lib: ["ES2022"], types: [], strict: true, noEmit: true,
+          allowJs: true, checkJs: true, jsx: "preserve",
+        },
+        include: ["old-tests/**/*"],
+      }),
+    }, config);
+    expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
+    expect(layoutCheck(snapshot)).toEqual([
+      expect.objectContaining({ path, category: "legacy-debt" }),
+    ]);
+    expect(legacySize(snapshot)).toEqual([
+      expect.objectContaining({ path, statements: 1, calls: 0, category: "legacy-debt" }),
+    ]);
+    expect(capabilityCheck(snapshot).findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path, debtKey: expect.stringContaining("raw-primitive"), category: "legacy-debt" }),
+    ]));
+  },
+);
+
+test.each([["mts", "mjs"], ["cts", "cjs"]])(
+  "a .%s helper imported as .%s keeps its real identity and blocking limits",
+  (extension, emitted) => {
+    const path = "src/core/readings/value.ts";
+    const helper = `old-tests/value.${extension}`;
+    const snapshot = sourceFixture({
+      "package.json": JSON.stringify({ type: "module" }),
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext",
+          lib: ["ES2022"], types: [], strict: true, noEmit: true,
+        },
+        include: ["src/**/*.ts", "old-tests/**/*"],
+      }),
+      [path]: `import { value } from '../../../old-tests/value.${emitted}'; export function read(name: string): unknown { return value(name); }`,
+      [helper]: "export function value(name: string): unknown { return Reflect.get(globalThis, name); }",
+      "old-tests/value.ts": "export function value(_name: string): unknown { return undefined; }",
+    }, config);
+    expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
+    expect(snapshot.imports.filter((edge) => edge.from === path)).toEqual([
+      { from: path, to: helper },
+    ]);
+    const limits = capabilityCheck(snapshot).findings.filter(
+      (item) => item.path === helper && item.category === "checker-limit",
+    );
+    expect(limits.length).toBeGreaterThan(0);
+    const baseline = Object.fromEntries(limits.map((item) => [item.debtKey, null]));
+    expect(ratchetFindings(limits, baseline, [path], snapshot.imports))
+      .toEqual(expect.arrayContaining(limits));
+  },
+);
+
 test("location debt does not cover helper growth or a new helper in its directory", () => {
   const path = "old-tests/helper.ts";
   const inspect = (files: Readonly<Record<string, string>>) => sourceFixture(files, config);
