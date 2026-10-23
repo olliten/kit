@@ -2392,7 +2392,7 @@ function captureReach(
         const callback = call?.arguments[0];
         const fn = callback === undefined ? undefined : ts.isFunctionLike(callback) ? callback :
           checker.getTypeAtLocation(callback).getCallSignatures()[0]?.declaration;
-        if (fn !== undefined && !fn.getSourceFile().isDeclarationFile) {
+        if (fn !== undefined && !fn.getSourceFile().isDeclarationFile && "body" in fn && fn.body !== undefined) {
           const item = fn.parameters[0];
           if (item !== undefined && !ts.isQualifiedName(item.name)) bind(item.name, []);
           const collection = fn.parameters[2];
@@ -2580,6 +2580,7 @@ function captureReach(
           next(declaration.initializer);
           for (const symbol of bindingSymbols(declaration.name)) piece.edges.push(selectedOf(symbol, path));
         } else if (ts.isBindingElement(declaration)) {
+          if (declaration.initializer !== undefined) piece.edges.push(declaration.initializer);
           let binding: ts.Node = declaration.parent;
           while (ts.isBindingElement(binding) || ts.isObjectBindingPattern(binding) || ts.isArrayBindingPattern(binding)) binding = binding.parent;
           if (ts.isVariableDeclaration(binding) && binding.initializer !== undefined && ts.isIdentifier(declaration.name)) {
