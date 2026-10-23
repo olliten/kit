@@ -438,6 +438,51 @@ test("an overwritten collection method is not treated as the standard nonretaini
   ]));
 });
 
+test.each(["object", "array"])("a %s destructuring alias retains mutations of the original SDK member", (kind) => {
+  const alias = kind === "object"
+    ? "const holder = { page }; const { page: held } = holder;"
+    : "const holder = [page]; const [held] = holder; if (held === undefined) throw new Error('missing member');";
+  expect(inspectSdk({
+    ...sdkFactoryFiles,
+    "legacy/boot.ts": sdkImport +
+      "import { lease } from '../src/shell/adapters/lease.js';\n" +
+      "import { clock } from '../src/shell/adapters/clock.js';\n" +
+      "export function boot(): { page: Page } { const page = lease.open(); " + alias +
+      " held.title = () => String(clock.now()); return { page }; }\n",
+    "legacy/helper.ts": sdkCall + "import { boot } from './boot.js';\n" +
+      "export function read(): string { return title(boot().page); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      path: sdkAdapter, blocking: true,
+      debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+    }),
+  ]));
+});
+
+test.each(["local", "parameter"])("a reassigned SDK %s is checked as the value actually supplied", (kind) => {
+  const files = kind === "local"
+    ? {
+      "legacy/boot.ts": sdkImport +
+        "import { lease } from '../src/shell/adapters/lease.js';\n" +
+        "import { clock } from '../src/shell/adapters/clock.js';\n" +
+        "export function boot(): { page: Page } { let page: Page = lease.open(); " +
+        "page = { title: () => String(clock.now()), evaluate: read => read() }; return { page }; }\n",
+      "legacy/helper.ts": sdkCall + "import { boot } from './boot.js';\n" +
+        "export function read(): string { return title(boot().page); }\n",
+    }
+    : {
+      "legacy/helper.ts": sdkImport + sdkCall +
+        "import { clock } from '../src/shell/adapters/clock.js';\n" +
+        "export function read(page: Page): string { page = { title: () => String(clock.now()), evaluate: read => read() }; return title(page); }\n",
+    };
+  expect(inspectSdk({ ...sdkFactoryFiles, ...files }, { adapters: sdkFactoryRegistration }).findings).toEqual(
+    expect.arrayContaining([expect.objectContaining({
+      path: sdkAdapter, blocking: true,
+      debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+    })]),
+  );
+});
+
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
   expect(
     inspect({
