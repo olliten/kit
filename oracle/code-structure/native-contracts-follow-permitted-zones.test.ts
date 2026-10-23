@@ -335,6 +335,90 @@ test("a later spread cannot hide the retained callbacks of the selected SDK hand
   ]));
 });
 
+test.each(["dirty-sibling", "replacement", "member-mutation"])(
+  "retained SDK identity distinguishes pool ownership from %s",
+  (kind) => {
+    const update = kind === "dirty-sibling"
+      ? "pool.push(dirty);"
+      : kind === "replacement"
+        ? "pool[0] = dirty;"
+        : "pool[0]!.title = dirty.title;";
+    const findings = inspectSdk({
+      ...sdkFactoryFiles,
+      "legacy/boot.ts": sdkImport +
+        "import { lease } from '../src/shell/adapters/lease.js';\n" +
+        "import { clock } from '../src/shell/adapters/clock.js';\n" +
+        "export function boot(): { page: Page } { const page = lease.open(); const pool: Page[] = []; pool.push(page); " +
+        "const dirty: Page = { title: () => String(clock.now()), evaluate: read => read() }; " +
+        update + " return { page }; }\n",
+      "legacy/helper.ts": sdkCall + "import { boot } from './boot.js';\n" +
+        "export function read(): string { return title(boot().page); }\n",
+    }, { adapters: sdkFactoryRegistration }).findings;
+    if (kind === "member-mutation") {
+      expect(findings).toEqual(expect.arrayContaining([expect.objectContaining({
+        path: sdkAdapter, blocking: true,
+        debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+      })]));
+    } else {
+      expectMigrationOnly(findings, [
+        "R1:migration-zone:legacy/boot.ts:src/shell/adapters/clock.ts",
+        "R1:migration-zone:legacy/boot.ts:src/shell/adapters/lease.ts",
+        "R1:migration-zone:legacy/helper.ts:src/shell/adapters/browser.ts",
+      ]);
+    }
+  },
+);
+
+test.each(["map", "forEach"].flatMap((method) => [false, true].map((mutated) => ({ method, mutated }))))(
+  "an Array.$method callback retains only the mutation it makes to the SDK member: $mutated",
+  ({ method, mutated }) => {
+    const callback = mutated
+      ? "item => { item.title = () => String(clock.now()); return item; }"
+      : "() => clock.now()";
+    const findings = inspectSdk({
+      ...sdkFactoryFiles,
+      "legacy/boot.ts": sdkImport +
+        "import { lease } from '../src/shell/adapters/lease.js';\n" +
+        "import { clock } from '../src/shell/adapters/clock.js';\n" +
+        "export function boot(): { page: Page } { const page = lease.open(); const pool: Page[] = []; pool.push(page); " +
+        `pool.${method}(${callback}); return { page }; }\n`,
+      "legacy/helper.ts": sdkCall + "import { boot } from './boot.js';\n" +
+        "export function read(): string { return title(boot().page); }\n",
+    }, { adapters: sdkFactoryRegistration }).findings;
+    if (mutated) {
+      expect(findings).toEqual(expect.arrayContaining([expect.objectContaining({
+        path: sdkAdapter, blocking: true,
+        debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+      })]));
+    } else {
+      expectMigrationOnly(findings, [
+        "R1:migration-zone:legacy/boot.ts:src/shell/adapters/clock.ts",
+        "R1:migration-zone:legacy/boot.ts:src/shell/adapters/lease.ts",
+        "R1:migration-zone:legacy/helper.ts:src/shell/adapters/browser.ts",
+      ]);
+    }
+  },
+);
+
+test("an Array.map result retains callbacks actually stored in its returned SDK members", () => {
+  expect(inspectSdk({
+    ...sdkFactoryFiles,
+    "legacy/boot.ts": sdkImport +
+      "import { lease } from '../src/shell/adapters/lease.js';\n" +
+      "import { clock } from '../src/shell/adapters/clock.js';\n" +
+      "export function boot(): { page: Page } { const page = lease.open(); const pool: Page[] = [page]; " +
+      "const mapped = pool.map(item => ({ ...item, title: () => String(clock.now()) })); " +
+      "return { page: mapped[0] ?? page }; }\n",
+    "legacy/helper.ts": sdkCall + "import { boot } from './boot.js';\n" +
+      "export function read(): string { return title(boot().page); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      path: sdkAdapter, blocking: true,
+      debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+    }),
+  ]));
+});
+
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
   expect(
     inspect({
