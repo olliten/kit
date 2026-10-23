@@ -1634,11 +1634,17 @@ function readCompiler(
         importTarget,
         facts,
         nativeInputs,
+        new Set(sdkTypes.keys()),
       );
       for (const { argument, binding } of pendingCaptures) {
         const { heldParameters, ...capture } = captureOf(argument);
         const natives = new Map<string, CapturedNative>();
         const types = new Map<string, { readonly file: string; readonly name: string }>();
+        const argumentType = checker.getTypeAtLocation(argument);
+        const argumentSymbol = argumentType.aliasSymbol ?? argumentType.symbol;
+        for (const authority of nativeAuthorityOf(argumentType))
+          if (argumentSymbol !== undefined && sdkTypes.has(argumentSymbol))
+            natives.set(`${authority.root.file}:${authority.root.name}`, authority);
         // Authority enrichment belongs to compiler fact extraction; proof reachability needs only reach.
         for (const parameter of heldParameters) {
           const type = checker.getTypeAtLocation(parameter);
@@ -1869,6 +1875,7 @@ function captureReach(
   // Per file, in order, each fact that can grant authority and the first position of its kind there.
   facts: ReadonlyMap<string, readonly { readonly start: number; readonly position: number }[]>,
   nativeInputs: ReadonlySet<ts.ParameterDeclaration> = new Set(),
+  sdkTypes: ReadonlySet<ts.Symbol> = new Set(),
 ): (argument: ts.Node) => CaptureReach {
   const unaliased = (symbol: ts.Symbol): ts.Symbol => {
     if ((symbol.flags & ts.SymbolFlags.Alias) === 0) return symbol;
@@ -2031,6 +2038,15 @@ function captureReach(
     parameters: new Set(),
   });
   const pieces = new Map<Key, Piece>();
+  const retainedKeys = new Map<ts.Node, Map<string, Retained>>();
+  const retainedOf = (node: ts.Node, path: readonly string[] = []): Retained => {
+    let paths = retainedKeys.get(node);
+    if (paths === undefined) retainedKeys.set(node, paths = new Map());
+    const name = JSON.stringify(path);
+    let key = paths.get(name);
+    if (key === undefined) paths.set(name, key = { retained: node, path });
+    return key;
+  };
   const resultKeys = new Map<ts.Symbol, Results>();
   const resultsOf = (symbol: ts.Symbol): Results => {
     let key = resultKeys.get(symbol);
@@ -2391,10 +2407,62 @@ function captureReach(
     visit(root);
     return piece;
   };
+  // Acquiring a native handle executes its creator; it does not retain that execution. Follow the
+  // returned value and its mutations instead. Factory arguments remain captures: a native SDK may
+  // hold any callback or option it receives. Ordinary callable/proof captures still follow code.
+  const retained = ({ retained: node, path }: Retained): Piece => {
+    const piece = empty();
+    const next = (value: ts.Node, keys = path): void => { piece.edges.push(retainedOf(value, keys)); };
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) ||
+        ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node) || ts.isAwaitExpression(node)) {
+      next(node.expression);
+    } else if (ts.isPropertyAccessExpression(node)) {
+      next(node.expression, [node.name.text, ...path]);
+    } else if (ts.isIdentifier(node)) {
+      const raw = rawSymbolOf(node);
+      const symbol = raw === undefined ? undefined : unaliased(raw);
+      const declarations = symbol?.declarations ?? [];
+      if (declarations.length === 0) piece.edges.push(node);
+      for (const declaration of declarations) {
+        if (ts.isVariableDeclaration(declaration) && declaration.initializer !== undefined) {
+          next(declaration.initializer);
+          piece.edges.push(...bindingSymbols(declaration.name));
+        } else if (ts.isBindingElement(declaration)) {
+          let binding: ts.Node = declaration.parent;
+          while (ts.isBindingElement(binding) || ts.isObjectBindingPattern(binding) || ts.isArrayBindingPattern(binding)) binding = binding.parent;
+          if (ts.isVariableDeclaration(binding) && binding.initializer !== undefined && ts.isIdentifier(declaration.name)) {
+            next(binding.initializer, [declaration.propertyName?.getText() ?? declaration.name.text, ...path]);
+            piece.edges.push(...bindingSymbols(declaration.name));
+          } else piece.edges.push(node);
+        } else reach(declaration, piece);
+      }
+    } else if (ts.isObjectLiteralExpression(node) && path.length > 0) {
+      const property = node.properties.find((entry) => entry.name?.getText().replace(/^['"]|['"]$/g, "") === path[0]);
+      if (property !== undefined && ts.isPropertyAssignment(property)) next(property.initializer, path.slice(1));
+      else if (property !== undefined && ts.isShorthandPropertyAssignment(property)) next(property.name, path.slice(1));
+      else piece.edges.push(node);
+    } else if (ts.isCallExpression(node)) {
+      const declaration = checker.getResolvedSignature(node)?.declaration;
+      if (declaration !== undefined && ts.isFunctionLike(declaration) &&
+          !declaration.getSourceFile().isDeclarationFile && "body" in declaration && declaration.body !== undefined) {
+        const returns = (child: ts.Node): void => {
+          if (ts.isReturnStatement(child)) {
+            if (child.expression !== undefined) next(child.expression);
+          } else if (!ts.isFunctionLike(child)) ts.forEachChild(child, returns);
+        };
+        if (ts.isBlock(declaration.body)) returns(declaration.body);
+        else next(declaration.body);
+      } else if (declaration === undefined) piece.edges.push(node);
+      // The factory's execution and package ownership are checked at its call site. Its inputs may
+      // be retained in the result even when their declaration is unavailable.
+      piece.edges.push(...node.arguments);
+    } else piece.edges.push(node);
+    return piece;
+  };
   const pieceOf = (key: Key): Piece => {
     let piece = pieces.get(key);
     if (piece === undefined) {
-      piece = isResults(key) ? results(key.results) : isSymbol(key) ? changes(key) : code(key);
+      piece = isRetained(key) ? retained(key) : isResults(key) ? results(key.results) : isSymbol(key) ? changes(key) : code(key);
       pieces.set(key, piece);
     }
     return piece;
@@ -2444,7 +2512,7 @@ function captureReach(
   };
   const own = (key: Key, piece: Piece): bigint => {
     let bits = 0n;
-    if (!isResults(key) && !isSymbol(key)) {
+    if (!isRetained(key) && !isResults(key) && !isSymbol(key)) {
       const file = local(key.getSourceFile().fileName);
       bits |= bit(`r:${file}`, { kind: "reached", name: file });
       for (const start of positionsOf(key, file))
@@ -2515,7 +2583,9 @@ function captureReach(
     return summaries.get(start) ?? 0n;
   };
   return (argument) => {
-    const bits = summarize(argument).toString(2);
+    const type = checker.getTypeAtLocation(argument);
+    const symbol = type.aliasSymbol ?? type.symbol;
+    const bits = summarize(symbol !== undefined && sdkTypes.has(symbol) ? retainedOf(argument) : argument).toString(2);
     const found: { file: string; start: number }[] = [];
     const reached = new Set<string>();
     const whole = new Set<string>();
@@ -2558,7 +2628,12 @@ function captureReach(
 
 // A piece is keyed by its code, by a binding whose changes it holds, or by a function whose results it holds.
 type Results = { readonly results: ts.Symbol };
-type Key = ts.Node | ts.Symbol | Results;
+type Retained = { readonly retained: ts.Node; readonly path: readonly string[] };
+type Key = ts.Node | ts.Symbol | Results | Retained;
+
+function isRetained(key: Key): key is Retained {
+  return "retained" in key;
+}
 
 function isResults(key: Key): key is Results {
   return "results" in key;
