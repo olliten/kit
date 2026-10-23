@@ -266,6 +266,55 @@ test.each(["factory-options", "typed-literal"])("an acquired SDK handle retains 
   ]));
 });
 
+test.each([false, true])("an SDK method's returned handle retains its receiver's callback state: %s", (mutated) => {
+  const findings = inspectSdk({
+    ...sdkFactoryFiles,
+    "node_modules/browser-sdk/index.d.ts":
+      "export interface Page { title(): string; evaluate(read: () => number): number; clone(): Page; }\n" +
+      "export declare function open(options?: { read: () => number }): Page;\n",
+    "src/shell/compositions/boot.ts": sdkImport +
+      "import { lease } from '../adapters/lease.js';\n" +
+      "import { clock } from '../adapters/clock.js';\n" +
+      "export function boot(): Page { const page = lease.open(); " +
+      (mutated ? "page.title = () => String(clock.now()); " : "") +
+      "return page.clone(); }\n",
+    "legacy/helper.ts": sdkCall +
+      "import { boot } from '../src/shell/compositions/boot.js';\n" +
+      "export function read(): string { return title(boot()); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings;
+  if (mutated) {
+    expect(findings).toEqual(expect.arrayContaining([expect.objectContaining({
+      path: sdkAdapter, blocking: true,
+      debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+    })]));
+  } else {
+    expectMigrationOnly(findings, [
+      "R1:migration-zone:legacy/helper.ts:src/shell/adapters/browser.ts",
+      "R1:migration-zone:legacy/helper.ts:src/shell/compositions/boot.ts",
+    ]);
+  }
+});
+
+test("a later spread cannot hide the retained callbacks of the selected SDK handle", () => {
+  expect(inspectSdk({
+    ...sdkFactoryFiles,
+    "src/shell/compositions/boot.ts": sdkImport +
+      "import { lease } from '../adapters/lease.js';\n" +
+      "import { clock } from '../adapters/clock.js';\n" +
+      "export function boot(): { page: Page } { const clean = lease.open(); " +
+      "const extra: Record<string, Page> = { page: { title: () => String(clock.now()), evaluate: read => read() } }; " +
+      "return { page: clean, ...extra }; }\n",
+    "legacy/helper.ts": sdkCall +
+      "import { boot } from '../src/shell/compositions/boot.js';\n" +
+      "export function read(): string { return title(boot().page); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      path: sdkAdapter, blocking: true,
+      debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+    }),
+  ]));
+});
+
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
   expect(
     inspect({
