@@ -57,6 +57,27 @@ const rootRelayCases = ["src", "oracle"].flatMap((srcRoot) =>
   [false, true].map((relay) => ({ srcRoot, relay })),
 );
 
+test.each([false, true])("forwarded parameters follow their actual mutation, not unrelated module imports: %s", (mutated) => {
+  const result = inspect({
+    "src/substrate/compositions/relay.ts": coreImport + clockImport +
+      "export function unrelated(): number { return clock.now(); }\n" +
+      "export function relay(read: () => number): number { " +
+      (mutated ? "read = () => clock.now(); " : "") +
+      "return run(read); }\n",
+    "src/substrate/compositions/value.ts": relayImport +
+      "export function value(): number { return relay(() => 7); }\n",
+  });
+  if (mutated) {
+    expect(result.findings).toEqual(expect.arrayContaining([expect.objectContaining({
+      path: "src/substrate/compositions/relay.ts",
+      debtKey: expect.stringMatching(/closure-binding:.*:clock\.read$/),
+      blocking: true,
+    })]));
+  } else {
+    expect(result.findings).toEqual([]);
+  }
+});
+
 test("an extended array of plain data has no executable input capability", () => {
   expect(
     inspect({

@@ -113,10 +113,22 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   );
   const contractTypes = adapters.flatMap((adapter) =>
     (contracts.get(adapter) ?? []).flatMap((fact) =>
-      fact.type === null
+      fact.type === null ||
+      (adapter.kind === "external" && fact.parameter !== null &&
+        !files.includes(fact.type.file) && fact.nativeAuthority?.some((authority) =>
+          authority.root.file === fact.type?.file && authority.root.name === fact.type?.name))
         ? []
         : [{ capability: adapter.capability, type: fact.type, kind: adapter.kind }],
     ),
+  );
+  const sdkInputs = adapters.flatMap((adapter) =>
+    adapter.kind !== "external" ? [] :
+      (contracts.get(adapter) ?? []).flatMap((fact) =>
+        fact.parameter === null || fact.type === null || files.includes(fact.type.file) ||
+        !fact.nativeAuthority?.some((authority) =>
+          authority.root.file === fact.type?.file && authority.root.name === fact.type?.name)
+          ? [] : [{ file: pathOf(adapter.module), type: fact.type }],
+      ),
   );
   const externalAdapterPaths = new Set(
     adapters
@@ -797,7 +809,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         inputs.set(keyOf(input), input.file);
   const known = new Set<string>();
   const suppliedCapabilities = new Map([...inputs.keys()].map((key) => [key, new Set<string>()]));
-  for (const parameter of projects.flatMap((project) => project.parameters))
+  for (const parameter of projects.flatMap((project) => project.parameters)) {
     for (const contract of contractTypes)
       if (
         (contract.kind !== "produce" || parameter.callable || parameter.accessor) &&
@@ -808,8 +820,18 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         known.add(key);
         suppliedCapabilities.get(key)?.add(contract.capability);
       }
+    for (const input of sdkInputs)
+      if (parameter.types[0]?.file === input.type.file && parameter.types[0]?.name === input.type.name) {
+        const key = keyOf(parameter);
+        known.add(key);
+        suppliedCapabilities.get(key)?.add(nativeKey(input.type));
+      }
+  }
   const established = (binding: (typeof bindings)[number]): boolean =>
     binding.supported &&
+    (binding.capture === undefined || binding.capture.parameters.every(
+      (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
+    )) &&
     (binding.source !== null
       ? known.has(keyOf(binding.source))
       : binding.origin !== null &&
@@ -873,7 +895,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   };
   const bindingCapabilities = (binding: (typeof bindings)[number]): Set<string> =>
     new Set(
-      binding.source === null && binding.capture !== undefined
+      binding.capture !== undefined
         ? [
             ...captured(binding.capture),
             ...binding.capture.parameters.flatMap((parameter) => [
@@ -1049,7 +1071,10 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       const detail = `${relocated ? `${connection.file}:` : ""}${connection.target}:${connection.start}`;
       for (const [index, origin] of connection.callableOrigins.entries()) {
         const binding = bindingOf(connection, index);
-        if (!established(binding) && restricted(connection.target))
+        if (
+          !established(binding) && (restricted(connection.target) ||
+            sdkInputs.some((input) => input.file === connection.target))
+        )
           unresolved(
             "callable-binding",
             boundary,
@@ -1061,8 +1086,11 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         if (origin === null && binding.capture === undefined) continue;
         for (const capability of bindingCapabilities(binding)) {
           if (nativeAuthorities.has(capability)) {
+            const receiver = sdkInputs.some((input) =>
+              input.file === connection.target && nativeKey(input.type) === capability,
+            ) ? connection.target : invocation;
             if (
-              !permits(invocation, capability) &&
+              !permits(receiver, capability) &&
               !nativeFailures.has(`${connection.file}:${capability}`)
             )
               unresolved(

@@ -415,6 +415,34 @@ function readCompiler(
         (type.objectFlags & ts.ObjectFlags.Reference) !== 0;
       type NativeAuthority = NonNullable<Project["parameters"][number]["nativeAuthority"]>[number];
       type NativeType = NativeAuthority["root"];
+      const nativeInputs = new Set<ts.ParameterDeclaration>();
+      const sdkTypes = new Map<ts.Symbol, NativeType>();
+      for (const adapter of config.adapters ?? []) {
+        if (adapter.kind !== "external" || adapter.contract === undefined || !("parameter" in adapter.contract)) continue;
+        const path = moduleFileOf(adapter.module, config.srcRoot, config.layerNames);
+        if (!externalAdapters.has(path)) continue;
+        const file = program.getSourceFile(join(appRoot, path));
+        const module = file === undefined ? undefined : checker.getSymbolAtLocation(file);
+        const exported = module === undefined ? undefined : checker.getExportsOfModule(module).find((symbol) => symbol.name === adapter.export);
+        const declarations = exported?.declarations ?? [];
+        if (declarations.length !== 1) continue;
+        const declaration = declarations[0];
+        const operation = declaration !== undefined && ts.isVariableDeclaration(declaration) ? declaration.initializer : declaration;
+        if (operation === undefined || !ts.isFunctionLike(operation)) continue;
+        const parameter = operation.parameters[adapter.contract.parameter];
+        if (parameter === undefined) continue;
+        const type = checker.getTypeAtLocation(parameter);
+        const symbol = type.aliasSymbol ?? type.symbol;
+        const owners = symbol?.declarations ?? [];
+        const owner = owners[0];
+        if (symbol === undefined || owners.length !== 1 || owner === undefined ||
+          (type.flags & ts.TypeFlags.Object) === 0 || type.getCallSignatures().length !== 0 ||
+          !(ts.isInterfaceDeclaration(owner) || ts.isClassDeclaration(owner) || ts.isTypeAliasDeclaration(owner)) ||
+          !owner.getSourceFile().isDeclarationFile || program.isSourceFileDefaultLibrary(owner.getSourceFile()) ||
+          source.has(local(owner.getSourceFile().fileName))) continue;
+        sdkTypes.set(symbol, { file: local(owner.getSourceFile().fileName), name: symbol.name });
+        nativeInputs.add(parameter);
+      }
       const nativeLibrary = (node: ts.Node): boolean =>
         program.isSourceFileDefaultLibrary(node.getSourceFile()) &&
         /^lib\.dom(?:\.[\w-]+)*\.d\.ts$/.test(basename(node.getSourceFile().fileName));
@@ -462,6 +490,8 @@ function readCompiler(
               ts.isSetAccessorDeclaration(node)),
         ) === true;
       const nativeType = (type: ts.Type): NativeType | null => {
+        const sdk = sdkTypes.get(type.aliasSymbol ?? type.symbol);
+        if (sdk !== undefined) return sdk;
         const symbol = type.symbol;
         if (hostValue(symbol)) return null;
         const declaration = symbol?.declarations?.find(
@@ -518,7 +548,7 @@ function readCompiler(
           result = [{
             root,
             bases,
-            ...(!workerTypes.has(root.name) ? { windowOnly: true as const } : {}),
+            ...(!sdkTypes.has(type.aliasSymbol ?? type.symbol) && !workerTypes.has(root.name) ? { windowOnly: true as const } : {}),
           }];
         } else {
           const constraint =
@@ -576,7 +606,7 @@ function readCompiler(
             const identity = nativeType(type);
             return identity !== null && !workerTypes.has(identity.name);
           });
-        if (nativeMember(member) || windowReceiver) return nativeAuthorityOf(receiver);
+        if (nativeMember(member) || windowReceiver || sdkTypes.has(receiver.aliasSymbol ?? receiver.symbol)) return nativeAuthorityOf(receiver);
         const type = checker.getTypeOfSymbolAtLocation(member, location);
         return type.getConstructSignatures().length > 0 ? nativeAuthorityOf(type) : [];
       };
@@ -754,7 +784,9 @@ function readCompiler(
             );
           })
           .map((property) => property.name);
-      const contractIdentity = (type: ts.Type): { file: string; name: string } | null => {
+      const contractIdentity = (type: ts.Type, nativeInput = false): { file: string; name: string } | null => {
+        const sdk = nativeInput ? sdkTypes.get(type.aliasSymbol ?? type.symbol) : undefined;
+        if (sdk !== undefined) return sdk;
         const symbol = type.aliasSymbol ?? type.symbol;
         const declaration = symbol?.declarations?.[0];
         return declaration !== undefined &&
@@ -1067,7 +1099,7 @@ function readCompiler(
                 name: node.name.text,
                 parameter: index,
                 operations: operationsOf(checker.getTypeAtLocation(parameter)),
-                type: contractIdentity(checker.getTypeAtLocation(parameter)),
+                type: contractIdentity(checker.getTypeAtLocation(parameter), nativeInputs.has(parameter)),
                 ...nativeContract(checker.getTypeAtLocation(parameter)),
               });
               if (node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword))
@@ -1091,7 +1123,7 @@ function readCompiler(
                 name,
                 parameter: index,
                 operations: operationsOf(type),
-                type: contractIdentity(type),
+                type: contractIdentity(type, nativeInputs.has(parameter)),
                 ...nativeContract(type),
               });
               recordParameter(parameter, true);
@@ -1163,6 +1195,11 @@ function readCompiler(
                 source = ts.isParameter(parent) ? parent : undefined;
               }
               const parameter = source !== undefined && ts.isParameter(source) ? source : null;
+              const argumentType = checker.getTypeAtLocation(argument);
+              const argumentSymbol = argumentType.aliasSymbol ?? argumentType.symbol;
+              const acquisition = ts.isCallExpression(argument) && argumentSymbol !== undefined && sdkTypes.has(argumentSymbol)
+                ? checker.getResolvedSignature(argument)?.declaration
+                : undefined;
               const origin =
                 parameter !== null
                   ? parameter
@@ -1172,7 +1209,7 @@ function readCompiler(
                       ts.isArrayLiteralExpression(argument) ||
                       ts.isNewExpression(argument)
                     ? argument
-                    : targetOf(argument);
+                    : targetOf(argument) ?? acquisition;
               const called =
                 declaration !== undefined && ts.isVariableDeclaration(declaration)
                   ? declaration.initializer
@@ -1200,7 +1237,7 @@ function readCompiler(
                         start: targetParameter.getStart(),
                       },
               };
-              if (parameter === null) pendingCaptures.push({ argument, binding });
+              pendingCaptures.push({ argument, binding });
               return [
                 {
                   binding,
@@ -1601,11 +1638,18 @@ function readCompiler(
         local,
         importTarget,
         facts,
+        nativeInputs,
+        new Set(sdkTypes.keys()),
       );
       for (const { argument, binding } of pendingCaptures) {
         const { heldParameters, ...capture } = captureOf(argument);
         const natives = new Map<string, CapturedNative>();
         const types = new Map<string, { readonly file: string; readonly name: string }>();
+        const argumentType = checker.getTypeAtLocation(argument);
+        const argumentSymbol = argumentType.aliasSymbol ?? argumentType.symbol;
+        for (const authority of nativeAuthorityOf(argumentType))
+          if (argumentSymbol !== undefined && sdkTypes.has(argumentSymbol))
+            natives.set(`${authority.root.file}:${authority.root.name}`, authority);
         // Authority enrichment belongs to compiler fact extraction; proof reachability needs only reach.
         for (const parameter of heldParameters) {
           const type = checker.getTypeAtLocation(parameter);
@@ -1835,6 +1879,8 @@ function captureReach(
   importTarget: (specifier: string, containingFile: string) => string | null,
   // Per file, in order, each fact that can grant authority and the first position of its kind there.
   facts: ReadonlyMap<string, readonly { readonly start: number; readonly position: number }[]>,
+  nativeInputs: ReadonlySet<ts.ParameterDeclaration> = new Set(),
+  sdkTypes: ReadonlySet<ts.Symbol> = new Set(),
 ): (argument: ts.Node) => CaptureReach {
   const unaliased = (symbol: ts.Symbol): ts.Symbol => {
     if ((symbol.flags & ts.SymbolFlags.Alias) === 0) return symbol;
@@ -1997,6 +2043,15 @@ function captureReach(
     parameters: new Set(),
   });
   const pieces = new Map<Key, Piece>();
+  const retainedKeys = new Map<ts.Node, Map<string, Retained>>();
+  const retainedOf = (node: ts.Node, path: readonly string[] = []): Retained => {
+    let paths = retainedKeys.get(node);
+    if (paths === undefined) retainedKeys.set(node, paths = new Map());
+    const name = JSON.stringify(path);
+    let key = paths.get(name);
+    if (key === undefined) paths.set(name, key = { retained: node, path });
+    return key;
+  };
   const resultKeys = new Map<ts.Symbol, Results>();
   const resultsOf = (symbol: ts.Symbol): Results => {
     let key = resultKeys.get(symbol);
@@ -2139,7 +2194,9 @@ function captureReach(
           ? declaration.parameters
           : undefined;
       const parameter = parameters?.[Math.min(position, parameters.length - 1)];
-      if (parameter !== undefined) piece.edges.push(...bindingSymbols(parameter.name));
+      if (parameter !== undefined) {
+        if (!nativeInputs.has(parameter)) piece.edges.push(...bindingSymbols(parameter.name));
+      }
       else {
         // A library call may copy the value into any other argument or its receiver, and return it.
         for (const other of callArguments)
@@ -2355,10 +2412,80 @@ function captureReach(
     visit(root);
     return piece;
   };
+  // Acquiring a native handle executes its creator; it does not retain that execution. Follow the
+  // returned value and its mutations instead. Factory arguments remain captures: a native SDK may
+  // hold any callback or option it receives. Ordinary callable/proof captures still follow code.
+  const retained = ({ retained: node, path }: Retained): Piece => {
+    const piece = empty();
+    const next = (value: ts.Node, keys = path): void => { piece.edges.push(retainedOf(value, keys)); };
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) ||
+        ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node) || ts.isAwaitExpression(node)) {
+      next(node.expression);
+    } else if (ts.isPropertyAccessExpression(node)) {
+      next(node.expression, [node.name.text, ...path]);
+    } else if (ts.isElementAccessExpression(node) &&
+        (ts.isStringLiteralLike(node.argumentExpression) || ts.isNumericLiteral(node.argumentExpression))) {
+      next(node.expression, [node.argumentExpression.text, ...path]);
+    } else if (ts.isIdentifier(node)) {
+      const raw = rawSymbolOf(node);
+      const symbol = raw === undefined ? undefined : unaliased(raw);
+      const declarations = symbol?.declarations ?? [];
+      if (declarations.length === 0) piece.edges.push(node);
+      for (const declaration of declarations) {
+        if (ts.isVariableDeclaration(declaration) && declaration.initializer !== undefined) {
+          next(declaration.initializer);
+          piece.edges.push(...bindingSymbols(declaration.name));
+        } else if (ts.isBindingElement(declaration)) {
+          let binding: ts.Node = declaration.parent;
+          while (ts.isBindingElement(binding) || ts.isObjectBindingPattern(binding) || ts.isArrayBindingPattern(binding)) binding = binding.parent;
+          if (ts.isVariableDeclaration(binding) && binding.initializer !== undefined && ts.isIdentifier(declaration.name)) {
+            next(binding.initializer, [declaration.propertyName?.getText() ?? declaration.name.text, ...path]);
+            piece.edges.push(...bindingSymbols(declaration.name));
+          } else piece.edges.push(node);
+        } else reach(declaration, piece);
+      }
+    } else if (ts.isObjectLiteralExpression(node) && path.length > 0) {
+      // Later spreads may replace the selected property; retain every possible overriding value.
+      // An explicit later property, however, makes earlier entries irrelevant to this selection.
+      for (const property of [...node.properties].reverse()) {
+        if (ts.isSpreadAssignment(property)) next(property.expression);
+        else if (property.name?.getText().replace(/^['"]|['"]$/g, "") === path[0]) {
+          if (ts.isPropertyAssignment(property)) next(property.initializer, path.slice(1));
+          else if (ts.isShorthandPropertyAssignment(property)) next(property.name, path.slice(1));
+          else piece.edges.push(property);
+          break;
+        } else if (property.name !== undefined && ts.isComputedPropertyName(property.name)) {
+          piece.edges.push(property);
+        }
+      }
+    } else if (ts.isCallExpression(node)) {
+      if (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression)) {
+        const receiver = node.expression.expression;
+        const type = checker.getTypeAtLocation(receiver);
+        const symbol = type.aliasSymbol ?? type.symbol;
+        if (symbol !== undefined && sdkTypes.has(symbol)) next(receiver, []);
+      }
+      const declaration = checker.getResolvedSignature(node)?.declaration;
+      if (declaration !== undefined && ts.isFunctionLike(declaration) &&
+          !declaration.getSourceFile().isDeclarationFile && "body" in declaration && declaration.body !== undefined) {
+        const returns = (child: ts.Node): void => {
+          if (ts.isReturnStatement(child)) {
+            if (child.expression !== undefined) next(child.expression);
+          } else if (!ts.isFunctionLike(child)) ts.forEachChild(child, returns);
+        };
+        if (ts.isBlock(declaration.body)) returns(declaration.body);
+        else next(declaration.body);
+      } else if (declaration === undefined) piece.edges.push(node);
+      // The factory's execution and package ownership are checked at its call site. Its inputs may
+      // be retained in the result even when their declaration is unavailable.
+      piece.edges.push(...node.arguments);
+    } else piece.edges.push(node);
+    return piece;
+  };
   const pieceOf = (key: Key): Piece => {
     let piece = pieces.get(key);
     if (piece === undefined) {
-      piece = isResults(key) ? results(key.results) : isSymbol(key) ? changes(key) : code(key);
+      piece = isRetained(key) ? retained(key) : isResults(key) ? results(key.results) : isSymbol(key) ? changes(key) : code(key);
       pieces.set(key, piece);
     }
     return piece;
@@ -2408,7 +2535,7 @@ function captureReach(
   };
   const own = (key: Key, piece: Piece): bigint => {
     let bits = 0n;
-    if (!isResults(key) && !isSymbol(key)) {
+    if (!isRetained(key) && !isResults(key) && !isSymbol(key)) {
       const file = local(key.getSourceFile().fileName);
       bits |= bit(`r:${file}`, { kind: "reached", name: file });
       for (const start of positionsOf(key, file))
@@ -2479,7 +2606,15 @@ function captureReach(
     return summaries.get(start) ?? 0n;
   };
   return (argument) => {
-    const bits = summarize(argument).toString(2);
+    let root: Key = argument;
+    // A whole-file proof root has no expression type. Only the source-input reader supplies SDK
+    // roots; ordinary/proof captures do not ask the checker about their root.
+    if (sdkTypes.size > 0) {
+      const type = checker.getTypeAtLocation(argument);
+      const symbol = type.aliasSymbol ?? type.symbol;
+      if (symbol !== undefined && sdkTypes.has(symbol)) root = retainedOf(argument);
+    }
+    const bits = summarize(root).toString(2);
     const found: { file: string; start: number }[] = [];
     const reached = new Set<string>();
     const whole = new Set<string>();
@@ -2522,7 +2657,12 @@ function captureReach(
 
 // A piece is keyed by its code, by a binding whose changes it holds, or by a function whose results it holds.
 type Results = { readonly results: ts.Symbol };
-type Key = ts.Node | ts.Symbol | Results;
+type Retained = { readonly retained: ts.Node; readonly path: readonly string[] };
+type Key = ts.Node | ts.Symbol | Results | Retained;
+
+function isRetained(key: Key): key is Retained {
+  return "retained" in key;
+}
 
 function isResults(key: Key): key is Results {
   return "results" in key;
