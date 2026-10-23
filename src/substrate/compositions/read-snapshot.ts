@@ -415,6 +415,34 @@ function readCompiler(
         (type.objectFlags & ts.ObjectFlags.Reference) !== 0;
       type NativeAuthority = NonNullable<Project["parameters"][number]["nativeAuthority"]>[number];
       type NativeType = NativeAuthority["root"];
+      const nativeInputs = new Set<ts.ParameterDeclaration>();
+      const sdkTypes = new Map<ts.Symbol, NativeType>();
+      for (const adapter of config.adapters ?? []) {
+        if (adapter.kind !== "external" || adapter.contract === undefined || !("parameter" in adapter.contract)) continue;
+        const path = moduleFileOf(adapter.module, config.srcRoot, config.layerNames);
+        if (!externalAdapters.has(path)) continue;
+        const file = program.getSourceFile(join(appRoot, path));
+        const module = file === undefined ? undefined : checker.getSymbolAtLocation(file);
+        const exported = module === undefined ? undefined : checker.getExportsOfModule(module).find((symbol) => symbol.name === adapter.export);
+        const declarations = exported?.declarations ?? [];
+        if (declarations.length !== 1) continue;
+        const declaration = declarations[0];
+        const operation = declaration !== undefined && ts.isVariableDeclaration(declaration) ? declaration.initializer : declaration;
+        if (operation === undefined || !ts.isFunctionLike(operation)) continue;
+        const parameter = operation.parameters[adapter.contract.parameter];
+        if (parameter === undefined) continue;
+        const type = checker.getTypeAtLocation(parameter);
+        const symbol = type.aliasSymbol ?? type.symbol;
+        const owners = symbol?.declarations ?? [];
+        const owner = owners[0];
+        if (symbol === undefined || owners.length !== 1 || owner === undefined ||
+          (type.flags & ts.TypeFlags.Object) === 0 || type.getCallSignatures().length !== 0 ||
+          !(ts.isInterfaceDeclaration(owner) || ts.isClassDeclaration(owner) || ts.isTypeAliasDeclaration(owner)) ||
+          !owner.getSourceFile().isDeclarationFile || program.isSourceFileDefaultLibrary(owner.getSourceFile()) ||
+          source.has(local(owner.getSourceFile().fileName))) continue;
+        sdkTypes.set(symbol, { file: local(owner.getSourceFile().fileName), name: symbol.name });
+        nativeInputs.add(parameter);
+      }
       const nativeLibrary = (node: ts.Node): boolean =>
         program.isSourceFileDefaultLibrary(node.getSourceFile()) &&
         /^lib\.dom(?:\.[\w-]+)*\.d\.ts$/.test(basename(node.getSourceFile().fileName));
@@ -462,6 +490,8 @@ function readCompiler(
               ts.isSetAccessorDeclaration(node)),
         ) === true;
       const nativeType = (type: ts.Type): NativeType | null => {
+        const sdk = sdkTypes.get(type.aliasSymbol ?? type.symbol);
+        if (sdk !== undefined) return sdk;
         const symbol = type.symbol;
         if (hostValue(symbol)) return null;
         const declaration = symbol?.declarations?.find(
@@ -518,7 +548,7 @@ function readCompiler(
           result = [{
             root,
             bases,
-            ...(!workerTypes.has(root.name) ? { windowOnly: true as const } : {}),
+            ...(!sdkTypes.has(type.aliasSymbol ?? type.symbol) && !workerTypes.has(root.name) ? { windowOnly: true as const } : {}),
           }];
         } else {
           const constraint =
@@ -576,7 +606,7 @@ function readCompiler(
             const identity = nativeType(type);
             return identity !== null && !workerTypes.has(identity.name);
           });
-        if (nativeMember(member) || windowReceiver) return nativeAuthorityOf(receiver);
+        if (nativeMember(member) || windowReceiver || sdkTypes.has(receiver.aliasSymbol ?? receiver.symbol)) return nativeAuthorityOf(receiver);
         const type = checker.getTypeOfSymbolAtLocation(member, location);
         return type.getConstructSignatures().length > 0 ? nativeAuthorityOf(type) : [];
       };
@@ -754,7 +784,9 @@ function readCompiler(
             );
           })
           .map((property) => property.name);
-      const contractIdentity = (type: ts.Type): { file: string; name: string } | null => {
+      const contractIdentity = (type: ts.Type, nativeInput = false): { file: string; name: string } | null => {
+        const sdk = nativeInput ? sdkTypes.get(type.aliasSymbol ?? type.symbol) : undefined;
+        if (sdk !== undefined) return sdk;
         const symbol = type.aliasSymbol ?? type.symbol;
         const declaration = symbol?.declarations?.[0];
         return declaration !== undefined &&
@@ -1067,7 +1099,7 @@ function readCompiler(
                 name: node.name.text,
                 parameter: index,
                 operations: operationsOf(checker.getTypeAtLocation(parameter)),
-                type: contractIdentity(checker.getTypeAtLocation(parameter)),
+                type: contractIdentity(checker.getTypeAtLocation(parameter), nativeInputs.has(parameter)),
                 ...nativeContract(checker.getTypeAtLocation(parameter)),
               });
               if (node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword))
@@ -1091,7 +1123,7 @@ function readCompiler(
                 name,
                 parameter: index,
                 operations: operationsOf(type),
-                type: contractIdentity(type),
+                type: contractIdentity(type, nativeInputs.has(parameter)),
                 ...nativeContract(type),
               });
               recordParameter(parameter, true);
@@ -1200,7 +1232,7 @@ function readCompiler(
                         start: targetParameter.getStart(),
                       },
               };
-              if (parameter === null) pendingCaptures.push({ argument, binding });
+              pendingCaptures.push({ argument, binding });
               return [
                 {
                   binding,
@@ -1601,6 +1633,7 @@ function readCompiler(
         local,
         importTarget,
         facts,
+        nativeInputs,
       );
       for (const { argument, binding } of pendingCaptures) {
         const { heldParameters, ...capture } = captureOf(argument);
@@ -1835,6 +1868,7 @@ function captureReach(
   importTarget: (specifier: string, containingFile: string) => string | null,
   // Per file, in order, each fact that can grant authority and the first position of its kind there.
   facts: ReadonlyMap<string, readonly { readonly start: number; readonly position: number }[]>,
+  nativeInputs: ReadonlySet<ts.ParameterDeclaration> = new Set(),
 ): (argument: ts.Node) => CaptureReach {
   const unaliased = (symbol: ts.Symbol): ts.Symbol => {
     if ((symbol.flags & ts.SymbolFlags.Alias) === 0) return symbol;
@@ -2139,7 +2173,9 @@ function captureReach(
           ? declaration.parameters
           : undefined;
       const parameter = parameters?.[Math.min(position, parameters.length - 1)];
-      if (parameter !== undefined) piece.edges.push(...bindingSymbols(parameter.name));
+      if (parameter !== undefined) {
+        if (!nativeInputs.has(parameter)) piece.edges.push(...bindingSymbols(parameter.name));
+      }
       else {
         // A library call may copy the value into any other argument or its receiver, and return it.
         for (const other of callArguments)
