@@ -2418,6 +2418,9 @@ function captureReach(
       next(node.expression);
     } else if (ts.isPropertyAccessExpression(node)) {
       next(node.expression, [node.name.text, ...path]);
+    } else if (ts.isElementAccessExpression(node) &&
+        (ts.isStringLiteralLike(node.argumentExpression) || ts.isNumericLiteral(node.argumentExpression))) {
+      next(node.expression, [node.argumentExpression.text, ...path]);
     } else if (ts.isIdentifier(node)) {
       const raw = rawSymbolOf(node);
       const symbol = raw === undefined ? undefined : unaliased(raw);
@@ -2451,7 +2454,7 @@ function captureReach(
         }
       }
     } else if (ts.isCallExpression(node)) {
-      if (ts.isPropertyAccessExpression(node.expression)) {
+      if (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression)) {
         const receiver = node.expression.expression;
         const type = checker.getTypeAtLocation(receiver);
         const symbol = type.aliasSymbol ?? type.symbol;
