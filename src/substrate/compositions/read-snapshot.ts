@@ -2437,11 +2437,26 @@ function captureReach(
         } else reach(declaration, piece);
       }
     } else if (ts.isObjectLiteralExpression(node) && path.length > 0) {
-      const property = node.properties.find((entry) => entry.name?.getText().replace(/^['"]|['"]$/g, "") === path[0]);
-      if (property !== undefined && ts.isPropertyAssignment(property)) next(property.initializer, path.slice(1));
-      else if (property !== undefined && ts.isShorthandPropertyAssignment(property)) next(property.name, path.slice(1));
-      else piece.edges.push(node);
+      // Later spreads may replace the selected property; retain every possible overriding value.
+      // An explicit later property, however, makes earlier entries irrelevant to this selection.
+      for (const property of [...node.properties].reverse()) {
+        if (ts.isSpreadAssignment(property)) next(property.expression);
+        else if (property.name?.getText().replace(/^['"]|['"]$/g, "") === path[0]) {
+          if (ts.isPropertyAssignment(property)) next(property.initializer, path.slice(1));
+          else if (ts.isShorthandPropertyAssignment(property)) next(property.name, path.slice(1));
+          else piece.edges.push(property);
+          break;
+        } else if (property.name !== undefined && ts.isComputedPropertyName(property.name)) {
+          piece.edges.push(property);
+        }
+      }
     } else if (ts.isCallExpression(node)) {
+      if (ts.isPropertyAccessExpression(node.expression)) {
+        const receiver = node.expression.expression;
+        const type = checker.getTypeAtLocation(receiver);
+        const symbol = type.aliasSymbol ?? type.symbol;
+        if (symbol !== undefined && sdkTypes.has(symbol)) next(receiver, []);
+      }
       const declaration = checker.getResolvedSignature(node)?.declaration;
       if (declaration !== undefined && ts.isFunctionLike(declaration) &&
           !declaration.getSourceFile().isDeclarationFile && "body" in declaration && declaration.body !== undefined) {
@@ -2583,9 +2598,15 @@ function captureReach(
     return summaries.get(start) ?? 0n;
   };
   return (argument) => {
-    const type = checker.getTypeAtLocation(argument);
-    const symbol = type.aliasSymbol ?? type.symbol;
-    const bits = summarize(symbol !== undefined && sdkTypes.has(symbol) ? retainedOf(argument) : argument).toString(2);
+    let root: Key = argument;
+    // A whole-file proof root has no expression type. Only the source-input reader supplies SDK
+    // roots; ordinary/proof captures do not ask the checker about their root.
+    if (sdkTypes.size > 0) {
+      const type = checker.getTypeAtLocation(argument);
+      const symbol = type.aliasSymbol ?? type.symbol;
+      if (symbol !== undefined && sdkTypes.has(symbol)) root = retainedOf(argument);
+    }
+    const bits = summarize(root).toString(2);
     const found: { file: string; start: number }[] = [];
     const reached = new Set<string>();
     const whole = new Set<string>();
