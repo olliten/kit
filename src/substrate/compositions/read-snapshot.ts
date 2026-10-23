@@ -23,7 +23,7 @@ const SKIP_DIR = /^(?:node_modules|\..*)$/;
 const IMPORT = /\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
 const EXPORT =
   /^export\s+(?:async\s+)?(?:function\*?|const|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm;
-const SOURCE = /\.(?:ts|tsx|mts|js|mjs)$/;
+const SOURCE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 /**
  * The built-in collections whose own methods are data access, not behaviour a caller supplies. Binary data is
  * one of them: a typed array, its buffer and a view over it only read and write their own memory.
@@ -140,7 +140,7 @@ export function readSnapshot(
         const target = posix.normalize(posix.join(posix.dirname(path), specifier));
         if (ignored(target)) throw ignoredImport(path, target);
       }
-      const to = specifier.startsWith(".")
+      const to = scope === undefined && specifier.startsWith(".")
         ? resolve(path, specifier, known)
         : aliasTarget(appRoot, path, specifier, dynamic, scope, ignored, known, trace.compiler);
       if (to !== undefined && !seen.has(to)) {
@@ -203,7 +203,7 @@ function scopeOf(path: string, scopes: readonly Scope[], appRoot: string): Scope
     )[0];
 }
 
-// A non-relative specifier resolves through the compiler's own module resolution, so `paths`, `baseUrl` and
+// A compiled specifier resolves through the compiler's own module resolution, so `paths`, `baseUrl` and
 // `extends` mean what they mean to tsc; only a resolution to a file of the snapshot is an edge. A dynamic
 // import is always an ECMAScript import; any other takes the module format of the file it is in.
 function aliasTarget(
