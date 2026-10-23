@@ -187,6 +187,23 @@ test("passing a callback into a native receiver before the adapter boundary reta
   })]));
 });
 
+test("awaiting a shared gesture does not prove an opaque SDK receiver released its callback", () => {
+  expect(inspectSdk({
+    "legacy/gesture.ts": sdkImport +
+      "import { clock } from '../src/shell/adapters/clock.js';\n" +
+      "export async function gesture(page: Page): Promise<void> { await page.evaluate(() => clock.now()); }\n",
+    "legacy/helper.ts": sdkImport + sdkCall +
+      "export function read(page: Page): string { return title(page); }\n",
+    "legacy/claim.ts": sdkImport +
+      "import { gesture } from './gesture.js';\n" +
+      "import { read } from './helper.js';\n" +
+      "export async function claim(page: Page): Promise<string> { await gesture(page); return read(page); }\n",
+  }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
+    path: sdkAdapter, blocking: true,
+    debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+  })]));
+});
+
 test("an adapter's own native callback is not treated as a callback supplied by its caller", () => {
   expectMigrationOnly(inspectSdk({
     [sdkAdapter]: sdkImport +
