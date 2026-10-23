@@ -213,6 +213,59 @@ test("a structurally identical SDK declaration does not acquire another package'
   })]));
 });
 
+const sdkFactoryFiles = {
+  "node_modules/browser-sdk/index.d.ts":
+    "export interface Page { title(): string; evaluate(read: () => number): number; }\n" +
+    "export declare function open(options?: { read: () => number }): Page;\n",
+  "src/shell/adapters/lease.ts":
+    "import { open } from 'browser-sdk';\n" + sdkImport +
+    "export interface Lease { open(options?: { read: () => number }): Page; }\n" +
+    "export const lease: Lease = { open };\n",
+};
+const sdkFactoryRegistration: NonNullable<KitConfig["adapters"]> = [...sdkRegistration, {
+  module: "shell/adapters/lease", export: "lease", capability: "rendering",
+  kind: "external", zones: ["shell"], contract: { type: "Lease" }, packages: ["browser-sdk"],
+}];
+
+test.each([false, true])("an acquired SDK handle retains its native identity, not acquisition effects: %s", (usesClock) => {
+  expectMigrationOnly(inspectSdk({
+    ...sdkFactoryFiles,
+    "legacy/boot.ts": sdkImport +
+      "import { lease } from '../src/shell/adapters/lease.js';\n" +
+      "import { clock } from '../src/shell/adapters/clock.js';\n" +
+      "export function unrelated(): number { return clock.now(); }\n" +
+      "export function boot(): { page: Page } { " +
+      (usesClock ? "clock.now(); " : "") + "return { page: lease.open() }; }\n",
+    "legacy/helper.ts": sdkCall + "import { boot } from './boot.js';\n" +
+      "export function read(): string { return title(boot().page); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings, [
+    "R1:migration-zone:legacy/boot.ts:src/shell/adapters/clock.ts",
+    "R1:migration-zone:legacy/boot.ts:src/shell/adapters/lease.ts",
+    "R1:migration-zone:legacy/helper.ts:src/shell/adapters/browser.ts",
+  ]);
+});
+
+test.each(["factory-options", "typed-literal"])("an acquired SDK handle retains the clock callback in %s", (kind) => {
+  const create = kind === "factory-options"
+    ? "lease.open({ read: () => clock.now() })"
+    : "{ title: () => String(clock.now()), evaluate: (read: () => number) => read() }";
+  expect(inspectSdk({
+    ...sdkFactoryFiles,
+    "src/shell/compositions/boot.ts": sdkImport +
+      (kind === "factory-options" ? "import { lease } from '../adapters/lease.js';\n" : "") +
+      "import { clock } from '../adapters/clock.js';\n" +
+      `export function boot(): { page: Page } { return { page: ${create} }; }\n`,
+    "legacy/helper.ts": sdkCall +
+      "import { boot } from '../src/shell/compositions/boot.js';\n" +
+      "export function read(): string { return title(boot().page); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      path: sdkAdapter, blocking: true,
+      debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+    }),
+  ]));
+});
+
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
   expect(
     inspect({
