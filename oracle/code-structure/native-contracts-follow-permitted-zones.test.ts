@@ -64,6 +64,14 @@ function inspectSdk(files: Readonly<Record<string, string>>, config: Partial<Kit
   return { snapshot, findings: capabilityCheck(snapshot).findings };
 }
 
+function expectMigrationOnly(findings: ReturnType<typeof capabilityCheck>["findings"], keys: string[]) {
+  expect([...findings].sort((a, b) => a.debtKey.localeCompare(b.debtKey))).toEqual(
+    [...keys].sort().map((debtKey) => expect.objectContaining({
+      debtKey, status: "unresolved", category: "checker-limit",
+    })),
+  );
+}
+
 test("an explicitly selected SDK input uses its canonical declaration without unrelated module authority", () => {
   const { snapshot, findings } = inspectSdk({
     "legacy/helper.ts":
@@ -82,11 +90,14 @@ test("an explicitly selected SDK input uses its canonical declaration without un
       }),
     ]),
   );
-  expect(findings).toEqual([]);
+  expectMigrationOnly(findings, [
+    "R1:migration-zone:legacy/helper.ts:src/shell/adapters/browser.ts",
+    "R1:migration-zone:legacy/helper.ts:src/shell/adapters/clock.ts",
+  ]);
 });
 
 test("one canonical SDK input may serve two adapters without inheriting both named capabilities", () => {
-  expect(inspectSdk({
+  expectMigrationOnly(inspectSdk({
     "src/shell/adapters/network.ts": sdkImport +
       "export function request(page: Page): string { return page.title(); }\n",
     "legacy/helper.ts": sdkImport + sdkCall +
@@ -94,17 +105,20 @@ test("one canonical SDK input may serve two adapters without inheriting both nam
   }, { adapters: [...sdkRegistration, {
     module: "shell/adapters/network", export: "request", capability: "network",
     kind: "external", zones: ["shell"], contract: { parameter: 0 },
-  }] }).findings).toEqual([]);
+  }] }).findings, ["R1:migration-zone:legacy/helper.ts:src/shell/adapters/browser.ts"]);
 });
 
 test("a re-export and renamed import preserve the canonical SDK input identity", () => {
-  expect(inspectSdk({
+  expectMigrationOnly(inspectSdk({
     "legacy/sdk.ts": "export type { Page as HostPage } from 'browser-sdk';\n",
     [sdkAdapter]: "import type { HostPage } from '../../../legacy/sdk.js';\n" +
       "export function title(page: HostPage): string { return page.title(); }\n",
     "legacy/helper.ts": "import type { HostPage } from './sdk.js';\n" + sdkCall +
       "export function read(page: HostPage): string { return title(page); }\n",
-  }).findings).toEqual([]);
+  }).findings, [
+    "R1:migration-zone:legacy/helper.ts:src/shell/adapters/browser.ts",
+    "R1:migration-zone:src/shell/adapters/browser.ts:legacy/sdk.ts",
+  ]);
 });
 
 test("an SDK input is not Window-only merely because its declaration is outside the worker library", () => {
@@ -147,7 +161,8 @@ test.each(["mutation", "literal"])("a typed SDK %s cannot hide a retained clock 
   expect(inspectSdk({ [path]: sdkImport + sdkCall +
     "import { clock } from '../src/shell/adapters/clock.js';\n" + body,
   }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
-    path, blocking: true, debtKey: expect.stringMatching(/closure-binding:.*:clock$/),
+    path: sdkAdapter, blocking: true,
+    debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
   })]));
 });
 
@@ -156,7 +171,8 @@ test("a known SDK input does not establish an unknown callback assigned into it"
   expect(inspectSdk({ [path]: sdkImport + sdkCall +
     "export function read(page: Page, unknown: () => string): string { page.title = unknown; return title(page); }\n",
   }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
-    path, blocking: true, debtKey: expect.stringContaining("callable-binding:"),
+    path: sdkAdapter, blocking: true,
+    debtKey: expect.stringMatching(/callable-binding:.*:legacy\/helper\.ts:/),
   })]));
 });
 
@@ -166,12 +182,13 @@ test("passing a callback into a native receiver before the adapter boundary reta
     "import { clock } from '../src/shell/adapters/clock.js';\n" +
     "export function read(page: Page): string { page.evaluate(() => clock.now()); return title(page); }\n",
   }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
-    path, blocking: true, debtKey: expect.stringMatching(/closure-binding:.*:clock$/),
+    path: sdkAdapter, blocking: true,
+    debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
   })]));
 });
 
 test("an adapter's own native callback is not treated as a callback supplied by its caller", () => {
-  expect(inspectSdk({
+  expectMigrationOnly(inspectSdk({
     [sdkAdapter]: sdkImport +
       "export function title(page: Page): string { return String(page.evaluate(() => document.title.length)); }\n",
     "legacy/helper.ts": sdkImport + sdkCall +
@@ -179,7 +196,7 @@ test("an adapter's own native callback is not treated as a callback supplied by 
   }, { adapters: [sdkClock, {
     module: "shell/adapters/browser", export: "title", capability: "rendering",
     kind: "external", zones: ["shell"], contract: { parameter: 0 }, globals: ["document"],
-  }] }).findings).toEqual([]);
+  }] }).findings, ["R1:migration-zone:legacy/helper.ts:src/shell/adapters/browser.ts"]);
 });
 
 test("a structurally identical SDK declaration does not acquire another package's canonical contract", () => {
@@ -188,8 +205,12 @@ test("a structurally identical SDK declaration does not acquire another package'
     "node_modules/other-sdk/index.d.ts":
       "export interface Page { title(): string; evaluate(read: () => number): number; }\n",
     [path]: "import type { Page } from 'other-sdk';\n" +
-      "export function read(page: Page): string { return page.title(); }\n",
-  }).findings).toEqual(expect.arrayContaining([expect.objectContaining({ path, blocking: true })]));
+      "import { title } from '../adapters/browser.js';\n" +
+      "export function read(page: Page): string { return title(page); }\n",
+  }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
+    path, blocking: true,
+    debtKey: expect.stringMatching(/(?:callable-binding|native-authority):.*src\/shell\/compositions\/read\.ts:/),
+  })]));
 });
 
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
