@@ -11,6 +11,11 @@ its config, and its debt in its own baseline.
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
+- Test discovery includes the configured proof root and only explicitly configured
+  `legacy-test-roots`, with no application directory names built in. Each is a relative directory
+  without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy
+  discovery grants no placement or capability permission. · {#proof-discovery-is-configured}
+
 - {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
   {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
   - Proof: {{binding-findings}}
