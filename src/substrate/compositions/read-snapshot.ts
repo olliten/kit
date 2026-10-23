@@ -2554,6 +2554,27 @@ function captureReach(
       const symbol = raw === undefined ? undefined : unaliased(raw);
       const declarations = symbol?.declarations ?? [];
       if (declarations.length === 0) piece.edges.push(node);
+      // Reading a binding holds any value assigned into its selected slot. Tracking an already held
+      // value's mutations is separate: replacing a container slot does not mutate its former member.
+      if (symbol !== undefined) for (const reference of homeReferences(symbol)) {
+        let target: ts.Node = reference;
+        let selected = path;
+        for (;;) {
+          const parent = target.parent;
+          if (ts.isPropertyAccessExpression(parent) && parent.expression === target && selected[0] === parent.name.text) {
+            target = parent;
+            selected = selected.slice(1);
+          } else if (ts.isElementAccessExpression(parent) && parent.expression === target &&
+              selected.length > 0 && (!(ts.isStringLiteralLike(parent.argumentExpression) || ts.isNumericLiteral(parent.argumentExpression)) || selected[0] === parent.argumentExpression.text)) {
+            target = parent;
+            selected = selected.slice(1);
+          } else if (ts.isParenthesizedExpression(parent) || ts.isNonNullExpression(parent) ||
+              ts.isAsExpression(parent) || ts.isSatisfiesExpression(parent)) {
+            target = parent;
+          } else break;
+        }
+        if (assignment(target.parent) && target.parent.left === target) next(target.parent.right, selected);
+      }
       for (const declaration of declarations) {
         if (ts.isVariableDeclaration(declaration) && declaration.initializer !== undefined) {
           next(declaration.initializer);
