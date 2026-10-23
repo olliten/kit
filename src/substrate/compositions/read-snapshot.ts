@@ -2347,6 +2347,13 @@ function captureReach(
   const selected = ({ selected: symbol, path, result }: Selected): Piece => {
     const piece = empty();
     const seen = new Map<ts.Node, Set<string>>();
+    const bind = (name: ts.BindingName, selection: readonly string[]): void => {
+      if (ts.isIdentifier(name)) {
+        for (const held of bindingSymbols(name)) piece.edges.push(selectedOf(held, selection));
+      } else
+        // Complex binding patterns keep the original conservative graph, including defaults and writes.
+        piece.edges.push(name.parent, ...bindingSymbols(name));
+    };
     const follow = (node: ts.Node, selection: readonly string[]): void => {
       let paths = seen.get(node);
       if (paths === undefined) seen.set(node, paths = new Set());
@@ -2387,9 +2394,9 @@ function captureReach(
           checker.getTypeAtLocation(callback).getCallSignatures()[0]?.declaration;
         if (fn !== undefined && !fn.getSourceFile().isDeclarationFile) {
           const item = fn.parameters[0];
-          if (item !== undefined && !ts.isQualifiedName(item.name)) for (const held of bindingSymbols(item.name)) piece.edges.push(selectedOf(held));
+          if (item !== undefined && !ts.isQualifiedName(item.name)) bind(item.name, []);
           const collection = fn.parameters[2];
-          if (collection !== undefined && !ts.isQualifiedName(collection.name)) for (const held of bindingSymbols(collection.name)) piece.edges.push(selectedOf(held, ["*"]));
+          if (collection !== undefined && !ts.isQualifiedName(collection.name)) bind(collection.name, ["*"]);
         } else if (callback !== undefined) piece.edges.push(callback);
         return;
       }
@@ -2400,9 +2407,6 @@ function captureReach(
         return;
       }
       const remaining = selection.slice(keys.length);
-      const bind = (name: ts.BindingName, suffix = remaining): void => {
-        for (const held of bindingSymbols(name)) piece.edges.push(selectedOf(held, suffix));
-      };
       if (assignment(parent)) {
         // Replacing an element only changes the slot, not the value formerly stored there.
         if (!within(top, parent.left)) {
@@ -2410,7 +2414,7 @@ function captureReach(
           if (holder !== undefined) piece.edges.push(selectedOf(holder, remaining));
           else flow(node, piece, new Set());
         }
-      } else if (ts.isVariableDeclaration(parent) && parent.initializer === top) bind(parent.name);
+      } else if (ts.isVariableDeclaration(parent) && parent.initializer === top) bind(parent.name, remaining);
       else if (ts.isCallExpression(parent) || ts.isNewExpression(parent)) {
         const args = parent.arguments ?? [];
         const index = args.findIndex((argument) => argument === top);
@@ -2421,7 +2425,7 @@ function captureReach(
         const operation = called !== undefined && ts.isMethodSignature(called) && ts.isInterfaceDeclaration(called.parent) &&
           ["Array", "ReadonlyArray"].includes(called.parent.name.text) && program.isSourceFileDefaultLibrary(called.getSourceFile());
         if (input !== undefined && index >= 0) {
-          if (!nativeInputs.has(input)) bind(input.name);
+          if (!nativeInputs.has(input)) bind(input.name, remaining);
         } else if (operation && receiver !== undefined && ts.isPropertyAccessExpression(parent.expression) &&
             ["push", "unshift"].includes(parent.expression.name.text)) {
           const holder = holderOf(receiver);
@@ -2442,6 +2446,7 @@ function captureReach(
       } else if (ts.isForOfStatement(parent) && parent.expression === top && remaining[0] === "*" && ts.isVariableDeclarationList(parent.initializer)) {
         for (const entry of parent.initializer.declarations) bind(entry.name, remaining.slice(1));
       } else if (ts.isAwaitExpression(parent) || ts.isConditionalExpression(parent) || ts.isBinaryExpression(parent)) follow(parent, remaining);
+      else flow(node, piece, new Set());
     };
     for (const reference of homeReferences(symbol)) {
       if (result) {
@@ -2562,6 +2567,7 @@ function captureReach(
           } else piece.edges.push(node);
         } else if (ts.isParameter(declaration)) {
           piece.parameters.add(declaration);
+          if (declaration.initializer !== undefined) piece.edges.push(declaration.initializer);
           for (const symbol of bindingSymbols(declaration.name)) piece.edges.push(selectedOf(symbol, path));
         } else reach(declaration, piece);
       }
