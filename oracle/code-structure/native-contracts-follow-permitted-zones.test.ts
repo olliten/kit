@@ -483,6 +483,38 @@ test.each(["local", "parameter"])("a reassigned SDK %s is checked as the value a
   );
 });
 
+test("a destructured SDK default retains the callback of its actual fallback value", () => {
+  expect(inspectSdk({
+    ...sdkFactoryFiles,
+    "legacy/boot.ts": sdkImport +
+      "import { clock } from '../src/shell/adapters/clock.js';\n" +
+      "export function boot(): { page: Page } { const holder: { page?: Page } = {}; " +
+      "const fallback: Page = { title: () => String(clock.now()), evaluate: read => read() }; " +
+      "const { page: held = fallback } = holder; return { page: held }; }\n",
+    "legacy/helper.ts": sdkCall + "import { boot } from './boot.js';\n" +
+      "export function read(): string { return title(boot().page); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      path: sdkAdapter, blocking: true,
+      debtKey: expect.stringMatching(/closure-binding:.*:legacy\/helper\.ts:.*:clock$/),
+    }),
+  ]));
+});
+
+test("an unknown collection callback is not established by its callable type declaration", () => {
+  expect(inspectSdk({
+    ...sdkFactoryFiles,
+    "legacy/helper.ts": sdkImport + sdkCall +
+      "import { lease } from '../src/shell/adapters/lease.js';\n" +
+      "function boot(change: (page: Page) => void): { page: Page } { const page = lease.open(); " +
+      "const pool: Page[] = [page]; pool.forEach(change); return { page }; }\n" +
+      "export function read(change: (page: Page) => void): string { return title(boot(change).page); }\n",
+  }, { adapters: sdkFactoryRegistration }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
+    path: sdkAdapter, blocking: true,
+    debtKey: expect.stringMatching(/callable-binding:.*:legacy\/helper\.ts:/),
+  })]));
+});
+
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
   expect(
     inspect({
