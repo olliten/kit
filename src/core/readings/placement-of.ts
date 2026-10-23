@@ -21,6 +21,11 @@ const LEGACY: Legacy = { placed: false };
 
 const isZone = (s: string): s is Zone => ZONES.some((zone) => zone === s);
 
+export function legacyCodeOf(path: string, locations: readonly string[] = []): boolean {
+  for (const location of locations) rootOf("", [location]);
+  return locations.some((location) => path === location || path.startsWith(`${location}/`));
+}
+
 export function moduleFileOf(
   module: string,
   roots: string | readonly string[],

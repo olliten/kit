@@ -109,6 +109,10 @@
   - Role: derived
   - Zone: core
   - From: {{comment}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}
+- **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
 - **legacy-size** — the size of each legacy module as debt: its statements, and how many of them only call into placed modules.
   - Role: derived
   - Zone: core

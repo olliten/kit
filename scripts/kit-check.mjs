@@ -7,7 +7,10 @@ import { cachedKitCheck } from "./kit-snapshot-cache.mjs";
 
 export function startupCheckRoots(config) {
   const roots = typeof config.srcRoot === "string" ? [config.srcRoot] : config.srcRoot;
-  return (config.exceptions ?? []).filter((path) => roots.some((root) => path.startsWith(`${root}/`)));
+  return (config.exceptions ?? []).filter((path) =>
+    roots.some((root) => path.startsWith(`${root}/`)) ||
+    (config.layout?.legacy ?? []).some((location) => path === location || path.startsWith(`${location}/`)),
+  );
 }
 
 /** Compare shared snapshot graphs without expanding their references into JSON text. */
@@ -136,6 +139,7 @@ async function main() {
     const { placementOf } = await load("src/core/readings/placement-of.ts");
     const { topicShape } = await load("src/core/readings/topic-shape.ts");
     const { legacySize } = await load("src/core/readings/legacy-size.ts");
+    const { layoutCheck } = await load("src/core/readings/layout-check.ts");
     const { testChangeCheck } = await load("src/core/readings/test-change-check.ts");
     const { changeLog } = await load("src/substrate/adapters/change-log.ts");
     const config = configuredKit(DEFAULT_CONFIG, declared);
@@ -181,6 +185,7 @@ async function main() {
       const findings = [
         ...capability.findings,
         ...legacySize(snapshot),
+        ...layoutCheck(snapshot),
         ...structural,
         ...conceptLimits,
         ...requiredLimits,

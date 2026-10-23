@@ -26,7 +26,12 @@ export function sourceFixture(
           isolatedDeclarations: true,
           ...compilerOptions,
         },
-        include: roots.map((path) => `${path}/**/*.ts`),
+        include: [
+          ...roots.map((path) => `${path}/**/*.ts`),
+          ...(config.layout?.legacy ?? []).map((path) =>
+            /\.[mc]?[jt]sx?$/.test(path) ? path : `${path}/**/*.ts`,
+          ),
+        ],
       }),
       ...files,
     };

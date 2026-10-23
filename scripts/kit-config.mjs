@@ -44,6 +44,7 @@ export function configuredKit(defaults, declaration) {
         : roots.src.map((path) => path.replace(/\/$/, "")).sort(),
     specRoot: declaration.roots.spec.replace(/\/$/, ""),
     oracleRoot: declaration.roots.oracle.replace(/\/$/, ""),
+    ...(declaration.layout === undefined ? {} : { layout: configuredLayout(declaration.layout) }),
     termsFile: declaration.terms,
     claimSeparator: declaration["claim-separator"] ?? defaults.claimSeparator,
     legacyAreas: declaration["legacy-areas"] ?? [],
@@ -54,6 +55,26 @@ export function configuredKit(defaults, declaration) {
     adapters: declaration.adapters ?? [],
     packages: declaration.packages ?? [],
   };
+}
+
+/** @param {unknown} declaration
+ * @returns {{legacy: string[]}}
+ */
+function configuredLayout(declaration) {
+  if (
+    !declaration || typeof declaration !== "object" || Array.isArray(declaration) ||
+    Object.keys(declaration).some((key) => key !== "legacy") ||
+    !Array.isArray(declaration.legacy)
+  ) throw new Error("Declare layout as a mapping with a legacy list of relative files or directories.");
+  const legacy = declaration.legacy.map((path) => {
+    if (
+      typeof path !== "string" || !path || path.trim() !== path ||
+      /[\\*?{}[\]!]/.test(path) || /^[a-z]:/i.test(path) || posix.isAbsolute(path) ||
+      path.replace(/\/$/, "").split("/").some((part) => !part || part === "." || part === "..")
+    ) throw new Error("Layout legacy locations must be relative files or directories without patterns or dot segments.");
+    return path.replace(/\/$/, "");
+  });
+  return { legacy: [...new Set(legacy)].sort() };
 }
 
 /** An ignored path is exact and inside the app, so the walk can skip it by prefix without reading it.
