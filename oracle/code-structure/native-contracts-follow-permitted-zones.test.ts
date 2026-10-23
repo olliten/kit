@@ -25,6 +25,173 @@ function inspect(files: Readonly<Record<string, string>>, adapters = registratio
   return capabilityCheck(snapshot).findings;
 }
 
+const sdkAdapter = "src/shell/adapters/browser.ts";
+const sdkClock: NonNullable<KitConfig["adapters"]>[number] = {
+  module: "shell/adapters/clock",
+  export: "clock",
+  capability: "clock",
+  kind: "external",
+  zones: ["shell"],
+  globals: ["Date"],
+  primitives: ["clock"],
+};
+const sdkRegistration: NonNullable<KitConfig["adapters"]> = [
+  {
+    module: "shell/adapters/browser",
+    export: "title",
+    capability: "rendering",
+    kind: "external",
+    zones: ["shell"],
+    contract: { parameter: 0 },
+  },
+  sdkClock,
+];
+const sdkImport = "import type { Page } from 'browser-sdk';\n";
+const sdkCall = "import { title } from '../src/shell/adapters/browser.js';\n";
+
+function inspectSdk(files: Readonly<Record<string, string>>, config: Partial<KitConfig> = {}) {
+  const snapshot = sourceFixture(
+    {
+      "node_modules/browser-sdk/index.d.ts":
+        "export interface Page { title(): string; evaluate(read: () => number): number; }\n",
+      [sdkAdapter]: sdkImport + "export function title(page: Page): string { return page.title(); }\n",
+      "src/shell/adapters/clock.ts": "export const clock = { now: (): number => Date.now() };\n",
+      ...files,
+    },
+    { layout: { legacy: ["legacy"] }, adapters: sdkRegistration, ...config },
+  );
+  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
+  return { snapshot, findings: capabilityCheck(snapshot).findings };
+}
+
+test("an explicitly selected SDK input uses its canonical declaration without unrelated module authority", () => {
+  const { snapshot, findings } = inspectSdk({
+    "legacy/helper.ts":
+      sdkImport + sdkCall +
+      "import { clock } from '../src/shell/adapters/clock.js';\n" +
+      "export function unrelated(): number { return clock.now(); }\n" +
+      "export function read(page: Page): string { return title(page); }\n",
+  });
+  expect(snapshot.compiler?.projects.flatMap((project) => project.contracts)).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        file: sdkAdapter,
+        name: "title",
+        parameter: 0,
+        type: { file: "node_modules/browser-sdk/index.d.ts", name: "Page" },
+      }),
+    ]),
+  );
+  expect(findings).toEqual([]);
+});
+
+test("one canonical SDK input may serve two adapters without inheriting both named capabilities", () => {
+  expect(inspectSdk({
+    "src/shell/adapters/network.ts": sdkImport +
+      "export function request(page: Page): string { return page.title(); }\n",
+    "legacy/helper.ts": sdkImport + sdkCall +
+      "export function read(page: Page): string { return title(page); }\n",
+  }, { adapters: [...sdkRegistration, {
+    module: "shell/adapters/network", export: "request", capability: "network",
+    kind: "external", zones: ["shell"], contract: { parameter: 0 },
+  }] }).findings).toEqual([]);
+});
+
+test("a re-export and renamed import preserve the canonical SDK input identity", () => {
+  expect(inspectSdk({
+    "legacy/sdk.ts": "export type { Page as HostPage } from 'browser-sdk';\n",
+    [sdkAdapter]: "import type { HostPage } from '../../../legacy/sdk.js';\n" +
+      "export function title(page: HostPage): string { return page.title(); }\n",
+    "legacy/helper.ts": "import type { HostPage } from './sdk.js';\n" + sdkCall +
+      "export function read(page: HostPage): string { return title(page); }\n",
+  }).findings).toEqual([]);
+});
+
+test("an SDK input is not Window-only merely because its declaration is outside the worker library", () => {
+  expect(inspectSdk({
+    [sdkAdapter]: "export {};\n",
+    "src/substrate/adapters/browser.ts": sdkImport +
+      "export function title(page: Page): string { return page.title(); }\n",
+    "src/substrate/compositions/read.ts": sdkImport +
+      "import { title } from '../adapters/browser.js';\n" +
+      "export function read(page: Page): string { return title(page); }\n",
+  }, { adapters: [sdkClock, {
+    module: "substrate/adapters/browser", export: "title", capability: "remote.read",
+    kind: "external", zones: ["substrate"], contract: { parameter: 0 },
+  }] }).findings).toEqual([]);
+});
+
+test.each(["src/core/compositions/read.ts", "src/shell/readings/read.ts"])(
+  "an external SDK contract does not grant native operation inputs to %s",
+  (path) => {
+    expect(inspectSdk({ [path]: sdkImport +
+      "export function read(page: Page): string { return page.title(); }\n",
+    }).findings).toEqual(expect.arrayContaining([expect.objectContaining({ path, blocking: true })]));
+  },
+);
+
+test("a declared legacy zone cannot consume another zone's SDK adapter", () => {
+  const path = "legacy/helper.ts";
+  expect(inspectSdk({ [path]: sdkImport + sdkCall +
+    "export function read(page: Page): string { return title(page); }\n",
+  }, { legacyZones: [{ root: "legacy", zone: "substrate" }] }).findings).toEqual(
+    expect.arrayContaining([expect.objectContaining({ path, blocking: true })]),
+  );
+});
+
+test.each(["mutation", "literal"])("a typed SDK %s cannot hide a retained clock callback", (kind) => {
+  const path = "legacy/helper.ts";
+  const body = kind === "mutation"
+    ? "export function read(page: Page): string { page.title = () => String(clock.now()); return title(page); }\n"
+    : "export function read(): string { const page: Page = { title: () => String(clock.now()), evaluate: read => read() }; return title(page); }\n";
+  expect(inspectSdk({ [path]: sdkImport + sdkCall +
+    "import { clock } from '../src/shell/adapters/clock.js';\n" + body,
+  }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
+    path, blocking: true, debtKey: expect.stringMatching(/closure-binding:.*:clock$/),
+  })]));
+});
+
+test("a known SDK input does not establish an unknown callback assigned into it", () => {
+  const path = "legacy/helper.ts";
+  expect(inspectSdk({ [path]: sdkImport + sdkCall +
+    "export function read(page: Page, unknown: () => string): string { page.title = unknown; return title(page); }\n",
+  }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
+    path, blocking: true, debtKey: expect.stringContaining("callable-binding:"),
+  })]));
+});
+
+test("passing a callback into a native receiver before the adapter boundary retains its authority", () => {
+  const path = "legacy/helper.ts";
+  expect(inspectSdk({ [path]: sdkImport + sdkCall +
+    "import { clock } from '../src/shell/adapters/clock.js';\n" +
+    "export function read(page: Page): string { page.evaluate(() => clock.now()); return title(page); }\n",
+  }).findings).toEqual(expect.arrayContaining([expect.objectContaining({
+    path, blocking: true, debtKey: expect.stringMatching(/closure-binding:.*:clock$/),
+  })]));
+});
+
+test("an adapter's own native callback is not treated as a callback supplied by its caller", () => {
+  expect(inspectSdk({
+    [sdkAdapter]: sdkImport +
+      "export function title(page: Page): string { return String(page.evaluate(() => document.title.length)); }\n",
+    "legacy/helper.ts": sdkImport + sdkCall +
+      "export function read(page: Page): string { return title(page); }\n",
+  }, { adapters: [sdkClock, {
+    module: "shell/adapters/browser", export: "title", capability: "rendering",
+    kind: "external", zones: ["shell"], contract: { parameter: 0 }, globals: ["document"],
+  }] }).findings).toEqual([]);
+});
+
+test("a structurally identical SDK declaration does not acquire another package's canonical contract", () => {
+  const path = "src/shell/compositions/read.ts";
+  expect(inspectSdk({
+    "node_modules/other-sdk/index.d.ts":
+      "export interface Page { title(): string; evaluate(read: () => number): number; }\n",
+    [path]: "import type { Page } from 'other-sdk';\n" +
+      "export function read(page: Page): string { return page.title(); }\n",
+  }).findings).toEqual(expect.arrayContaining([expect.objectContaining({ path, blocking: true })]));
+});
+
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
   expect(
     inspect({
