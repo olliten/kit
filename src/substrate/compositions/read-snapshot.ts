@@ -1195,6 +1195,11 @@ function readCompiler(
                 source = ts.isParameter(parent) ? parent : undefined;
               }
               const parameter = source !== undefined && ts.isParameter(source) ? source : null;
+              const argumentType = checker.getTypeAtLocation(argument);
+              const argumentSymbol = argumentType.aliasSymbol ?? argumentType.symbol;
+              const acquisition = ts.isCallExpression(argument) && argumentSymbol !== undefined && sdkTypes.has(argumentSymbol)
+                ? checker.getResolvedSignature(argument)?.declaration
+                : undefined;
               const origin =
                 parameter !== null
                   ? parameter
@@ -1204,7 +1209,7 @@ function readCompiler(
                       ts.isArrayLiteralExpression(argument) ||
                       ts.isNewExpression(argument)
                     ? argument
-                    : targetOf(argument);
+                    : targetOf(argument) ?? acquisition;
               const called =
                 declaration !== undefined && ts.isVariableDeclaration(declaration)
                   ? declaration.initializer
