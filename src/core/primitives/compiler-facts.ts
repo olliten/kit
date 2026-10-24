@@ -141,6 +141,20 @@ export interface CompilerFacts {
       readonly nativeAuthority?: readonly NativeAuthority[];
       // A host value type such as URL, used as a value: it parses or transcodes and reaches no host.
       readonly value?: boolean;
+      // The installed packages whose ambient declarations alone declare it, such as node for process. Absent
+      // when a compiler library declares it.
+      readonly packages?: readonly string[];
+    }[];
+    // Values of a host's entry type: code carried into that host. A function literal is checked there, with
+    // the outer names it captures; a reference, an any or a source string can't be followed.
+    readonly programs?: readonly {
+      readonly file: string;
+      readonly start: number;
+      readonly end: number;
+      readonly host: string;
+      readonly type: string;
+      readonly literal: boolean;
+      readonly captures: readonly { readonly name: string; readonly start: number }[];
     }[];
     readonly escapes: readonly {
       readonly file: string;
