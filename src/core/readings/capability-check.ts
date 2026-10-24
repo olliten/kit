@@ -118,9 +118,50 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         !files.includes(fact.type.file) && fact.nativeAuthority?.some((authority) =>
           authority.root.file === fact.type?.file && authority.root.name === fact.type?.name))
         ? []
-        : [{ capability: adapter.capability, type: fact.type, kind: adapter.kind }],
+        : [
+            { capability: adapter.capability, type: fact.type, kind: adapter.kind },
+            // A port the contract returns carries the same capability, and no other.
+            ...(adapter.kind === "external" && fact.parameter === null ? (fact.ports ?? []) : []).map((port) => ({
+              capability: adapter.capability,
+              type: port,
+              kind: adapter.kind,
+            })),
+          ],
     ),
   );
+  // The installed package a declaration file belongs to, as an adapter's accepted types name it.
+  const packageOf = (file: string): string | undefined => {
+    const at = file.lastIndexOf("node_modules/");
+    if (at < 0) return undefined;
+    const parts = file.slice(at + "node_modules/".length).split("/");
+    return parts[0]?.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+  };
+  for (const adapter of adapters)
+    for (const accepted of adapter.accepts ?? [])
+      if (
+        adapter.kind !== "external" ||
+        typeof accepted.package !== "string" ||
+        !accepted.package.trim() ||
+        /^[.#/]/.test(accepted.package) ||
+        !packages.some((row) => row.name === accepted.package) ||
+        !Array.isArray(accepted.types) ||
+        accepted.types.length === 0 ||
+        Array.from(accepted.types).some((name) => typeof name !== "string" || !/^[A-Za-z_$][\w$]*$/.test(name)) ||
+        new Set(accepted.types).size !== accepted.types.length
+      )
+        throw new Error(
+          "Declare accepts only on an external adapter, as a declared package and its distinct named handle types.",
+        );
+  const accepting = (path: string, type: { readonly file: string; readonly name: string } | undefined) =>
+    adapters.find(
+      (adapter) =>
+        adapter.kind === "external" &&
+        pathOf(adapter.module) === path &&
+        type !== undefined &&
+        (adapter.accepts ?? []).some(
+          (accepted) => accepted.types.includes(type.name) && packageOf(type.file) === accepted.package,
+        ),
+    );
   const sdkInputs = adapters.flatMap((adapter) =>
     adapter.kind !== "external" ? [] :
       (contracts.get(adapter) ?? []).flatMap((fact) =>
@@ -741,7 +782,11 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         (adapter) =>
           pathOf(adapter.module) === path &&
           adapter.kind === "external" &&
-          ((hostLibrary.test(native.root.file) && declaresHostGlobal(adapter, path)) ||
+          ((hostLibrary.test(native.root.file) &&
+            (declaresHostGlobal(adapter, path) || (adapter.accepts ?? []).length > 0)) ||
+          (adapter.accepts ?? []).some(
+            (accepted) => packageOf(native.root.file) === accepted.package && accepted.types.includes(native.root.name),
+          ) ||
           [
             ...(contracts.get(adapter) ?? []).flatMap((contract) => contract.nativeAuthority ?? []),
             ...projects.flatMap((project) =>
@@ -827,7 +872,43 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         suppliedCapabilities.get(key)?.add(nativeKey(input.type));
       }
   }
+  // A value bound to a parameter typed as a registered adapter's contract or port, or to a package handle an
+  // adapter accepts, is that adapter's: the binding is established and carries exactly its capability. A
+  // literal or closure supplied there is still judged by what it captures.
+  const held = new Map<string, (typeof adapters)[number]>();
+  for (const parameter of projects.flatMap((project) => project.parameters)) {
+    const type = parameter.types[0];
+    const contract = contractTypes.find(
+      (candidate) =>
+        candidate.kind !== "produce" && type?.file === candidate.type.file && type?.name === candidate.type.name,
+    );
+    const owner = accepting(parameter.file, type);
+    const holder = contract === undefined ? owner : adapters.find((adapter) =>
+      adapter.kind === "external" && adapter.capability === contract.capability &&
+      (contracts.get(adapter) ?? []).some((fact) => fact.type !== null &&
+        [fact.type, ...(fact.ports ?? [])].some((port) => port.file === type?.file && port.name === type?.name)));
+    if (holder !== undefined) held.set(keyOf(parameter), holder);
+  }
+  const heldBy = (binding: (typeof bindings)[number]) =>
+    binding.supported && binding.target !== null ? held.get(keyOf(binding.target)) : undefined;
+  // What a held value brings beyond its adapter: the adapter's own authority, and the handles it accepts or the
+  // host library they open, are its; anything else captured stays the caller's and is checked.
+  const beyond = (binding: (typeof bindings)[number], holder: (typeof adapters)[number]): string[] => {
+    const own = inherited.get(pathOf(holder.module)) ?? new Set<string>();
+    return [...(binding.capture === undefined ? [] : captured(binding.capture))].filter((capability) => {
+      if (own.has(capability) || capability === windowAuthority) return false;
+      const native = nativeAuthorities.get(capability);
+      return !(native !== undefined && (holder.accepts ?? []).length > 0 &&
+        (hostLibrary.test(native.root.file) || (holder.accepts ?? []).some((accepted) =>
+          packageOf(native.root.file) === accepted.package)));
+    });
+  };
+  const heldCarry = (binding: (typeof bindings)[number]): string[] | undefined => {
+    const holder = heldBy(binding);
+    return holder === undefined ? undefined : [holder.capability, ...beyond(binding, holder)];
+  };
   const established = (binding: (typeof bindings)[number]): boolean =>
+    heldCarry(binding)?.length === 1 ||
     binding.supported &&
     (binding.capture === undefined || binding.capture.parameters.every(
       (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
@@ -895,7 +976,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   };
   const bindingCapabilities = (binding: (typeof bindings)[number]): Set<string> =>
     new Set(
-      binding.capture !== undefined
+      heldCarry(binding) !== undefined
+        ? (heldCarry(binding) ?? [])
+        : binding.capture !== undefined
         ? [
             ...captured(binding.capture),
             ...binding.capture.parameters.flatMap((parameter) => [
@@ -1085,6 +1168,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           );
         if (origin === null && binding.capture === undefined) continue;
         for (const capability of bindingCapabilities(binding)) {
+          // An accepted handle handed to its adapter is that adapter's to hold, not its caller's to grant.
+          if (capability === heldBy(binding)?.capability && pathOf(heldBy(binding)?.module ?? "") === connection.target) continue;
           if (nativeAuthorities.has(capability)) {
             const receiver = sdkInputs.some((input) =>
               input.file === connection.target && nativeKey(input.type) === capability,

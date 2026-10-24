@@ -63,6 +63,8 @@ export interface KitConfig {
     readonly globals?: readonly string[];
     // Packages only this adapter's module may import at runtime, granting its capability there.
     readonly packages?: readonly string[];
+    // Package handle types this adapter accepts from its callers: a value of one passed to it is its to hold.
+    readonly accepts?: readonly { readonly package: string; readonly types: readonly string[] }[];
   }[];
 }
 
