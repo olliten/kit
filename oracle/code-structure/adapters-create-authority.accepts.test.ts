@@ -148,6 +148,8 @@ test("a handle the caller builds keeps the caller's own authority", () => {
 test.each([
   ["document", "document.title"],
   ["localStorage", "localStorage.getItem('k') ?? ''"],
+  ["window, which the page's own graph also reaches", "window.name"],
+  ["window.localStorage", "window.localStorage.getItem('k') ?? ''"],
 ])("a caller's handle literal capturing %s keeps that host global its own", (_, read) => {
   const findings = inspect(
     "export function run(page: Page): Promise<string> {\n" +
@@ -157,6 +159,18 @@ test.each([
   expect(findings.map((item) => item.debtKey)).toContainEqual(
     expect.stringMatching(new RegExp(`^R1:(?:closure-binding|native-authority):${adapter}:${caller}:${adapter}:\\d+:`)),
   );
+});
+
+test("accepting a handle adds nothing to what the adapter's own code may reach", () => {
+  // The adapter's own natives: a contract whose types mention Window already covers Window-rooted access, as
+  // on main; accepts must not widen that, and Storage stays undeclared either way.
+  const body = "of: (page) => ({ title: async () => (await page.title()) + window.name + (window.localStorage.getItem('k') ?? '') })";
+  const own = (adapters: NonNullable<KitConfig["adapters"]>) =>
+    inspect(handOver, adapters, adapterSource(undefined, body))
+      .map((item) => item.debtKey)
+      .filter((key) => key.startsWith(`R1:native-authority:${adapter}:native:`));
+  expect(own(drivers(accepted))).toEqual(own(drivers()));
+  expect(own(drivers(accepted))).toContainEqual(expect.stringMatching(/lib\.dom\.d\.ts:Storage$/));
 });
 
 test("accepting a handle grants the adapter no undeclared host global", () => {

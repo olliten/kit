@@ -806,7 +806,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           pathOf(adapter.module) === path &&
           adapter.kind === "external" &&
           ((hostLibrary.test(native.root.file) && declaresHostGlobal(adapter, path)) ||
-          acceptedRoots(adapter).has(capability) ||
+          // The adapter's own Window-only access needs a declared global, whatever its handles' types mention.
+          (acceptedRoots(adapter).has(capability) && native.windowOnly !== true) ||
           [
             ...(contracts.get(adapter) ?? []).flatMap((contract) => contract.nativeAuthority ?? []),
             ...projects.flatMap((project) =>
@@ -929,8 +930,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   // accepts are its; anything else captured, a host global included, stays the caller's and is checked.
   const beyond = (binding: (typeof bindings)[number], holder: (typeof adapters)[number]): string[] => {
     const own = inherited.get(pathOf(holder.module)) ?? new Set<string>();
+    // A root the caller's own code reaches, such as a captured window, is the caller's even when the handle's
+    // type mentions it too.
+    const brought = new Set(
+      (binding.capture?.positions ?? [])
+        .filter((position) => !adapterPaths.has(position.file))
+        .flatMap((position) => positioned.get(`${position.file}:${position.start}`) ?? []),
+    );
     return [...(binding.capture === undefined ? [] : captured(binding.capture))].filter((capability) => {
-      return !own.has(capability) && !acceptedRoots(holder).has(capability);
+      return !own.has(capability) && (!acceptedRoots(holder).has(capability) || brought.has(capability));
     });
   };
   const heldCarry = (binding: (typeof bindings)[number]): string[] | undefined => {
