@@ -19,7 +19,10 @@ export interface LegacySizeFinding extends Finding {
 export function legacySize(snapshot: Snapshot): LegacySizeFinding[] {
   const { srcRoot, legacyGrowth } = snapshot.config;
   const entries = listedEntries(hostOf(snapshot.config));
-  const fix = `Add at most ${legacyGrowth} statements to this legacy module, each only a call into a placed module; place anything larger first.`;
+  const fix =
+    legacyGrowth === 0
+      ? "Add no statements to this legacy module; place new code first and leave this module to shrink."
+      : `Add at most ${legacyGrowth} statements to this legacy module, each only a call into a placed module; place anything larger first.`;
   return (snapshot.sizes ?? [])
     .filter(
       ({ file }) =>

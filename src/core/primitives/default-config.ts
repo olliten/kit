@@ -90,5 +90,5 @@ export const DEFAULT_CONFIG: KitConfig = {
   plurals: ["s", "es"],
   anchor: "\\{#[\\w-]+\\}",
   debtMarkers: ["TODO", "FIXME", "XXX", "HACK"],
-  legacyGrowth: 5,
+  legacyGrowth: 0,
 };
