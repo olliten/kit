@@ -17,7 +17,10 @@ export interface LegacySizeFinding extends Finding {
 // A declared startup file is an exception, not legacy, and a placed module is held to the rules instead.
 export function legacySize(snapshot: Snapshot): LegacySizeFinding[] {
   const { srcRoot, exceptions = [], legacyGrowth } = snapshot.config;
-  const fix = `Add at most ${legacyGrowth} statements to this legacy module, each only a call into a placed module; place anything larger first.`;
+  const fix =
+    legacyGrowth === 0
+      ? "Add no statements to this legacy module; place new code first and leave this module to shrink."
+      : `Add at most ${legacyGrowth} statements to this legacy module, each only a call into a placed module; place anything larger first.`;
   return (snapshot.sizes ?? [])
     .filter(
       ({ file }) =>

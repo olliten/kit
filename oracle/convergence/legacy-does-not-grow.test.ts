@@ -71,17 +71,25 @@ test("a legacy module's size is its statements, and those that only call into pl
   expect(failures(before, baseline)).toEqual([]);
 });
 
-test("growth within the allowance, by calls into placed modules, passes", () => {
-  const grown = measure({ [legacy]: report(calls(growth)) });
-  expect(sizeOf(grown)).toEqual({ statements: 7 + growth, calls: 2 + growth });
-  expect(failures(grown, baseline)).toEqual([]);
-});
-
-test("growth beyond the allowance fails, even by calls into placed modules", () => {
-  const grown = measure({ [legacy]: report(calls(growth + 1)) });
+test("the Kit allows a legacy module no growth, not even one call into a placed module", () => {
+  expect(growth).toBe(0);
+  const grown = measure({ [legacy]: report(calls(1)) });
+  expect(sizeOf(grown)).toEqual({ statements: 8, calls: 3 });
   expect(failures(grown, baseline)).toEqual([legacy]);
   const [failure] = ratchetFindings(grown, baseline, [], [], [], growth);
-  expect(failure.fix).toContain(`at most ${growth}`);
+  expect(failure.fix).toContain("may add no statements to a legacy module");
+  expect(failure.fix).not.toContain("at most");
+  expect(measure({ [legacy]: report() })[1]?.fix).toContain("Add no statements to this legacy module");
+});
+
+test("a supplied allowance admits only that many calls into placed modules", () => {
+  const allowance = 2;
+  const within = measure({ [legacy]: report(calls(allowance)) });
+  expect(ratchetFindings(within, baseline, [], [], [], allowance)).toEqual([]);
+  const beyond = measure({ [legacy]: report(calls(allowance + 1)) });
+  const [failure] = ratchetFindings(beyond, baseline, [], [], [], allowance);
+  expect(failure.path).toBe(legacy);
+  expect(failure.fix).toContain(`at most ${allowance}`);
 });
 
 test("one added statement that is not a call into a placed module fails", () => {
@@ -112,10 +120,10 @@ test("a shrink tightens the baseline, so later growth counts from the smaller si
 });
 
 test("tightening never records growth and drops the size of a module that is gone", () => {
-  const grown = measure({ [legacy]: report(calls(growth)) });
+  const grown = measure({ [legacy]: report(calls(1)) });
   expect(tightenedBaseline(baseline, grown)).toEqual(baseline);
-  const swapped = measure({ [legacy]: report(calls(3)).replace(ifBlock, "") });
-  expect(sizeOf(swapped)).toEqual({ statements: 8, calls: 5 });
+  const swapped = measure({ [legacy]: report(calls(2)).replace(ifBlock, "") });
+  expect(sizeOf(swapped)).toEqual({ statements: 7, calls: 4 });
   expect(failures(swapped, baseline)).toEqual([]);
   expect(tightenedBaseline(baseline, swapped)[`R1:legacy-size:${legacy}`]).toEqual({
     statements: 7,
