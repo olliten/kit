@@ -782,8 +782,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         (adapter) =>
           pathOf(adapter.module) === path &&
           adapter.kind === "external" &&
-          ((hostLibrary.test(native.root.file) &&
-            (declaresHostGlobal(adapter, path) || (adapter.accepts ?? []).length > 0)) ||
+          ((hostLibrary.test(native.root.file) && declaresHostGlobal(adapter, path)) ||
           (adapter.accepts ?? []).some(
             (accepted) => packageOf(native.root.file) === accepted.package && accepted.types.includes(native.root.name),
           ) ||
@@ -891,16 +890,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   }
   const heldBy = (binding: (typeof bindings)[number]) =>
     binding.supported && binding.target !== null ? held.get(keyOf(binding.target)) : undefined;
-  // What a held value brings beyond its adapter: the adapter's own authority, and the handles it accepts or the
-  // host library they open, are its; anything else captured stays the caller's and is checked.
+  // What a held value brings beyond its adapter: the adapter's own authority and the handle types it accepts
+  // are its; anything else captured, a host global included, stays the caller's and is checked.
   const beyond = (binding: (typeof bindings)[number], holder: (typeof adapters)[number]): string[] => {
     const own = inherited.get(pathOf(holder.module)) ?? new Set<string>();
     return [...(binding.capture === undefined ? [] : captured(binding.capture))].filter((capability) => {
-      if (own.has(capability) || capability === windowAuthority) return false;
+      if (own.has(capability)) return false;
       const native = nativeAuthorities.get(capability);
-      return !(native !== undefined && (holder.accepts ?? []).length > 0 &&
-        (hostLibrary.test(native.root.file) || (holder.accepts ?? []).some((accepted) =>
-          packageOf(native.root.file) === accepted.package)));
+      return !(native !== undefined && (holder.accepts ?? []).some((accepted) =>
+        packageOf(native.root.file) === accepted.package && accepted.types.includes(native.root.name)));
     });
   };
   const heldCarry = (binding: (typeof bindings)[number]): string[] | undefined => {

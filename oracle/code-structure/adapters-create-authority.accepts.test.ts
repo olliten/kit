@@ -106,6 +106,31 @@ test("a handle the caller builds keeps the caller's own authority", () => {
 });
 
 test.each([
+  ["document", "document.title"],
+  ["localStorage", "localStorage.getItem('k') ?? ''"],
+])("a caller's handle literal capturing %s keeps that host global its own", (_, read) => {
+  const findings = inspect(
+    "export function run(page: Page): Promise<string> {\n" +
+      `  const local: Page = { click: (selector) => page.click(selector), title: async () => ${read} };\n` +
+      "  return captureDrivers.of(local).title();\n}\n",
+  );
+  expect(findings.map((item) => item.debtKey)).toContainEqual(
+    expect.stringMatching(new RegExp(`^R1:(?:closure-binding|native-authority):${adapter}:${caller}:${adapter}:\\d+:`)),
+  );
+});
+
+test("accepting a handle grants the adapter no undeclared host global", () => {
+  const findings = inspect(
+    handOver,
+    drivers(accepted),
+    adapterSource(undefined, "of: (page) => ({ title: async () => (await page.title()) + (window.localStorage.getItem('k') ?? '') })"),
+  );
+  expect(findings.map((item) => item.debtKey)).toContainEqual(
+    expect.stringMatching(new RegExp(`^R1:native-authority:${adapter}:native:.*lib\\.dom\\.d\\.ts:(?:Storage|Window)$`)),
+  );
+});
+
+test.each([
   ["a non-external adapter", [{ ...drivers()[0]!, kind: "apply" as const, accepts: accepted }]],
   ["an undeclared package", drivers([{ package: "other-driver", types: ["Page"] }])],
   ["no types", drivers([{ package: "browser-driver", types: [] }])],
