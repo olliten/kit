@@ -171,6 +171,29 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ? [] : [{ file: pathOf(adapter.module), type: fact.type }],
       ),
   );
+  // The native roots an accepted handle reaches through its own type graph, as the compiler resolved them at the
+  // accepting adapter's parameters: the accepted types and the host types their members mention, nothing else.
+  const acceptedCache = new Map<(typeof adapters)[number], Set<string>>();
+  const acceptedRoots = (adapter: (typeof adapters)[number]): Set<string> => {
+    const cached = acceptedCache.get(adapter);
+    if (cached !== undefined) return cached;
+    const roots = new Set(
+      (adapter.accepts ?? []).length === 0
+        ? []
+        : (snapshot.compiler?.projects ?? []).flatMap((project) =>
+            project.parameters
+              .filter((parameter) => accepting(pathOf(adapter.module), parameter.types[0]) === adapter)
+              .flatMap((parameter) =>
+                (parameter.nativeAuthority ?? []).flatMap((authority) => [
+                  nativeKey(authority.root),
+                  ...(authority.windowOnly === true ? [windowAuthority] : []),
+                ]),
+              ),
+          ),
+    );
+    acceptedCache.set(adapter, roots);
+    return roots;
+  };
   const externalAdapterPaths = new Set(
     adapters
       .filter((adapter) => adapter.kind === "external")
@@ -783,9 +806,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           pathOf(adapter.module) === path &&
           adapter.kind === "external" &&
           ((hostLibrary.test(native.root.file) && declaresHostGlobal(adapter, path)) ||
-          (adapter.accepts ?? []).some(
-            (accepted) => packageOf(native.root.file) === accepted.package && accepted.types.includes(native.root.name),
-          ) ||
+          acceptedRoots(adapter).has(capability) ||
           [
             ...(contracts.get(adapter) ?? []).flatMap((contract) => contract.nativeAuthority ?? []),
             ...projects.flatMap((project) =>
@@ -825,12 +846,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     readonly target: { readonly file: string; readonly start: number } | null;
     readonly supported: boolean;
     readonly capture: NonNullable<typeof connection.callableBindings>[number]["capture"];
+    // The module the value is handed to.
+    readonly into: string | null;
   } => ({
     origin: connection.callableOrigins[index] ?? null,
     source: connection.callableBindings?.[index]?.source ?? null,
     target: connection.callableBindings?.[index]?.target ?? null,
     supported: connection.callableBindings?.[index] !== undefined,
     capture: connection.callableBindings?.[index]?.capture,
+    into: connection.target,
   });
   const bindings = connections.flatMap((connection) =>
     connection.callableOrigins.map((_, index) => bindingOf(connection, index)),
@@ -888,17 +912,25 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         [fact.type, ...(fact.ports ?? [])].some((port) => port.file === type?.file && port.name === type?.name)));
     if (holder !== undefined) held.set(keyOf(parameter), holder);
   }
+  const parameterFacts = new Map(
+    projects.flatMap((project) => project.parameters.map((parameter) => [keyOf(parameter), parameter] as const)),
+  );
+  // The handle a binding passes: the caller's own parameter, named directly or as the one value its argument uses.
+  const passed = (binding: (typeof bindings)[number]) => {
+    const source = binding.source ?? (binding.capture?.parameters.length === 1 ? binding.capture.parameters[0] : undefined);
+    return source === undefined ? undefined : parameterFacts.get(keyOf(source));
+  };
   const heldBy = (binding: (typeof bindings)[number]) =>
-    binding.supported && binding.target !== null ? held.get(keyOf(binding.target)) : undefined;
-  // What a held value brings beyond its adapter: the adapter's own authority and the handle types it accepts
-  // are its; anything else captured, a host global included, stays the caller's and is checked.
+    !binding.supported
+      ? undefined
+      : ((binding.target === null ? undefined : held.get(keyOf(binding.target))) ??
+        accepting(binding.into ?? "", passed(binding)?.types[0]));
+  // What a held value brings beyond its adapter: the adapter's own authority and the roots of the handle types it
+  // accepts are its; anything else captured, a host global included, stays the caller's and is checked.
   const beyond = (binding: (typeof bindings)[number], holder: (typeof adapters)[number]): string[] => {
     const own = inherited.get(pathOf(holder.module)) ?? new Set<string>();
     return [...(binding.capture === undefined ? [] : captured(binding.capture))].filter((capability) => {
-      if (own.has(capability)) return false;
-      const native = nativeAuthorities.get(capability);
-      return !(native !== undefined && (holder.accepts ?? []).some((accepted) =>
-        packageOf(native.root.file) === accepted.package && accepted.types.includes(native.root.name)));
+      return !own.has(capability) && !acceptedRoots(holder).has(capability);
     });
   };
   const heldCarry = (binding: (typeof bindings)[number]): string[] | undefined => {

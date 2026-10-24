@@ -60,7 +60,8 @@ compositions wire the others into behaviour.
   hosts no external adapter. In an explicit root set, a registration names the root-qualified module
   identity rather than choosing a default root. A registered external adapter may declare the package
   handle types it `accepts`: a value of an accepted type passed to that adapter is the adapter's to hold, so
-  that type's native roots belong to the adapter's capability, and only the adapter's contract leaves it.
+  the native roots its type graph reaches, the accepted type and the host types its members name, belong to
+  the adapter's capability, and only the adapter's contract leaves it.
   Accepting a handle grants no host global: the adapter still declares those it uses. Every other argument,
   an undeclared type, and what the caller adds to the value, a host global included, stay checked ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#adapters-create-authority}
   - Proof: {{source-fixture}}

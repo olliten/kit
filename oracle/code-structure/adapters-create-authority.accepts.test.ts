@@ -6,7 +6,8 @@ import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 const adapter = "oracle/shell/adapters/capture-driver.ts";
 const caller = "legacy/full-stack.ts";
 const driver =
-  "export interface Page { click(selector: string): Promise<void>; title(): Promise<string>; }\n" +
+  // Like a browser driver's page, its own type graph reaches the DOM's Window.
+  "export interface Page { click(selector: string): Promise<void>; title(): Promise<string>; readonly opener: Window | null; }\n" +
   "export interface Locator { text(): Promise<string>; }\n" +
   "export interface Frame { url(): string; }\n";
 const drivers = (accepts?: NonNullable<KitConfig["adapters"]>[number]["accepts"]): NonNullable<KitConfig["adapters"]> => [
@@ -56,19 +57,58 @@ function inspect(
     { srcRoot: ["oracle", "src"], layout: { legacy: ["legacy"] }, adapters, packages },
   );
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return capabilityCheck(snapshot).findings.filter((item) => !item.debtKey.startsWith("R1:migration-zone:"));
+  // The legacy caller's own migration limits and raw reads stay its own; the rules under test are about the hand-over.
+  return capabilityCheck(snapshot).findings.filter(
+    (item) => !item.debtKey.startsWith("R1:migration-zone:") && item.path !== caller,
+  );
 }
 
-const handOver = "export function run(page: Page): Promise<string> { return captureDrivers.of(page).title(); }\n";
+const handOver =
+  "import { store } from '../src/substrate/adapters/store.js';\n" +
+  "export function stamp(): string { return store.read() + String(Date.now()); }\n" +
+  "export const run = (page: Page): Promise<string> => captureDrivers.of(page).title();\n";
 
 test("a page handed to the adapter that accepts it is the adapter's to hold", () => {
   expect(inspect(handOver)).toEqual([]);
 });
 
-test("without accepts the same page is an executable input crossing a checked boundary", () => {
-  expect(inspect(handOver, drivers()).map((item) => item.debtKey)).toContainEqual(
-    expect.stringMatching(new RegExp(`^R1:callable-binding:${adapter}:${caller}:`)),
+test("without accepts the same page is an executable input carrying its Window into the adapter", () => {
+  const keys = inspect(handOver, drivers()).map((item) => item.debtKey);
+  expect(keys).toContainEqual(expect.stringMatching(new RegExp(`^R1:callable-binding:${adapter}:${caller}:`)));
+  expect(keys).toContainEqual(expect.stringMatching(new RegExp(`^R1:native-authority:${adapter}:${caller}:.*:Window$`)));
+});
+
+test("the port the adapter returns carries the page's roots into a placed composition only with accepts", () => {
+  const overlay = "oracle/shell/compositions/capture-overlay.ts";
+  const files = {
+    [overlay]:
+      "import type { CaptureDriver } from '../adapters/capture-driver.js';\n" +
+      "export async function open(page: CaptureDriver): Promise<string> { return page.title(); }\n" +
+      "export async function driveCapture(page: CaptureDriver): Promise<string> { return open(page); }\n",
+  };
+  const call =
+    "import * as overlay from '../oracle/shell/compositions/capture-overlay.js';\n" +
+    "export const open = (page: Page): Promise<string> => overlay.driveCapture(captureDrivers.of(page));\n";
+  const snapshot = (adapters: NonNullable<KitConfig["adapters"]>) =>
+    capabilityCheck(sourceFixture(
+      {
+        "node_modules/browser-driver/index.d.ts": driver,
+        [adapter]: adapterSource(),
+        ...files,
+        "src/substrate/adapters/store.ts": "export interface Store { read(): string; }\nexport const store: Store = { read: () => 'x' };\n",
+        [caller]: "import type { Page } from 'browser-driver';\nimport { captureDrivers } from '../oracle/shell/adapters/capture-driver.js';\n" + call,
+      },
+      {
+        srcRoot: ["oracle", "src"],
+        layout: { legacy: ["legacy"] },
+        adapters,
+        packages: [{ name: "browser-driver", capabilities: ["browser-driving"] }],
+      },
+    )).findings.filter((item) => item.path === overlay);
+  expect(snapshot(drivers()).map((item) => item.debtKey)).toContainEqual(
+    expect.stringMatching(new RegExp(`^R1:callable-binding:${overlay}:${caller}:`)),
   );
+  expect(snapshot(drivers(accepted))).toEqual([]);
 });
 
 test("another argument of a type the adapter does not accept stays checked", () => {
@@ -97,7 +137,7 @@ test("a handle the caller builds keeps the caller's own authority", () => {
   const findings = inspect(
     "import { store } from '../src/substrate/adapters/store.js';\n" +
       "export function run(page: Page): Promise<string> {\n" +
-      "  const local: Page = { click: (selector) => page.click(selector + store.read()), title: () => page.title() };\n" +
+      "  const local: Page = { click: (selector) => page.click(selector + store.read()), title: () => page.title(), opener: null };\n" +
       "  return captureDrivers.of(local).title();\n}\n",
   );
   expect(findings.map((item) => item.debtKey)).toContainEqual(
@@ -111,7 +151,7 @@ test.each([
 ])("a caller's handle literal capturing %s keeps that host global its own", (_, read) => {
   const findings = inspect(
     "export function run(page: Page): Promise<string> {\n" +
-      `  const local: Page = { click: (selector) => page.click(selector), title: async () => ${read} };\n` +
+      `  const local: Page = { click: (selector) => page.click(selector), title: async () => ${read}, opener: null };\n` +
       "  return captureDrivers.of(local).title();\n}\n",
   );
   expect(findings.map((item) => item.debtKey)).toContainEqual(
