@@ -67,8 +67,10 @@ function sizeFailure(item, baseline, growth) {
     ...item,
     fix:
       `This legacy module has ${item.statements} statements, ${item.calls} of them calls into placed modules; ` +
-      `its baseline records ${base.statements} and ${base.calls}. A change may add at most ${growth}, each only ` +
-      "a call into a placed module: move the new code into a placed module and call it from here.",
+      `its baseline records ${base.statements} and ${base.calls}. ` +
+      (growth === 0
+        ? "A change may add no statements to a legacy module: place the new code first, and let this module only shrink."
+        : `A change may add at most ${growth}, each only a call into a placed module: move the new code into a placed module and call it from here.`),
   };
 }
 
