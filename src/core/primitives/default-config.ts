@@ -21,9 +21,13 @@ export interface KitConfig {
     | { readonly root: string; readonly zone: "core" | "shell" | "substrate" }
     | { readonly files: readonly string[]; readonly zone: "core" | "shell" | "substrate" }
   )[];
-  // Exact executable entrypoints outside zones, including claim proofs. This grants wiring permission
-  // only to each named file; its authority and dependencies remain checked.
+  // Where code runs and what may run there. Each host names the compiler libraries whose globals exist in
+  // it, the zone that runs in it, its exact entry files, the proof directories its tests come from, the
+  // runner exports its entries may use and the types whose function values carry code into it.
+  readonly hosts?: Readonly<Record<string, Host>>;
+  // Read for one release in place of hosts: exact entries, proof discovery directories and runner exports.
   readonly exceptions?: readonly string[];
+  readonly legacyTestRoots?: readonly string[];
   // Explicit separation of local code. Selectors are exact relative files or directory prefixes.
   readonly dependencyExclusions?: readonly {
     readonly from: string;
@@ -48,8 +52,7 @@ export interface KitConfig {
   readonly packages?: readonly {
     readonly name: string;
     readonly capabilities: readonly string[];
-    // An effectful package boundary restricted to exact entrypoints and these named runtime exports.
-    // This is not a purity declaration; callbacks retain the package's capabilities.
+    // Read for one release in place of hosts.<name>.provides.
     readonly entrypointExports?: readonly string[];
   }[];
   readonly adapters?: readonly {
@@ -64,6 +67,18 @@ export interface KitConfig {
     // Packages only this adapter's module may import at runtime, granting its capability there.
     readonly packages?: readonly string[];
   }[];
+}
+
+export interface Host {
+  // "dom", "webworker", "node", or a package whose ambient declarations the host provides.
+  readonly lib: readonly string[];
+  readonly zone?: "shell" | "substrate";
+  readonly entries?: readonly string[];
+  readonly roots?: readonly string[];
+  // Named runtime exports of an effectful package that this host's entries may import.
+  readonly provides?: Readonly<Record<string, readonly string[]>>;
+  // `<package>#<type>`: a function literal of this type is a program in this host.
+  readonly enteredBy?: readonly string[];
 }
 
 export const DEFAULT_CONFIG: KitConfig = {

@@ -1,4 +1,5 @@
 import { type Finding, byDebtKey, finding } from "./finding.js";
+import { hostOf, listedEntries } from "./host-of.js";
 import { type Placed, placementOf, rootOf } from "./placement-of.js";
 
 // R2, dependencies. Only imports between two placed artifacts are held; legacy files are not.
@@ -41,12 +42,13 @@ export function dependencyExclusions(snapshot: Snapshot): {
       .filter((file) => file.type === "source" || file.type === "test")
       .map((file) => file.path),
   );
+  const entries = listedEntries(hostOf(snapshot.config));
   const analyzed = new Set(
     snapshot.files
       .filter(
         (file) =>
           file.type === "source" ||
-          (file.type === "test" && snapshot.config.exceptions?.includes(file.path)),
+          (file.type === "test" && entries.includes(file.path)),
       )
       .map((file) => file.path),
   );

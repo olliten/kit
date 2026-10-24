@@ -49,12 +49,89 @@ export function configuredKit(defaults, declaration) {
     claimSeparator: declaration["claim-separator"] ?? defaults.claimSeparator,
     legacyAreas: declaration["legacy-areas"] ?? [],
     legacyZones: declaration["legacy-zones"] ?? [],
+    ...(declaration.hosts === undefined ? {} : { hosts: configuredHosts(declaration.hosts) }),
     exceptions: declaration.exceptions ?? [],
+    legacyTestRoots: declaration["legacy-test-roots"] === undefined
+      ? []
+      : (testRoots(declaration), declaration["legacy-test-roots"].map((root) => posix.normalize(root).replace(/\/$/, ""))),
     dependencyExclusions: declaration["dependency-exclusions"] ?? [],
     ignore: ignoredPaths(declaration.ignore),
     adapters: declaration.adapters ?? [],
     packages: declaration.packages ?? [],
   };
+}
+
+const HOST_FIELDS = ["lib", "zone", "entries", "roots", "provides", "entered-by"];
+
+/** A path a host lists is exact and relative: no pattern, no dot segment, nothing outside the app.
+ * @param {unknown} path
+ */
+function exactPath(path) {
+  return typeof path === "string" && path.length > 0 && path.trim() === path &&
+    !/[\\*?{}[\]!]/.test(path) && !/^[a-z]:/i.test(path) && !posix.isAbsolute(path) &&
+    !path.replace(/\/$/, "").split("/").some((part) => !part || part === "." || part === "..");
+}
+
+/** Hosts are a mapping from a host name to the libraries, zone, entries, proof roots, provided runner exports
+ * and entry types of that runtime; a field or shape the checks do not read is an error.
+ * @param {unknown} declaration
+ */
+export function configuredHosts(declaration) {
+  const fail = (why) => {
+    throw new Error(`Declare hosts as a mapping of host names to { lib, zone?, entries?, roots?, provides?, entered-by? }: ${why}.`);
+  };
+  if (!declaration || typeof declaration !== "object" || Array.isArray(declaration)) fail("not a mapping");
+  const zones = new Set();
+  return Object.fromEntries(Object.entries(declaration).map(([name, host]) => {
+    if (!/^[a-z][a-z0-9-]*$/.test(name)) fail(`${JSON.stringify(name)} is not a lowercase host name`);
+    if (!host || typeof host !== "object" || Array.isArray(host)) fail(`${name} is not a mapping`);
+    const unknown = Object.keys(host).find((key) => !HOST_FIELDS.includes(key));
+    if (unknown !== undefined) fail(`${name}.${unknown} is not a host field`);
+    const names = (value, field) => {
+      if (value === undefined) return undefined;
+      if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || !item.trim() || item.trim() !== item))
+        fail(`${name}.${field} must list names`);
+      return [...new Set(value)];
+    };
+    const lib = names(host.lib, "lib");
+    if (lib === undefined || lib.length === 0) fail(`${name}.lib must name at least one library`);
+    if (host.zone !== undefined) {
+      if (host.zone === "core") fail(`${name}.zone: the core runs in no host`);
+      if (host.zone !== "shell" && host.zone !== "substrate") fail(`${name}.zone must be shell or substrate`);
+      if (zones.has(host.zone)) fail(`${name}.zone: one host runs each zone`);
+      zones.add(host.zone);
+    }
+    const paths = (value, field) => {
+      const listed = names(value, field);
+      if (listed !== undefined && listed.some((path) => !exactPath(path)))
+        fail(`${name}.${field} must list relative paths without patterns or dot segments`);
+      return listed;
+    };
+    const entries = paths(host.entries, "entries");
+    const roots = paths(host.roots, "roots")?.map((root) => root.replace(/\/$/, ""));
+    let provides;
+    if (host.provides !== undefined) {
+      if (!host.provides || typeof host.provides !== "object" || Array.isArray(host.provides))
+        fail(`${name}.provides must map packages to export names`);
+      provides = Object.fromEntries(Object.entries(host.provides).map(([pkg, exports]) => {
+        const listed = names(exports, `provides.${pkg}`);
+        if (/^[.#/]/.test(pkg) || listed.length === 0 || listed.some((item) => !/^[A-Za-z_$][\w$]*$/.test(item)))
+          fail(`${name}.provides.${pkg} must list a package's named exports`);
+        return [pkg, listed];
+      }));
+    }
+    const enteredBy = names(host["entered-by"], "entered-by");
+    if (enteredBy !== undefined && enteredBy.some((reference) => !/^[^#\s]+#[A-Za-z_$][\w$]*$/.test(reference)))
+      fail(`${name}.entered-by must list <package>#<type> references`);
+    return [name, {
+      lib,
+      ...(host.zone === undefined ? {} : { zone: host.zone }),
+      ...(entries === undefined ? {} : { entries }),
+      ...(roots === undefined ? {} : { roots }),
+      ...(provides === undefined ? {} : { provides }),
+      ...(enteredBy === undefined ? {} : { enteredBy }),
+    }];
+  }));
 }
 
 /** @param {unknown} declaration
@@ -138,7 +215,8 @@ export function kitCheckPaths(args, engineRoot, cwd = process.cwd()) {
   };
 }
 
-/** Legacy proofs remain registered while the declared oracle root is adopted. */
+/** Tests are discovered in the proof root and in the proof host's roots; `legacy-test-roots` is read for one
+ * release in their place. */
 /** @param {Record<string, unknown>} declaration
  * @returns {string[]}
  */
@@ -146,7 +224,10 @@ export function testRoots(declaration) {
   const legacy = declaration["legacy-test-roots"] === undefined ? [] : declaration["legacy-test-roots"];
   if (!Array.isArray(legacy))
     throw new Error("The Kit configuration's legacy-test-roots must list relative directories.");
-  const roots = [...legacy, declaration.roots?.oracle].map((root) => {
+  const hosted = declaration.hosts?.proof?.roots ?? [];
+  if (!Array.isArray(hosted))
+    throw new Error("The Kit configuration's hosts.proof.roots must list relative directories.");
+  const roots = [...legacy, ...hosted, declaration.roots?.oracle].map((root) => {
     const normalized = typeof root === "string" ? posix.normalize(root).replace(/\/$/, "") : "";
     if (
       typeof root !== "string" ||
