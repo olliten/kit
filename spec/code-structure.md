@@ -51,7 +51,13 @@ compositions wire the others into behaviour.
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
   hosts no external adapter. In an explicit root set, a registration names the root-qualified module
-  identity rather than choosing a default root ({{capability-check}}). · {#adapters-create-authority}
+  identity rather than choosing a default root. A registered external adapter may declare the package
+  handle types it `accepts`: a value of an accepted type passed to that adapter is the adapter's to hold, so
+  the native roots its type graph reaches, the accepted type and the host types its members name, belong to
+  the adapter's capability, and only the adapter's contract leaves it.
+  Accepting a handle grants no host global: the adapter still declares those it uses. Every other argument,
+  an undeclared type, and what the caller adds to the value, a host global included, stay checked ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#adapters-create-authority}
+  - Proof: {{source-fixture}}
 - A package an adapter declares in its `packages` is that adapter's to import: there the import grants the
   adapter's capability, and anywhere else, the core included, a runtime import of it is a finding even where a
   package row declares it; a package no row declares stays a limit ({{capability-check}}). · {#declared-packages-stay-in-their-adapter}
@@ -74,7 +80,11 @@ compositions wire the others into behaviour.
   endpoint. A composition or registered external adapter handing a handle to a function only its own file
   can name crosses no boundary; the module's own authority stays checked. A
   function another file can name, through an export, an exported record or a public method of an exported
-  class, is one ({{capability-check}}). · {#registration-passes-no-authority}
+  class, is one. A value whose type is a registered adapter's contract, or a port type that contract's
+  operations return, is an established binding carrying exactly that adapter's capability; what a literal of
+  that type captures beyond it, and the zone and reading rules, stay checked
+  ({{capability-check}}, {{compiler-facts}}, {{read-snapshot}}). · {#registration-passes-no-authority}
+  - Proof: {{source-fixture}}
 - A native capability contract is usable in an outer zone only when both its host boundary and its
   registered adapter permit it, and its operation contract establishes the access. Window-only authority
   needs a `dom` host; the core stays forbidden, and undeclared native authority stays a limit
