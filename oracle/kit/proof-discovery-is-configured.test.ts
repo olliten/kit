@@ -19,6 +19,14 @@ test("legacy discovery is explicit, normalized and does not mutate declarations"
   ]);
 });
 
+test("the proof host's roots are its explicit discovery directories", () => {
+  expect(testRoots({
+    roots: { oracle: "oracle/" },
+    hosts: { proof: { lib: ["node"], roots: ["spec/", "src/", "__tests__/"] } },
+  })).toEqual(["spec", "src", "__tests__", "oracle"]);
+  expect(() => testRoots({ roots: { oracle: "proofs" }, hosts: { proof: { lib: ["node"], roots: ["../x"] } } })).toThrow();
+});
+
 test("a consumer can retain its exact historical discovery directories", () => {
   expect(testRoots({
     roots: { oracle: "oracle/" },

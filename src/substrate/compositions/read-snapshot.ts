@@ -9,6 +9,7 @@ import type { ImportEdge } from "../../core/primitives/import.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
+import { hostOf, listedEntries } from "../../core/readings/host-of.js";
 import { legacyCodeOf, moduleFileOf, placementOf, rootOf } from "../../core/readings/placement-of.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
@@ -241,11 +242,16 @@ function readCompiler(
   const workerHost = compilerWorkspace.workerHost(trace);
   const workerTypes = new Set(workerHost.types);
   const workerGlobals = new Set(workerHost.globals);
+  const hosts = hostOf(config);
+  const entries = listedEntries(hosts);
+  const enteredBy = hosts.hosts.flatMap((host) =>
+    host.enteredBy.map((reference) => ({ ...reference, host: host.name })),
+  );
   const source = new Set(
     files
       .filter(
         (file) => file.type === "source" ||
-          (file.type === "test" && config.exceptions?.includes(file.path)),
+          (file.type === "test" && entries.includes(file.path)),
       )
       .map((file) => file.path),
   );
@@ -331,6 +337,7 @@ function readCompiler(
       const accesses: Project["accesses"][number][] = [];
       const constructions: Project["constructions"][number][] = [];
       const connections: Project["connections"][number][] = [];
+      const programs: NonNullable<Project["programs"]>[number][] = [];
       const termSources: NonNullable<Project["termFacts"]>["sources"][number][] = [];
       const termTypes: NonNullable<Project["termFacts"]>["types"][number][] = [];
       type CallableBinding = {
@@ -1402,12 +1409,15 @@ function readCompiler(
                       windowOnly: true,
                     }]
                   : [];
+              const homes = (symbol?.declarations ?? []).map((home) => ambientPackageOf(local(home.getSourceFile().fileName)));
+              const packages = homes.every((home) => home !== null) ? [...new Set(homes)].sort() : [];
               globals.push({
                 file: path,
                 name: node.text,
                 start: node.getStart(sf),
                 declarationFile: local(declaration.getSourceFile().fileName),
                 runtime,
+                ...(packages.length > 0 ? { packages } : {}),
                 nativeAuthority: [
                   ...new Map(
                     [...nativeAuthorityOf(type), ...returned, ...windowAuthority].map((authority) => [
@@ -1444,6 +1454,60 @@ function readCompiler(
                     }] }
                   : {}),
               });
+          }
+          if (enteredBy.length > 0 && runtime && (ts.isCallExpression(node) || ts.isNewExpression(node))) {
+            const signature = checker.getResolvedSignature(node);
+            const declared = signature?.getParameters() ?? [];
+            for (const [index, argument] of (node.arguments ?? []).entries()) {
+              const parameter = declared[Math.min(index, declared.length - 1)]?.valueDeclaration;
+              if (parameter === undefined || !ts.isParameter(parameter) || parameter.type === undefined) continue;
+              if (!ts.isTypeReferenceNode(parameter.type)) continue;
+              let named = checker.getSymbolAtLocation(parameter.type.typeName);
+              if (named !== undefined && (named.flags & ts.SymbolFlags.Alias) !== 0) named = checker.getAliasedSymbol(named);
+              const home = named?.declarations?.[0]?.getSourceFile().fileName;
+              const owner = home === undefined ? null : ambientPackageOf(local(home));
+              const entered = enteredBy.find((reference) => reference.name === owner && reference.type === named?.name);
+              if (entered === undefined) continue;
+              let program: ts.Expression = argument;
+              while (ts.isParenthesizedExpression(program)) program = program.expression;
+              const literal =
+                (ts.isArrowFunction(program) || ts.isFunctionExpression(program)) &&
+                (checker.getTypeAtLocation(program).flags & ts.TypeFlags.Any) === 0;
+              const captures: { name: string; start: number }[] = [];
+              const body = program;
+              // The copy a host runs is serialized: every name it keeps from outside the literal is lost, and
+              // only its own parameters and the host's globals remain.
+              const capture = (child: ts.Node): void => {
+                if (ts.isTypeNode(child)) return;
+                if (ts.isIdentifier(child) && !(
+                  (ts.isPropertyAccessExpression(child.parent) && child.parent.name === child) ||
+                  (ts.isPropertyAssignment(child.parent) && child.parent.name === child) ||
+                  (ts.isBindingElement(child.parent) && child.parent.propertyName === child)
+                )) {
+                  const reached = ts.isShorthandPropertyAssignment(child.parent)
+                    ? checker.getShorthandAssignmentValueSymbol(child.parent)
+                    : checker.getSymbolAtLocation(child);
+                  const origin = reached?.valueDeclaration ?? reached?.declarations?.[0];
+                  if (
+                    origin !== undefined &&
+                    !origin.getSourceFile().isDeclarationFile &&
+                    !(origin.getSourceFile() === sf && origin.pos >= body.pos && origin.end <= body.end)
+                  )
+                    captures.push({ name: child.text, start: child.getStart(sf) });
+                }
+                ts.forEachChild(child, capture);
+              };
+              if (literal) ts.forEachChild(program, capture);
+              programs.push({
+                file: path,
+                start: program.getStart(sf),
+                end: program.getEnd(),
+                host: entered.host,
+                type: `${entered.name}#${entered.type}`,
+                literal,
+                captures,
+              });
+            }
           }
           const kind =
             node.kind === ts.SyntaxKind.AnyKeyword
@@ -1725,11 +1789,23 @@ function readCompiler(
         accesses,
         constructions,
         connections,
+        ...(programs.length > 0 ? { programs } : {}),
         proofs,
         termFacts: { sources: termSources, types: termTypes },
       };
     });
   return { facts: { version: ts.version, projects }, scopes };
+}
+
+// The installed package whose declaration file this is, as a host library names it: `@types/node` is node.
+// A compiler library, or a file outside every package, is none.
+function ambientPackageOf(path: string): string | null {
+  const at = path.lastIndexOf("node_modules/");
+  if (at < 0) return null;
+  const parts = path.slice(at + "node_modules/".length).split("/");
+  const name = parts[0]?.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+  if (name === undefined || name === "typescript") return null;
+  return name.startsWith("@types/") ? name.slice("@types/".length) : name;
 }
 
 // Every comment the parser attaches before or after a node, each once, in file order.

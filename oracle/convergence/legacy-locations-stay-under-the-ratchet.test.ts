@@ -132,11 +132,11 @@ test("placed code still cannot capture legacy clock authority through a helper",
     .toEqual(expect.arrayContaining([expect.objectContaining({ path, category: "placed-violation" })]));
 });
 
-test("declared legacy entrypoints retain blocking reachable checker limits", () => {
+test("declared legacy entries retain blocking reachable checker limits", () => {
   const path = "old-tests/start.ts";
   const snapshot = sourceFixture({
     [path]: "export const get = (name: string): unknown => Reflect.get(globalThis, name);",
-  }, { ...config, exceptions: [path] });
+  }, { ...config, hosts: { browser: { lib: ["dom"], zone: "shell", entries: [path] } } });
   const result = capabilityCheck(snapshot);
   const roots = startupCheckRoots(snapshot.config);
   expect(roots).toEqual([path]);

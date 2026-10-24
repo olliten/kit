@@ -44,13 +44,6 @@ compositions wire the others into behaviour.
 
 ## Authority
 
-- Window-only host authority stays in Shell, even if an adapter declaration permits another zone.
-  The compiler's DOM and worker declarations distinguish Window-only types and globals from shared
-  host APIs; HTTP and cancellation remain available to Substrate. Imports and captured callbacks retain
-  this requirement. · {#window-authority-stays-in-shell}
-  - Implementation: {{capability-check}}, {{compiler-facts}}, {{compiler}}, {{read-snapshot}}
-  - Proof: {{source-fixture}}
-
 - A module's authority is derived from its actual inputs: runtime imports, ambient globals and parameters
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
   never purity ({{capability-check}}, {{compiler-facts}}). · {#authority-is-derived}
@@ -59,20 +52,9 @@ compositions wire the others into behaviour.
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
   hosts no external adapter. In an explicit root set, a registration names the root-qualified module
   identity rather than choosing a default root ({{capability-check}}). · {#adapters-create-authority}
-- Inside an adapter, a host global it declares covers every handle reached through it, and a composition
-  holding only the adapter's plain contract holds no native authority ({{capability-check}}). · {#declared-globals-cover-their-handles}
-  - Proof: {{source-fixture}}
-- An ambient host global such as `process` is authority: used outside an adapter that declares it, also as
-  `globalThis.<name>` or through a cast of `globalThis`, it is a limit ({{capability-check}}). · {#host-globals-need-an-adapter}
 - A package an adapter declares in its `packages` is that adapter's to import: there the import grants the
   adapter's capability, and anywhere else, the core included, a runtime import of it is a finding even where a
   package row declares it; a package no row declares stays a limit ({{capability-check}}). · {#declared-packages-stay-in-their-adapter}
-  - Proof: {{source-fixture}}
-- An effectful package contract may restrict runtime imports to selected named exports in exact declared
-  entrypoints. Aliases retain the original export name and erased imports grant no authority; other access
-  forms, subpaths and missing import evidence stay limits. The permission does not extend to helpers or
-  remove captured callback authority, and adapter package ownership takes precedence
-  ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#entrypoint-package-exports-are-checked}
   - Proof: {{source-fixture}}
 - A namespace such as `Window` grants only what is reached through it, and a constructor selected from it
   keeps its own authority ({{capability-check}}). · {#namespaces-grant-what-is-reached}
@@ -95,7 +77,7 @@ compositions wire the others into behaviour.
   class, is one ({{capability-check}}). · {#registration-passes-no-authority}
 - A native capability contract is usable in an outer zone only when both its host boundary and its
   registered adapter permit it, and its operation contract establishes the access. Window-only authority
-  stays in Shell; the core stays forbidden, and undeclared native authority stays a limit
+  needs a `dom` host; the core stays forbidden, and undeclared native authority stays a limit
   ({{capability-check}}). · {#native-contracts-follow-permitted-zones}
   - Proof: {{source-fixture}}
 - An import between legacy and placed code obeys zone boundaries and carries capabilities transitively,
@@ -103,13 +85,47 @@ compositions wire the others into behaviour.
 - Imports through project references and path aliases carry the authority of the file they reach, and a
   non-null assertion is allowed only directly on an indexed access ({{compiler-facts}}). · {#project-imports-carry-authority}
 
-## Startup
+## Hosts
 
-- An app may declare exact, existing executable entrypoints outside every zone, including claim proofs:
-  each may connect Shell and Substrate contracts and use the core's, no module imports it, and its permission
-  does not pass to what it imports or exempt it from the capability, write, compiler and cycle checks.
-  A proof keeps its topic binding; a test suffix grants no permission. A directory, a pattern, a missing file
-  or a zoned module declared as an entrypoint grants nothing ({{capability-check}}, {{default-config}}). · {#startup-assembles-outer-zones}
+- A host is where code runs: the compiler libraries whose globals exist there, and the code that starts
+  there. `hosts` names each host's libraries, `dom`, `webworker`, `node` or a package whose ambient
+  declarations it provides, and the zone that runs in it; one host runs each zone and the core runs in
+  none. A global exists in a host only if one of its libraries declares it: Window-only authority, which
+  the compiler's DOM and worker declarations tell apart from shared web APIs, needs `dom`, and a global only
+  a package declares needs that package. Imports and captured callbacks keep the requirement. Without
+  `hosts`, Shell runs in a `dom` browser, Substrate in a `node` and `webworker` server, and proofs in `dom`
+  and `node` ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{host-of}}). · {#hosts-are-declared}
+  - Implementation: {{compiler}}, {{read-snapshot}}
+  - Proof: {{source-fixture}}
+
+- A host's globals belong to its adapters. In each host one adapter owns each global it declares, and every
+  handle reached through it is that adapter's, so a composition holding only the adapter's plain contract
+  holds no native authority. Other code in that host acquires the global only through that adapter. A second
+  owner in one host is a finding; two hosts may each own the same name, so a proof-root adapter may own a
+  global in the proof host. A package's ambient global such as `process` that no adapter owns in its host,
+  also as `globalThis.<name>` or through a cast of `globalThis`, is a limit
+  ({{capability-check}}, {{host-of}}). · {#host-globals-have-one-owner}
+  - Proof: {{source-fixture}}
+
+- A host starts at its entries: the exact, existing files outside every zone that it lists, and every claim
+  test, an entry of the proof host derived from its claim binding. An entry may wire the outer zones'
+  contracts and the core's, and import the named runtime exports its host `provides`; nothing imports it,
+  and it grants nothing to what it imports or exempts it from the capability, write, compiler and cycle
+  checks. A provided export keeps its original name through an alias, grants nothing outside the host's
+  entries and leaves its callbacks the package's authority; other access forms, subpaths and missing import
+  evidence stay limits. A listed entry is compiled and checked; a claim test the proof host does not list
+  keeps only its binding and the import rule. A test suffix, a directory, a pattern, a missing file or a
+  zoned module grants nothing. The proof host's `roots` are where tests outside the proof root are found
+  ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{host-of}}, {{read-snapshot}}). · {#hosts-start-at-entries}
+  - Proof: {{source-fixture}}
+
+- A host may name the types that carry code into it, `entered-by: [<package>#<type>]` for the package whose
+  declarations define the type, such as a browser-automation page function. A function literal passed
+  where that type is expected is a program in that host: what it touches is checked against that host's
+  libraries and nothing is charged to its caller, and each outer name it captures is a finding, since the
+  host runs a serialized copy that keeps only its parameters. The sending call keeps its handle's authority.
+  A reference, an `any` or a source string stays a limit
+  ({{capability-check}}, {{compiler-facts}}, {{host-of}}, {{read-snapshot}}). · {#entry-types-carry-code-into-a-host}
   - Proof: {{source-fixture}}
 
 ## Writes

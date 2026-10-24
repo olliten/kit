@@ -14,7 +14,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
 
 - A finding carries its rule, path and fix, and a debt key made of rule, check, path and detail
   ({{finding}}). · {#finding-debt-key}
-- The check rejects new legacy debt, every violation in placed code or a declared executable entrypoint,
+- The check rejects new legacy debt, every violation in placed code or an entry a host lists,
   and every checker limit reachable through imports from either; a baseline can't waive the last two
   ({{finding}}). · {#ratchet-keeps-architecture-obligations}
   - Proof: {{source-fixture}}

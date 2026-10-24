@@ -11,10 +11,18 @@ its config, and its debt in its own baseline.
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
-- Test discovery includes the configured proof root and only explicitly configured
-  `legacy-test-roots`, with no application directory names built in. Each is a relative directory
-  without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy
-  discovery grants no placement or capability permission. · {#proof-discovery-is-configured}
+- Test discovery includes the configured proof root and only the proof host's explicitly configured
+  `hosts.proof.roots`, with no application directory names built in. Each is a relative directory
+  without patterns or dot segments; invalid declarations fail instead of dropping proofs. Discovery grants
+  no placement or capability permission; a test found there runs in the proof host. · {#proof-discovery-is-configured}
+
+- `kit migrate-config <config>` rewrites a configuration's `exceptions`, `legacy-test-roots` and
+  `packages[].entrypointExports` as the hosts the check already reads in their place: exceptions in the
+  proof root become proof-host entries and others entries of a `startup` host with `dom`, `node` and
+  `webworker`, test roots become proof-host roots and entry exports what the proof host provides; an app
+  without hosts gets the hosts its zones imply. No finding changes. For one release the old keys are still
+  read, each with a non-blocking `deprecated-config` note ({{host-of}}). · {#old-config-keys-migrate}
+  - Proof: {{source-fixture}}
 
 - An app may opt into directory roles with `layout: { legacy: [...] }`. Source and shared proof code
   belong in its governed code roots, tests in its proof root, and Markdown in its specification root
@@ -22,7 +30,7 @@ its config, and its debt in its own baseline.
   Other Markdown and non-code assets are not specifications merely by existing in the repository.
   Exact relative legacy files or directories retain their misplaced files as location debt; new location
   debt fails the ratchet. Missing or malformed legacy locations fail configuration. Legacy locations
-  grant no module placement, capability or executable-entrypoint permission. Without a layout declaration,
+  grant no module placement, capability or host-entry permission. Without a layout declaration,
   existing configuration keeps its behavior. · {#directory-roles-are-configured}
   - Implementation: {{layout-check}}, {{placement-of}}, {{read-snapshot}}
   - Proof: {{source-fixture}}

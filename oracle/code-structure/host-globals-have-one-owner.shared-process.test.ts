@@ -5,7 +5,8 @@ import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const environment = "src/substrate/adapters/environment.ts";
-const diagnostic = "src/substrate/adapters/diagnostic.ts";
+// A proof-root adapter runs in the proof host, so it may own process beside the server host's owner.
+const diagnostic = "oracle/substrate/adapters/diagnostic.ts";
 const environmentSource =
   "export interface Environment { directory(): string; }\n" +
   "export const environment: Environment = { directory: () => process.cwd() };\n";
@@ -14,7 +15,7 @@ const diagnosticSource =
   "export const diagnostic: Diagnostic = { write: (text) => { process.stderr.write(text); } };\n";
 const owners: NonNullable<KitConfig["adapters"]> = [
   {
-    module: "substrate/adapters/environment",
+    module: "src/substrate/adapters/environment",
     export: "environment",
     capability: "environment.read",
     kind: "external",
@@ -23,7 +24,7 @@ const owners: NonNullable<KitConfig["adapters"]> = [
     globals: ["process"],
   },
   {
-    module: "substrate/adapters/diagnostic",
+    module: "oracle/substrate/adapters/diagnostic",
     export: "diagnostic",
     capability: "diagnostic.write",
     kind: "external",
@@ -51,21 +52,21 @@ function inspect(
           skipLibCheck: true,
           noEmit: true,
         },
-        include: ["src/**/*.ts"],
+        include: ["src/**/*.ts", "oracle/**/*.ts"],
       }),
       "package.json": JSON.stringify({ type: "module" }),
       [environment]: environmentSource,
       [diagnostic]: diagnosticSource,
       ...files,
     },
-    { adapters },
+    { srcRoot: ["oracle", "src"], adapters },
   );
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
   return capabilityCheck(snapshot);
 }
 
 test.each([false, true])(
-  "two adapters sharing process retain only their own capability, reversed=%s",
+  "adapters owning process in two hosts retain only their own capability, reversed=%s",
   (reversed) => {
     const result = inspect({}, reversed ? [...owners].reverse() : owners);
     expect(result.requirements.find((row) => row.path === environment)).toEqual({
@@ -92,7 +93,7 @@ test("multiple registered exports in one owner do not reject that owner's global
     [
       ...owners,
       {
-        module: "substrate/adapters/environment",
+        module: "src/substrate/adapters/environment",
         export: "fallbackEnvironment",
         capability: "environment.fallback",
         kind: "external",
@@ -140,7 +141,7 @@ test.each(["adapters", "compositions"])(
         ? [
             ...owners,
             {
-              module: "substrate/adapters/unregistered",
+              module: "src/substrate/adapters/unregistered",
               export: "directory",
               capability: "unregistered.read",
               kind: "external",
@@ -239,3 +240,20 @@ test.each([false, true])(
     );
   },
 );
+
+test("a second adapter owning process in one host is a finding at each owner", () => {
+  const second = "src/substrate/adapters/diagnostic.ts";
+  const result = inspect({ [second]: diagnosticSource }, [
+    ...owners,
+    { ...owners[1]!, module: "src/substrate/adapters/diagnostic" },
+  ]);
+  expect(result.findings.map((item) => item.debtKey)).toEqual(
+    expect.arrayContaining([
+      `R1:host-global-owner:${environment}:process`,
+      `R1:host-global-owner:${second}:process`,
+    ]),
+  );
+  expect(result.findings.map((item) => item.debtKey)).not.toContain(
+    `R1:host-global-owner:${diagnostic}:process`,
+  );
+});

@@ -7,7 +7,11 @@ import { cachedKitCheck } from "./kit-snapshot-cache.mjs";
 
 export function startupCheckRoots(config) {
   const roots = typeof config.srcRoot === "string" ? [config.srcRoot] : config.srcRoot;
-  return (config.exceptions ?? []).filter((path) =>
+  const entries = [
+    ...(config.exceptions ?? []),
+    ...Object.values(config.hosts ?? {}).flatMap((host) => host.entries ?? []),
+  ];
+  return [...new Set(entries)].filter((path) =>
     roots.some((root) => path.startsWith(`${root}/`)) ||
     (config.layout?.legacy ?? []).some((location) => path === location || path.startsWith(`${location}/`)),
   );

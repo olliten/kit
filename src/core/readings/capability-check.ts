@@ -1,5 +1,7 @@
+import { proofOf } from "./claim-proof-binder.js";
 import { cycles } from "./dependency-check.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
+import { type ResolvedHost, hostOf, hostOfFile, listedEntries } from "./host-of.js";
 import { legacyCodeOf, moduleFileOf, placementOf, rootOf } from "./placement-of.js";
 
 export interface CapabilityFinding extends Finding {
@@ -50,15 +52,16 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     const at = placementOf(path, snapshot.config.srcRoot, snapshot.config.layerNames);
     return at.placed ? at : null;
   };
+  const model = hostOf(snapshot.config);
+  const entries = listedEntries(model);
   const files = snapshot.files
     .filter(
       (file) =>
-        (file.type === "source" ||
-          (file.type === "test" && snapshot.config.exceptions?.includes(file.path))) &&
+        (file.type === "source" || (file.type === "test" && entries.includes(file.path))) &&
         (rootOf(file.path, roots) !== undefined || legacyCodeOf(file.path, snapshot.config.layout?.legacy)),
     )
     .map((file) => file.path);
-  const zoneOf = (path: string): string | undefined => {
+  const zoneOf = (path: string): Zone | undefined => {
     const root = rootOf(path, roots);
     if (root === undefined && !legacyCodeOf(path, snapshot.config.layout?.legacy)) return undefined;
     const zone = root === undefined ? undefined : path.slice(root.length + 1).split("/")[0];
@@ -69,8 +72,23 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         : path.startsWith(`${row.root.replace(/\/$/, "")}/`),
     )?.zone;
   };
+  const tests = new Set(snapshot.files.filter((file) => file.type === "test").map((file) => file.path));
+  const hostAt = (path: string): ResolvedHost | undefined =>
+    hostOfFile(model, snapshot.config, path, zoneOf(path), tests.has(path));
+  // Claim tests are entries of the proof host, derived from their binding: nothing may import one.
+  const claimTests = new Set(
+    [...tests].filter((path) => {
+      const proof = proofOf(path, snapshot.config.oracleRoot);
+      return proof !== null && (snapshot.claims ?? []).some((claim) =>
+        claim.anchor === proof.anchor && claim.file === `${snapshot.config.specRoot}/${proof.topic}.md`);
+    }),
+  );
   const adapters = snapshot.config.adapters ?? [];
   const packages = snapshot.config.packages ?? [];
+  const provided = (path: string, name: string): readonly string[] | undefined =>
+    hostAt(path)?.provides.find((row) => row.name === name)?.exports;
+  const providedAnywhere = (name: string): boolean =>
+    model.hosts.some((host) => host.provides.some((row) => row.name === name));
   for (const row of packages) {
     if (row.entrypointExports === undefined) continue;
     if (
@@ -93,7 +111,26 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       throw new Error("Declare one effectful entrypoint package contract with distinct named exports.");
   }
   const pathOf = (module: string): string => moduleFileOf(module, roots, snapshot.config.layerNames);
-  const projects = snapshot.compiler?.projects ?? [];
+  // Code carried into another host runs there: nothing a literal of an entry type touches is its caller's.
+  const programs = (snapshot.compiler?.projects ?? []).flatMap((project) => project.programs ?? []);
+  const carried = (fact: { readonly file: string; readonly start: number }) =>
+    programs.find(
+      (program) =>
+        program.literal && program.file === fact.file && fact.start >= program.start && fact.start < program.end,
+    );
+  const outside = (fact: { readonly file: string; readonly start: number }): boolean => carried(fact) === undefined;
+  const projects = (snapshot.compiler?.projects ?? []).map((project) =>
+    programs.length === 0
+      ? project
+      : {
+          ...project,
+          globals: project.globals.filter(outside),
+          accesses: project.accesses.filter(outside),
+          parameters: project.parameters.filter(outside),
+          constructions: project.constructions.filter(outside),
+          connections: project.connections.filter(outside),
+        },
+  );
   const contracts = new Map(
     adapters.map((adapter) => {
       const contract = adapter.contract;
@@ -158,6 +195,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   // Each capability a fact grants at its position, so a callable is charged only the code it reaches.
   const positioned = new Map<string, string[]>();
   const windowAuthority = "host:window";
+  // Window-only authority exists only where the host's libraries include the DOM.
+  const domHost = (path: string): boolean => hostAt(path)?.lib.includes("dom") === true;
   const grantAt = (file: string, start: number, capability: string): void => {
     const key = `${file}:${start}`;
     const list = positioned.get(key);
@@ -215,7 +254,18 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       true,
       limit,
     );
-  for (const path of snapshot.config.exceptions ?? []) {
+  for (const key of model.deprecated)
+    add(
+      "R1",
+      "deprecated-config",
+      key,
+      "Run kit migrate-config to declare this as hosts; the old key is read for one release.",
+      undefined,
+      "unresolved",
+      false,
+      "This configuration key is read in place of hosts for one release.",
+    );
+  for (const path of entries) {
     if (rootOf(path, roots) === undefined && !legacyCodeOf(path, snapshot.config.layout?.legacy)) continue;
     if (
       !files.includes(path) ||
@@ -228,11 +278,11 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         "R2",
         "startup-placement",
         path,
-        "Declare only an exact existing executable entrypoint outside every zone.",
+        "Declare only an exact existing executable entry outside every zone.",
         path,
         "unresolved",
         true,
-        "Directory, pattern, missing-code and zoned-module exceptions grant no entrypoint permission.",
+        "Directory, pattern, missing-code and zoned-module entries grant no entry permission.",
       );
       continue;
     }
@@ -334,6 +384,63 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
       return types.map((type) => ({ ...adapter, type }));
     });
+  const owned = new Map<string, Set<string>>();
+  for (const adapter of adapters)
+    for (const name of adapter.globals ?? []) {
+      const path = pathOf(adapter.module);
+      const host = hostAt(path);
+      if (host === undefined) continue;
+      const key = `${host.name}\u0000${name}`;
+      owned.set(key, new Set([...(owned.get(key) ?? []), path]));
+    }
+  for (const [key, paths] of owned) {
+    if (paths.size < 2) continue;
+    const [host, name] = key.split("\u0000");
+    for (const path of paths)
+      add(
+        "R1",
+        "host-global-owner",
+        path,
+        `Keep one adapter owning ${name} in the ${host} host; acquire it elsewhere through that adapter.`,
+        name,
+      );
+  }
+  for (const program of programs) {
+    const host = model.hosts.find((candidate) => candidate.name === program.host);
+    if (!program.literal) {
+      unresolved(
+        "entry-program",
+        program.file,
+        "A reference, an any or a source string of an entry type can't be checked in the host it runs in.",
+        `${program.type}:${program.start}`,
+      );
+      continue;
+    }
+    for (const capture of program.captures)
+      add(
+        "R1",
+        "entry-capture",
+        program.file,
+        `Pass ${capture.name} as an argument: the ${program.host} host runs a serialized copy that keeps only its parameters.`,
+        capture.name,
+      );
+    for (const global of (snapshot.compiler?.projects ?? []).flatMap((project) => project.globals))
+      if (
+        global.runtime &&
+        carried(global) === program &&
+        host !== undefined &&
+        ((global.nativeAuthority ?? []).some((authority) => authority.windowOnly === true)
+          ? !host.lib.includes("dom")
+          : (global.packages ?? []).length > 0 && !(global.packages ?? []).some((library) => host.lib.includes(library)))
+      )
+        add(
+          "R1",
+          "host-global",
+          program.file,
+          `Use this global only in a host whose libraries declare it; ${host.name} declares ${host.lib.join(", ")}.`,
+          global.name,
+        );
+  }
   for (const project of projects) {
     if (!project.settings.noImplicitAny || !project.settings.strictNullChecks)
       for (const path of project.files)
@@ -432,6 +539,21 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     const hostGlobals = new Set<string>();
     for (const global of project.globals) {
       if (!global.runtime || !direct.has(global.file)) continue;
+      const host = hostAt(global.file);
+      // A global its host's libraries can't declare is foreign there, and stays its declaring adapters' raw
+      // primitive wherever they run.
+      const foreign =
+        host !== undefined &&
+        ((global.nativeAuthority ?? []).some((authority) => authority.windowOnly === true)
+          ? !host.lib.includes("dom")
+          : (global.packages ?? []).length > 0 && !(global.packages ?? []).some((library) => host.lib.includes(library)));
+      // In its host, a global's adapter is the one owning it there; code in no host keeps every declaration.
+      const ownersOf = (name: string) =>
+        adapters.filter(
+          (adapter) =>
+            adapter.globals?.includes(name) === true &&
+            (host === undefined || foreign || hostAt(pathOf(adapter.module))?.name === host.name),
+        );
       // An installed package's ambient global, such as Node's process or require, reaches the host
       // without any import, so only an adapter that declares it may use it.
       const name = global.name.startsWith("globalThis.")
@@ -443,7 +565,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         global.value !== true &&
         /(?:^|\/)node_modules\//.test(declared) &&
         !/(?:^|\/)node_modules\/typescript\/lib\//.test(declared) &&
-        !adapters.some((adapter) => adapter.globals?.includes(name)) &&
+        ownersOf(name).length === 0 &&
         !hostGlobals.has(`${global.file}:${name}`)
       ) {
         hostGlobals.add(`${global.file}:${name}`);
@@ -454,9 +576,24 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           name,
         );
       }
-      const declaredAdapters = adapters.filter((adapter) =>
-        adapter.globals?.includes(global.name),
-      );
+      if (
+        host !== undefined &&
+        !name.includes(".") &&
+        global.value !== true &&
+        (global.packages ?? []).length > 0 &&
+        foreign &&
+        !hostGlobals.has(`${global.file}:${name}:host`)
+      ) {
+        hostGlobals.add(`${global.file}:${name}:host`);
+        add(
+          "R1",
+          "host-global",
+          global.file,
+          `Use this global only in a host whose libraries declare it; ${host.name} declares ${host.lib.join(", ")}.`,
+          name,
+        );
+      }
+      const declaredAdapters = ownersOf(global.name);
       const owners = declaredAdapters.filter((adapter) => pathOf(adapter.module) === global.file);
       if (externalAdapterPaths.has(global.file) || declaredAdapters.length === 0)
         for (const authority of global.nativeAuthority ?? []) {
@@ -481,7 +618,11 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     for (const edge of project.imports) {
       const from = placement(edge.file);
       const to = edge.target === null ? null : placement(edge.target);
-      if (edge.target !== null && startups.has(edge.target) && direct.has(edge.file))
+      if (
+        edge.target !== null &&
+        (startups.has(edge.target) || claimTests.has(edge.target)) &&
+        direct.has(edge.file)
+      )
         add(
           "R2",
           "startup-import",
@@ -576,21 +717,23 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
               "Import this package only in the capability adapter that declares it, and use that adapter's contract here.",
               packageName,
             );
-        } else if (declaration?.entrypointExports !== undefined) {
+        } else if (declaration !== undefined && providedAnywhere(declaration.name)) {
+          const exports = provided(edge.file, declaration.name);
           if (
             startups.has(edge.file) &&
+            exports !== undefined &&
             edge.specifier === declaration.name &&
             edge.namedImports !== undefined &&
             edge.namedImports !== null &&
             edge.namedImports.length > 0 &&
-            Array.from(edge.namedImports).every((name) => declaration.entrypointExports?.includes(name))
+            Array.from(edge.namedImports).every((name) => exports.includes(name))
           ) {
             for (const capability of declaration.capabilities) direct.get(edge.file)?.add(capability);
           } else
             unresolved(
               "entrypoint-package",
               edge.file,
-              "This package contract permits only selected named runtime exports in an exact declared entrypoint.",
+              "This package provides only selected named runtime exports to the entries of a host that lists them.",
               edge.specifier,
             );
         } else if (
@@ -674,7 +817,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   const permits = (path: string, capability: string): boolean => {
     if (
       startups.has(path) &&
-      packages.some((row) => row.entrypointExports !== undefined && row.capabilities.includes(capability))
+      packages.some((row) => provided(path, row.name) !== undefined && row.capabilities.includes(capability))
     )
       return true;
     const zone = zoneOf(path);
@@ -684,9 +827,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         ? []
         : [zone];
     if (permittedZones.length === 0) return false;
-    if (capability === windowAuthority) return permittedZones.includes("shell");
+    if (capability === windowAuthority) return domHost(path);
     const native = nativeAuthorities.get(capability);
-    if (native?.windowOnly === true && !permittedZones.includes("shell")) return false;
+    if (native?.windowOnly === true && !domHost(path)) return false;
     if (native !== undefined)
       return (
         permittedZones.some((allowed) => allowed !== "core") &&
@@ -1133,3 +1276,4 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
 }
 import { LAYERS } from "../primitives/layer.js";
 import type { Snapshot } from "../primitives/snapshot.js";
+import type { Zone } from "../primitives/zones.js";

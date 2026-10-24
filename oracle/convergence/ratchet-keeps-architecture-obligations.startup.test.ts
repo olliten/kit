@@ -12,10 +12,10 @@ const vendor = "declare module 'unregistered' { export function wire(): void; }\
 
 function inspect(
   files: Readonly<Record<string, string>>,
-  exceptions = [startup],
+  entries = [startup],
   config: Partial<KitConfig> = {},
 ) {
-  const snapshot = sourceFixture(files, { ...config, exceptions });
+  const snapshot = sourceFixture(files, { ...config, hosts: { browser: { lib: ["dom"], zone: "shell", entries } } });
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
   const findings = capabilityCheck(snapshot).findings;
   const placed = snapshot.files

@@ -3,13 +3,13 @@ import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { configuredHosts } from "../../scripts/kit-config.mjs";
 
 const proof = "oracle/count/increments.test.ts";
-const contract = {
-  name: "vitest",
-  capabilities: ["test-runner"],
-  entrypointExports: ["test", "expect"],
-};
+const contract = { name: "vitest", capabilities: ["test-runner"] };
+const proofHost = (exports: readonly string[]): NonNullable<KitConfig["hosts"]> => ({
+  proof: { lib: ["dom", "node"], entries: [proof], provides: { vitest: exports } },
+});
 const source =
   "import { test, expect } from 'vitest'; test('increments', () => { expect(1 + 1).toBe(2); });\n";
 
@@ -24,7 +24,7 @@ function inspect(
       [proof]: code,
       ...files,
     },
-    { srcRoot: ["src", "oracle"], exceptions: [proof], packages: [contract], ...config },
+    { srcRoot: ["src", "oracle"], hosts: proofHost(["test", "expect"]), packages: [contract], ...config },
     {
       skipLibCheck: true,
       paths: {
@@ -38,7 +38,7 @@ function inspect(
   return { snapshot, result: capabilityCheck(snapshot) };
 }
 
-test("real Vitest registration and assertions are an effectful entrypoint contract", () => {
+test("real Vitest registration and assertions are exports the proof host provides", () => {
   const { result } = inspect();
   expect(result.findings).toEqual([]);
   expect(result.requirements.find((row) => row.path === proof)?.direct).toEqual(["test-runner"]);
@@ -89,12 +89,7 @@ test("hook registration uses the same explicit effectful boundary", () => {
     "import { beforeEach, afterEach, test, expect } from 'vitest'; let n = 0; beforeEach(() => { n = 1; }); afterEach(() => { n = 0; }); test('value', () => { expect(n).toBe(1); });\n",
     {},
     {
-      packages: [
-        {
-          ...contract,
-          entrypointExports: [...contract.entrypointExports, "beforeEach", "afterEach"],
-        },
-      ],
+      hosts: proofHost(["test", "expect", "beforeEach", "afterEach"]),
     },
   );
   expect(result.findings).toEqual([]);
@@ -112,7 +107,7 @@ test.each(["test", "beforeEach"])(
         `import { ${name} } from 'vitest'; ${invoke}\n`,
         {},
         {
-          packages: [{ ...contract, entrypointExports: ["test", "beforeEach"] }],
+          hosts: proofHost(["test", "beforeEach"]),
         },
       ).result.findings,
     ).toContainEqual(
@@ -126,7 +121,7 @@ test.each(["test", "beforeEach"])(
   },
 );
 
-test("a helper cannot import the entrypoint package on the proof's behalf", () => {
+test("a helper cannot import a provided package on the proof's behalf", () => {
   const helper = "oracle/substrate/compositions/register.ts";
   const { result } = inspect(
     "import { register } from '../substrate/compositions/register.js'; register();\n",
@@ -167,7 +162,7 @@ test.each([
     );
 });
 
-test("a package owned by an adapter remains unavailable to direct entrypoint imports", () => {
+test("a package owned by an adapter remains unavailable to direct entry imports", () => {
   const { result } = inspect(
     source,
     {
@@ -195,7 +190,7 @@ test("a package owned by an adapter remains unavailable to direct entrypoint imp
   );
 });
 
-test("restricted contracts reject subpaths, absent compiler evidence and malformed declarations", () => {
+test("provided exports reject subpaths, absent compiler evidence and malformed declarations", () => {
   const { snapshot } = inspect();
   for (const kind of ["subpath", "missing-evidence"]) {
     const compiler = {
@@ -223,16 +218,11 @@ test("restricted contracts reject subpaths, absent compiler evidence and malform
       }),
     );
   }
-  for (const packages of [
-    [{ ...contract, capabilities: [] }],
-    [{ ...contract, capabilities: new Array<string>(1) }],
-    [{ ...contract, entrypointExports: [] }],
-    [{ ...contract, entrypointExports: new Array<string>(1) }],
-    [{ ...contract, entrypointExports: ["*"] }],
-    [{ ...contract, entrypointExports: ["test", "test"] }],
-    [contract, { name: "vitest", capabilities: [] }],
+  for (const provides of [
+    { vitest: [] },
+    { vitest: [""] },
+    { vitest: ["*"] },
+    { "./local": ["test"] },
   ])
-    expect(() =>
-      capabilityCheck({ ...snapshot, config: { ...snapshot.config, packages } }),
-    ).toThrow(/entrypoint package contract/);
+    expect(() => configuredHosts({ proof: { lib: ["node"], provides } })).toThrow(/provides/);
 });

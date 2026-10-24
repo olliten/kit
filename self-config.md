@@ -11,11 +11,19 @@ roots:
 terms: spec/terms.md
 claim-separator: "·"
 legacy-areas: []
-exceptions:
-  - oracle/code-structure/imports-point-inward.test.ts
-  - oracle/code-structure/imports-have-no-cycles.test.ts
-  - oracle/kit/source-fixtures-own-their-files.test.ts
-  - oracle/code-structure/window-authority-stays-in-shell.test.ts
+hosts:
+  server:
+    lib: [node]
+    zone: substrate
+  proof:
+    lib: [node]
+    entries:
+      - oracle/code-structure/imports-point-inward.test.ts
+      - oracle/code-structure/imports-have-no-cycles.test.ts
+      - oracle/kit/source-fixtures-own-their-files.test.ts
+      - oracle/code-structure/hosts-are-declared.dom.test.ts
+    provides:
+      vitest: [describe, test, expect]
 dependency-exclusions:
   - from: src
     to: oracle
@@ -24,7 +32,6 @@ dependency-exclusions:
 packages:
   - name: vitest
     capabilities: [test-runner]
-    entrypointExports: [describe, test, expect]
   - name: mdast-util-from-markdown
     capabilities: []
   - name: mdast-util-gfm-table
@@ -120,8 +127,11 @@ adapters:
 
 Filesystem and process-environment are real requirements of the native compiler host. Compiler includes the broader native compiler/host/sys authority, not merely the two methods selected by this adapter. Hashing with `node:crypto` reads nothing, so it is declared pure; TypeScript and the other Node packages are not. The Markdown parser declaration describes its supplied-text default parsing, not immunity from effects in supplied extension callbacks.
 
-The dependency and source-fixture proofs are checked entrypoints, not rule waivers. Their test registration and assertions
-use only the declared Vitest exports. The runner is effectful; shared proof modules gain no runner permission.
+Kit runs in Node: Substrate in the server host and its proofs in the proof host, both with only Node's
+libraries. The dependency, source-fixture and DOM-host proofs are entries the proof host lists, not rule waivers.
+Their test registration and assertions use only the Vitest exports the proof host provides. The runner is
+effectful; shared proof modules gain no runner permission. Every other claim test is an entry of the proof
+host too, so nothing may import it, but only listed entries are compiled and checked.
 
 The change-log adapter is the one place Kit runs git, and only when a check is given `--base`. The
 temporary-repository proof adapter runs git too, to build the repositories its proofs read.
