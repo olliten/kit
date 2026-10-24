@@ -105,7 +105,7 @@ proof file whether the claim is a list item or a row. Optional `Implementation` 
 hold comma-separated module references; an empty cell omits that relationship. Headers declare no
 claims. If row order or table completeness is a promise, state and prove it as a separate claim.
 
-The claim test is the outer proof entrypoint: it registers cases, wires modules and asserts results.
+The claim test is the outer proof entry: it registers cases, wires modules and asserts results.
 Reusable proof modules use the same adapters, primitives, readings and compositions as production
 code. They do not repeat the claim anchor. A straightforward test needs no separate composition merely
 to conform to the structure.
@@ -137,9 +137,11 @@ An agent gets the task *decline a whole article with one reason*.
 - `shell` renders and turns input into data.
 - `substrate` does I/O.
 
-Window-only host authority belongs to shell, regardless of adapter permissions. Kit derives that
-boundary from the compiler's DOM and worker declarations; shared HTTP and cancellation APIs remain
-available to substrate. Imports and callbacks retain the requirement. Plain supplied options are data.
+Each outer zone runs in a host: a runtime whose globals come from compiler libraries. Shell runs in a
+`dom` browser and substrate in a `node` server unless `hosts` says otherwise; the core runs in none. A
+global exists in a host only if one of its libraries declares it, so Window-only authority stays where
+the DOM is, whatever an adapter permits. Imports and callbacks retain the requirement. Plain supplied
+options are data.
 
 Each zone has four layers:
 
@@ -229,32 +231,33 @@ root, for example `oracle/core/primitives/decline-cases`; adapter registrations 
 too. Term names stay globally unique. `roots.oracle` still selects claim proof files. Existing scalar
 `roots.src: src` configurations keep their module identities.
 
-An exact proof path inside a governed code root may use the same entrypoint declaration as application startup:
+Hosts answer where code runs and what it may touch:
 
 ```yaml
-exceptions:
-  - oracle/review-an-article/decline-needs-reason.test.ts
+hosts:
+  browser: { lib: [dom], zone: shell, entries: [src/shell/startup.ts] }
+  server:  { lib: [node], zone: substrate, entries: [src/substrate/startup.ts] }
+  proof:   { lib: [node], roots: [legacy-tests/], provides: { vitest: [describe, test, expect] } }
+  page:    { lib: [dom], entered-by: [playwright-core#PageFunction] }
 ```
 
-The declared file retains its topic binding and is checked for authority and compiler failures. It may
-wire outer contracts, but no module may import it, and its dependencies gain no permission. Violations
-in a declared entrypoint cannot be waived as legacy debt. A test suffix alone grants nothing. Framework
-imports still need supported contracts; declaring a proof does not declare Vitest or another runner pure.
-For direct registration and assertions, a package contract can select the named runtime exports:
+A host's `lib` names the compiler libraries (`dom`, `webworker`, `node`) or packages whose ambient
+declarations exist there. In each host one adapter owns each global it declares; other code in that host
+acquires it through that adapter, and two hosts may each own the same name. A host starts at its
+`entries`: exact files outside every zone that may wire the outer zones' contracts. Nothing imports an
+entry, and its imports gain no permission. Every claim test is an entry of the `proof` host, derived from
+its binding; only the entries a host lists are compiled and checked. `provides` selects named runtime
+exports of an effectful package, such as a test runner, for the host's entries; helpers gain no runner
+permission from a proof that calls them. The proof host's `roots` add test discovery directories.
 
-```yaml
-packages:
-  - name: vitest
-    capabilities: [test-runner]
-    entrypointExports: [test, expect]
-```
+`entered-by` names the types that carry code into a host, by the package whose declarations define the
+type. A function literal of that type, such as a browser-automation page function, is checked in that
+host and charges nothing to its caller; an outer name it captures is a finding, because the host runs a
+serialized copy. A reference, an `any` or a source string stays a limit.
 
-This effectful boundary is available only in exact declared entrypoints. Aliases and type-only imports
-are supported; namespace imports, dynamic imports, re-exports and package subpaths stay unresolved.
-Test bodies and captured callbacks remain checked. Shared comparisons can return plain data to the
-entrypoint's assertions; helpers gain no runner permission from a proof that calls them. A package owned
-by an adapter still belongs to that adapter. This contract restricts top-level exports, not individual
-members of an exported API.
+`npm run migrate-config -- kit/config.md` rewrites the older `exceptions`, `legacy-test-roots` and
+`packages[].entrypointExports` keys as hosts. The old keys are read for one more release with a
+non-blocking `deprecated-config` note.
 
 ## Adopt
 
@@ -311,9 +314,9 @@ call. Moving the source-fixture workflow and its temporary-project adapter pays 
 and three calls, leaving only the cache fixture with 40 statements and six calls
 in `self-debt/legacy.json`. That inventory adds no source-module waivers or
 checker-limit waivers. The remaining infrastructure stays under the ratchet until its capability is
-migrated. The `imports-point-inward` and `imports-have-no-cycles` claim tests are also declared as checked
-entrypoints. Their Vitest contract permits only `describe`, `test` and `expect`; their shared snapshot reading
-has no runner permission. Other claim-test files retain their existing compiler and claim-reach checks
+migrated. The `imports-point-inward` and `imports-have-no-cycles` claim tests are also entries the proof
+host lists. The proof host provides only Vitest's `describe`, `test` and `expect`; their shared snapshot
+reading has no runner permission. Other claim-test files retain their existing compiler and claim-reach checks
 until their infrastructure is adopted.
 
 Compiler fixtures use `oracle/substrate/compositions/source-fixture.ts` to prepare the input, run Kit and
