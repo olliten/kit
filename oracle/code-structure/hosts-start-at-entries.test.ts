@@ -15,8 +15,13 @@ const files = {
   [server]: "export function serve(view: () => string): string { return view(); }\n",
 };
 
+const entryHosts = (paths: readonly string[]): NonNullable<KitConfig["hosts"]> => ({
+  browser: { lib: ["dom"], zone: "shell", entries: paths },
+  server: { lib: ["node", "webworker"], zone: "substrate" },
+});
+
 function inspect(extra: Readonly<Record<string, string>> = {}, config: Partial<KitConfig> = {}) {
-  const snapshot = sourceFixture({ ...files, ...extra }, { exceptions: [startup], ...config });
+  const snapshot = sourceFixture({ ...files, ...extra }, { hosts: entryHosts([startup]), ...config });
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
   return capabilityCheck(snapshot).findings;
 }
@@ -25,12 +30,13 @@ test("an exact existing startup outside zones assembles both outer contracts", (
   expect(inspect()).toEqual([]);
 });
 
-test("the application configuration reader carries exact startup exceptions into checking", () => {
+test("the application configuration reader carries a host's exact entries into checking", () => {
   const declaration = kitConfig(
-    "```yaml\nroots: { src: src/, spec: spec/, oracle: oracle/ }\nterms: spec/terms.md\nexceptions: [src/start.ts]\n```\n",
+    "```yaml\nroots: { src: src/, spec: spec/, oracle: oracle/ }\nterms: spec/terms.md\n" +
+      "hosts:\n  browser: { lib: [dom], zone: shell, entries: [src/start.ts] }\n  server: { lib: [node, webworker], zone: substrate }\n```\n",
   );
   const config = configuredKit(DEFAULT_CONFIG, declaration);
-  expect(config.exceptions).toEqual([startup]);
+  expect(config.hosts?.browser?.entries).toEqual([startup]);
   expect(capabilityCheck(sourceFixture(files, config)).findings).toEqual([]);
 });
 
@@ -71,8 +77,8 @@ test.each(["runtime", "type"])(
   },
 );
 
-test("a placed file cannot be made startup by an exception declaration", () => {
-  expect(inspect({}, { exceptions: [startup, server] })).toEqual(
+test("a placed file cannot be made an entry by a host declaration", () => {
+  expect(inspect({}, { hosts: entryHosts([startup, server]) })).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         debtKey: expect.stringContaining("R2:startup-placement:"),
@@ -82,7 +88,7 @@ test("a placed file cannot be made startup by an exception declaration", () => {
   );
 });
 
-test("an existing legacy zone cannot be hidden by an exact startup exception", () => {
+test("an existing legacy zone cannot be hidden by an exact host entry", () => {
   expect(inspect({}, { legacyZones: [{ root: "src", zone: "substrate" }] })).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -95,8 +101,8 @@ test("an existing legacy zone cannot be hidden by an exact startup exception", (
 
 test.each(["src/", "src/*.ts", "src/start", "src/missing.ts"])(
   "%s does not exempt application source",
-  (exception) => {
-    expect(inspect({}, { exceptions: [exception] })).toEqual(
+  (entry) => {
+    expect(inspect({}, { hosts: entryHosts([entry]) })).toEqual(
       expect.arrayContaining([expect.objectContaining({ blocking: true })]),
     );
   },
@@ -250,7 +256,7 @@ test.each(["invoke", "construct"])(
 test("startup does not suppress compiler failures in its dependencies", () => {
   const snapshot = sourceFixture(
     { ...files, [server]: "export function serve(view: () => string): string { return 7; }\n" },
-    { exceptions: [startup] },
+    { hosts: entryHosts([startup]) },
   );
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual(
     expect.arrayContaining([expect.objectContaining({ file: server, code: 2322 })]),

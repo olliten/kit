@@ -80,7 +80,7 @@
 - **capability-check** — capability requirements, structural findings and explicit limits derived from supplied compiler and configuration facts.
   - Role: derived
   - Zone: core
-  - From: {{dependency-check}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
+  - From: {{claim-proof-binder}}, {{dependency-check}}, {{finding}}, {{host-of}}, {{layer}}, {{placement-of}}, {{snapshot}}, {{zone}}
 - **claim-inventory** — claim declarations, module relationships and references interpreted from supplied Markdown.
   - Role: derived
   - Zone: core
@@ -96,7 +96,7 @@
 - **dependency-check** — findings from import direction, cycles and explicit separation of compiled dependencies.
   - Role: derived
   - Zone: core
-  - From: {{finding}}, {{placement-of}}, {{snapshot}}
+  - From: {{finding}}, {{host-of}}, {{placement-of}}, {{snapshot}}
 - **finding** — what a check reports: its rule, a path, the fix and a debt key.
   - Role: derived
   - Zone: core
@@ -109,6 +109,10 @@
   - Role: derived
   - Zone: core
   - From: {{comment}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}
+- **host-of** — the hosts a configuration declares or its zones imply, the old keys read in their place, and the host each file runs in.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}, {{zone}}
 - **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
   - Role: derived
   - Zone: core
@@ -116,7 +120,7 @@
 - **legacy-size** — the size of each legacy module as debt: its statements, and how many of them only call into placed modules.
   - Role: derived
   - Zone: core
-  - From: {{finding}}, {{placement-of}}, {{snapshot}}
+  - From: {{finding}}, {{host-of}}, {{placement-of}}, {{snapshot}}
 - **module-references** — the check that every placed module is named by a claim it keeps, and the claims each module keeps.
   - Role: derived
   - Zone: core
@@ -195,7 +199,7 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{host-of}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
 - **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
   - Role: composition
   - Zone: substrate
@@ -209,8 +213,10 @@
 - **core** — the zone that decides everything and performs no effect.
 - **cycle** — a dependency path that returns to its starting module.
 - **debt-key** — a finding's stable name, which a debt list holds.
+- **entry** — the outermost code of a host program: a file a host lists, a claim test, or a literal of a host's entry type.
 - **file-type** — what a file is: source, test, spec or other.
 - **heading** — the spec line that carries a module's identity.
+- **host** — a runtime environment: the globals its compiler libraries declare and the code that starts there.
 - **import-edge** — one file's import of another.
 - **inventory** — the collected declarations and references read from a document.
 - **kit** — the checks, their spec and their config, applied to an app.

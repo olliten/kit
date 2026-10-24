@@ -28,7 +28,7 @@ function inspect(
     { ...files, ...extra },
     {
       srcRoot: ["src", "oracle"],
-      exceptions: [proof],
+      hosts: { proof: { lib: ["dom", "node"], entries: [proof] } },
       ...config,
     },
     compilerOptions,
@@ -36,7 +36,7 @@ function inspect(
   return { snapshot, result: capabilityCheck(snapshot) };
 }
 
-test("an exact declared proof is checked as an entrypoint without losing its topic identity", () => {
+test("an exact declared proof is checked as an entry without losing its topic identity", () => {
   const { snapshot, result } = inspect();
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
   expect(snapshot.files.find((file) => file.path === proof)?.type).toBe("test");
@@ -70,7 +70,7 @@ test("a declared proof cannot hide its own compiler errors", () => {
 });
 
 test.each(["runtime", "type"])(
-  "modules cannot import a proof entrypoint through a %s edge",
+  "modules cannot import a proof entry through a %s edge",
   (kind) => {
     const { result } = inspect({
       [proof]:
@@ -91,7 +91,7 @@ test.each(["runtime", "type"])(
   },
 );
 
-test("an entrypoint declaration grants no raw authority to its driver", () => {
+test("an entry declaration grants no raw authority to its driver", () => {
   const { result } = inspect({
     [driver]:
       "export function drive(read: (n: number) => number): number { return read(Date.now()); }\n",
@@ -151,9 +151,9 @@ test.each([
   },
 );
 
-test("a test suffix cannot turn a zoned module into an entrypoint", () => {
+test("a test suffix cannot turn a zoned module into an entry", () => {
   const path = "oracle/core/readings/value.test.ts";
-  const { result } = inspect({ [path]: "void 0;\n" }, { exceptions: [path] });
+  const { result } = inspect({ [path]: "void 0;\n" }, { hosts: { proof: { lib: ["dom", "node"], entries: [path] } } });
   expect(result.findings).toContainEqual(
     expect.objectContaining({
       path,
@@ -205,4 +205,19 @@ test("real Vitest registration stays an unresolved boundary until its framework 
       blocking: true,
     }),
   );
+});
+
+test("every claim test is a derived proof-host entry: nothing may import it, listed or not", () => {
+  const caller = "oracle/substrate/compositions/caller.ts";
+  const { result } = inspect(
+    {
+      [proof]: files[proof] + "export const name: string = 'increments';\n",
+      [caller]: "import { name } from '../../count/increments.test.js';\nexport const read = (): string => name;\n",
+    },
+    { hosts: { proof: { lib: ["dom", "node"] } } },
+  );
+  expect(result.findings).toContainEqual(
+    expect.objectContaining({ debtKey: `R2:startup-import:${caller}:${proof}`, blocking: true }),
+  );
+  expect(result.requirements.map((row) => row.path)).not.toContain(proof);
 });

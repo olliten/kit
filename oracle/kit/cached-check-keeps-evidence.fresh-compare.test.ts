@@ -9,13 +9,13 @@ afterEach(removeCacheApps);
 const engine = resolve(import.meta.dirname, "../..");
 const { kitRefs } = await import(new URL("../../scripts/kit-refs.mjs", import.meta.url).href);
 
-test("--fresh-compare keeps evidence for code roots and proof entrypoints without waiving failures", async () => {
+test("--fresh-compare keeps evidence for code roots and proof entries without waiving failures", async () => {
   const base = scratch("kit-fresh-compare-");
   const app = join(base, "app");
   const proofSource =
     "import { actual } from '../../src/core/readings/actual.js';\nimport { reference } from '../../oracle/core/readings/reference.js';\nif (actual(1) !== reference(1)) throw new Error('Mismatch');\n";
   const configSource =
-    "```yaml\napp: numbers\nroots:\n  src: [src/, oracle/, proof/]\n  spec: spec/\n  oracle: proof/\nterms: spec/terms.md\nexceptions: [proof/count/increments.test.ts]\n```\n";
+    "```yaml\napp: numbers\nroots:\n  src: [src/, oracle/, proof/]\n  spec: spec/\n  oracle: proof/\nterms: spec/terms.md\nhosts:\n  proof: { lib: [node], entries: [proof/count/increments.test.ts] }\n```\n";
   writeApp(app, {
     "package.json": JSON.stringify({ type: "module" }),
     "tsconfig.json": JSON.stringify({

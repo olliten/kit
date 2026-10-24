@@ -179,11 +179,11 @@ test("a new legacy module, or one without a recorded size, is new debt", () => {
   ]);
 });
 
-test("a placed module and a declared startup file have no legacy size", () => {
+test("a placed module and a host entry have no legacy size", () => {
   const startup = "src/start.ts";
   const snapshot = sourceFixture(
     { ...placed, [startup]: 'import { total } from "./core/readings/total.js";\ntotal([]);\n' },
-    { exceptions: [startup] },
+    { hosts: { browser: { lib: ["dom"], zone: "shell", entries: [startup] } } },
   );
   expect(snapshot.sizes?.map((size) => size.file)).toEqual([
     "src/core/readings/total.ts",
