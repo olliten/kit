@@ -83,3 +83,17 @@ test("a literal of the port's type keeps what its closures capture", () => {
     expect.stringMatching(/^R1:closure-binding:src\/shell\/compositions\/forge\.ts:src\/shell\/compositions\/capture-overlay\.ts:\d+:storage$/),
   );
 });
+
+test("plain data a contract returns is a result, not a port, so a reading may take it", () => {
+  const result = inspect({
+    "src/shell/adapters/capture-driver.ts":
+      "export interface Shot { readonly title: string; }\n" +
+      "export interface CaptureDrivers { shoot(): Promise<Shot>; }\n" +
+      "export const captureDrivers: CaptureDrivers = { shoot: async () => ({ title: 'x' }) };\n",
+    "src/shell/readings/caption.ts":
+      "import type { Shot } from '../adapters/capture-driver.js';\nexport function caption(shot: Shot): string { return shot.title; }\n",
+  });
+  // Its type-only import of the adapter is still a layer edge; it gains no capability.
+  expect(result.requirements.find((row) => row.path === "src/shell/readings/caption.ts")?.inherited).toEqual([]);
+  expect(result.findings.filter((item) => item.path === "src/shell/readings/caption.ts" && item.rule === "R1")).toEqual([]);
+});
