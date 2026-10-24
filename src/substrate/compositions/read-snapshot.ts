@@ -784,6 +784,25 @@ function readCompiler(
             );
           })
           .map((property) => property.name);
+      const portsOf = (type: ts.Type): { ports?: { file: string; name: string }[] } => {
+        const ports = new Map<string, { file: string; name: string }>();
+        for (const property of type.getProperties()) {
+          const declaration = property.valueDeclaration ?? property.declarations?.[0];
+          if (declaration === undefined) continue;
+          for (const signature of checker.getTypeOfSymbolAtLocation(property, declaration).getCallSignatures()) {
+            const returned = checker.getReturnTypeOfSignature(signature);
+            const port = checker.getAwaitedType(returned) ?? returned;
+            const symbol = port.aliasSymbol ?? port.symbol;
+            const home = symbol?.declarations?.[0];
+            if (home === undefined || !source.has(local(home.getSourceFile().fileName))) continue;
+            // Plain data returned by an operation is a result, not a port: only a type with operations is held.
+            if (!(ts.isInterfaceDeclaration(home) || ts.isTypeAliasDeclaration(home)) || operationsOf(port).length === 0) continue;
+            const identity = { file: local(home.getSourceFile().fileName), name: symbol?.name ?? "" };
+            ports.set(`${identity.file}:${identity.name}`, identity);
+          }
+        }
+        return ports.size === 0 ? {} : { ports: [...ports.values()] };
+      };
       const contractIdentity = (type: ts.Type, nativeInput = false): { file: string; name: string } | null => {
         const sdk = nativeInput ? sdkTypes.get(type.aliasSymbol ?? type.symbol) : undefined;
         if (sdk !== undefined) return sdk;
@@ -1091,6 +1110,7 @@ function readCompiler(
               operations: operationsOf(checker.getTypeAtLocation(node)),
               type: contractIdentity(checker.getTypeAtLocation(node)),
               ...nativeContract(checker.getTypeAtLocation(node)),
+              ...portsOf(checker.getTypeAtLocation(node)),
             });
           if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
             for (const [index, parameter] of node.parameters.entries()) {

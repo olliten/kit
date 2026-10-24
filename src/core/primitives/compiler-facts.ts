@@ -72,6 +72,8 @@ export interface CompilerFacts {
       readonly operations: readonly string[];
       readonly type: { readonly file: string; readonly name: string } | null;
       readonly nativeAuthority?: readonly NativeAuthority[];
+      // The named project types its operations return, awaited: the ports a caller holds after using it.
+      readonly ports?: readonly { readonly file: string; readonly name: string }[];
     }[];
     readonly accesses: readonly {
       readonly file: string;
