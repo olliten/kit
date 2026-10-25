@@ -111,3 +111,15 @@ test("an unclassified package a legacy callable reaches is unresolved too", () =
   );
   expect(findings.length).toBeGreaterThan(0);
 });
+
+test("a pure value use of a host type is not represented by an earlier native static of the same global", () => {
+  expect(
+    atRun(
+      inspect(
+        "import { run } from '../src/substrate/compositions/run.js';\n" +
+          "export function drop(url: string): void { URL.revokeObjectURL(url); }\n" +
+          "run(() => new URL('https://example.test').host, (value: string): void => { void value; });\n",
+      ),
+    ),
+  ).toEqual([]);
+});

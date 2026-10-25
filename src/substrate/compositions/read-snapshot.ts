@@ -1628,7 +1628,7 @@ function readCompiler(
                 (/(?:^|\/)node_modules\//.test(global.declarationFile ?? "") &&
                   !/(?:^|\/)node_modules\/typescript\/lib\//.test(global.declarationFile ?? ""))),
           )
-          .map((global) => ({ fact: global, kind: JSON.stringify(["global", global.name, natives(global)]) })),
+          .map((global) => ({ fact: global, kind: JSON.stringify(["global", global.name, global.value === true, natives(global)]) })),
         ...[...parameters.values()]
           .filter(
             (parameter) =>
