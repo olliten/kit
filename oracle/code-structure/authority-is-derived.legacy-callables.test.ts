@@ -295,3 +295,25 @@ test("a legacy callable assigned through a placed setter is not established", ()
   expect(keys("import { holder } from '../src/substrate/compositions/holder.js';\nimport { read } from './io.js';\nholder.read = read;\n").length).toBeGreaterThan(0);
   expect(keys("import { holder } from '../src/substrate/compositions/holder.js';\nimport { twice } from './io.js';\nholder.read = () => twice('a');\n")).toEqual([]);
 });
+
+test("a callable reaching TypeScript outside every checked root and legacy location is not established", () => {
+  const findings = atRun(
+    inspect(
+      "import { run } from '../src/substrate/compositions/run.js';\nimport { load } from '../outside/io.js';\n" +
+        "run(() => load(), (value: string): void => { void value; });\n",
+      { "outside/io.ts": "export const load = (): string => process.env.HOME ?? '';\n" },
+    ),
+  );
+  expect(findings.length).toBeGreaterThan(0);
+});
+
+test("a destructured callable default carries the unresolved authority it reaches", () => {
+  expect(
+    atRun(
+      inspect(
+        "import { run } from '../src/substrate/compositions/run.js';\nimport { read } from './io.js';\n" +
+          "function start({ r = read }: { r?: () => string } = {}): void { run(r, (value: string): void => { void value; }); }\nstart();\n",
+      ),
+    ).length,
+  ).toBeGreaterThan(0);
+});

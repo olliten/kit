@@ -1001,6 +1001,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         (position) => !adapterPaths.has(position.file) && unresolvedAt.has(`${position.file}:${position.start}`),
       ) ||
       capture.whole.some((file) => !adapterPaths.has(file) && unresolvedFiles.has(file)) ||
+      // Code outside every checked root and legacy location has no recorded authority at all.
+      [...capture.reached, ...capture.whole].some((file) => !direct.has(file)) ||
       // An adapter importing an unregistered package keeps that limit itself; its port stays established.
       capture.packages.some((specifier) =>
         [...(unresolvedPackages.get(specifier) ?? [])].some(

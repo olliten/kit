@@ -1506,13 +1506,19 @@ function readCompiler(
                   : {}),
               });
           }
+          // A destructured default binds the parameter it is destructured from.
+          let defaulted: ts.Node | undefined =
+            (ts.isParameter(node) || ts.isBindingElement(node)) && node.initializer !== undefined ? node : undefined;
+          while (defaulted !== undefined && ts.isBindingElement(defaulted)) defaulted = defaulted.parent.parent;
           if (
             runtime &&
-            ts.isParameter(node) &&
+            defaulted !== undefined &&
+            ts.isParameter(defaulted) &&
+            (ts.isParameter(node) || ts.isBindingElement(node)) &&
             node.initializer !== undefined &&
             typeFacts(checker.getTypeAtLocation(node.initializer), new Set(), true).callable
           ) {
-            const binding: CallableBinding = { source: null, target: { file: path, start: node.getStart(sf) } };
+            const binding: CallableBinding = { source: null, target: { file: path, start: defaulted.getStart(sf) } };
             pendingCaptures.push({ argument: node.initializer, binding });
             defaults.push(binding);
           }
