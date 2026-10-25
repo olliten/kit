@@ -342,6 +342,7 @@ function readCompiler(
         [];
       // A callable default is a value bound to its parameter as surely as an argument is.
       const defaults: CallableBinding[] = [];
+      const held: NonNullable<Project["held"]>[number][] = [];
       const targetOf = (node: ts.Node): ts.Declaration | undefined => {
         let symbol = checker.getSymbolAtLocation(node);
         if (symbol !== undefined && (symbol.flags & ts.SymbolFlags.Alias) !== 0)
@@ -1506,6 +1507,41 @@ function readCompiler(
                   : {}),
               });
           }
+          // A function held as a value, rather than called where Kit resolves it, takes arguments Kit can't see,
+          // and so does an anonymous function handed on to whoever calls it.
+          if (runtime && ts.isIdentifier(node)) {
+            const shorthand = ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node
+              ? checker.getShorthandAssignmentValueSymbol(node.parent)
+              : undefined;
+            const aliased = shorthand !== undefined && (shorthand.flags & ts.SymbolFlags.Alias) !== 0
+              ? checker.getAliasedSymbol(shorthand)
+              : shorthand;
+            const resolved = shorthand !== undefined
+              ? aliased?.valueDeclaration ?? aliased?.declarations?.[0]
+              : targetOf(node);
+            const declaration = resolved !== undefined && ts.getNameOfDeclaration(resolved) === node ? undefined : resolved;
+            const fn =
+              declaration === undefined || declaration.getSourceFile().isDeclarationFile
+                ? undefined
+                : ts.isFunctionDeclaration(declaration) || ts.isMethodDeclaration(declaration)
+                  ? declaration
+                  : ts.isVariableDeclaration(declaration) &&
+                      declaration.initializer !== undefined &&
+                      (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer))
+                    ? declaration.initializer
+                    : undefined;
+            const access = ts.isPropertyAccessExpression(node.parent) && node.parent.name === node ? node.parent : node;
+            const called =
+              ((ts.isCallExpression(access.parent) || ts.isNewExpression(access.parent)) && access.parent.expression === access) ||
+              (ts.isPropertyAccessExpression(access.parent) &&
+                access.parent.expression === access &&
+                ["call", "apply", "bind"].includes(access.parent.name.text));
+            if (fn !== undefined && !called)
+              for (const parameter of fn.parameters)
+                held.push({ file: local(fn.getSourceFile().fileName), start: parameter.getStart(), at: path });
+          }
+          if (runtime && (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) && !ts.isVariableDeclaration(node.parent))
+            for (const parameter of node.parameters) held.push({ file: path, start: parameter.getStart(sf), at: path });
           // A destructured default binds the parameter it is destructured from.
           let defaulted: ts.Node | undefined =
             (ts.isParameter(node) || ts.isBindingElement(node)) && node.initializer !== undefined ? node : undefined;
@@ -1806,6 +1842,7 @@ function readCompiler(
         constructions,
         connections,
         ...(defaults.length > 0 ? { defaults } : {}),
+        ...(held.length > 0 ? { held } : {}),
         proofs,
         termFacts: { sources: termSources, types: termTypes },
       };

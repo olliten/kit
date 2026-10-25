@@ -317,3 +317,31 @@ test("a destructured callable default carries the unresolved authority it reache
     ).length,
   ).toBeGreaterThan(0);
 });
+
+const pure = "(value: string): void => { void value; }";
+
+test.each([
+  ["an alias of the placed function", "const f = run;\nf(read, " + pure + ");\n"],
+  ["a record holding it", "const api = { run };\napi.run(read, " + pure + ");\n"],
+  ["an element access", "const m: Record<string, typeof run> = { run };\nm['run']!(read, " + pure + ");\n"],
+  ["a timer", "setTimeout(run, 0, read, " + pure + ");\n"],
+])("a placed function legacy holds as %s has no established inputs", (_, call) => {
+  const keys = inspect("import { run } from '../src/substrate/compositions/run.js';\nimport { read } from './io.js';\n" + call)
+    .map((item) => item.debtKey)
+    .filter((key) => key.startsWith(`R1:callable-binding:${run}:legacy/index.ts:`));
+  expect(keys.length).toBeGreaterThan(0);
+});
+
+test.each([
+  ["a returned function", "const make = () => (r: () => string): void => { run(r, " + pure + "); };\nmake()(read);\n"],
+  ["an alias of a forwarder", "function forward(r: () => string): void { run(r, " + pure + "); }\nconst g = forward;\ng(read);\n"],
+  ["a forwarder in a record", "function forward(r: () => string): void { run(r, " + pure + "); }\nconst o: Record<string, typeof forward> = { forward };\no['forward']!(read);\n"],
+  ["handlers called by native code", "function forward(r: () => string): void { run(r, " + pure + "); }\n[forward].forEach((h) => h(read));\n"],
+  ["a parameter bound by Array.forEach", "[read].forEach((r) => run(r, " + pure + "));\n"],
+  ["a parameter bound by a promise", "void Promise.resolve(read).then((r) => run(r, " + pure + "));\n"],
+  ["an exported forwarder with no caller here", "export function forward(r: () => string): void { run(r, " + pure + "); }\nvoid read;\n"],
+])("a legacy parameter bound through %s is unresolved", (_, code) => {
+  expect(
+    atRun(inspect("import { run } from '../src/substrate/compositions/run.js';\nimport { read } from './io.js';\n" + code)).length,
+  ).toBeGreaterThan(0);
+});

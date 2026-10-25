@@ -1098,6 +1098,26 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
                   .flatMap(([key]) => [...(suppliedCapabilities.get(key) ?? [])])),
           ],
     );
+  // A legacy parameter Kit can't see every argument of, because its function is held as a value, handed on
+  // anonymously or never called where Kit resolves the call, is unresolved: a limit, never purity.
+  const heldInputs = projects.flatMap((project) => project.held ?? []);
+  const boundTargets = new Set(
+    [...bindings, ...defaultBindings].flatMap((binding) => (binding.target === null ? [] : [keyOf(binding.target)])),
+  );
+  // A parameter whose type establishes it, an adapter contract, port, SDK input or accepted handle, carries that
+  // type's authority wherever it came from.
+  const typed = (key: string): boolean => {
+    const type = parameterFacts.get(key)?.types[0];
+    return known.has(key) || (type !== undefined && adapters.some((adapter) => accepting(pathOf(adapter.module), type) === adapter));
+  };
+  for (const [key, file] of inputs)
+    if (
+      placement(file) === null &&
+      direct.has(file) &&
+      !typed(key) &&
+      (heldInputs.some((entry) => keyOf(entry) === key) || !boundTargets.has(key))
+    )
+      unresolvedInputs.add(key);
   changed = true;
   while (changed) {
     changed = false;
@@ -1318,6 +1338,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       }
     }
   }
+  // A placed function legacy code holds as a value takes executable inputs from wherever legacy hands it on.
+  for (const entry of heldInputs)
+    if (placement(entry.file) !== null && placement(entry.at) === null && inputs.has(keyOf(entry)))
+      unresolved(
+        "callable-binding",
+        entry.file,
+        `${entry.at} holds this function as a value, so its executable inputs have no established capability boundary.`,
+        `${entry.at}:${entry.start}`,
+      );
   return {
     requirements: [...inherited].map(([path, caps]) => ({
       path,
