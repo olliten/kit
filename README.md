@@ -286,8 +286,7 @@ git clone <this repo> ../kit && (cd ../kit && npm install)
 ```
 
 Add `kit/config.md` mapping your folders to zones, `spec/terms.md` with your domain's words, and a baseline of
-today's findings and legacy sizes. Run `kit check --base <the pull request's base ref>` in CI, so a change that
-edits a claim's test without its topic fails, and `kit check --tighten` after a change lands, so
+today's findings and legacy sizes. Run `kit check` in CI, and `kit check --tighten` after a change lands, so
 paid debt and shrunk modules leave the baseline. Nothing users see changes. For the read hook, point a `PostToolUse`
 hook on `Read` at `kit-refs.mjs --hook --root . --config kit/config.md`.
 

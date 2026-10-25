@@ -6,10 +6,6 @@
   - Role: fact
   - Zone: core
   - Of: []
-- **change-history** — the files a change added, modified or deleted since its base, and its commit messages.
-  - Role: fact
-  - Zone: core
-  - Of: []
 - **claim** — a promise declared once in its topic and proved by tests.
   - Role: fact
   - Zone: core
@@ -145,10 +141,6 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{term}}, {{finding}}, {{placement-of}}
-- **test-change-check** — the check that a change editing a claim's test changes the claim's topic too, or says why.
-  - Role: derived
-  - Zone: core
-  - From: {{change-history}}, {{snapshot}}, {{finding}}, {{claim-proof-binder}}
 - **topic-shape** — the check that a topic is a title, a short intro, then only section headings and claims with optional module relationships.
   - Role: derived
   - Zone: core
@@ -165,10 +157,6 @@
 
 ## Adapter contracts
 
-- **change-log** — access to what a change did since it left a base ref, read from git.
-  - Role: adapter
-  - Zone: substrate
-  - Of: {{change-history}}
 - **compiler** — access to project loading and import resolution through a language compiler.
   - Role: adapter
   - Zone: substrate
@@ -182,10 +170,6 @@
   - Zone: substrate
   - Of: []
 - **temporary-project** — ownership of an isolated temporary directory, its fixture file writes and its disposal.
-  - Role: adapter
-  - Zone: substrate
-  - Of: []
-- **temporary-repository** — ownership of an isolated temporary git repository, its commits and branches, and its disposal.
   - Role: adapter
   - Zone: substrate
   - Of: []

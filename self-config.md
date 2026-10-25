@@ -39,8 +39,6 @@ packages:
     capabilities: [process-environment]
   - name: node:os
     capabilities: [process-environment]
-  - name: node:child_process
-    capabilities: [git]
   - name: typescript
     capabilities: [compiler, filesystem, process-environment]
 adapters:
@@ -68,30 +66,6 @@ adapters:
     kind: external
     zones: [substrate]
     contract: {type: TemporaryProjects}
-  - module: src/substrate/adapters/change-log
-    export: changeLog
-    capability: git
-    kind: external
-    zones: [substrate]
-    contract: {type: ChangeLog}
-  - module: oracle/substrate/adapters/temporary-repository
-    export: temporaryRepositories
-    capability: git
-    kind: external
-    zones: [substrate]
-    contract: {type: TemporaryRepositories}
-  - module: oracle/substrate/adapters/temporary-repository
-    export: temporaryRepositories
-    capability: filesystem
-    kind: external
-    zones: [substrate]
-    contract: {type: TemporaryRepositories}
-  - module: oracle/substrate/adapters/temporary-repository
-    export: temporaryRepositories
-    capability: process-environment
-    kind: external
-    zones: [substrate]
-    contract: {type: TemporaryRepositories}
   - module: src/substrate/adapters/filesystem
     export: filesystem
     capability: filesystem
@@ -122,9 +96,6 @@ Filesystem and process-environment are real requirements of the native compiler 
 
 The dependency and source-fixture proofs are checked entrypoints, not rule waivers. Their test registration and assertions
 use only the declared Vitest exports. The runner is effectful; shared proof modules gain no runner permission.
-
-The change-log adapter is the one place Kit runs git, and only when a check is given `--base`. The
-temporary-repository proof adapter runs git too, to build the repositories its proofs read.
 
 The temporary-project adapter owns temporary directories and writes. Locating the operating system's
 temporary directory uses process-environment authority; `node:os` is not declared pure.

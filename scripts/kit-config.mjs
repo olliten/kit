@@ -108,8 +108,7 @@ export function ignoredPaths(declared) {
   ].sort();
 }
 
-/** Paths the caller gives resolve against where the caller runs; the defaults check the Kit itself. A base is the
- * git ref a change is compared with, so the checks of what it changed run. */
+/** Paths the caller gives resolve against where the caller runs; the defaults check the Kit itself. */
 export function kitCheckPaths(args, engineRoot, cwd = process.cwd()) {
   const option = (name) => {
     const values = [];
@@ -126,7 +125,6 @@ export function kitCheckPaths(args, engineRoot, cwd = process.cwd()) {
   const root = given === undefined ? engineRoot : resolve(cwd, given);
   const config = option("config");
   const baseline = option("baseline");
-  const base = option("base");
   if (root !== engineRoot && (!config || !baseline))
     throw new Error("A different governed root requires its --config and --baseline paths.");
   return {
@@ -134,7 +132,6 @@ export function kitCheckPaths(args, engineRoot, cwd = process.cwd()) {
     configPath: config === undefined ? resolve(engineRoot, "self-config.md") : resolve(cwd, config),
     baselinePath:
       baseline === undefined ? resolve(engineRoot, "self-debt/legacy.json") : resolve(cwd, baseline),
-    base,
   };
 }
 
