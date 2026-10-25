@@ -1166,8 +1166,8 @@ function readCompiler(
               spread: node.properties.some(ts.isSpreadAssignment),
             });
           }
-          if (ts.isCallExpression(node)) {
-            if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+          if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+            if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
               const specifier = node.arguments[0];
               if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
                 imports.push({
@@ -1184,7 +1184,7 @@ function readCompiler(
               ts.isPropertyAccessExpression(node.expression) &&
               globalName(node.expression.expression) === "Reflect" &&
               node.expression.name.text === "get" &&
-              node.arguments[0] !== undefined &&
+              node.arguments?.[0] !== undefined &&
               globalName(node.arguments[0]) === "globalThis"
             )
               accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
@@ -1195,7 +1195,7 @@ function readCompiler(
               declaration !== undefined &&
               (externalAdapters.has(local(declaration.getSourceFile().fileName)) ||
                 shellCompositions.has(local(declaration.getSourceFile().fileName)));
-            const callableArguments = node.arguments.flatMap((argument, index) => {
+            const callableArguments = (node.arguments ?? []).flatMap((argument, index) => {
               const facts = typeFacts(
                 checker.getTypeAtLocation(argument),
                 new Set(),
@@ -1230,10 +1230,13 @@ function readCompiler(
                       ts.isNewExpression(argument)
                     ? argument
                     : targetOf(argument) ?? acquisition;
+              // A constructed class receives its arguments in its constructor.
               const called =
                 declaration !== undefined && ts.isVariableDeclaration(declaration)
                   ? declaration.initializer
-                  : declaration;
+                  : declaration !== undefined && ts.isClassLike(declaration)
+                    ? declaration.members.find(ts.isConstructorDeclaration)
+                    : declaration;
               const targetParameter =
                 called !== undefined && ts.isFunctionLike(called)
                   ? called.parameters[index]

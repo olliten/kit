@@ -236,3 +236,18 @@ test("a baseline cannot waive the limit, and established callables gain no new c
   expect(pure.findings.filter((item) => item.debtKey.startsWith("R1:callable-binding:"))).toEqual([]);
   expect(pure.requirements.find((row) => row.path === run)).toEqual({ path: run, direct: [], inherited: [] });
 });
+
+test("a legacy callable handed to a placed constructor is not established", () => {
+  const runner = "src/substrate/compositions/runner.ts";
+  const files = {
+    [runner]:
+      "export class Runner {\n  readonly #read: () => string;\n  constructor(read: () => string) { this.#read = read; }\n" +
+      "  value(): string { return this.#read(); }\n}\n",
+  };
+  const keys = (caller: string) =>
+    inspect(caller, files)
+      .map((item) => item.debtKey)
+      .filter((key) => key.startsWith(`R1:callable-binding:${runner}:legacy/index.ts:`));
+  expect(keys("import { Runner } from '../src/substrate/compositions/runner.js';\nimport { read } from './io.js';\nnew Runner(read).value();\n").length).toBeGreaterThan(0);
+  expect(keys("import { Runner } from '../src/substrate/compositions/runner.js';\nimport { twice } from './io.js';\nnew Runner(() => twice('a')).value();\n")).toEqual([]);
+});
