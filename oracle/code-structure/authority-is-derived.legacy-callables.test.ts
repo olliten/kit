@@ -345,3 +345,25 @@ test.each([
     atRun(inspect("import { run } from '../src/substrate/compositions/run.js';\nimport { read } from './io.js';\n" + code)).length,
   ).toBeGreaterThan(0);
 });
+
+test.each([
+  ["an element write", "holder['read'] = read;\n"],
+  ["Object.assign", "Object.assign(holder, { read });\n"],
+  ["a public field", "holder.handler = read;\n"],
+  ["a placed array's push", "register.push(read);\n"],
+])("a legacy callable written into a placed value through %s is not established", (_, write) => {
+  const store = "src/substrate/compositions/store.ts";
+  const keys = (code: string) =>
+    inspect(
+      "import { holder, register } from '../src/substrate/compositions/store.js';\n" + code,
+      {
+        [store]:
+          "export class Holder {\n  handler: () => string = () => '';\n  read: () => string = () => '';\n  value(): string { return this.handler() + this.read(); }\n}\n" +
+          "export const holder: Holder = new Holder();\nexport const register: (() => string)[] = [];\n",
+      },
+    )
+      .map((item) => item.debtKey)
+      .filter((key) => key.startsWith(`R1:callable-binding:${store}:legacy/index.ts:`));
+  expect(keys("import { read } from './io.js';\n" + write).length).toBeGreaterThan(0);
+  expect(keys("import { twice } from './io.js';\nconst read = (): string => twice('a');\n" + write)).toEqual([]);
+});

@@ -1507,6 +1507,55 @@ function readCompiler(
                   : {}),
               });
           }
+          // Writing a callable into another module's value, by assignment, Object.assign or a collection's
+          // mutator, hands it to that module as surely as an argument does.
+          const rootOf = (expression: ts.Expression): ts.Declaration | undefined => {
+            let current = expression;
+            while (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current) || ts.isParenthesizedExpression(current))
+              current = current.expression;
+            return ts.isIdentifier(current) ? targetOf(current) : undefined;
+          };
+          const written = ((): { readonly into: ts.Declaration | undefined; readonly values: readonly ts.Expression[] } | undefined => {
+            if (
+              ts.isBinaryExpression(node) &&
+              node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+              (ts.isPropertyAccessExpression(node.left) || ts.isElementAccessExpression(node.left)) &&
+              setter === undefined
+            )
+              return { into: rootOf(node.left.expression), values: [node.right] };
+            if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return undefined;
+            const method = node.expression.name.text;
+            if (globalName(node.expression.expression) === "Object" && method === "assign" && node.arguments[0] !== undefined)
+              return { into: rootOf(node.arguments[0]), values: node.arguments.slice(1) };
+            if (["push", "unshift", "splice", "set", "add"].includes(method))
+              return { into: rootOf(node.expression.expression), values: node.arguments };
+            return undefined;
+          })();
+          if (
+            runtime &&
+            written?.into !== undefined &&
+            !written.into.getSourceFile().isDeclarationFile &&
+            written.into.getSourceFile() !== sf
+          ) {
+            const values = written.values.filter((value) => {
+              const facts = typeFacts(checker.getTypeAtLocation(value), new Set(), true);
+              return facts.callable || facts.accessor;
+            });
+            const bindings = values.map((value) => {
+              const binding: CallableBinding = { source: null, target: null };
+              pendingCaptures.push({ argument: value, binding });
+              return binding;
+            });
+            if (bindings.length > 0)
+              connections.push({
+                file: path,
+                start: node.getStart(sf),
+                target: local(written.into.getSourceFile().fileName),
+                callableOrigins: bindings.map(() => path),
+                callableBindings: bindings,
+                builtin: false,
+              });
+          }
           // A function held as a value, rather than called where Kit resolves it, takes arguments Kit can't see,
           // and so does an anonymous function handed on to whoever calls it.
           if (runtime && ts.isIdentifier(node)) {
