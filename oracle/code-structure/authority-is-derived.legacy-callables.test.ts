@@ -280,3 +280,18 @@ test.each([
     ).length,
   ).toBeGreaterThan(0);
 });
+
+test("a legacy callable assigned through a placed setter is not established", () => {
+  const holder = "src/substrate/compositions/holder.ts";
+  const files = {
+    [holder]:
+      "export class Holder {\n  #read: () => string = () => '';\n  set read(next: () => string) { this.#read = next; }\n" +
+      "  value(): string { return this.#read(); }\n}\nexport const holder: Holder = new Holder();\n",
+  };
+  const keys = (caller: string) =>
+    inspect(caller, files)
+      .map((item) => item.debtKey)
+      .filter((key) => key.startsWith(`R1:callable-binding:${holder}:legacy/index.ts:`));
+  expect(keys("import { holder } from '../src/substrate/compositions/holder.js';\nimport { read } from './io.js';\nholder.read = read;\n").length).toBeGreaterThan(0);
+  expect(keys("import { holder } from '../src/substrate/compositions/holder.js';\nimport { twice } from './io.js';\nholder.read = () => twice('a');\n")).toEqual([]);
+});

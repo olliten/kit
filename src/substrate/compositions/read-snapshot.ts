@@ -1168,8 +1168,22 @@ function readCompiler(
               spread: node.properties.some(ts.isSpreadAssignment),
             });
           }
-          if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
-            if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+          // Assigning through a setter hands the value to the setter's parameter, like a call.
+          const setter =
+            ts.isBinaryExpression(node) &&
+            node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+            ts.isPropertyAccessExpression(node.left)
+              ? checker
+                  .getSymbolAtLocation(node.left.name)
+                  ?.declarations?.find(
+                    (declaration): declaration is ts.SetAccessorDeclaration =>
+                      ts.isSetAccessorDeclaration(declaration) && !declaration.getSourceFile().isDeclarationFile,
+                  )
+              : undefined;
+          if (ts.isCallExpression(node) || ts.isNewExpression(node) || (setter !== undefined && ts.isBinaryExpression(node))) {
+            const call = ts.isBinaryExpression(node) ? undefined : node;
+            if (call !== undefined && ts.isCallExpression(call) && call.expression.kind === ts.SyntaxKind.ImportKeyword) {
+              const node = call;
               const specifier = node.arguments[0];
               if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
                 imports.push({
@@ -1183,11 +1197,12 @@ function readCompiler(
               } else accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
             }
             if (
-              ts.isPropertyAccessExpression(node.expression) &&
-              globalName(node.expression.expression) === "Reflect" &&
-              node.expression.name.text === "get" &&
-              node.arguments?.[0] !== undefined &&
-              globalName(node.arguments[0]) === "globalThis"
+              call !== undefined &&
+              ts.isPropertyAccessExpression(call.expression) &&
+              globalName(call.expression.expression) === "Reflect" &&
+              call.expression.name.text === "get" &&
+              call.arguments?.[0] !== undefined &&
+              globalName(call.arguments[0]) === "globalThis"
             )
               accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
             // `f.call(t, …)`, `f.bind(t, …)`, `f.apply(t, […])` and `Reflect.apply(f, t, […])` hand their
@@ -1195,9 +1210,11 @@ function readCompiler(
             const elements = (list: ts.Expression | undefined): readonly ts.Expression[] =>
               list !== undefined && ts.isArrayLiteralExpression(list) ? list.elements : [];
             const invoked = ((): { readonly callee: ts.Expression; readonly passed: readonly ts.Expression[] } => {
-              const all = node.arguments ?? [];
-              const expression = node.expression;
-              if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(expression)) {
+              if (call === undefined)
+                return ts.isBinaryExpression(node) ? { callee: node.left, passed: [node.right] } : { callee: node, passed: [] };
+              const all = call.arguments ?? [];
+              const expression = call.expression;
+              if (ts.isCallExpression(call) && ts.isPropertyAccessExpression(expression)) {
                 const method = expression.name.text;
                 if (globalName(expression.expression) === "Reflect" && method === "apply" && all[0] !== undefined)
                   return { callee: all[0], passed: elements(all[2]) };
@@ -1209,8 +1226,8 @@ function readCompiler(
               }
               return { callee: expression, passed: all };
             })();
-            const declaration = targetOf(invoked.callee);
-            const raw = rawAccess(node.expression);
+            const declaration = setter ?? targetOf(invoked.callee);
+            const raw = call === undefined ? null : rawAccess(call.expression);
             if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
             const nativeDestination =
               declaration !== undefined &&
