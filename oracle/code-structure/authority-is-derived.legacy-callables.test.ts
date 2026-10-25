@@ -140,3 +140,53 @@ test("an adapter importing an unregistered package keeps that limit itself, and 
     "R1:external-boundary:src/substrate/adapters/journal.ts:unregistered",
   );
 });
+
+test.each([
+  [
+    "a forwarding function",
+    "import { run } from '../src/substrate/compositions/run.js';\nimport { read, write } from './io.js';\n" +
+      "function forward(r: () => string, w: (value: string) => void): void { run(r, w); }\nforward(read, write);\n",
+  ],
+  [
+    "a forwarded record",
+    "import { runRecord } from '../src/substrate/compositions/run.js';\nimport { read, write } from './io.js';\n" +
+      "function forward(ports: { read(): string; write(value: string): void }): void { runRecord(ports); }\nforward({ read, write });\n",
+  ],
+  [
+    "a destructured record",
+    "import { run } from '../src/substrate/compositions/run.js';\nimport { read, write } from './io.js';\n" +
+      "function forward({ r, w }: { r: () => string; w: (value: string) => void }): void { run(r, w); }\nforward({ r: read, w: write });\n",
+  ],
+  [
+    "a forwarder in another legacy module",
+    "import { forward } from './forward.js';\nimport { read, write } from './io.js';\nforward(read, write);\n",
+  ],
+])("%s carries the unresolved authority of what it is handed", (_, caller) => {
+  const findings = inspect(caller, {
+    "legacy/forward.ts":
+      "import { run } from '../src/substrate/compositions/run.js';\n" +
+      "export function forward(r: () => string, w: (value: string) => void): void { run(r, w); }\n",
+  }).filter((item) => item.debtKey.startsWith(`R1:callable-binding:${run}:legacy/`));
+  expect(findings.length).toBeGreaterThan(0);
+});
+
+test("forwarding pure callables stays established", () => {
+  expect(
+    inspect(
+      "import { run } from '../src/substrate/compositions/run.js';\nimport { twice } from './io.js';\n" +
+        "function forward(r: () => string, w: (value: string) => void): void { run(r, w); }\n" +
+        "forward(() => twice('a'), (value: string): void => { void twice(value); });\n",
+    ).filter((item) => item.debtKey.startsWith(`R1:callable-binding:${run}:`)),
+  ).toEqual([]);
+});
+
+test("a relative import outside the project is as unclassified as an unknown package", () => {
+  const findings = atRun(
+    inspect(
+      "import { run } from '../src/substrate/compositions/run.js';\nimport { load } from '../outside/io.js';\n" +
+        "run(() => load(), (value: string): void => { void value; });\n",
+      { "outside/io.d.ts": "export declare function load(): string;\n", "outside/io.js": "export const load = () => process.env.HOME;\n" },
+    ),
+  );
+  expect(findings.length).toBeGreaterThan(0);
+});

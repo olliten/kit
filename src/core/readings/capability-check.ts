@@ -968,7 +968,14 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   };
   // A callable that reaches code whose authority could not be established carries that unknown with it: it
   // is never an established binding, wherever it is handed, and registered adapters keep their own limits.
-  const reachesUnresolved = (binding: (typeof bindings)[number]): boolean => {
+  // Parameters that receive such a callable carry it on: a function forwarding its input is no cleaner than
+  // the input.
+  const unresolvedInputs = new Set<string>();
+  const reachesUnresolved = (binding: (typeof bindings)[number]): boolean =>
+    [binding.source, ...(binding.capture?.parameters ?? [])].some(
+      (input) => input !== null && unresolvedInputs.has(keyOf(input)),
+    ) || reachesUnresolvedCode(binding);
+  const reachesUnresolvedCode = (binding: (typeof bindings)[number]): boolean => {
     const capture = binding.capture;
     if (capture === undefined)
       return binding.source === null && binding.origin !== null && unresolvedFiles.has(binding.origin);
@@ -1072,6 +1079,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
                   .flatMap(([key]) => [...(suppliedCapabilities.get(key) ?? [])])),
           ],
     );
+  changed = true;
+  while (changed) {
+    changed = false;
+    for (const binding of bindings)
+      if (binding.target !== null && !unresolvedInputs.has(keyOf(binding.target)) && reachesUnresolved(binding)) {
+        unresolvedInputs.add(keyOf(binding.target));
+        changed = true;
+      }
+  }
   changed = true;
   while (changed) {
     changed = false;

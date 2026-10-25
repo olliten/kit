@@ -2043,12 +2043,13 @@ function captureReach(
     for (const declaration of symbol.declarations ?? []) {
       let current: ts.Node | undefined = declaration;
       while (current !== undefined && !ts.isImportDeclaration(current)) current = current.parent;
-      if (
-        current !== undefined &&
-        ts.isStringLiteral(current.moduleSpecifier) &&
-        !current.moduleSpecifier.text.startsWith(".")
-      )
-        return current.moduleSpecifier.text;
+      if (current === undefined || !ts.isStringLiteral(current.moduleSpecifier)) continue;
+      const specifier = current.moduleSpecifier.text;
+      if (!specifier.startsWith(".")) return specifier;
+      // A relative import that reaches no checked source, such as a declaration beside a JavaScript file
+      // outside the project, is as unclassified as an unknown package.
+      const target = importTarget(specifier, current.getSourceFile().fileName);
+      if (target === null || !source.has(target) || /\.d\.[mc]?ts$/.test(target)) return specifier;
     }
     return null;
   };
