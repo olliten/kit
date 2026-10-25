@@ -114,6 +114,10 @@ export interface CompilerFacts {
       }[];
       readonly builtin: boolean;
     }[];
+    // Callable default values, each bound to its parameter like an argument.
+    readonly defaults?: readonly NonNullable<
+      CompilerFacts["projects"][number]["connections"][number]["callableBindings"]
+    >[number][];
     // What each test file's code uses, followed as a callable's capture is: the files whose code it reaches, and
     // the files it reaches in ways that can't be followed, charged whole.
     readonly proofs?: readonly {

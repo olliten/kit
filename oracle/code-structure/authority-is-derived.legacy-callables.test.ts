@@ -251,3 +251,19 @@ test("a legacy callable handed to a placed constructor is not established", () =
   expect(keys("import { Runner } from '../src/substrate/compositions/runner.js';\nimport { read } from './io.js';\nnew Runner(read).value();\n").length).toBeGreaterThan(0);
   expect(keys("import { Runner } from '../src/substrate/compositions/runner.js';\nimport { twice } from './io.js';\nnew Runner(() => twice('a')).value();\n")).toEqual([]);
 });
+
+test("a callable default value carries the unresolved authority it reaches", () => {
+  const keys = (caller: string) => atRun(inspect(caller));
+  expect(
+    keys(
+      "import { run } from '../src/substrate/compositions/run.js';\nimport { read } from './io.js';\n" +
+        "function start(r: () => string = read): void { run(r, (value: string): void => { void value; }); }\nstart();\n",
+    ).length,
+  ).toBeGreaterThan(0);
+  expect(
+    keys(
+      "import { run } from '../src/substrate/compositions/run.js';\nimport { twice } from './io.js';\n" +
+        "function start(r: () => string = () => twice('a')): void { run(r, (value: string): void => { void value; }); }\nstart();\n",
+    ),
+  ).toEqual([]);
+});

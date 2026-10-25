@@ -340,6 +340,8 @@ function readCompiler(
       };
       const pendingCaptures: { readonly argument: ts.Expression; readonly binding: CallableBinding }[] =
         [];
+      // A callable default is a value bound to its parameter as surely as an argument is.
+      const defaults: CallableBinding[] = [];
       const targetOf = (node: ts.Node): ts.Declaration | undefined => {
         let symbol = checker.getSymbolAtLocation(node);
         if (symbol !== undefined && (symbol.flags & ts.SymbolFlags.Alias) !== 0)
@@ -1468,6 +1470,16 @@ function readCompiler(
                   : {}),
               });
           }
+          if (
+            runtime &&
+            ts.isParameter(node) &&
+            node.initializer !== undefined &&
+            typeFacts(checker.getTypeAtLocation(node.initializer), new Set(), true).callable
+          ) {
+            const binding: CallableBinding = { source: null, target: { file: path, start: node.getStart(sf) } };
+            pendingCaptures.push({ argument: node.initializer, binding });
+            defaults.push(binding);
+          }
           const kind =
             node.kind === ts.SyntaxKind.AnyKeyword
               ? "any"
@@ -1751,6 +1763,7 @@ function readCompiler(
         accesses,
         constructions,
         connections,
+        ...(defaults.length > 0 ? { defaults } : {}),
         proofs,
         termFacts: { sources: termSources, types: termTypes },
       };
