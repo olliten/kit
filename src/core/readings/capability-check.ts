@@ -1004,10 +1004,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       // Code outside every checked root and legacy location has no recorded authority at all.
       [...capture.reached, ...capture.whole].some((file) => !direct.has(file)) ||
       // An adapter importing an unregistered package keeps that limit itself; its port stays established.
-      capture.packages.some((specifier) =>
-        [...(unresolvedPackages.get(specifier) ?? [])].some(
-          (file) => !adapterPaths.has(file) && (capture.reached.includes(file) || capture.whole.includes(file)),
-        ),
+      capture.packages.some(({ file, specifier }) =>
+        file === null || !direct.has(file) ||
+        (!adapterPaths.has(file) && unresolvedPackages.get(specifier)?.has(file) === true),
       )
     );
   };
@@ -1044,7 +1043,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           .filter((position) => !adapterPaths.has(position.file))
           .flatMap(grants),
         ...capture.whole.flatMap(whole),
-        ...capture.packages.flatMap((specifier) => {
+        ...capture.packages.flatMap(({ file, specifier }) => {
           const name = specifier.startsWith("@")
             ? specifier.split("/").slice(0, 2).join("/")
             : specifier.split("/")[0];
@@ -1055,8 +1054,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
               name !== undefined &&
               adapter.packages?.includes(name) === true,
           );
+          const owners = bound.filter((adapter) => pathOf(adapter.module) === file);
           return bound.length > 0
-            ? bound.map((adapter) => adapter.capability)
+            ? (owners.length > 0 ? owners : bound).map((adapter) => adapter.capability)
             : (snapshot.config.packages?.find((row) => row.name === name)?.capabilities ?? []);
         }),
         ...capture.parameters.flatMap(grants),
