@@ -241,6 +241,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     if (nativeAuthorities.get(capability)?.windowOnly === true)
       direct.get(path)?.add(windowAuthority);
   };
+  const hostLibrary = /(?:^|\/)lib\.dom(?:\.[\w-]+)*\.d\.ts$/;
+  // The Window object an adapter reaches through a global, as opposed to through a handle it is given.
+  const globalWindow = new Set<string>();
   const findings: CapabilityFinding[] = [];
   const startups = new Set<string>();
   const rawFailures = new Set<string>();
@@ -525,6 +528,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       if (externalAdapterPaths.has(global.file) || declaredAdapters.length === 0)
         for (const authority of global.nativeAuthority ?? []) {
           recordNative(global.file, nativeKey(authority.root));
+          if (hostLibrary.test(authority.root.file) && authority.root.name === "Window")
+            globalWindow.add(`${global.file}:${nativeKey(authority.root)}`);
           grantAt(global.file, global.start, nativeKey(authority.root));
         }
       for (const adapter of owners.length > 0 ? owners : declaredAdapters) {
@@ -786,7 +791,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   // A declared host global is a door: every handle an adapter reaches through it, such as the elements
   // behind document or the response behind fetch, belongs to the same host library and is the adapter's to
   // hold. Its contract decides what leaves.
-  const hostLibrary = /(?:^|\/)lib\.dom(?:\.[\w-]+)*\.d\.ts$/;
   const declaresHostGlobal = (adapter: (typeof adapters)[number], path: string): boolean =>
     projects.some((project) =>
       project.globals.some(
@@ -806,10 +810,12 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           pathOf(adapter.module) === path &&
           adapter.kind === "external" &&
           ((hostLibrary.test(native.root.file) && declaresHostGlobal(adapter, path)) ||
-          // The adapter's own Window-only access needs a declared global, whatever its handles' types mention.
-          (acceptedRoots(adapter).has(capability) && native.windowOnly !== true) ||
+          // The window object itself needs a declared global, whatever its handles' types or contract mention.
+          (acceptedRoots(adapter).has(capability) && !globalWindow.has(`${path}:${capability}`)) ||
           [
-            ...(contracts.get(adapter) ?? []).flatMap((contract) => contract.nativeAuthority ?? []),
+            ...(globalWindow.has(`${path}:${capability}`)
+              ? []
+              : (contracts.get(adapter) ?? []).flatMap((contract) => contract.nativeAuthority ?? [])),
             ...projects.flatMap((project) =>
               project.globals.flatMap((global) =>
                 global.file === path && global.runtime && adapter.globals?.includes(global.name)
