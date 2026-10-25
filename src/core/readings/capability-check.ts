@@ -247,7 +247,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   // Where authority could not be established: what a callable reaches there is unknown, never pure.
   const unresolvedAt = new Set<string>();
   const unresolvedFiles = new Set<string>();
-  const unresolvedPackages = new Set<string>();
+  // Each unclassified import specifier, with the files importing it.
+  const unresolvedPackages = new Map<string, Set<string>>();
   const markUnresolved = (file: string, start: number): void => {
     unresolvedAt.add(`${file}:${start}`);
     unresolvedFiles.add(file);
@@ -681,7 +682,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           for (const capability of declaration.capabilities) direct.get(edge.file)?.add(capability);
         else {
           unresolvedFiles.add(edge.file);
-          unresolvedPackages.add(edge.specifier);
+          unresolvedPackages.set(edge.specifier, new Set([...(unresolvedPackages.get(edge.specifier) ?? []), edge.file]));
           unresolved(
             "external-boundary",
             edge.file,
@@ -976,7 +977,12 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         (position) => !adapterPaths.has(position.file) && unresolvedAt.has(`${position.file}:${position.start}`),
       ) ||
       capture.whole.some((file) => !adapterPaths.has(file) && unresolvedFiles.has(file)) ||
-      capture.packages.some((specifier) => unresolvedPackages.has(specifier))
+      // An adapter importing an unregistered package keeps that limit itself; its port stays established.
+      capture.packages.some((specifier) =>
+        [...(unresolvedPackages.get(specifier) ?? [])].some(
+          (file) => !adapterPaths.has(file) && (capture.reached.includes(file) || capture.whole.includes(file)),
+        ),
+      )
     );
   };
   const established = (binding: (typeof bindings)[number]): boolean =>

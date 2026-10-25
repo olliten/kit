@@ -123,3 +123,20 @@ test("a pure value use of a host type is not represented by an earlier native st
     ),
   ).toEqual([]);
 });
+
+test("an adapter importing an unregistered package keeps that limit itself, and its contract port stays established", () => {
+  const findings = inspect(
+    "import { record } from '../src/substrate/compositions/run.js';\n" +
+      "import { journal } from '../src/substrate/adapters/journal.js';\nrecord(journal);\n",
+    {
+      "legacy/unregistered.d.ts": "declare module 'unregistered' { export function load(): string; }\n",
+      "src/substrate/adapters/journal.ts":
+        "import { load } from 'unregistered';\n" +
+        "export interface Journal { note(text: string): void; }\nexport const journal: Journal = { note: (text) => { void (text + load()); } };\n",
+    },
+  );
+  expect(atRun(findings)).toEqual([]);
+  expect(findings.map((item) => item.debtKey)).toContainEqual(
+    "R1:external-boundary:src/substrate/adapters/journal.ts:unregistered",
+  );
+});
