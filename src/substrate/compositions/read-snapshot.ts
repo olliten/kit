@@ -2687,7 +2687,8 @@ function captureReach(
         const specifier = node.arguments[0];
         if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
           const target = importTarget(specifier.text, sf.fileName);
-          if (target !== null) piece.whole.add(target);
+          if (target !== null && source.has(target) && !/\.d\.[mc]?ts$/.test(target))
+            piece.whole.add(target);
           else {
             const imported = { file: local(sf.fileName), specifier: specifier.text };
             piece.packages.set(packageKey(imported), imported);
