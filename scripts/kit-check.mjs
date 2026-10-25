@@ -51,30 +51,26 @@ function recordedSize(entry) {
     : undefined;
 }
 
-// A legacy module may grow by at most `growth` statements, and only by calls into placed code: its other
-// statements may not grow at all. A module the baseline holds no size for is new debt.
-function sizeFailure(item, baseline, growth) {
+// A legacy module may gain statements that only call into placed code, which is how new placed code is wired in
+// from where the app starts; its other statements may only shrink. A module the baseline holds no size for is
+// new debt.
+function sizeFailure(item, baseline) {
   const base = Object.hasOwn(baseline, item.debtKey) ? recordedSize(baseline[item.debtKey]) : undefined;
   if (base === undefined)
     return {
       ...item,
       fix: `This legacy module has no recorded size, so its ${item.statements} statements are new debt: place it.`,
     };
-  const grown = item.statements - base.statements;
-  const unplaced = item.statements - item.calls - (base.statements - base.calls);
-  if (grown <= growth && unplaced <= 0) return undefined;
+  if (item.statements - item.calls <= base.statements - base.calls) return undefined;
   return {
     ...item,
     fix:
-      `This legacy module has ${item.statements} statements, ${item.calls} of them calls into placed modules; ` +
-      `its baseline records ${base.statements} and ${base.calls}. ` +
-      (growth === 0
-        ? "A change may add no statements to a legacy module: place the new code first, and let this module only shrink."
-        : `A change may add at most ${growth}, each only a call into a placed module: move the new code into a placed module and call it from here.`),
+      `This legacy module has ${item.statements - item.calls} statements of its own; its baseline records ` +
+      `${base.statements - base.calls}. Move the new code into a placed module and call it from here.`,
   };
 }
 
-export function ratchetFindings(findings, baseline, placedPaths, imports, requiredRoots = [], growth = 0) {
+export function ratchetFindings(findings, baseline, placedPaths, imports, requiredRoots = []) {
   const entries = recorded(baseline);
   const keys = new Set(Object.keys(entries));
   const reachable = new Set([...placedPaths, ...requiredRoots]);
@@ -94,14 +90,14 @@ export function ratchetFindings(findings, baseline, placedPaths, imports, requir
   return findings.flatMap((item) => {
     if (item.category === "checker-limit") return reachable.has(item.path) ? [item] : [];
     if (item.category === "placed-violation") return [item];
-    if (typeof item.statements === "number") return sizeFailure(item, entries, growth) ?? [];
+    if (typeof item.statements === "number") return sizeFailure(item, entries) ?? [];
     return keys.has(item.debtKey) ? [] : [item];
   });
 }
 
 // The baseline only shrinks: a key whose debt is paid leaves it, and a legacy module's size entry takes the
 // smaller of what it records and what the module holds now, for its statements and for those that are not
-// calls into placed code. Nothing is added, so growth a change was allowed is never recorded.
+// calls into placed code. Nothing is added, so growth is never recorded.
 export function tightenedBaseline(baseline, findings) {
   const current = new Map(
     findings.filter((item) => item.category === "legacy-debt").map((item) => [item.debtKey, item]),
@@ -244,7 +240,6 @@ async function main() {
       placedPaths,
       imports,
       startupCheckRoots(config),
-      config.legacyGrowth,
     );
     const failures = [...new Map([...ratcheted, ...requiredLimits, ...changed].map((item) => [item.debtKey, item])).values()];
     if (process.argv.includes("--tighten")) {

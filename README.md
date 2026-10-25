@@ -181,8 +181,8 @@ So the spec is only promises that are proved, no test exists without saying what
 exists without a promise it keeps.
 
 A change that breaks a rule fails the check. Existing code is legacy until it's moved into place; its findings
-are debt that may only shrink, and so is its size. A change may add no statement to a legacy module, not even
-a call into a placed module; new code is placed first, so nothing new lands in the old shape.
+are debt that may only shrink, and so is its size. A change may add to a legacy module only calls into placed
+modules; new code is placed first, so nothing new lands in the old shape.
 
 ## Headless and modular
 

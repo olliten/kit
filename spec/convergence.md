@@ -22,7 +22,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
   beside them takes none, and each listed file is debt, so the row may shrink but a file added to it is new debt
   the ratchet rejects; a listed path that is placed or missing is a finding ({{capability-check}}, {{finding}}). · {#legacy-zone-rows-only-shrink}
   - Proof: {{source-fixture}}
-- A legacy module's size is debt that may only shrink. A change may add no statement to a legacy module, not
-  even a call into a placed module; new code is placed first ({{legacy-size}}, {{read-snapshot}},
+- A legacy module's size is debt that may only shrink. A change may add to a legacy module only statements
+  that call into placed modules; new code is placed first ({{legacy-size}}, {{read-snapshot}},
   {{finding}}). · {#legacy-does-not-grow}
   - Proof: {{source-fixture}}

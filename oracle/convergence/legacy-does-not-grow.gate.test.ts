@@ -67,7 +67,7 @@ test("the real gate fails a legacy module grown past its recorded size, and --ti
   const failed = grown.run();
   expect(failed.error).toBeUndefined();
   expect(failed.status).toBe(1);
-  expect(failed.stderr).toContain(`${key}: This legacy module has 4 statements, 0 of them calls`);
+  expect(failed.stderr).toContain(`${key}: This legacy module has 4 statements of its own; its baseline records 2.`);
 
   const shrunk = app(report(""), { [key]: { statements: 4, calls: 0, note: "kept" }, "R1:gone:x": {} });
   const passed = shrunk.run("--tighten");
