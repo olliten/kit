@@ -105,7 +105,8 @@ export interface CompilerFacts {
           readonly reached: readonly string[];
           // Files it reaches in ways that can't be followed, charged whole.
           readonly whole: readonly string[];
-          readonly packages: readonly string[];
+          // The runtime import that contributes each package's authority; null preserves an unknown origin.
+          readonly packages: readonly { readonly file: string | null; readonly specifier: string }[];
           // Its own module's parameters it captures, and the types of other modules' it reaches.
           readonly parameters: readonly { readonly file: string; readonly start: number }[];
           readonly types: readonly { readonly file: string; readonly name: string }[];
