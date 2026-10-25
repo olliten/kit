@@ -267,3 +267,16 @@ test("a callable default value carries the unresolved authority it reaches", () 
     ),
   ).toEqual([]);
 });
+
+test.each([
+  ["call", "run.call(null, read, (value: string): void => { void value; });\n"],
+  ["apply", "run.apply(null, [read, (value: string): void => { void value; }]);\n"],
+  ["bind", "run.bind(null, read)((value: string): void => { void value; });\n"],
+  ["Reflect.apply", "Reflect.apply(run, null, [read, (value: string): void => { void value; }]);\n"],
+])("a legacy callable handed through %s is not established", (_, call) => {
+  expect(
+    atRun(
+      inspect("import { run } from '../src/substrate/compositions/run.js';\nimport { read } from './io.js';\n" + call),
+    ).length,
+  ).toBeGreaterThan(0);
+});

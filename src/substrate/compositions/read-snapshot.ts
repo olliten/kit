@@ -1190,14 +1190,33 @@ function readCompiler(
               globalName(node.arguments[0]) === "globalThis"
             )
               accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
-            const declaration = targetOf(node.expression);
+            // `f.call(t, …)`, `f.bind(t, …)`, `f.apply(t, […])` and `Reflect.apply(f, t, […])` hand their
+            // arguments to `f` as surely as `f(…)` does.
+            const elements = (list: ts.Expression | undefined): readonly ts.Expression[] =>
+              list !== undefined && ts.isArrayLiteralExpression(list) ? list.elements : [];
+            const invoked = ((): { readonly callee: ts.Expression; readonly passed: readonly ts.Expression[] } => {
+              const all = node.arguments ?? [];
+              const expression = node.expression;
+              if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(expression)) {
+                const method = expression.name.text;
+                if (globalName(expression.expression) === "Reflect" && method === "apply" && all[0] !== undefined)
+                  return { callee: all[0], passed: elements(all[2]) };
+                const receiver = checker.getTypeAtLocation(expression.expression);
+                if (receiver.getCallSignatures().length > 0 && targetOf(expression.name)?.getSourceFile().isDeclarationFile === true) {
+                  if (method === "call" || method === "bind") return { callee: expression.expression, passed: all.slice(1) };
+                  if (method === "apply") return { callee: expression.expression, passed: elements(all[1]) };
+                }
+              }
+              return { callee: expression, passed: all };
+            })();
+            const declaration = targetOf(invoked.callee);
             const raw = rawAccess(node.expression);
             if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
             const nativeDestination =
               declaration !== undefined &&
               (externalAdapters.has(local(declaration.getSourceFile().fileName)) ||
                 shellCompositions.has(local(declaration.getSourceFile().fileName)));
-            const callableArguments = (node.arguments ?? []).flatMap((argument, index) => {
+            const callableArguments = invoked.passed.flatMap((argument, index) => {
               const facts = typeFacts(
                 checker.getTypeAtLocation(argument),
                 new Set(),
