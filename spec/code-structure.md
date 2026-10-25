@@ -62,7 +62,8 @@ compositions wire the others into behaviour.
   handle types it `accepts`: a value of an accepted type passed to that adapter is the adapter's to hold, so
   the native roots its type graph reaches, the accepted type and the host types its members name, belong to
   the adapter's capability, and only the adapter's contract leaves it.
-  Accepting a handle grants no host global: the adapter still declares those it uses. Every other argument,
+  Accepting a handle grants no host global: the adapter still declares those it uses. Nor does a contract:
+  the window object reached through a global needs a declared global, whatever types the contract names. Every other argument,
   an undeclared type, and what the caller adds to the value, a host global included, stay checked ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#adapters-create-authority}
   - Proof: {{source-fixture}}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
