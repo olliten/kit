@@ -109,6 +109,10 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **legacy-boundary** — findings where legacy code imports a placed export that takes behaviour.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
 - **legacy-size** — the size of each legacy module as debt: its statements, and how many of them only call into placed modules.
   - Role: derived
   - Zone: core

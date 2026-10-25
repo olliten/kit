@@ -138,6 +138,7 @@ async function main() {
     const { topicShape } = await load("src/core/readings/topic-shape.ts");
     const { legacySize } = await load("src/core/readings/legacy-size.ts");
     const { layoutCheck } = await load("src/core/readings/layout-check.ts");
+    const { legacyBoundary } = await load("src/core/readings/legacy-boundary.ts");
     const config = configuredKit(DEFAULT_CONFIG, declared);
     const checkSnapshot = (snapshot) => {
       const capability = capabilityCheck(snapshot);
@@ -182,6 +183,7 @@ async function main() {
         ...capability.findings,
         ...legacySize(snapshot),
         ...layoutCheck(snapshot),
+        ...legacyBoundary(snapshot),
         ...structural,
         ...conceptLimits,
         ...requiredLimits,

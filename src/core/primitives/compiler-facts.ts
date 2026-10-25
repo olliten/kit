@@ -115,14 +115,6 @@ export interface CompilerFacts {
       }[];
       readonly builtin: boolean;
     }[];
-    // Parameters whose arguments can't all be seen: their function is held as a value in the file `at`, or is an
-    // anonymous function handed on there.
-    readonly held?: readonly { readonly file: string; readonly start: number; readonly at: string }[];
-    // Values bound to a parameter outside an argument list, like an argument: a callable default, or what a call
-    // holds for the anonymous function handed to it.
-    readonly defaults?: readonly NonNullable<
-      CompilerFacts["projects"][number]["connections"][number]["callableBindings"]
-    >[number][];
     // What each test file's code uses, followed as a callable's capture is: the files whose code it reaches, and
     // the files it reaches in ways that can't be followed, charged whole.
     readonly proofs?: readonly {
@@ -142,6 +134,8 @@ export interface CompilerFacts {
       readonly union: boolean;
       readonly satisfies: string | null;
       readonly resultType: { readonly file: string; readonly name: string } | null;
+      // A caller can hand this value behaviour: a callable, an accessor or an object with operations.
+      readonly acceptsBehaviour?: true;
     }[];
     readonly globals: readonly {
       readonly file: string;

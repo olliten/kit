@@ -182,7 +182,8 @@ exists without a promise it keeps.
 
 A change that breaks a rule fails the check. Existing code is legacy until it's moved into place; its findings
 are debt that may only shrink, and so is its size. A change may add to a legacy module only calls into placed
-modules; new code is placed first, so nothing new lands in the old shape.
+modules; new code is placed first, so nothing new lands in the old shape. Legacy hands placed code data, never
+behaviour: importing a placed export that takes a callback is legacy debt too.
 
 ## Headless and modular
 
