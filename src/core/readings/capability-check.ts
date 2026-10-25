@@ -336,20 +336,24 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             row.zone,
           );
   if (projects.length === 0)
-    for (const path of files)
+    for (const path of files) {
+      unresolvedFiles.add(path);
       unresolved("compiler-boundary", path, "No compiler project covers the source.");
+    }
   else
     for (const path of files)
       if (
         !projects.some(
           (project) => project.files.includes(path) || project.ambientFiles.includes(path),
         )
-      )
+      ) {
+        unresolvedFiles.add(path);
         unresolved(
           "compiler-boundary",
           path,
           "The source is excluded from every compiler project.",
         );
+      }
 
   for (const adapter of adapters) {
     const path = pathOf(adapter.module);
@@ -667,13 +671,16 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             Array.from(edge.namedImports).every((name) => declaration.entrypointExports?.includes(name))
           ) {
             for (const capability of declaration.capabilities) direct.get(edge.file)?.add(capability);
-          } else
+          } else {
+            unresolvedFiles.add(edge.file);
+            unresolvedPackages.set(edge.specifier, new Set([...(unresolvedPackages.get(edge.specifier) ?? []), edge.file]));
             unresolved(
               "entrypoint-package",
               edge.file,
               "This package contract permits only selected named runtime exports in an exact declared entrypoint.",
               edge.specifier,
             );
+          }
         } else if (
           declaration !== undefined &&
           !edge.specifier.startsWith(".") &&
