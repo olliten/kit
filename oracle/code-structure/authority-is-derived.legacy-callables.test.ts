@@ -190,3 +190,49 @@ test("a relative import outside the project is as unclassified as an unknown pac
   );
   expect(findings.length).toBeGreaterThan(0);
 });
+
+test.each([
+  ["dynamic code", "run(() => String(eval('1')), (value: string): void => { void value; });\n"],
+  ["a cast of globalThis", "run(() => String((globalThis as { home?: string }).home), (value: string): void => { void value; });\n"],
+])("a legacy callable reaching %s is not established", (_, call) => {
+  expect(atRun(inspect("import { run } from '../src/substrate/compositions/run.js';\n" + call)).length).toBeGreaterThan(0);
+});
+
+test("an adapter with its own unresolved authority keeps that limit, and its contract port stays established", () => {
+  const findings = inspect(
+    "import { record } from '../src/substrate/compositions/run.js';\n" +
+      "import { journal } from '../src/substrate/adapters/journal.js';\nrecord(journal);\n",
+    {
+      "src/substrate/adapters/journal.ts":
+        "export interface Journal { note(text: string): void; }\n" +
+        "export const journal: Journal = { note: (text) => { process.stdout.write(text); } };\n",
+    },
+  );
+  expect(atRun(findings)).toEqual([]);
+  expect(findings.map((item) => item.debtKey)).toContainEqual(
+    "R1:ambient-global:src/substrate/adapters/journal.ts:process",
+  );
+});
+
+test("a baseline cannot waive the limit, and established callables gain no new charge", async () => {
+  const { ratchetFindings } = await import(new URL("../../scripts/kit-check.mjs", import.meta.url).href);
+  const findings = inspect(
+    "import { run } from '../src/substrate/compositions/run.js';\nimport { read, write } from './io.js';\nrun(read, write);\n",
+  );
+  const limits = atRun(findings);
+  expect(limits.length).toBeGreaterThan(0);
+  const baseline = Object.fromEntries(findings.map((item) => [item.debtKey, null]));
+  expect(ratchetFindings(findings, baseline, [run], [])).toEqual(expect.arrayContaining(limits));
+  const pure = capabilityCheck(
+    sourceFixture(
+      {
+        [run]: "export function run(read: () => string): string { return read(); }\n",
+        "legacy/index.ts":
+          "import { run } from '../src/substrate/compositions/run.js';\nrun(() => new URL('https://example.test').host);\n",
+      },
+      { layout: { legacy: ["legacy"] } },
+    ),
+  );
+  expect(pure.findings.filter((item) => item.debtKey.startsWith("R1:callable-binding:"))).toEqual([]);
+  expect(pure.requirements.find((row) => row.path === run)).toEqual({ path: run, direct: [], inherited: [] });
+});
