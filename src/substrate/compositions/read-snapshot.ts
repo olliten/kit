@@ -2050,6 +2050,7 @@ type Capture = NonNullable<
   >[number]["capture"]
 >;
 type CapturedNative = Capture["nativeAuthority"][number];
+type CapturedPackage = Capture["packages"][number];
 type CaptureReach = Omit<Capture, "types" | "nativeAuthority"> & {
   readonly heldParameters: readonly ts.ParameterDeclaration[];
 };
@@ -2203,17 +2204,19 @@ function captureReach(
           readonlyProperty(property) && immutable(checker.getTypeOfSymbol(property), seen),
       );
   };
-  const packageOf = (symbol: ts.Symbol): string | null => {
+  const packageKey = ({ file, specifier }: CapturedPackage): string => JSON.stringify([file, specifier]);
+  const packageOf = (symbol: ts.Symbol): CapturedPackage | null => {
     for (const declaration of symbol.declarations ?? []) {
       let current: ts.Node | undefined = declaration;
       while (current !== undefined && !ts.isImportDeclaration(current)) current = current.parent;
       if (current === undefined || !ts.isStringLiteral(current.moduleSpecifier)) continue;
       const specifier = current.moduleSpecifier.text;
-      if (!specifier.startsWith(".")) return specifier;
+      const imported = { file: local(current.getSourceFile().fileName), specifier };
+      if (!specifier.startsWith(".")) return imported;
       // A relative import that reaches no checked source, such as a declaration beside a JavaScript file
       // outside the project, is as unclassified as an unknown package.
       const target = importTarget(specifier, current.getSourceFile().fileName);
-      if (target === null || !source.has(target) || /\.d\.[mc]?ts$/.test(target)) return specifier;
+      if (target === null || !source.has(target) || /\.d\.[mc]?ts$/.test(target)) return imported;
     }
     return null;
   };
@@ -2221,13 +2224,13 @@ function captureReach(
   type Piece = {
     readonly edges: Key[];
     readonly whole: Set<string>;
-    readonly packages: Set<string>;
+    readonly packages: Map<string, CapturedPackage>;
     readonly parameters: Set<ts.ParameterDeclaration>;
   };
   const empty = (): Piece => ({
     edges: [],
     whole: new Set(),
-    packages: new Set(),
+    packages: new Map(),
     parameters: new Set(),
   });
   const pieces = new Map<Key, Piece>();
@@ -2685,7 +2688,10 @@ function captureReach(
         if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
           const target = importTarget(specifier.text, sf.fileName);
           if (target !== null) piece.whole.add(target);
-          else piece.packages.add(specifier.text);
+          else {
+            const imported = { file: local(sf.fileName), specifier: specifier.text };
+            piece.packages.set(packageKey(imported), imported);
+          }
         }
       }
       if (ts.isIdentifier(node)) {
@@ -2705,8 +2711,8 @@ function captureReach(
               (declaration) => !declaration.getSourceFile().isDeclarationFile,
             );
             if (runtime.length === 0) {
-              const specifier = property ? null : packageOf(raw);
-              if (specifier !== null) piece.packages.add(specifier);
+              const imported = property ? null : packageOf(raw);
+              if (imported !== null) piece.packages.set(packageKey(imported), imported);
             } else if (
               !property ||
               runtime.some(
@@ -2857,7 +2863,8 @@ function captureReach(
   const items = new Map<string, number>();
   const values: (
     | { readonly kind: "position"; readonly file: string; readonly start: number }
-    | { readonly kind: "reached" | "whole" | "package"; readonly name: string }
+    | { readonly kind: "reached" | "whole"; readonly name: string }
+    | ({ readonly kind: "package" } & CapturedPackage)
     | { readonly kind: "parameter"; readonly parameter: ts.ParameterDeclaration }
   )[] = [];
   const parameterIds = new Map<ts.ParameterDeclaration, number>();
@@ -2879,7 +2886,8 @@ function captureReach(
         bits |= bit(`p:${file}:${start}`, { kind: "position", file, start });
     }
     for (const file of piece.whole) bits |= bit(`w:${file}`, { kind: "whole", name: file });
-    for (const name of piece.packages) bits |= bit(`k:${name}`, { kind: "package", name });
+    for (const imported of piece.packages.values())
+      bits |= bit(`k:${packageKey(imported)}`, { kind: "package", ...imported });
     for (const parameter of piece.parameters) {
       let id = parameterIds.get(parameter);
       if (id === undefined) {
@@ -2955,7 +2963,7 @@ function captureReach(
     const found: { file: string; start: number }[] = [];
     const reached = new Set<string>();
     const whole = new Set<string>();
-    const packages = new Set<string>();
+    const packages = new Map<string, CapturedPackage>();
     const parameters: { file: string; start: number }[] = [];
     const heldParameters: ts.ParameterDeclaration[] = [];
     const home = argument.getSourceFile();
@@ -2966,7 +2974,8 @@ function captureReach(
       if (value.kind === "position") found.push({ file: value.file, start: value.start });
       else if (value.kind === "reached") reached.add(value.name);
       else if (value.kind === "whole") whole.add(value.name);
-      else if (value.kind === "package") packages.add(value.name);
+      else if (value.kind === "package")
+        packages.set(packageKey(value), { file: value.file, specifier: value.specifier });
       else if (value.kind === "parameter") {
         const sf = value.parameter.getSourceFile();
         // A captured parameter holds what its declared type grants, also when a handle reached it by a
@@ -2985,7 +2994,8 @@ function captureReach(
       positions: found.sort(position),
       reached: [...reached].sort(),
       whole: [...whole].sort(),
-      packages: [...packages].sort(),
+      packages: [...packages.values()].sort((a, b) =>
+        (a.file ?? "").localeCompare(b.file ?? "") || a.specifier.localeCompare(b.specifier)),
       parameters: parameters.sort(position),
       heldParameters,
     };
