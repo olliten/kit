@@ -53,7 +53,9 @@ compositions wire the others into behaviour.
 
 - A module's authority is derived from its actual inputs: runtime imports, ambient globals and parameters
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
-  never purity ({{capability-check}}, {{compiler-facts}}). · {#authority-is-derived}
+  never purity. A callable that reaches such a limit, an ambient global, dynamic code or an unclassified
+  import, carries it: handed to placed code, it is never an established binding, however it is passed
+  ({{capability-check}}, {{compiler-facts}}, {{read-snapshot}}). · {#authority-is-derived}
   - Proof: {{fixture-config}}, {{source-fixture}}
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core

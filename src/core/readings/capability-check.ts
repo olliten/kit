@@ -244,6 +244,14 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   const hostLibrary = /(?:^|\/)lib\.dom(?:\.[\w-]+)*\.d\.ts$/;
   // The Window object an adapter reaches through a global, as opposed to through a handle it is given.
   const globalWindow = new Set<string>();
+  // Where authority could not be established: what a callable reaches there is unknown, never pure.
+  const unresolvedAt = new Set<string>();
+  const unresolvedFiles = new Set<string>();
+  const unresolvedPackages = new Set<string>();
+  const markUnresolved = (file: string, start: number): void => {
+    unresolvedAt.add(`${file}:${start}`);
+    unresolvedFiles.add(file);
+  };
   const findings: CapabilityFinding[] = [];
   const startups = new Set<string>();
   const rawFailures = new Set<string>();
@@ -461,6 +469,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       if (access.kind === "native") {
         for (const authority of access.nativeAuthority ?? [])
           recordNative(access.file, nativeKey(authority.root));
+        if ((access.nativeAuthority ?? []).length === 0) markUnresolved(access.file, access.start);
         if ((access.nativeAuthority ?? []).length === 0)
           unresolved(
             "native-authority",
@@ -488,13 +497,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             access.kind,
           );
         }
-      } else if (access.kind === "dynamic")
+      } else if (access.kind === "dynamic") {
+        markUnresolved(access.file, access.start);
         unresolved(
           "authority-entry",
           access.file,
           "Dynamic code or ambient access has no supported authority identity.",
           `${access.kind}:${access.start}`,
         );
+      }
     }
     const hostGlobals = new Set<string>();
     for (const global of project.globals) {
@@ -505,14 +516,14 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         ? global.name.slice("globalThis.".length)
         : global.name;
       const declared = global.declarationFile ?? "";
-      if (
+      const ambient =
         !name.includes(".") &&
         global.value !== true &&
         /(?:^|\/)node_modules\//.test(declared) &&
         !/(?:^|\/)node_modules\/typescript\/lib\//.test(declared) &&
-        !adapters.some((adapter) => adapter.globals?.includes(name)) &&
-        !hostGlobals.has(`${global.file}:${name}`)
-      ) {
+        !adapters.some((adapter) => adapter.globals?.includes(name));
+      if (ambient) markUnresolved(global.file, global.start);
+      if (ambient && !hostGlobals.has(`${global.file}:${name}`)) {
         hostGlobals.add(`${global.file}:${name}`);
         unresolved(
           "ambient-global",
@@ -668,13 +679,16 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           !edge.specifier.startsWith("#")
         )
           for (const capability of declaration.capabilities) direct.get(edge.file)?.add(capability);
-        else
+        else {
+          unresolvedFiles.add(edge.file);
+          unresolvedPackages.add(edge.specifier);
           unresolved(
             "external-boundary",
             edge.file,
             "This runtime import has no classified local source or adapter authority.",
             edge.specifier,
           );
+        }
       }
     }
     for (const escape of project.escapes)
@@ -951,8 +965,22 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     const holder = heldBy(binding);
     return holder === undefined ? undefined : [holder.capability, ...beyond(binding, holder)];
   };
+  // A callable that reaches code whose authority could not be established carries that unknown with it: it
+  // is never an established binding, wherever it is handed, and registered adapters keep their own limits.
+  const reachesUnresolved = (binding: (typeof bindings)[number]): boolean => {
+    const capture = binding.capture;
+    if (capture === undefined)
+      return binding.source === null && binding.origin !== null && unresolvedFiles.has(binding.origin);
+    return (
+      capture.positions.some(
+        (position) => !adapterPaths.has(position.file) && unresolvedAt.has(`${position.file}:${position.start}`),
+      ) ||
+      capture.whole.some((file) => !adapterPaths.has(file) && unresolvedFiles.has(file)) ||
+      capture.packages.some((specifier) => unresolvedPackages.has(specifier))
+    );
+  };
   const established = (binding: (typeof bindings)[number]): boolean =>
-    heldCarry(binding)?.length === 1 ||
+    !reachesUnresolved(binding) && (heldCarry(binding)?.length === 1 ||
     binding.supported &&
     (binding.capture === undefined || binding.capture.parameters.every(
       (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
@@ -966,7 +994,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ? [...inputs].every(([key, file]) => file !== binding.origin || known.has(key))
           : binding.capture.parameters.every(
               (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
-            )));
+            ))));
   // A file a callable reaches only in part grants what its reached code grants; an adapter's file, or
   // one the capture could not follow, is charged whole.
   const adapterPaths = new Set(adapters.map((adapter) => pathOf(adapter.module)));
@@ -1199,7 +1227,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       for (const [index, origin] of connection.callableOrigins.entries()) {
         const binding = bindingOf(connection, index);
         if (
-          !established(binding) && (restricted(connection.target) ||
+          !established(binding) && (restricted(connection.target) || reachesUnresolved(binding) ||
             sdkInputs.some((input) => input.file === connection.target))
         )
           unresolved(

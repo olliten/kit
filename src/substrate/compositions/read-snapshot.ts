@@ -1609,7 +1609,8 @@ function readCompiler(
           }
         }
       }
-      // Only facts that can grant authority are positions a capture lists, one per kind and file.
+      // Only facts that can grant authority, or whose authority can't be established, are positions a capture
+      // lists, one per kind and file.
       const adapterGlobals = new Set(
         (config.adapters ?? []).flatMap((adapter) => adapter.globals ?? []),
       );
@@ -1617,13 +1618,15 @@ function readCompiler(
         (entry.nativeAuthority ?? []).map((authority) => `${authority.root.file}:${authority.root.name}`);
       const grantingFacts = [
         ...accesses
-          .filter((access) => access.kind !== "dynamic")
           .map((access) => ({ fact: access, kind: JSON.stringify(["access", access.kind, natives(access)]) })),
         ...globals
           .filter(
             (global) =>
               global.runtime &&
-              ((global.nativeAuthority ?? []).length > 0 || adapterGlobals.has(global.name)),
+              ((global.nativeAuthority ?? []).length > 0 ||
+                adapterGlobals.has(global.name) ||
+                (/(?:^|\/)node_modules\//.test(global.declarationFile ?? "") &&
+                  !/(?:^|\/)node_modules\/typescript\/lib\//.test(global.declarationFile ?? ""))),
           )
           .map((global) => ({ fact: global, kind: JSON.stringify(["global", global.name, natives(global)]) })),
         ...[...parameters.values()]
