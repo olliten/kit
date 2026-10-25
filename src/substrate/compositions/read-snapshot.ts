@@ -340,6 +340,9 @@ function readCompiler(
       };
       const pendingCaptures: { readonly argument: ts.Expression; readonly binding: CallableBinding }[] =
         [];
+      // A callable default is a value bound to its parameter as surely as an argument is.
+      const defaults: CallableBinding[] = [];
+      const held: NonNullable<Project["held"]>[number][] = [];
       const targetOf = (node: ts.Node): ts.Declaration | undefined => {
         let symbol = checker.getSymbolAtLocation(node);
         if (symbol !== undefined && (symbol.flags & ts.SymbolFlags.Alias) !== 0)
@@ -1166,8 +1169,22 @@ function readCompiler(
               spread: node.properties.some(ts.isSpreadAssignment),
             });
           }
-          if (ts.isCallExpression(node)) {
-            if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+          // Assigning through a setter hands the value to the setter's parameter, like a call.
+          const setter =
+            ts.isBinaryExpression(node) &&
+            node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+            ts.isPropertyAccessExpression(node.left)
+              ? checker
+                  .getSymbolAtLocation(node.left.name)
+                  ?.declarations?.find(
+                    (declaration): declaration is ts.SetAccessorDeclaration =>
+                      ts.isSetAccessorDeclaration(declaration) && !declaration.getSourceFile().isDeclarationFile,
+                  )
+              : undefined;
+          if (ts.isCallExpression(node) || ts.isNewExpression(node) || (setter !== undefined && ts.isBinaryExpression(node))) {
+            const call = ts.isBinaryExpression(node) ? undefined : node;
+            if (call !== undefined && ts.isCallExpression(call) && call.expression.kind === ts.SyntaxKind.ImportKeyword) {
+              const node = call;
               const specifier = node.arguments[0];
               if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
                 imports.push({
@@ -1181,21 +1198,43 @@ function readCompiler(
               } else accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
             }
             if (
-              ts.isPropertyAccessExpression(node.expression) &&
-              globalName(node.expression.expression) === "Reflect" &&
-              node.expression.name.text === "get" &&
-              node.arguments[0] !== undefined &&
-              globalName(node.arguments[0]) === "globalThis"
+              call !== undefined &&
+              ts.isPropertyAccessExpression(call.expression) &&
+              globalName(call.expression.expression) === "Reflect" &&
+              call.expression.name.text === "get" &&
+              call.arguments?.[0] !== undefined &&
+              globalName(call.arguments[0]) === "globalThis"
             )
               accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
-            const declaration = targetOf(node.expression);
-            const raw = rawAccess(node.expression);
+            // `f.call(t, …)`, `f.bind(t, …)`, `f.apply(t, […])` and `Reflect.apply(f, t, […])` hand their
+            // arguments to `f` as surely as `f(…)` does.
+            const elements = (list: ts.Expression | undefined): readonly ts.Expression[] =>
+              list !== undefined && ts.isArrayLiteralExpression(list) ? list.elements : [];
+            const invoked = ((): { readonly callee: ts.Expression; readonly passed: readonly ts.Expression[] } => {
+              if (call === undefined)
+                return ts.isBinaryExpression(node) ? { callee: node.left, passed: [node.right] } : { callee: node, passed: [] };
+              const all = call.arguments ?? [];
+              const expression = call.expression;
+              if (ts.isCallExpression(call) && ts.isPropertyAccessExpression(expression)) {
+                const method = expression.name.text;
+                if (globalName(expression.expression) === "Reflect" && method === "apply" && all[0] !== undefined)
+                  return { callee: all[0], passed: elements(all[2]) };
+                const receiver = checker.getTypeAtLocation(expression.expression);
+                if (receiver.getCallSignatures().length > 0 && targetOf(expression.name)?.getSourceFile().isDeclarationFile === true) {
+                  if (method === "call" || method === "bind") return { callee: expression.expression, passed: all.slice(1) };
+                  if (method === "apply") return { callee: expression.expression, passed: elements(all[1]) };
+                }
+              }
+              return { callee: expression, passed: all };
+            })();
+            const declaration = setter ?? targetOf(invoked.callee);
+            const raw = call === undefined ? null : rawAccess(call.expression);
             if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
             const nativeDestination =
               declaration !== undefined &&
               (externalAdapters.has(local(declaration.getSourceFile().fileName)) ||
                 shellCompositions.has(local(declaration.getSourceFile().fileName)));
-            const callableArguments = node.arguments.flatMap((argument, index) => {
+            const callableArguments = invoked.passed.flatMap((argument, index) => {
               const facts = typeFacts(
                 checker.getTypeAtLocation(argument),
                 new Set(),
@@ -1230,10 +1269,13 @@ function readCompiler(
                       ts.isNewExpression(argument)
                     ? argument
                     : targetOf(argument) ?? acquisition;
+              // A constructed class receives its arguments in its constructor.
               const called =
                 declaration !== undefined && ts.isVariableDeclaration(declaration)
                   ? declaration.initializer
-                  : declaration;
+                  : declaration !== undefined && ts.isClassLike(declaration)
+                    ? declaration.members.find(ts.isConstructorDeclaration)
+                    : declaration;
               const targetParameter =
                 called !== undefined && ts.isFunctionLike(called)
                   ? called.parameters[index]
@@ -1465,6 +1507,126 @@ function readCompiler(
                   : {}),
               });
           }
+          // Writing a callable into another module's value, by assignment, Object.assign or a collection's
+          // mutator, hands it to that module as surely as an argument does.
+          const rootOf = (expression: ts.Expression): ts.Declaration | undefined => {
+            let current = expression;
+            while (ts.isPropertyAccessExpression(current) || ts.isElementAccessExpression(current) || ts.isParenthesizedExpression(current))
+              current = current.expression;
+            return ts.isIdentifier(current) ? targetOf(current) : undefined;
+          };
+          const written = ((): { readonly into: ts.Declaration | undefined; readonly values: readonly ts.Expression[] } | undefined => {
+            if (
+              ts.isBinaryExpression(node) &&
+              node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+              (ts.isPropertyAccessExpression(node.left) || ts.isElementAccessExpression(node.left)) &&
+              setter === undefined
+            )
+              return { into: rootOf(node.left.expression), values: [node.right] };
+            if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return undefined;
+            const method = node.expression.name.text;
+            if (globalName(node.expression.expression) === "Object" && method === "assign" && node.arguments[0] !== undefined)
+              return { into: rootOf(node.arguments[0]), values: node.arguments.slice(1) };
+            if (["push", "unshift", "splice", "set", "add"].includes(method))
+              return { into: rootOf(node.expression.expression), values: node.arguments };
+            return undefined;
+          })();
+          if (
+            runtime &&
+            written?.into !== undefined &&
+            !written.into.getSourceFile().isDeclarationFile &&
+            written.into.getSourceFile() !== sf
+          ) {
+            const values = written.values.filter((value) => {
+              const facts = typeFacts(checker.getTypeAtLocation(value), new Set(), true);
+              return facts.callable || facts.accessor;
+            });
+            const bindings = values.map((value) => {
+              const binding: CallableBinding = { source: null, target: null };
+              pendingCaptures.push({ argument: value, binding });
+              return binding;
+            });
+            if (bindings.length > 0)
+              connections.push({
+                file: path,
+                start: node.getStart(sf),
+                target: local(written.into.getSourceFile().fileName),
+                callableOrigins: bindings.map(() => path),
+                callableBindings: bindings,
+                builtin: false,
+              });
+          }
+          // A function held as a value, rather than called where Kit resolves it, takes arguments Kit can't see,
+          // and so does an anonymous function handed on to whoever calls it.
+          if (runtime && ts.isIdentifier(node)) {
+            const shorthand = ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node
+              ? checker.getShorthandAssignmentValueSymbol(node.parent)
+              : undefined;
+            const aliased = shorthand !== undefined && (shorthand.flags & ts.SymbolFlags.Alias) !== 0
+              ? checker.getAliasedSymbol(shorthand)
+              : shorthand;
+            const resolved = shorthand !== undefined
+              ? aliased?.valueDeclaration ?? aliased?.declarations?.[0]
+              : targetOf(node);
+            const declaration = resolved !== undefined && ts.getNameOfDeclaration(resolved) === node ? undefined : resolved;
+            const fn =
+              declaration === undefined || declaration.getSourceFile().isDeclarationFile
+                ? undefined
+                : ts.isFunctionDeclaration(declaration) || ts.isMethodDeclaration(declaration)
+                  ? declaration
+                  : ts.isVariableDeclaration(declaration) &&
+                      declaration.initializer !== undefined &&
+                      (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer))
+                    ? declaration.initializer
+                    : undefined;
+            const access = ts.isPropertyAccessExpression(node.parent) && node.parent.name === node ? node.parent : node;
+            const called =
+              ((ts.isCallExpression(access.parent) || ts.isNewExpression(access.parent)) && access.parent.expression === access) ||
+              (ts.isPropertyAccessExpression(access.parent) &&
+                access.parent.expression === access &&
+                ["call", "apply", "bind"].includes(access.parent.name.text));
+            if (fn !== undefined && !called)
+              for (const parameter of fn.parameters)
+                held.push({ file: local(fn.getSourceFile().fileName), start: parameter.getStart(), at: path });
+          }
+          if (runtime && (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) && !ts.isVariableDeclaration(node.parent))
+            for (const parameter of node.parameters) held.push({ file: path, start: parameter.getStart(sf), at: path });
+          // An anonymous function handed to a call receives what that call holds: its receiver and the other
+          // arguments, such as the items of the array it iterates or the value a promise resolves to.
+          if (
+            runtime &&
+            (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
+            (ts.isCallExpression(node.parent) || ts.isNewExpression(node.parent)) &&
+            node.parent.arguments?.includes(node) === true
+          ) {
+            const call = node.parent;
+            const sources = [
+              ...(ts.isPropertyAccessExpression(call.expression) ? [call.expression.expression] : []),
+              ...(call.arguments ?? []).filter((argument) => argument !== node),
+            ];
+            for (const parameter of node.parameters)
+              for (const source of sources) {
+                const binding: CallableBinding = { source: null, target: { file: path, start: parameter.getStart(sf) } };
+                pendingCaptures.push({ argument: source, binding });
+                defaults.push(binding);
+              }
+          }
+          // A destructured default binds the parameter it is destructured from.
+          let defaulted: ts.Node | undefined =
+            (ts.isParameter(node) || ts.isBindingElement(node)) && node.initializer !== undefined ? node : undefined;
+          while (defaulted !== undefined && ts.isBindingElement(defaulted)) defaulted = defaulted.parent.parent;
+          if (
+            runtime &&
+            defaulted !== undefined &&
+            ts.isParameter(defaulted) &&
+            (ts.isParameter(node) || ts.isBindingElement(node)) &&
+            node.initializer !== undefined &&
+            typeFacts(checker.getTypeAtLocation(node.initializer), new Set(), true).callable
+          ) {
+            const binding: CallableBinding = { source: null, target: { file: path, start: defaulted.getStart(sf) } };
+            pendingCaptures.push({ argument: node.initializer, binding });
+            defaults.push(binding);
+          }
           const kind =
             node.kind === ts.SyntaxKind.AnyKeyword
               ? "any"
@@ -1609,7 +1771,8 @@ function readCompiler(
           }
         }
       }
-      // Only facts that can grant authority are positions a capture lists, one per kind and file.
+      // Only facts that can grant authority, or whose authority can't be established, are positions a capture
+      // lists, one per kind and file.
       const adapterGlobals = new Set(
         (config.adapters ?? []).flatMap((adapter) => adapter.globals ?? []),
       );
@@ -1617,15 +1780,17 @@ function readCompiler(
         (entry.nativeAuthority ?? []).map((authority) => `${authority.root.file}:${authority.root.name}`);
       const grantingFacts = [
         ...accesses
-          .filter((access) => access.kind !== "dynamic")
           .map((access) => ({ fact: access, kind: JSON.stringify(["access", access.kind, natives(access)]) })),
         ...globals
           .filter(
             (global) =>
               global.runtime &&
-              ((global.nativeAuthority ?? []).length > 0 || adapterGlobals.has(global.name)),
+              ((global.nativeAuthority ?? []).length > 0 ||
+                adapterGlobals.has(global.name) ||
+                (/(?:^|\/)node_modules\//.test(global.declarationFile ?? "") &&
+                  !/(?:^|\/)node_modules\/typescript\/lib\//.test(global.declarationFile ?? ""))),
           )
-          .map((global) => ({ fact: global, kind: JSON.stringify(["global", global.name, natives(global)]) })),
+          .map((global) => ({ fact: global, kind: JSON.stringify(["global", global.name, global.value === true, natives(global)]) })),
         ...[...parameters.values()]
           .filter(
             (parameter) =>
@@ -1745,6 +1910,8 @@ function readCompiler(
         accesses,
         constructions,
         connections,
+        ...(defaults.length > 0 ? { defaults } : {}),
+        ...(held.length > 0 ? { held } : {}),
         proofs,
         termFacts: { sources: termSources, types: termTypes },
       };
@@ -2040,12 +2207,13 @@ function captureReach(
     for (const declaration of symbol.declarations ?? []) {
       let current: ts.Node | undefined = declaration;
       while (current !== undefined && !ts.isImportDeclaration(current)) current = current.parent;
-      if (
-        current !== undefined &&
-        ts.isStringLiteral(current.moduleSpecifier) &&
-        !current.moduleSpecifier.text.startsWith(".")
-      )
-        return current.moduleSpecifier.text;
+      if (current === undefined || !ts.isStringLiteral(current.moduleSpecifier)) continue;
+      const specifier = current.moduleSpecifier.text;
+      if (!specifier.startsWith(".")) return specifier;
+      // A relative import that reaches no checked source, such as a declaration beside a JavaScript file
+      // outside the project, is as unclassified as an unknown package.
+      const target = importTarget(specifier, current.getSourceFile().fileName);
+      if (target === null || !source.has(target) || /\.d\.[mc]?ts$/.test(target)) return specifier;
     }
     return null;
   };

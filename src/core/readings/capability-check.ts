@@ -244,6 +244,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   const hostLibrary = /(?:^|\/)lib\.dom(?:\.[\w-]+)*\.d\.ts$/;
   // The Window object an adapter reaches through a global, as opposed to through a handle it is given.
   const globalWindow = new Set<string>();
+  // Where authority could not be established: what a callable reaches there is unknown, never pure.
+  const unresolvedAt = new Set<string>();
+  const unresolvedFiles = new Set<string>();
+  // Each unclassified import specifier, with the files importing it.
+  const unresolvedPackages = new Map<string, Set<string>>();
+  const markUnresolved = (file: string, start: number): void => {
+    unresolvedAt.add(`${file}:${start}`);
+    unresolvedFiles.add(file);
+  };
   const findings: CapabilityFinding[] = [];
   const startups = new Set<string>();
   const rawFailures = new Set<string>();
@@ -327,20 +336,24 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             row.zone,
           );
   if (projects.length === 0)
-    for (const path of files)
+    for (const path of files) {
+      unresolvedFiles.add(path);
       unresolved("compiler-boundary", path, "No compiler project covers the source.");
+    }
   else
     for (const path of files)
       if (
         !projects.some(
           (project) => project.files.includes(path) || project.ambientFiles.includes(path),
         )
-      )
+      ) {
+        unresolvedFiles.add(path);
         unresolved(
           "compiler-boundary",
           path,
           "The source is excluded from every compiler project.",
         );
+      }
 
   for (const adapter of adapters) {
     const path = pathOf(adapter.module);
@@ -461,6 +474,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       if (access.kind === "native") {
         for (const authority of access.nativeAuthority ?? [])
           recordNative(access.file, nativeKey(authority.root));
+        if ((access.nativeAuthority ?? []).length === 0) markUnresolved(access.file, access.start);
         if ((access.nativeAuthority ?? []).length === 0)
           unresolved(
             "native-authority",
@@ -488,13 +502,15 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             access.kind,
           );
         }
-      } else if (access.kind === "dynamic")
+      } else if (access.kind === "dynamic") {
+        markUnresolved(access.file, access.start);
         unresolved(
           "authority-entry",
           access.file,
           "Dynamic code or ambient access has no supported authority identity.",
           `${access.kind}:${access.start}`,
         );
+      }
     }
     const hostGlobals = new Set<string>();
     for (const global of project.globals) {
@@ -505,14 +521,14 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         ? global.name.slice("globalThis.".length)
         : global.name;
       const declared = global.declarationFile ?? "";
-      if (
+      const ambient =
         !name.includes(".") &&
         global.value !== true &&
         /(?:^|\/)node_modules\//.test(declared) &&
         !/(?:^|\/)node_modules\/typescript\/lib\//.test(declared) &&
-        !adapters.some((adapter) => adapter.globals?.includes(name)) &&
-        !hostGlobals.has(`${global.file}:${name}`)
-      ) {
+        !adapters.some((adapter) => adapter.globals?.includes(name));
+      if (ambient) markUnresolved(global.file, global.start);
+      if (ambient && !hostGlobals.has(`${global.file}:${name}`)) {
         hostGlobals.add(`${global.file}:${name}`);
         unresolved(
           "ambient-global",
@@ -655,26 +671,32 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             Array.from(edge.namedImports).every((name) => declaration.entrypointExports?.includes(name))
           ) {
             for (const capability of declaration.capabilities) direct.get(edge.file)?.add(capability);
-          } else
+          } else {
+            unresolvedFiles.add(edge.file);
+            unresolvedPackages.set(edge.specifier, new Set([...(unresolvedPackages.get(edge.specifier) ?? []), edge.file]));
             unresolved(
               "entrypoint-package",
               edge.file,
               "This package contract permits only selected named runtime exports in an exact declared entrypoint.",
               edge.specifier,
             );
+          }
         } else if (
           declaration !== undefined &&
           !edge.specifier.startsWith(".") &&
           !edge.specifier.startsWith("#")
         )
           for (const capability of declaration.capabilities) direct.get(edge.file)?.add(capability);
-        else
+        else {
+          unresolvedFiles.add(edge.file);
+          unresolvedPackages.set(edge.specifier, new Set([...(unresolvedPackages.get(edge.specifier) ?? []), edge.file]));
           unresolved(
             "external-boundary",
             edge.file,
             "This runtime import has no classified local source or adapter authority.",
             edge.specifier,
           );
+        }
       }
     }
     for (const escape of project.escapes)
@@ -951,8 +973,46 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     const holder = heldBy(binding);
     return holder === undefined ? undefined : [holder.capability, ...beyond(binding, holder)];
   };
+  // A callable that reaches code whose authority could not be established carries that unknown with it: it
+  // is never an established binding, wherever it is handed, and registered adapters keep their own limits.
+  const defaultBindings = projects.flatMap((project) =>
+    (project.defaults ?? []).map((binding) => ({
+      origin: binding.target?.file ?? null,
+      source: binding.source,
+      target: binding.target,
+      supported: true,
+      capture: binding.capture,
+      into: binding.target?.file ?? null,
+    })),
+  );
+  // Parameters that receive such a callable carry it on: a function forwarding its input is no cleaner than
+  // the input.
+  const unresolvedInputs = new Set<string>();
+  const reachesUnresolved = (binding: (typeof bindings)[number]): boolean =>
+    [binding.source, ...(binding.capture?.parameters ?? [])].some(
+      (input) => input !== null && unresolvedInputs.has(keyOf(input)),
+    ) || reachesUnresolvedCode(binding);
+  const reachesUnresolvedCode = (binding: (typeof bindings)[number]): boolean => {
+    const capture = binding.capture;
+    if (capture === undefined)
+      return binding.source === null && binding.origin !== null && unresolvedFiles.has(binding.origin);
+    return (
+      capture.positions.some(
+        (position) => !adapterPaths.has(position.file) && unresolvedAt.has(`${position.file}:${position.start}`),
+      ) ||
+      capture.whole.some((file) => !adapterPaths.has(file) && unresolvedFiles.has(file)) ||
+      // Code outside every checked root and legacy location has no recorded authority at all.
+      [...capture.reached, ...capture.whole].some((file) => !direct.has(file)) ||
+      // An adapter importing an unregistered package keeps that limit itself; its port stays established.
+      capture.packages.some((specifier) =>
+        [...(unresolvedPackages.get(specifier) ?? [])].some(
+          (file) => !adapterPaths.has(file) && (capture.reached.includes(file) || capture.whole.includes(file)),
+        ),
+      )
+    );
+  };
   const established = (binding: (typeof bindings)[number]): boolean =>
-    heldCarry(binding)?.length === 1 ||
+    !reachesUnresolved(binding) && (heldCarry(binding)?.length === 1 ||
     binding.supported &&
     (binding.capture === undefined || binding.capture.parameters.every(
       (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
@@ -966,7 +1026,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ? [...inputs].every(([key, file]) => file !== binding.origin || known.has(key))
           : binding.capture.parameters.every(
               (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
-            )));
+            ))));
   // A file a callable reaches only in part grants what its reached code grants; an adapter's file, or
   // one the capture could not follow, is charged whole.
   const adapterPaths = new Set(adapters.map((adapter) => pathOf(adapter.module)));
@@ -1038,6 +1098,58 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
                   .flatMap(([key]) => [...(suppliedCapabilities.get(key) ?? [])])),
           ],
     );
+  // A legacy parameter Kit can't see every argument of, because its function is held as a value, handed on
+  // anonymously or never called where Kit resolves the call, is unresolved: a limit, never purity.
+  const heldInputs = projects.flatMap((project) => project.held ?? []);
+  const boundTargets = new Set(
+    [...bindings, ...defaultBindings].flatMap((binding) => (binding.target === null ? [] : [keyOf(binding.target)])),
+  );
+  // A package handle type, an SDK input or an accepted handle, comes from its package: it establishes a parameter
+  // whose arguments Kit can't see. A project contract or port type does not, since any literal can claim it.
+  const packageTyped = (key: string): boolean => {
+    const type = parameterFacts.get(key)?.types[0];
+    return type !== undefined && packageOf(type.file) !== undefined &&
+      (sdkInputs.some((input) => input.type.file === type.file && input.type.name === type.name) ||
+        adapters.some((adapter) => accepting(pathOf(adapter.module), type) === adapter));
+  };
+  const heldKeys = new Set(heldInputs.map((entry) => keyOf(entry)));
+  for (const [key, file] of inputs)
+    if (
+      placement(file) === null &&
+      direct.has(file) &&
+      !packageTyped(key) &&
+      !heldKeys.has(key) &&
+      !boundTargets.has(key)
+    )
+      unresolvedInputs.add(key);
+  // A held function's arguments are whatever is handed to calls Kit can't resolve: if any such value reaches
+  // unresolved authority, every held parameter may receive it.
+  const unseenCalls = projects
+    .flatMap((project) => project.connections)
+    .filter((connection) => direct.has(connection.file))
+    .flatMap((connection) => connection.callableOrigins.map((_, index) => bindingOf(connection, index)))
+    .filter((binding) => binding.supported && binding.target === null);
+  const tainted = (): boolean => unseenCalls.some((binding) => reachesUnresolved(binding));
+  changed = true;
+  while (changed) {
+    changed = false;
+    for (const binding of [...bindings, ...defaultBindings])
+      if (binding.target !== null && !unresolvedInputs.has(keyOf(binding.target)) && reachesUnresolved(binding)) {
+        unresolvedInputs.add(keyOf(binding.target));
+        changed = true;
+      }
+    if (tainted())
+      for (const key of heldKeys)
+        if (
+          inputs.has(key) &&
+          placement(inputs.get(key) ?? "") === null &&
+          !packageTyped(key) &&
+          !unresolvedInputs.has(key)
+        ) {
+          unresolvedInputs.add(key);
+          changed = true;
+        }
+  }
   changed = true;
   while (changed) {
     changed = false;
@@ -1199,7 +1311,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       for (const [index, origin] of connection.callableOrigins.entries()) {
         const binding = bindingOf(connection, index);
         if (
-          !established(binding) && (restricted(connection.target) ||
+          !established(binding) && (restricted(connection.target) || reachesUnresolved(binding) ||
             sdkInputs.some((input) => input.file === connection.target))
         )
           unresolved(
@@ -1249,6 +1361,22 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       }
     }
   }
+  // A placed function legacy code holds as a value takes executable inputs from wherever legacy hands it on,
+  // which matters once anything handed to an unresolvable call reaches unresolved authority.
+  for (const entry of heldInputs)
+    if (
+      placement(entry.file) !== null &&
+      placement(entry.at) === null &&
+      inputs.has(keyOf(entry)) &&
+      !packageTyped(keyOf(entry)) &&
+      tainted()
+    )
+      unresolved(
+        "callable-binding",
+        entry.file,
+        `${entry.at} holds this function as a value, so its executable inputs have no established capability boundary.`,
+        `${entry.at}:${entry.start}`,
+      );
   return {
     requirements: [...inherited].map(([path, caps]) => ({
       path,
