@@ -117,7 +117,8 @@ export interface CompilerFacts {
     // Parameters whose arguments can't all be seen: their function is held as a value in the file `at`, or is an
     // anonymous function handed on there.
     readonly held?: readonly { readonly file: string; readonly start: number; readonly at: string }[];
-    // Callable default values, each bound to its parameter like an argument.
+    // Values bound to a parameter outside an argument list, like an argument: a callable default, or what a call
+    // holds for the anonymous function handed to it.
     readonly defaults?: readonly NonNullable<
       CompilerFacts["projects"][number]["connections"][number]["callableBindings"]
     >[number][];

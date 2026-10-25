@@ -1104,20 +1104,32 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   const boundTargets = new Set(
     [...bindings, ...defaultBindings].flatMap((binding) => (binding.target === null ? [] : [keyOf(binding.target)])),
   );
-  // A parameter whose type establishes it, an adapter contract, port, SDK input or accepted handle, carries that
-  // type's authority wherever it came from.
-  const typed = (key: string): boolean => {
+  // A package handle type, an SDK input or an accepted handle, comes from its package: it establishes a parameter
+  // whose arguments Kit can't see. A project contract or port type does not, since any literal can claim it.
+  const packageTyped = (key: string): boolean => {
     const type = parameterFacts.get(key)?.types[0];
-    return known.has(key) || (type !== undefined && adapters.some((adapter) => accepting(pathOf(adapter.module), type) === adapter));
+    return type !== undefined && packageOf(type.file) !== undefined &&
+      (sdkInputs.some((input) => input.type.file === type.file && input.type.name === type.name) ||
+        adapters.some((adapter) => accepting(pathOf(adapter.module), type) === adapter));
   };
+  const heldKeys = new Set(heldInputs.map((entry) => keyOf(entry)));
   for (const [key, file] of inputs)
     if (
       placement(file) === null &&
       direct.has(file) &&
-      !typed(key) &&
-      (heldInputs.some((entry) => keyOf(entry) === key) || !boundTargets.has(key))
+      !packageTyped(key) &&
+      !heldKeys.has(key) &&
+      !boundTargets.has(key)
     )
       unresolvedInputs.add(key);
+  // A held function's arguments are whatever is handed to calls Kit can't resolve: if any such value reaches
+  // unresolved authority, every held parameter may receive it.
+  const unseenCalls = projects
+    .flatMap((project) => project.connections)
+    .filter((connection) => direct.has(connection.file))
+    .flatMap((connection) => connection.callableOrigins.map((_, index) => bindingOf(connection, index)))
+    .filter((binding) => binding.supported && binding.target === null);
+  const tainted = (): boolean => unseenCalls.some((binding) => reachesUnresolved(binding));
   changed = true;
   while (changed) {
     changed = false;
@@ -1126,6 +1138,17 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         unresolvedInputs.add(keyOf(binding.target));
         changed = true;
       }
+    if (tainted())
+      for (const key of heldKeys)
+        if (
+          inputs.has(key) &&
+          placement(inputs.get(key) ?? "") === null &&
+          !packageTyped(key) &&
+          !unresolvedInputs.has(key)
+        ) {
+          unresolvedInputs.add(key);
+          changed = true;
+        }
   }
   changed = true;
   while (changed) {
@@ -1338,9 +1361,16 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       }
     }
   }
-  // A placed function legacy code holds as a value takes executable inputs from wherever legacy hands it on.
+  // A placed function legacy code holds as a value takes executable inputs from wherever legacy hands it on,
+  // which matters once anything handed to an unresolvable call reaches unresolved authority.
   for (const entry of heldInputs)
-    if (placement(entry.file) !== null && placement(entry.at) === null && inputs.has(keyOf(entry)))
+    if (
+      placement(entry.file) !== null &&
+      placement(entry.at) === null &&
+      inputs.has(keyOf(entry)) &&
+      !packageTyped(keyOf(entry)) &&
+      tainted()
+    )
       unresolved(
         "callable-binding",
         entry.file,

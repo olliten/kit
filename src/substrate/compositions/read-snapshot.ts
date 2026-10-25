@@ -1591,6 +1591,26 @@ function readCompiler(
           }
           if (runtime && (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) && !ts.isVariableDeclaration(node.parent))
             for (const parameter of node.parameters) held.push({ file: path, start: parameter.getStart(sf), at: path });
+          // An anonymous function handed to a call receives what that call holds: its receiver and the other
+          // arguments, such as the items of the array it iterates or the value a promise resolves to.
+          if (
+            runtime &&
+            (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
+            (ts.isCallExpression(node.parent) || ts.isNewExpression(node.parent)) &&
+            node.parent.arguments?.includes(node) === true
+          ) {
+            const call = node.parent;
+            const sources = [
+              ...(ts.isPropertyAccessExpression(call.expression) ? [call.expression.expression] : []),
+              ...(call.arguments ?? []).filter((argument) => argument !== node),
+            ];
+            for (const parameter of node.parameters)
+              for (const source of sources) {
+                const binding: CallableBinding = { source: null, target: { file: path, start: parameter.getStart(sf) } };
+                pendingCaptures.push({ argument: source, binding });
+                defaults.push(binding);
+              }
+          }
           // A destructured default binds the parameter it is destructured from.
           let defaulted: ts.Node | undefined =
             (ts.isParameter(node) || ts.isBindingElement(node)) && node.initializer !== undefined ? node : undefined;

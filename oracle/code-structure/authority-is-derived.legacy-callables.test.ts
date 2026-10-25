@@ -367,3 +367,48 @@ test.each([
   expect(keys("import { read } from './io.js';\n" + write).length).toBeGreaterThan(0);
   expect(keys("import { twice } from './io.js';\nconst read = (): string => twice('a');\n" + write)).toEqual([]);
 });
+
+test.each([
+  ["an array of pure callables", "[() => twice('a')].forEach((r) => run(r, " + pure + "));\n"],
+  ["a promise of a pure callable", "void Promise.resolve(() => twice('a')).then((r) => run(r, " + pure + "));\n"],
+  [
+    "a forwarder held in a record, called with a pure callable",
+    "function fwd(r: () => string): void { run(r, " + pure + "); }\nconst hs = { a: fwd };\nhs.a(() => twice('x'));\n",
+  ],
+])("a visible pure value handed through %s stays established", (_, code) => {
+  expect(
+    atRun(inspect("import { run } from '../src/substrate/compositions/run.js';\nimport { twice } from './io.js';\n" + code)),
+  ).toEqual([]);
+});
+
+test.each([
+  ["an alias", "const g = record;\ng(journal);\n"],
+  ["a native callback", "[journal].forEach(record);\n"],
+])("a placed function held as %s and handed only an adapter port stays established", (_, code) => {
+  expect(
+    inspect(
+      "import { record } from '../src/substrate/compositions/run.js';\n" +
+        "import { journal } from '../src/substrate/adapters/journal.js';\n" + code,
+    ).filter((item) => item.debtKey.startsWith(`R1:callable-binding:${run}:`)),
+  ).toEqual([]);
+});
+
+test.each([
+  [
+    "a held forwarder given a raw literal",
+    "function fwd(j: Journal): void { record(j); }\nconst g = fwd;\ng({ note: (t: string) => { process.stdout.write(t); } });\n",
+  ],
+  ["an array cast to the contract", "const leak = { note: (t: string) => { process.stdout.write(t); } };\n[leak as Journal].forEach((j) => record(j));\n"],
+  [
+    "a promise of the contract",
+    "const leak: Journal = { note: (t: string) => { process.stdout.write(t); } };\nvoid Promise.resolve<Journal>(leak).then((j) => record(j));\n",
+  ],
+  ["an exported forwarder with no caller here", "export function fwd(j: Journal): void { record(j); }\n"],
+])("a contract-typed legacy parameter Kit can't see every argument of is unresolved: %s", (_, code) => {
+  expect(
+    inspect(
+      "import { record } from '../src/substrate/compositions/run.js';\n" +
+        "import type { Journal } from '../src/substrate/adapters/journal.js';\n" + code,
+    ).filter((item) => item.debtKey.startsWith(`R1:callable-binding:${run}:legacy/index.ts:`)).length,
+  ).toBeGreaterThan(0);
+});
