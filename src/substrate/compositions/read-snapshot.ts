@@ -343,6 +343,17 @@ function readCompiler(
       // A callable default is a value bound to its parameter as surely as an argument is.
       const defaults: CallableBinding[] = [];
       const held: NonNullable<Project["held"]>[number][] = [];
+      // A value built at the argument itself, rather than one acquired elsewhere and passed on.
+      const freshValue = (argument: ts.Expression): boolean => {
+        let value = argument;
+        while (
+          ts.isParenthesizedExpression(value) || ts.isAsExpression(value) || ts.isSatisfiesExpression(value) ||
+          ts.isNonNullExpression(value) || ts.isTypeAssertionExpression(value)
+        )
+          value = value.expression;
+        return ts.isObjectLiteralExpression(value) || ts.isArrayLiteralExpression(value) ||
+          ts.isArrowFunction(value) || ts.isFunctionExpression(value) || ts.isClassExpression(value);
+      };
       const targetOf = (node: ts.Node): ts.Declaration | undefined => {
         let symbol = checker.getSymbolAtLocation(node);
         if (symbol !== undefined && (symbol.flags & ts.SymbolFlags.Alias) !== 0)
@@ -1298,6 +1309,7 @@ function readCompiler(
                         file: local(targetParameter.getSourceFile().fileName),
                         start: targetParameter.getStart(),
                       },
+                ...(freshValue(argument) ? { fresh: true as const } : {}),
               };
               pendingCaptures.push({ argument, binding });
               return [

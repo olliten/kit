@@ -98,6 +98,8 @@ export interface CompilerFacts {
       readonly callableBindings?: readonly {
         readonly source: { readonly file: string; readonly start: number } | null;
         readonly target: { readonly file: string; readonly start: number } | null;
+        // The value is built at the argument itself, a literal, rather than acquired elsewhere and passed on.
+        readonly fresh?: true;
         // What the callable reaches when it is no parameter: absent, its whole origin file is charged.
         readonly capture?: {
           // Authority facts inside the code it reaches, and the files that code is in.

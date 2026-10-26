@@ -54,7 +54,8 @@ compositions wire the others into behaviour.
 - A module's authority is derived from its actual inputs: runtime imports, ambient globals and parameters
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
   never purity. A callable that reaches such a limit, an ambient global, dynamic code or an unclassified
-  import, carries it: handed to placed code, it is never an established binding, however it is passed
+  import, carries it: handed to placed code, it is never an established binding, however it is passed.
+  What only registered adapters reach, or an adapter's own value reaches, stays that adapter's limit
   ({{capability-check}}, {{compiler-facts}}, {{read-snapshot}}). · {#authority-is-derived}
   - Proof: {{fixture-config}}, {{source-fixture}}
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
@@ -66,7 +67,9 @@ compositions wire the others into behaviour.
   the adapter's capability, and only the adapter's contract leaves it.
   Accepting a handle grants no host global: the adapter still declares those it uses. Nor does a contract:
   the window object reached through a global needs a declared global, whatever types the contract names. Every other argument,
-  an undeclared type, and what the caller adds to the value, a host global included, stay checked ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#adapters-create-authority}
+  an undeclared type, and what the caller adds to the value, a host global included, stay checked. A
+  handle a legacy caller passes on is judged by any literal built at the argument, not by how that caller
+  acquired it ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#adapters-create-authority}
   - Proof: {{source-fixture}}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
   holding only the adapter's plain contract holds no native authority ({{capability-check}}). · {#declared-globals-cover-their-handles}

@@ -877,6 +877,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     readonly capture: NonNullable<typeof connection.callableBindings>[number]["capture"];
     // The module the value is handed to.
     readonly into: string | null;
+    readonly fresh: boolean;
   } => ({
     origin: connection.callableOrigins[index] ?? null,
     source: connection.callableBindings?.[index]?.source ?? null,
@@ -884,6 +885,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     supported: connection.callableBindings?.[index] !== undefined,
     capture: connection.callableBindings?.[index]?.capture,
     into: connection.target,
+    fresh: connection.callableBindings?.[index]?.fresh === true,
   });
   const bindings = connections.flatMap((connection) =>
     connection.callableOrigins.map((_, index) => bindingOf(connection, index)),
@@ -983,6 +985,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       supported: true,
       capture: binding.capture,
       into: binding.target?.file ?? null,
+      fresh: binding.fresh === true,
     })),
   );
   // Parameters that receive such a callable carry it on: a function forwarding its input is no cleaner than
@@ -992,6 +995,18 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
     [binding.source, ...(binding.capture?.parameters ?? [])].some(
       (input) => input !== null && unresolvedInputs.has(keyOf(input)),
     ) || reachesUnresolvedCode(binding);
+  // An installed package's file that only registered adapters import: its limits are those adapters' own.
+  const packageImporters = new Map<string, Set<string>>();
+  for (const edge of projects.flatMap((project) => project.imports)) {
+    if (edge.typeOnly || edge.specifier.startsWith(".") || edge.specifier.startsWith("#")) continue;
+    const name = edge.specifier.startsWith("@") ? edge.specifier.split("/").slice(0, 2).join("/") : edge.specifier.split("/")[0];
+    if (name !== undefined) packageImporters.set(name, new Set([...(packageImporters.get(name) ?? []), edge.file]));
+  }
+  const adapterOnly = (file: string): boolean => {
+    const name = packageOf(file);
+    const importers = name === undefined ? undefined : packageImporters.get(name);
+    return importers !== undefined && importers.size > 0 && [...importers].every((importer) => adapterPaths.has(importer));
+  };
   const reachesUnresolvedCode = (binding: (typeof bindings)[number]): boolean => {
     const capture = binding.capture;
     if (capture === undefined)
@@ -1001,8 +1016,10 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         (position) => !adapterPaths.has(position.file) && unresolvedAt.has(`${position.file}:${position.start}`),
       ) ||
       capture.whole.some((file) => !adapterPaths.has(file) && unresolvedFiles.has(file)) ||
-      // Code outside every checked root and legacy location has no recorded authority at all.
-      [...capture.reached, ...capture.whole].some((file) => !direct.has(file)) ||
+      // Code outside every checked root and legacy location has no recorded authority at all, unless only a
+      // registered adapter reaches it: an adapter keeps its own limits, and its port stays established.
+      (binding.origin === null || !adapterPaths.has(binding.origin)) &&
+        [...capture.reached, ...capture.whole].some((file) => !direct.has(file) && !adapterOnly(file)) ||
       // An adapter importing an unregistered package keeps that limit itself; its port stays established.
       capture.packages.some(({ file, specifier }) =>
         file === null || !direct.has(file) ||
@@ -1134,7 +1151,14 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   while (changed) {
     changed = false;
     for (const binding of [...bindings, ...defaultBindings])
-      if (binding.target !== null && !unresolvedInputs.has(keyOf(binding.target)) && reachesUnresolved(binding)) {
+      if (
+        binding.target !== null &&
+        !unresolvedInputs.has(keyOf(binding.target)) &&
+        // A package handle passed on, an SDK input or accepted handle, comes from its package: how a caller
+        // acquired it is not what it carries, so only a literal built at the argument taints it.
+        (binding.fresh || !packageTyped(keyOf(binding.target))) &&
+        reachesUnresolved(binding)
+      ) {
         unresolvedInputs.add(keyOf(binding.target));
         changed = true;
       }

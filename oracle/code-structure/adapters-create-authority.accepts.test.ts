@@ -193,3 +193,37 @@ test.each([
 ])("accepts on %s is a configuration error", (_, adapters) => {
   expect(() => inspect(handOver, adapters)).toThrow(/accepts/);
 });
+
+test("an accepted handle a legacy caller passes on stays established, however the caller acquired it", () => {
+  const chain = (harness: string) =>
+    capabilityCheck(
+      sourceFixture(
+        {
+          "node_modules/browser-driver/index.d.ts": driver + "export declare function newPage(): Page;\n",
+          [adapter]: adapterSource(),
+          "src/substrate/adapters/store.ts": "export interface Store { read(): string; }\nexport const store: Store = { read: () => 'x' };\n",
+          "outside/helpers.ts":
+            "import { newPage } from 'browser-driver';\nexport const makePage = () => { void eval('1'); return newPage(); };\n",
+          [caller]:
+            "import type { Page } from 'browser-driver';\nimport { captureDrivers } from '../oracle/shell/adapters/capture-driver.js';\n" +
+            "export const run = (page: Page): Promise<string> => captureDrivers.of(page).title();\n",
+          "legacy/harness.ts": harness,
+        },
+        {
+          srcRoot: ["oracle", "src"],
+          layout: { legacy: ["legacy"] },
+          adapters: drivers(accepted),
+          packages: [{ name: "browser-driver", capabilities: ["browser-driving"] }],
+        },
+      ),
+    ).findings.map((item) => item.debtKey).filter((key) => key.startsWith(`R1:callable-binding:${adapter}:`));
+  expect(
+    chain("import { run } from './full-stack.js';\nimport { makePage } from '../outside/helpers.js';\nexport const render = (): Promise<string> => run(makePage());\n"),
+  ).toEqual([]);
+  expect(
+    chain(
+      "import type { Page } from 'browser-driver';\nimport { run } from './full-stack.js';\n" +
+        "export const render = (): Promise<string> => run({ click: async () => { void eval('1'); }, title: async () => '', opener: null });\n",
+    ).length,
+  ).toBeGreaterThan(0);
+});
