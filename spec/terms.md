@@ -284,6 +284,10 @@
 
 ## Composition contracts
 
+- **behaviour-reading** — the reading of whether a type is or accepts behaviour: callable, an accessor, or an object with operations that is not a registered contract.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{contract-reading}}, {{native-reading}}, {{placement-of}}, {{program-scope}}
 - **cache-proof** — the workflow that builds cache apps in temporary directories and checks them through the cache, counting extractions.
   - Role: composition
   - Zone: substrate
@@ -300,14 +304,22 @@
   - Role: composition
   - Zone: substrate
   - Of: {{command}}, {{consumer-report}}, {{kit-configuration}}, {{processes}}, {{text-files}}
+- **contract-reading** — the reading of the identities a type names in the checked sources: its contract, the ports its operations return and its named parts.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{program-scope}}
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
   - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+- **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{program-scope}}
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{type-reading}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
@@ -328,10 +340,6 @@
   - Role: composition
   - Zone: substrate
   - Of: []
-- **type-reading** — the reading of what the checker says a type carries: its native authority, the identities it names, and whether it is or accepts behaviour.
-  - Role: composition
-  - Zone: substrate
-  - Of: {{compiler-facts}}, {{placement-of}}, {{program-scope}}
 - **verification-runner** — the workflow that runs a verification plan with the effects and capacity a caller supplies.
   - Role: composition
   - Zone: substrate

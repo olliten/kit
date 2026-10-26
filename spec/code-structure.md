@@ -48,20 +48,20 @@ compositions wire the others into behaviour.
   The compiler's DOM and worker declarations distinguish Window-only types and globals from shared
   host APIs; HTTP and cancellation remain available to Substrate. Imports retain this requirement.
   · {#window-authority-stays-in-shell}
-  - Implementation: {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{compiler-facts}}, {{compiler}}, {{read-snapshot}}, {{type-reading}}
+  - Implementation: {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{compiler-facts}}, {{compiler}}, {{read-snapshot}}, {{native-reading}}
   - Proof: {{source-fixture}}
 
 - A module's authority is derived from its actual inputs: runtime imports, ambient globals and parameters
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
   never purity ({{capability-check}}, {{authority-graph}}, {{capability-context}}, {{compiler-check}}, {{compiler-facts}}, {{program-scope}}, {{syntax-reading}},
-  {{type-reading}}). · {#authority-is-derived}
+  {{native-reading}}). · {#authority-is-derived}
   - Proof: {{fixture-config}}, {{source-fixture}}
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
   hosts no external adapter. In an explicit root set, a registration names the root-qualified module
   identity rather than choosing a default root. A contract grants no host global: the window object reached
   through a global needs a declared global, whatever types the contract names
-  ({{registration-check}}, {{authority-graph}}, {{zone-authority-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}, {{type-reading}}). · {#adapters-create-authority}
+  ({{registration-check}}, {{authority-graph}}, {{zone-authority-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}, {{contract-reading}}). · {#adapters-create-authority}
   - Proof: {{source-fixture}}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
   holding only the adapter's plain contract holds no native authority ({{authority-graph}}, {{zone-authority-check}}). · {#declared-globals-cover-their-handles}
@@ -87,12 +87,12 @@ compositions wire the others into behaviour.
   property or a mutable collection, is a finding, unless that position is typed as a registered adapter's
   contract or a port its operations return, whose capability the zone rules then check. Behaviour moves
   freely only between the compositions and adapters of one zone, which share its permissions
-  ({{behaviour-check}}, {{type-reading}}). · {#core-and-readings-take-data}
+  ({{behaviour-check}}, {{behaviour-reading}}). · {#core-and-readings-take-data}
   - Proof: {{source-fixture}}
 - Only an adapter constructs values of its contract and its ports: an object literal of such a type, or a
   class implementing one, outside the adapter's file is a finding, so a value of a contract carries what the
   adapter's file shows. A declared entrypoint may construct them as test doubles
-  ({{construction-check}}, {{read-snapshot}}, {{type-reading}}). · {#only-adapters-construct-contracts}
+  ({{construction-check}}, {{read-snapshot}}, {{contract-reading}}). · {#only-adapters-construct-contracts}
   - Proof: {{source-fixture}}
 - A native handle or event handler stays authority: a reading or a core composition taking one is a finding. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
   host function it is handed to, such as `fetch`, stays authority ({{authority-graph}}, {{zone-authority-check}}). · {#native-handles-stay-in-adapters}

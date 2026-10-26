@@ -14,10 +14,12 @@ import { semanticReferenceInventory } from "../../core/readings/semantic-referen
 import { termInventory } from "../../core/readings/term-inventory.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
 import { type FilesystemRead, filesystem } from "../adapters/filesystem.js";
+import { behaviourReading } from "./behaviour-reading.js";
+import { contractReading } from "./contract-reading.js";
+import { type NativeAuthority, VALUE_STATICS, nativeReading } from "./native-reading.js";
 import { sourceSize } from "./source-size.js";
 import { syntaxReading } from "./syntax-reading.js";
 import { testReach } from "./test-reach.js";
-import { type NativeAuthority, VALUE_STATICS, typeReading } from "./type-reading.js";
 
 // The kit's only effect: read one snapshot of the codebase at `appRoot`. Only imports that resolve to a file
 // of the snapshot are recorded. Terms come only from the config's terms file, as lines
@@ -290,21 +292,12 @@ function readCompiler(
       const termTypes: NonNullable<Project["termFacts"]>["types"][number][] = [];
       const scope = { appRoot, config, program, checker, local, source, workerTypes };
       const { targetOf, typeOnlyOf, rawAccess, globalName, literal, annotation } = syntaxReading(scope);
-      const {
-        nativeLibrary,
-        hostValue,
-        nativeMember,
-        nativeAuthorityOf,
-        nativeMemberAuthority,
-        nativeContract,
-        typeFacts,
-        parameterFacts,
-        acceptsBehaviour,
-        operationsOf,
-        portsOf,
-        contractIdentity,
-        typeNames,
-      } = typeReading(scope);
+      const natives = nativeReading(scope);
+      const contractTypes = contractReading(scope);
+      const { nativeLibrary, hostValue, nativeMember, nativeAuthorityOf, nativeMemberAuthority, nativeContract } =
+        natives;
+      const { operationsOf, portsOf, contractIdentity, typeNames } = contractTypes;
+      const { typeFacts, parameterFacts, acceptsBehaviour } = behaviourReading(scope, natives, contractTypes);
       const exportedDeclarations = new Map<ts.SourceFile, ReadonlySet<ts.Node>>();
       const exportedFrom = (sf: ts.SourceFile): ReadonlySet<ts.Node> => {
         const known = exportedDeclarations.get(sf);
