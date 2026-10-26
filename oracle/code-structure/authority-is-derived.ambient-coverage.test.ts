@@ -37,7 +37,7 @@ test.each([true, false])(
         writeFileSync(join(root, path), text);
       }
       const snapshot = readSnapshot(root, DEFAULT_CONFIG);
-      expect(snapshot.files).toContainEqual({ path: ambient, type: "source" });
+      expect(snapshot.files).toContainEqual(expect.objectContaining({ path: ambient, type: "source" }));
       expect(snapshot.compiler?.projects).toHaveLength(1);
       const project = snapshot.compiler?.projects[0];
       expect(project?.diagnostics).toEqual([]);

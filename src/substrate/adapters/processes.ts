@@ -1,4 +1,5 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { availableParallelism } from "node:os";
 
 // Another program run to completion: its output, errors and exit status.
 export interface Processes {
@@ -7,7 +8,24 @@ export interface Processes {
     args: readonly string[],
     cwd?: string,
   ): { readonly stdout: string; readonly stderr: string; readonly status: number | null };
+  // Shell command lines, as many at once as the machine runs in parallel, each with its own directory.
+  shells(
+    lines: readonly string[],
+    cwd: string,
+  ): Promise<readonly { readonly stdout: string; readonly stderr: string; readonly status: number | null }[]>;
   node(): string;
+}
+
+function shell(line: string, cwd: string): Promise<{ stdout: string; stderr: string; status: number | null }> {
+  return new Promise((resolve) => {
+    const child = spawn(line, { cwd, shell: true });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString("utf8")));
+    child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString("utf8")));
+    child.on("close", (status) => resolve({ stdout, stderr, status }));
+    child.on("error", (error) => resolve({ stdout, stderr: stderr + error.message, status: null }));
+  });
 }
 
 export const processes: Processes = {
@@ -18,6 +36,18 @@ export const processes: Processes = {
       ...(cwd === undefined ? {} : { cwd }),
     });
     return { stdout: result.stdout, stderr: result.stderr, status: result.status };
+  },
+  async shells(lines, cwd) {
+    const results: { stdout: string; stderr: string; status: number | null }[] = [];
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      for (let at = next++; at < lines.length; at = next++) {
+        const line = lines[at];
+        if (line !== undefined) results[at] = await shell(line, cwd);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(availableParallelism(), lines.length) }, worker));
+    return results;
   },
   node: () => process.execPath,
 };

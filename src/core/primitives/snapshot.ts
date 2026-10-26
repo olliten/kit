@@ -24,4 +24,6 @@ export interface Snapshot {
   readonly comments: readonly SnapshotComment[];
   readonly config: KitConfig;
   readonly compiler?: CompilerFacts;
+  // The text of the runs record the config declares, or null when it declares one that doesn't exist.
+  readonly runsText?: string | null;
 }

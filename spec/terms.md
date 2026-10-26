@@ -58,6 +58,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **runs** — what `kit runs` recorded: the digest of each placed module and test, and the named functions each test ran.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **snapshot** — the supplied files, declarations, configuration and compiler facts of one codebase.
   - Role: fact
   - Zone: core
@@ -105,6 +109,10 @@
   - Role: derived
   - Zone: core
   - From: {{compiler-facts}}, {{default-config}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
+- **check-paths** — the root, config and baseline paths a check is given, resolved against where the caller runs.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}
 - **claim-cohesion** — the check that the claims naming a module share the code of it their tests use.
   - Role: derived
   - Zone: core
@@ -117,6 +125,10 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}
+- **claim-runs** — what each claim's tests ran of each placed module, beside the claims that name it.
+  - Role: derived
+  - Zone: core
+  - From: {{claim-proof-binder}}, {{compiler-facts}}, {{placement-of}}, {{proof-reach}}, {{runs}}, {{snapshot}}
 - **comment-check** — the check that comments cite nothing and carry no debt.
   - Role: derived
   - Zone: core
@@ -125,11 +137,19 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
+- **config-values** — the values a Kit configuration declares, checked as they are read: mappings, text, zones and relative locations.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}
 - **construction-check** — the check that only an adapter builds its contract's values and only a declared core producer its write descriptions.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
 - **consumer-report** — what one app check reports for that app: its failures by check beside the Kit commit it pins.
+  - Role: derived
+  - Zone: core
+  - From: []
+- **coverage-report** — the named functions an LCOV report lists for each file, by start line, and how often each ran.
   - Role: derived
   - Zone: core
   - From: []
@@ -145,6 +165,10 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{dependency-check}}, {{snapshot}}
+- **excerpt-cohesion** — debt from a module holding the excerpts of two or more claims: code only one claim runs, held by no code others run.
+  - Role: derived
+  - Zone: core
+  - From: {{claim-runs}}, {{finding}}, {{placement-of}}, {{runs}}, {{snapshot}}
 - **finding** — what a check reports: its rule, a path, the fix and a debt key.
   - Role: derived
   - Zone: core
@@ -161,6 +185,10 @@
   - Role: derived
   - Zone: core
   - From: {{comment}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}
+- **function-governance** — debt from the named functions of a module that no claim naming it runs.
+  - Role: derived
+  - Zone: core
+  - From: {{claim-runs}}, {{finding}}, {{runs}}, {{snapshot}}
 - **global-authority** — what a module acquires through ambient globals, and which uses need a declared adapter.
   - Role: derived
   - Zone: core
@@ -173,18 +201,22 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
-- **kit-configuration** — the config an app declares, read from its YAML fence and validated, and the paths a check is given.
-  - Role: derived
-  - Zone: core
-  - From: {{default-config}}
 - **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **layout-configuration** — the layout an app opts into: its existing legacy locations.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}
 - **legacy-size** — the size of each legacy module as debt: its statements, and how many of them only call into placed modules.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **legacy-zone-configuration** — the zones legacy code is declared in, by root or by exact files.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}, {{default-config}}
 - **module-references** — the check that every placed module is named by a claim it keeps, and the claims each module keeps.
   - Role: derived
   - Zone: core
@@ -221,6 +253,10 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
+- **runs-record** — the runs record while it still describes the code, or the finding that it is missing, unreadable or stale.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{runs}}, {{snapshot}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
@@ -249,11 +285,18 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{snapshot}}
+- **test-roots** — the directories a test runner discovers: the proof root and the legacy test roots an app declares.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}
+- **test-runs** — the runs record built from each test's coverage reports and the digests of the files they ran over.
+  - Role: derived
+  - Zone: core
+  - From: {{coverage-report}}, {{file}}, {{placement-of}}, {{runs}}
 - **topic-shape** — the check that a topic is a title, a short intro, then only section headings and claims with optional module relationships.
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
-
 - **verification-partition** — disjoint worker assignments derived from required checks, supplied durations and initial worker loads.
   - Role: derived
   - Zone: core
@@ -270,6 +313,7 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
+
 
 ## Adapter contracts
 
@@ -335,11 +379,11 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{cached-check}}, {{compiler}}, {{default-config}}, {{filesystem}}, {{gate}}, {{kit-configuration}}, {{ratchet}}, {{read-snapshot}}, {{snapshot-comparison}}, {{text-files}}
+  - Of: {{cached-check}}, {{check-paths}}, {{command}}, {{compiler}}, {{default-config}}, {{filesystem}}, {{gate}}, {{kit-configuration}}, {{ratchet}}, {{read-snapshot}}, {{snapshot-comparison}}, {{text-files}}
 - **consumers-run** — the `kit consumers` workflow: check each app checkout against this Kit and report its work.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{consumer-report}}, {{kit-configuration}}, {{processes}}, {{text-files}}
+  - Of: {{command}}, {{config-values}}, {{consumer-report}}, {{kit-configuration}}, {{processes}}, {{text-files}}
 - **contract-reading** — the reading of the identities a type names in the checked sources: its contract, the ports its operations return and its named parts.
   - Role: composition
   - Zone: substrate
@@ -360,14 +404,22 @@
   - Role: composition
   - Zone: substrate
   - Of: []
+- **function-recorder** — the recorder of each source's named functions: the name a runtime reports, its line, a stable id and the function holding it.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{file-scope}}
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
-  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{runs-record}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
 - **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
   - Role: composition
   - Zone: substrate
   - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{file-scope}}, {{placement-of}}, {{program-scope}}, {{syntax-reading}}
+- **kit-configuration** — the config an app declares, read from its YAML fence and validated section by section, and the paths a check is given.
+  - Role: composition
+  - Zone: core
+  - Of: {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate
@@ -379,7 +431,7 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{fact-walk}}, {{import-recorder}}, {{term-recorder}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{fact-walk}}, {{function-recorder}}, {{import-recorder}}, {{term-recorder}}
 - **recorded-authority** — the workflow that compiles a fixture and records only its parameters, accesses and globals.
   - Role: composition
   - Zone: substrate
@@ -392,6 +444,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{default-config}}, {{escape-recorder}}, {{fact-walk}}, {{program-fixture}}
+- **recorded-functions** — the workflow that compiles a fixture and records only its named functions.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{default-config}}, {{fact-walk}}, {{function-recorder}}, {{program-fixture}}
 - **recorded-imports** — the workflow that compiles a fixture and records only its imports and exports.
   - Role: composition
   - Zone: substrate
@@ -403,7 +459,11 @@
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{text-files}}
+  - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{text-files}}
+- **runs-run** — the `kit runs` workflow: run each test file alone with the app's command and record which named functions it ran.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{processes}}, {{read-snapshot}}, {{test-runs}}, {{text-files}}
 - **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
   - Role: composition
   - Zone: substrate

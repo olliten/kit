@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { expect, test } from "vitest";
 
-import { kitCheckPaths } from "../../src/core/readings/kit-configuration.js";
+import { kitCheckPaths } from "../../src/core/readings/check-paths.js";
 
 const engine = "/opt/kit";
 const app = "/work/app";

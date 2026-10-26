@@ -16,7 +16,7 @@ its config, and its debt in its own baseline.
   `legacy-test-roots`, with no application directory names built in. Each is a relative directory
   without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy
   discovery grants no placement or capability permission. · {#proof-discovery-is-configured}
-  - Implementation: {{kit-configuration}}
+  - Implementation: {{test-roots}}, {{config-values}}
 
 - An app may opt into directory roles with `layout: { legacy: [...] }`. Source and shared proof code
   belong in its governed code roots, tests in its proof root, and Markdown in its specification root
@@ -26,7 +26,7 @@ its config, and its debt in its own baseline.
   debt fails the ratchet. Missing or malformed legacy locations fail configuration. Legacy locations
   grant no module placement, capability or executable-entrypoint permission. Without a layout declaration,
   existing configuration keeps its behavior. · {#directory-roles-are-configured}
-  - Implementation: {{layout-check}}, {{kit-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
+  - Implementation: {{layout-check}}, {{kit-configuration}}, {{layout-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 
 - {{read-snapshot}} reads the fixture as its files, imports, claims, terms and references through {{filesystem}} and
@@ -61,7 +61,7 @@ its config, and its debt in its own baseline.
 - Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. A
   launcher in `scripts/` hands its command the arguments, working directory and input, and answers the terminal
   with the command's output and exit status. · {#paths-from-the-caller}
-  - Implementation: {{kit-configuration}}
+  - Implementation: {{check-paths}}, {{config-values}}
 
 ## Checking itself
 

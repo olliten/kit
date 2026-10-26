@@ -20,6 +20,7 @@ import { contractReading } from "./contract-reading.js";
 import { contractRecorder } from "./contract-recorder.js";
 import { escapeRecorder } from "./escape-recorder.js";
 import { factWalk } from "./fact-walk.js";
+import { functionRecorder } from "./function-recorder.js";
 import { importRecorder } from "./import-recorder.js";
 import { nativeReading } from "./native-reading.js";
 import { sourceSize } from "./source-size.js";
@@ -70,9 +71,12 @@ export function readSnapshot(
   const claimReferences: NonNullable<Snapshot["claimReferences"]>[number][] = [];
   const semanticReferences: NonNullable<Snapshot["semanticReferences"]>[number][] = [];
   const sources = new Map<string, string>();
+  const digests = new Map<string, string>();
   for (const { path, type } of files) {
     if (type === "other") continue;
     const text = filesystem.readText(join(appRoot, path), trace.filesystem);
+    const read = trace.filesystem[trace.filesystem.length - 1]?.result;
+    if (typeof read === "string") digests.set(path, read);
     if (type === "spec") {
       const inventory = semanticReferenceInventory(text);
       semanticReferences.push(
@@ -133,8 +137,20 @@ export function readSnapshot(
   const sizes = [...sources].map(([path, text]) =>
     sourceSize(path, text, scopeOf(path, scopes, appRoot)?.program, appRoot, known),
   );
+  // The runs record is read like any other input, so a cached snapshot is reused only while it is unchanged.
+  let runsText: string | null | undefined;
+  if (config.runs !== undefined)
+    try {
+      runsText = filesystem.readText(join(appRoot, config.runs.record), trace.filesystem);
+    } catch {
+      runsText = null;
+    }
   return {
-    files,
+    files: files.map((file) => {
+      const digest = digests.get(file.path);
+      return digest === undefined ? file : { ...file, digest };
+    }),
+    ...(runsText === undefined ? {} : { runsText }),
     sizes,
     imports,
     terms,
@@ -296,7 +312,8 @@ function readCompiler(
       const contractFacts = contractRecorder(scope, natives, contractTypes, behaviour);
       const escapeFacts = escapeRecorder();
       const termFacts = termRecorder(scope, syntax);
-      factWalk(scope, [escapeFacts, importFacts, contractFacts, authorityFacts, termFacts]);
+      const functionFacts = functionRecorder();
+      factWalk(scope, [escapeFacts, importFacts, contractFacts, authorityFacts, termFacts, functionFacts]);
       // A test reaches what its code uses, followed into helpers and modules as a capture is, so a helper that
       // imports many modules lends a test only the ones the code it calls uses.
       const proofOf = testReach(
@@ -359,6 +376,7 @@ function readCompiler(
         constructions: contractFacts.constructions,
         proofs,
         termFacts: { sources: termFacts.sources, types: termFacts.types },
+        functions: functionFacts.functions,
       };
     });
   return { facts: { version: ts.version, projects }, scopes };

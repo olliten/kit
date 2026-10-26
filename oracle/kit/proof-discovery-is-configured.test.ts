@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { testRoots } from "../../src/core/readings/kit-configuration.js";
+import { testRoots } from "../../src/core/readings/test-roots.js";
 
 test("an unrelated repository discovers only its own proof directory", () => {
   expect(testRoots({ roots: { oracle: "proofs/" } })).toEqual(["proofs"]);

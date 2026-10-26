@@ -5,7 +5,7 @@ import { nameCheck } from "../../src/core/readings/name-check.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import { configuredKit, kitConfig } from "../../src/core/readings/kit-configuration.js";
+import { configuredKit, kitConfig } from "../../src/core/compositions/kit-configuration.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 test("a supporting exported type needs no glossary entries for its ordinary words", () => {

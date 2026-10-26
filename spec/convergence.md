@@ -22,7 +22,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
 - A legacy zone row may list exact legacy files instead of a prefix: only those files take its zone, a new file
   beside them takes none, and each listed file is debt, so the row may shrink but a file added to it is new debt
   the ratchet rejects; a listed path that is placed or missing is a finding ({{registration-check}}, {{capability-context}}, {{finding}}). · {#legacy-zone-rows-only-shrink}
-  - Implementation: {{edge-check}}, {{dependency-check}}, {{ratchet}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}
+  - Implementation: {{edge-check}}, {{dependency-check}}, {{ratchet}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}, {{legacy-zone-configuration}}, {{config-values}}
   - Proof: {{recorded-imports}}, {{project-snapshot}}
 - Code outside the zones, legacy or a declared entrypoint, hands placed code data or a registered adapter's
   contract, never other behaviour. Its runtime import of a placed export that takes a callable, an accessor or

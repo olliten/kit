@@ -1,7 +1,8 @@
 import { gate } from "../../core/compositions/gate.js";
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
 import { DEFAULT_CONFIG } from "../../core/primitives/default-config.js";
-import { configuredKit, kitCheckPaths, kitConfig } from "../../core/readings/kit-configuration.js";
+import { configuredKit, kitConfig } from "../../core/compositions/kit-configuration.js";
+import { kitCheckPaths } from "../../core/readings/check-paths.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
 import { sameSnapshot } from "../../core/readings/snapshot-comparison.js";
 import { compilerWorkspace } from "../adapters/compiler.js";
