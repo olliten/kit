@@ -8,9 +8,7 @@ import { proofReach } from "../../src/core/readings/proof-reach.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
-const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
-const { ratchetFindings } = await import(gateSource);
+import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 const multi = (parts: Parameters<typeof snapshotOf>[0]) => {
   const snapshot = snapshotOf(parts);
   return {

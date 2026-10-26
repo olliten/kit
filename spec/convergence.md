@@ -16,7 +16,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
   ({{finding}}). · {#finding-debt-key}
 - The check rejects new legacy debt, every violation in placed code or a declared executable entrypoint,
   and every checker limit reachable through imports from either; a baseline can't waive the last two
-  ({{finding}}). · {#ratchet-keeps-architecture-obligations}
+  ({{finding}}, {{ratchet}}). · {#ratchet-keeps-architecture-obligations}
   - Proof: {{source-fixture}}
 - A legacy zone row may list exact legacy files instead of a prefix: only those files take its zone, a new file
   beside them takes none, and each listed file is debt, so the row may shrink but a file added to it is new debt
@@ -31,5 +31,5 @@ and its size are debt that may only shrink, and placed code is held to every rul
   - Proof: {{source-fixture}}
 - A legacy module's size is debt that may only shrink. A change may add to a legacy module only statements
   that call into placed modules; new code is placed first ({{legacy-size}}, {{read-snapshot}},
-  {{finding}}). · {#legacy-does-not-grow}
+  {{finding}}, {{ratchet}}, {{check-run}}, {{command}}). · {#legacy-does-not-grow}
   - Proof: {{source-fixture}}

@@ -4,9 +4,7 @@ import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { handoverCheck } from "../../src/core/readings/handover-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
-const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
-const { ratchetFindings } = await import(gateSource);
+import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 
 const run = "src/substrate/compositions/run.ts";
 const store = "src/substrate/compositions/store.ts";

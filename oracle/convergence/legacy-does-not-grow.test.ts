@@ -2,9 +2,7 @@ import { expect, test } from "vitest";
 import { type LegacySizeFinding, legacySize } from "../../src/core/readings/legacy-size.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
-const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
-const { ratchetFindings, tightenedBaseline } = await import(gateSource);
+import { ratchetFindings, tightenedBaseline } from "../../src/core/readings/ratchet.js";
 
 const legacy = "src/legacy/report.ts";
 const placed = {
@@ -29,7 +27,7 @@ const report = (extra = ""): string =>
   "  return String(helper(sum));\n" +
   "}\n";
 
-type Baseline = Record<string, { statements: number; calls: number }>;
+type Baseline = Record<string, unknown>;
 
 function measure(files: Readonly<Record<string, string>>): LegacySizeFinding[] {
   return legacySize(sourceFixture({ ...placed, ...helper, ...files }));
@@ -83,7 +81,7 @@ test("one added statement that is not a call into a placed module fails", () => 
     expect(sizeOf(grown)?.statements).toBe(8);
     expect(failures(grown, baseline)).toEqual([legacy]);
     const [failure] = ratchetFindings(grown, baseline, [], [], []);
-    expect(failure.fix).toContain("Move the new code into a placed module");
+    expect(failure?.fix).toContain("Move the new code into a placed module");
   }
   const nested = measure({ [legacy]: report("  total([1].map((value) => {\n    return value * 2;\n  }));\n") });
   expect(sizeOf(nested)).toEqual({ statements: 9, calls: 3 });

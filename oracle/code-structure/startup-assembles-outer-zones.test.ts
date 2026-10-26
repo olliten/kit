@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
-import { configuredKit, kitConfig } from "../../scripts/kit-config.mjs";
+import { configuredKit, kitConfig } from "../../src/core/readings/kit-configuration.js";
 
 const startup = "src/start.ts";
 const shell = "src/shell/readings/view.ts";

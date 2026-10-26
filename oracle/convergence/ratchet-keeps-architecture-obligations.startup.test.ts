@@ -4,9 +4,7 @@ import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
-const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
-const { ratchetFindings, startupCheckRoots } = await import(gateSource);
+import { ratchetFindings, startupCheckRoots } from "../../src/core/readings/ratchet.js";
 const startup = "src/start.ts";
 const vendor = "declare module 'unregistered' { export function wire(): void; }\n";
 

@@ -2,11 +2,19 @@
 
 ## Primitive contracts
 
+- **cache-app** — the small app a cache proof extracts, and what its config ignores.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **case-inventory** — the independently supplied identities, conditions and input paths of the structural fixture cases.
   - Role: fact
   - Zone: core
   - Of: []
 - **claim** — a promise declared once in its topic and proved by tests.
+  - Role: fact
+  - Zone: core
+  - Of: []
+- **command** — what a launcher hands a Kit command and what the command answers.
   - Role: fact
   - Zone: core
   - Of: []
@@ -50,6 +58,10 @@
   - Role: fact
   - Zone: core
   - Of: {{claim}}, {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{term}}
+- **snapshot-cache** — one stored extraction and the reads its trace replays, with the index and environment that key it.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **term** — a concept defined once in the global terms file, with its meaning and any declared contract metadata.
   - Role: fact
   - Zone: core
@@ -101,6 +113,10 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **consumer-report** — what one app check reports for that app: its failures by check beside the Kit commit it pins.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **dependency-check** — findings from import direction and cycles between placed modules.
   - Role: derived
   - Zone: core
@@ -125,6 +141,10 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **kit-configuration** — the config an app declares, read from its YAML fence and validated, and the paths a check is given.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}
 - **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
   - Role: derived
   - Zone: core
@@ -149,10 +169,26 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
+- **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, and the baseline left after a change lands.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}, {{finding}}
+- **refs-description** — the claims that name a module, with their text and tests, and how they are listed.
+  - Role: derived
+  - Zone: core
+  - From: {{claim-inventory}}, {{default-config}}, {{module-references}}, {{placement-of}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
   - From: {{reference}}, {{topic}}, {{finding}}, {{snapshot}}
+- **snapshot-cache-key** — the key a stored extraction answers, its settled trace, and how its root is written so worktrees share it.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}, {{snapshot-cache}}
+- **snapshot-comparison** — whether two snapshots are the same graph.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **term-inventory** — global term definitions and inline declarations interpreted from supplied Markdown, with retained prose and syntax findings.
   - Role: derived
   - Zone: core
@@ -193,17 +229,61 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
+- **processes** — access to running another program to completion.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **snapshot-store** — ownership of stored extractions: their objects, their index and its lock, and the environment that keys them.
+  - Role: adapter
+  - Zone: substrate
+  - Of: {{snapshot-cache}}
+- **source-loader** — access to Kit's TypeScript modules from a JavaScript launcher.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **stopwatch** — access to the time, for receipts and cache bookkeeping.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 - **temporary-project** — ownership of an isolated temporary directory, its fixture file writes and its disposal.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **text-files** — access to plain text files outside a snapshot: configs, baselines and spec listings.
   - Role: adapter
   - Zone: substrate
   - Of: []
 
 ## Composition contracts
 
+- **cache-proof** — the workflow that builds cache apps in temporary directories and checks them through the cache, counting extractions.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{cache-app}}, {{cached-check}}, {{compiler}}, {{default-config}}, {{filesystem}}, {{read-snapshot}}, {{snapshot}}, {{temporary-project}}
+- **cached-check** — the workflow that reuses a stored extraction while every read it made still answers the same, and checks it again.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler}}, {{default-config}}, {{filesystem}}, {{snapshot}}, {{snapshot-cache}}, {{snapshot-cache-key}}, {{snapshot-store}}, {{stopwatch}}
+- **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{cached-check}}, {{compiler}}, {{default-config}}, {{filesystem}}, {{gate}}, {{kit-configuration}}, {{ratchet}}, {{read-snapshot}}, {{snapshot-comparison}}, {{text-files}}
+- **consumers-run** — the `kit consumers` workflow: check each app checkout against this Kit and report its work.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{consumer-report}}, {{kit-configuration}}, {{processes}}, {{text-files}}
+- **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
+  - Role: composition
+  - Zone: core
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
   - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{test-reach}}
+- **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{text-files}}
 - **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
   - Role: composition
   - Zone: substrate
@@ -212,6 +292,10 @@
   - Role: composition
   - Zone: substrate
   - Of: []
+- **verification-runner** — the workflow that runs a verification plan with the effects and capacity a caller supplies.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{source-loader}}
 
 ## Supporting vocabulary and roles
 

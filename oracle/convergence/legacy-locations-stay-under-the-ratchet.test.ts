@@ -6,7 +6,7 @@ import { legacySize } from "../../src/core/readings/legacy-size.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
-const { ratchetFindings, startupCheckRoots } = await import(new URL("../../scripts/kit-check.mjs", import.meta.url).href);
+import { ratchetFindings, startupCheckRoots } from "../../src/core/readings/ratchet.js";
 const config: Partial<KitConfig> = {
   srcRoot: ["src", "oracle"],
   layout: { legacy: ["old-tests"] },
@@ -105,12 +105,12 @@ test("location debt does not cover helper growth or a new helper in its director
       [debtKey, { statements, calls }],
     )),
   };
-  expect(ratchetFindings(findings, baseline, [], [], [], 5)).toEqual([]);
+  expect(ratchetFindings(findings, baseline, [], [], [])).toEqual([]);
   const grown = inspect({
     [path]: "export const one: number = 1; export const two: number = 2;",
     "old-tests/new.ts": "export const value: number = 3;",
   });
-  const failures = ratchetFindings([...layoutCheck(grown), ...legacySize(grown)], baseline, [], [], [], 5);
+  const failures = ratchetFindings([...layoutCheck(grown), ...legacySize(grown)], baseline, [], [], []);
   expect(failures.map(({ debtKey }: { debtKey: string }) => debtKey).sort()).toEqual([
     "R1:file-role:old-tests/new.ts", "R1:legacy-size:old-tests/helper.ts", "R1:legacy-size:old-tests/new.ts",
   ]);

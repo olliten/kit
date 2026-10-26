@@ -3,16 +3,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import {
-  CACHE_APP,
-  CACHE_CONFIG,
-  adapters,
-  cacheDirectory,
-  cachedKitCheck,
-  removeCacheApps,
-  scratch,
-  writeApp,
-} from "../lib/cache-fixture.js";
+import { removeCacheApps, scratch, writeApp, rereaders as adapters, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
+import { CACHE_APP } from "../core/primitives/cache-app.js";
+import { cachedKitCheck } from "../../src/substrate/compositions/cached-check.js";
+import { snapshotStore } from "../../src/substrate/adapters/snapshot-store.js";
 
 afterEach(removeCacheApps);
 
@@ -34,8 +28,8 @@ test("two worktrees of one repository reuse one cache entry", async () => {
   git(main, "-c", "user.name=kit", "-c", "user.email=kit@example.com", "commit", "-qm", "app");
   git(main, "worktree", "add", "-q", first);
   git(main, "worktree", "add", "-q", "--detach", other);
-  expect(cacheDirectory(other)).toBe(join(main, ".git", "kit-cache"));
-  expect(cacheDirectory(first)).toBe(cacheDirectory(other));
+  expect(snapshotStore.directory(other)).toBe(join(main, ".git", "kit-cache"));
+  expect(snapshotStore.directory(first)).toBe(snapshotStore.directory(other));
 
   let extractions = 0;
   const read = (...args: Parameters<typeof readSnapshot>) => {

@@ -6,9 +6,7 @@ import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 
-const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
-const { ratchetFindings } = await import(gateSource);
+import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 
 function inspect(source: string, declarations: Readonly<Record<string, string>> = {}) {
   const root = mkdtempSync(join(tmpdir(), "kit-namespace-footprint-"));

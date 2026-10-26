@@ -3,9 +3,7 @@ import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
-const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
-const { ratchetFindings } = await import(gateSource);
+import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 
 const placed = "src/substrate/compositions/serve.ts";
 const legacy = (path: string): string => `export const value: number = ${path.length};\n`;

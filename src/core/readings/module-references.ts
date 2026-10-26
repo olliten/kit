@@ -4,7 +4,7 @@ import { placementOf } from "./placement-of.js";
 
 // A placed module exists to keep a promise, so some claim names it. The reverse view, every claim a
 // module keeps, is derived from the same names and never written into the module.
-export function claimsKeptBy(snapshot: Snapshot): ReadonlyMap<string, readonly { file: string; anchor: string }[]> {
+export function claimsKeptBy(snapshot: Pick<Snapshot, "claims">): ReadonlyMap<string, readonly { file: string; anchor: string }[]> {
   const identity = (name: string): string => name.toLowerCase().trim();
   const kept = new Map<string, { file: string; anchor: string }[]>();
   for (const claim of snapshot.claims ?? [])

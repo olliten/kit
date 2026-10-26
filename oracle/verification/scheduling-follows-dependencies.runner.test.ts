@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { runVerification } from "../../scripts/kit-verification.mjs";
+import { runVerification } from "../../src/substrate/compositions/verification-runner.mjs";
 import type { VerificationCheck } from "../../src/core/primitives/verification.js";
 
 const check = (

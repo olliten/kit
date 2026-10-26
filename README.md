@@ -175,6 +175,8 @@ TypeScript, is in [`docs/method.md`](docs/method.md).
 
 ## This repository
 
-Kit is written in its own structure and checks itself. Rules: `spec/`. Reasons: `docs/decisions.md`. `npm test`,
+Kit is written in its own structure and checks itself, with no legacy baseline and no checker limits: its
+launchers in `scripts/` are declared entrypoints of a few lines each, and everything they run is placed. Rules:
+`spec/`. Reasons: `docs/decisions.md`. `npm test`,
 `npm run check`, `npm run refs -- <module>`, and `npm run consumers -- ../app …` to see what a change to Kit means
 for each app that uses it.

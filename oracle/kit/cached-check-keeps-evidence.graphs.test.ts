@@ -1,8 +1,10 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { sameSnapshot } from "../../scripts/kit-check.mjs";
-import { CACHE_CONFIG, adapters, cacheApp, cachedKitCheck, removeCacheApps } from "../lib/cache-fixture.js";
+import { sameSnapshot } from "../../src/core/readings/snapshot-comparison.js";
+import { cacheApp, removeCacheApps, rereaders as adapters, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
+
+import { cachedKitCheck } from "../../src/substrate/compositions/cached-check.js";
 
 afterEach(removeCacheApps);
 
@@ -31,7 +33,7 @@ test("a graph JSON cannot encode is cached, checked again, invalidated and rebui
   const hit = await run();
   expect(first.receipt.storageError).toBeUndefined();
   expect(hit.receipt.reused).toBe(true);
-  expect(hit.snapshot.self).toBe(hit.snapshot);
+  expect(Reflect.get(hit.snapshot, "self")).toBe(hit.snapshot);
   expect(app.counts()).toEqual({ extractions: 1, checks: 2 });
 
   app.put("src/core/primitives/value.ts", "export const value = 8;\n");
@@ -45,7 +47,7 @@ test("a graph JSON cannot encode is cached, checked again, invalidated and rebui
   const other = cacheApp();
   const relocated = await cachedKitCheck(other.root, CACHE_CONFIG, read, app.check, adapters, { cacheDir: app.cacheDir });
   expect(relocated.receipt.reused).toBe(false);
-  expect(relocated.snapshot.fixtureRoot).toBe(other.root);
+  expect(Reflect.get(relocated.snapshot, "fixtureRoot")).toBe(other.root);
 }, 120_000);
 
 test("a reused binary graph still rejects an input mutation during checking", async () => {

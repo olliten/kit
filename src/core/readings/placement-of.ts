@@ -42,7 +42,9 @@ export function moduleFileOf(
   )
     throw new Error("Declare a canonical module identity under one of the code roots.");
   const physical = Object.entries(layerNames ?? {}).find(([logical]) => logical === layer)?.[1] ?? layer;
-  return `${root}/${zone ?? ""}/${physical}/${name ?? ""}.ts`;
+  // A JavaScript module names its extension; TypeScript is the default.
+  const file = /\.[cm]?js$/.test(name ?? "") ? (name ?? "") : `${name ?? ""}.ts`;
+  return `${root}/${zone ?? ""}/${physical}/${file}`;
 }
 
 export function rootOf(

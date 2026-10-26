@@ -1,8 +1,6 @@
 import { expect, test } from "vitest";
 
-const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
-const { ratchetFindings } = await import(gateSource);
+import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 
 function finding(
   category: "legacy-debt" | "checker-limit" | "placed-violation",
@@ -10,7 +8,7 @@ function finding(
   debtKey: string,
 ) {
   return {
-    rule: "R1",
+    rule: "R1" as const,
     path,
     debtKey,
     fix: "Restore this architectural boundary.",

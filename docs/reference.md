@@ -107,11 +107,11 @@ home, such as Node built-in declarations; several homes retain uncertainty.
   across placement keep zone boundaries.
 - `legacy-areas`: spec files in an older format, outside the topic shape until they gain Implementation rows.
 - `legacy-test-roots`: test directories the runner should still discover; read by `testRoots()` in
-  `scripts/kit-config.mjs`.
+  `src/core/readings/kit-configuration.ts`.
 
 ## Portable verification
 
-`scripts/kit-verification.mjs` exports `verification()`, which loads the pure evidence planner and
+`src/substrate/compositions/verification-runner.mjs` exports `verification()`, which loads the pure evidence planner and
 duration-aware partitioner, and `runVerification(checks, io)`, which runs a dependency graph with supplied effects
 and resource capacity. Checks declare stable identities, input fingerprints, execution contracts and required
 strength; the caller supplies discovery, input tracking, evidence storage and policy.

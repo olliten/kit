@@ -432,3 +432,18 @@ without naming the app.
   paid down to the cache fixture's 40 statements and six calls in `self-debt/legacy.json`.
 - **Why:** an agent or a person adopting Kit should be able to hold the method in one read; edge cases belong
   where they are looked up.
+
+## 2026-10-26 · Kit checks all of itself
+
+- **Decision:** `scripts/` is a code root, and its launchers are declared entrypoints that hand a Kit command its
+  arguments, working directory and input and write its answer. The ratchet, config parsing, snapshot cache,
+  `kit refs`, `kit consumers` and the verification runner are placed modules with terms and claims. The source
+  loader is a placed JavaScript adapter, since nothing could load it otherwise; a registration names a JavaScript
+  module by its extension. The last legacy module, the cache fixture, is placed. Kit's baseline is empty and it
+  reports no checker limits.
+- **Why:** a checker whose own gate logic sits outside its rules can't show that the rules deliver what they
+  promise. Moving the logic exposed real gaps the check then named: undeclared host globals, a `performance`
+  clock outside an adapter, a loader handing callbacks to launchers, and commands no test reached because they
+  ran only in a subprocess. Commands are now functions from a request to a response, proved in-process.
+- **For apps:** `testRoots` moved to `src/core/readings/kit-configuration.ts`, and `verification` and
+  `runVerification` to `src/substrate/compositions/verification-runner.mjs`.
