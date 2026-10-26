@@ -458,3 +458,12 @@ without naming the app.
   more than one claim. Flagging a claim that reaches only part of a module flagged 40 small modules, a three-line
   one included, and missed the 982-line snapshot reader, which has one export. Which code a claim relies on can
   be measured, by mutation testing grouped by claim, but the machinery outweighs what it buys today.
+
+## 2026-10-26 · #57 and #58 are superseded by structural authority
+
+- **Decision:** the refinements #57 and #58 made to callable-binding inference (dynamic imports in captured
+  code, accepted handles passed on, adapter-only reach) are not carried over, because that inference is gone:
+  outside code hands placed code only data or a registered contract, and the core and readings take no
+  behaviour. #57's dynamic-constructor cases are kept under `authority-is-derived`; its two forbidden-flow cases
+  now expect `takes-behaviour` on the Core module. #58's two tests exercised `accepts`, which no longer exists.
+
