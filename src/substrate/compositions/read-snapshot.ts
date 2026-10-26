@@ -1032,7 +1032,7 @@ function readCompiler(
         };
         const escapeSite = (
           node: ts.Node,
-          kind: Project["escapes"][number]["kind"],
+          kind: string,
           syntax: unknown = syntaxOf(node),
         ): string => {
           const scope: (readonly [string, readonly (readonly [string, string])[]])[] = [];
@@ -1135,6 +1135,7 @@ function readCompiler(
             constructions.push({
               file: path,
               start: node.getStart(sf),
+              site: escapeSite(node, "construction"),
               callable: typeFacts(type).callable,
               types: [
                 ...typeNames(type),
@@ -1155,6 +1156,7 @@ function readCompiler(
                   constructions.push({
                     file: path,
                     start: implemented.getStart(sf),
+                    site: escapeSite(implemented, "construction"),
                     callable: false,
                     types: typeNames(checker.getTypeAtLocation(implemented)),
                     spread: false,
@@ -1171,7 +1173,7 @@ function readCompiler(
                   typeOnly: false,
                   namedImports: null,
                 });
-              } else accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
+              } else accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
             }
             if (
               ts.isPropertyAccessExpression(node.expression) &&
@@ -1180,13 +1182,13 @@ function readCompiler(
               node.arguments[0] !== undefined &&
               globalName(node.arguments[0]) === "globalThis"
             )
-              accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
+              accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
             const raw = rawAccess(node.expression);
-            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
+            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw, site: escapeSite(node, raw) });
           }
           if (ts.isPropertyAccessExpression(node)) {
             const raw = runtime ? rawAccess(node) : null;
-            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
+            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw, site: escapeSite(node, raw) });
           }
           if (
             runtime &&
@@ -1208,12 +1210,13 @@ function readCompiler(
                 file: path,
                 start: node.getStart(sf),
                 kind: "native",
+                site: escapeSite(node, "native"),
                 nativeAuthority: authority,
               });
           }
           if (ts.isBindingElement(node) && ts.isIdentifier(node.name)) {
             const raw = rawAccess(node.name);
-            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
+            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw, site: escapeSite(node, raw) });
             const owner = node.parent.parent;
             const key = node.propertyName ?? node.name;
             if (
@@ -1232,6 +1235,7 @@ function readCompiler(
                   file: path,
                   start: node.getStart(sf),
                   kind: "native",
+                  site: escapeSite(node, "native"),
                   nativeAuthority: authority,
                 });
             }
@@ -1241,7 +1245,7 @@ function readCompiler(
             (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) &&
             globalName(node.expression) === "globalThis"
           )
-            accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
+            accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
           if (ts.isNewExpression(node)) {
             const name = globalName(node.expression);
             const kind =
@@ -1250,21 +1254,21 @@ function readCompiler(
                 : name === "Function"
                   ? "dynamic"
                   : null;
-            if (kind !== null) accesses.push({ file: path, start: node.getStart(sf), kind });
+            if (kind !== null) accesses.push({ file: path, start: node.getStart(sf), kind, site: escapeSite(node, kind) });
           }
           if (
             ts.isElementAccessExpression(node) &&
             (node.expression.getText(sf) === "globalThis" ||
               ["Date", "Math", "Reflect"].includes(globalName(node.expression) ?? ""))
           )
-            accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
+            accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
           if (ts.isIdentifier(node)) {
             if (
               runtime &&
               !(ts.isVariableDeclaration(node.parent) && node.parent.name === node) &&
               rawAccess(node) === "dynamic"
             )
-              accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
+              accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
             const symbol = checker.getSymbolAtLocation(node);
             const declaration = symbol?.declarations?.find(
               (d) => d.getSourceFile().isDeclarationFile,

@@ -375,7 +375,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             "native-authority",
             access.file,
             "The native executable member has no supported receiver identity.",
-            `${access.start}`,
+            access.site ?? `${access.start}`,
           );
       } else if (access.kind === "clock" || access.kind === "randomness") {
         const kind = access.kind;
@@ -401,7 +401,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           "authority-entry",
           access.file,
           "Dynamic code or ambient access has no supported authority identity.",
-          `${access.kind}:${access.start}`,
+          `${access.kind}:${access.site ?? access.start}`,
         );
     }
     const hostGlobals = new Set<string>();
@@ -852,7 +852,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             "write-construction",
             construction.file,
             "Construct this description only in its declared Core producer.",
-            String(construction.start),
+            construction.site ?? String(construction.start),
           );
         if (construction.callable)
           add(
@@ -860,7 +860,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             "description-callable",
             construction.file,
             "Describe the operation and its arguments as data rather than a closure.",
-            String(construction.start),
+            construction.site ?? String(construction.start),
           );
       }
     }

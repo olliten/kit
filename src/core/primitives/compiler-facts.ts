@@ -76,11 +76,14 @@ export interface CompilerFacts {
       readonly file: string;
       readonly start: number;
       readonly kind: "clock" | "randomness" | "dynamic" | "native";
+      // Where it is, by its enclosing names and syntax rather than its offset, so an edit elsewhere keeps it.
+      readonly site?: string;
       readonly nativeAuthority?: readonly NativeAuthority[];
     }[];
     readonly constructions: readonly {
       readonly file: string;
       readonly start: number;
+      readonly site?: string;
       readonly types: readonly { readonly file: string; readonly name: string }[];
       readonly spread: boolean;
       readonly callable: boolean;

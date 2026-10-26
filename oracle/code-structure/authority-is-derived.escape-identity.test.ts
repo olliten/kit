@@ -101,3 +101,16 @@ test("a placed type escape always blocks, independent of whether its semantic ke
     expect(finding.blocking).toBe(true);
   }
 });
+
+test.each([
+  ["dynamic access", "R1:authority-entry:", "export function read(): unknown { return (globalThis as Record<string, unknown>)['x']; }\n"],
+  ["a dynamic import", "R1:authority-entry:", "export function read(name: string): unknown { return import(name); }\n"],
+])("%s keeps its debt key when an edit above it shifts every offset", (_, check, source) => {
+  const keys = (text: string): string[] =>
+    capabilityCheck(sourceFixture({ [LEGACY]: text }, { legacyZones: [{ root: "src/legacy", zone: "core" }] }))
+      .findings.filter((finding) => finding.path === LEGACY && finding.debtKey.startsWith(check))
+      .map((finding) => finding.debtKey);
+  const before = keys(source);
+  expect(before.length).toBeGreaterThan(0);
+  expect(keys("// An unrelated leading comment.\n\n" + source)).toEqual(before);
+});
