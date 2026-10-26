@@ -121,37 +121,21 @@ export function layerConfigLimit(snapshot: Snapshot): CapabilityFinding | undefi
   };
 }
 
-export function capabilityContext(snapshot: Snapshot): {
-  readonly context: CapabilityContext;
-  readonly findings: readonly CapabilityFinding[];
-} {
+// The checked files: sources, and test files declared as entrypoints, in a code root or a legacy location.
+export function checkedFiles(snapshot: Snapshot): string[] {
   const roots = snapshot.config.srcRoot;
-  rootOf("", roots);
-  const packages = snapshot.config.packages ?? [];
-  for (const row of packages) {
-    if (row.entrypointExports === undefined) continue;
-    if (
-      !row.name ||
-      row.name.trim() !== row.name ||
-      /^[.#/]/.test(row.name) ||
-      !Array.isArray(row.capabilities) ||
-      row.capabilities.length === 0 ||
-      Array.from(row.capabilities).some((capability) => typeof capability !== "string" || !capability.trim()) ||
-      !Array.isArray(row.entrypointExports) ||
-      row.entrypointExports.length === 0 ||
-      Array.from(row.entrypointExports).some((name) => typeof name !== "string" || !/^[A-Za-z_$][\w$]*$/.test(name)) ||
-      new Set(row.entrypointExports).size !== row.entrypointExports.length ||
-      packages.filter((other) => other.name === row.name).length !== 1
-    )
-      throw new Error("Declare one effectful entrypoint package contract with distinct named exports.");
-  }
-  const files = snapshot.files
+  return snapshot.files
     .filter(
       (file) =>
         (file.type === "source" || (file.type === "test" && snapshot.config.exceptions?.includes(file.path))) &&
         (rootOf(file.path, roots) !== undefined || legacyCodeOf(file.path, snapshot.config.layout?.legacy)),
     )
     .map((file) => file.path);
+}
+
+export function capabilityContext(snapshot: Snapshot, startups: readonly string[]): CapabilityContext {
+  rootOf("", snapshot.config.srcRoot);
+  const files = checkedFiles(snapshot);
   const projects = snapshot.compiler?.projects ?? [];
   const adapters = (snapshot.config.adapters ?? []).map((adapter) => {
     const path = adapterPath(snapshot, adapter.module);
@@ -189,33 +173,5 @@ export function capabilityContext(snapshot: Snapshot): {
       ),
     ),
   );
-  const startups: string[] = [];
-  const findings: CapabilityFinding[] = [];
-  for (const path of snapshot.config.exceptions ?? []) {
-    if (rootOf(path, roots) === undefined && !legacyCodeOf(path, snapshot.config.layout?.legacy)) continue;
-    if (
-      !files.includes(path) ||
-      /[*?{}[\]\\]/.test(path) ||
-      path.split("/").some((part) => part === "." || part === ".." || part === "") ||
-      placed(snapshot, path) !== null ||
-      zoneOf(snapshot, path) !== undefined
-    )
-      findings.push({
-        ...capabilityLimit(
-          "startup-placement",
-          path,
-          "Directory, pattern, missing-code and zoned-module exceptions grant no entrypoint permission.",
-          path,
-        ),
-        ...finding(
-          "R2",
-          "startup-placement",
-          path,
-          "Declare only an exact existing executable entrypoint outside every zone.",
-          path,
-        ),
-      });
-    else startups.push(path);
-  }
-  return { context: { files, startups, adapters, contractTypes, natives }, findings };
+  return { files, startups, adapters, contractTypes, natives };
 }

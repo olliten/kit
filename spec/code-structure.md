@@ -76,7 +76,7 @@ compositions wire the others into behaviour.
   entrypoints. Aliases retain the original export name and erased imports grant no authority; other access
   forms, subpaths and missing import evidence stay limits. The permission does not extend to helpers, and
   adapter package ownership takes precedence
-  ({{authority-graph}}, {{capability-context}}, {{zone-permission}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#entrypoint-package-exports-are-checked}
+  ({{authority-graph}}, {{startup-check}}, {{zone-permission}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#entrypoint-package-exports-are-checked}
   - Proof: {{source-fixture}}
 - A namespace such as `Window` grants only what is reached through it, and a constructor selected from it
   keeps its own authority ({{authority-graph}}, {{zone-authority-check}}). · {#namespaces-grant-what-is-reached}
@@ -112,7 +112,7 @@ compositions wire the others into behaviour.
   each may connect Shell and Substrate contracts and use the core's, no module imports it, and its permission
   does not pass to what it imports or exempt it from the capability, write, compiler and cycle checks.
   A proof keeps its topic binding; a test suffix grants no permission. A directory, a pattern, a missing file
-  or a zoned module declared as an entrypoint grants nothing ({{capability-context}}, {{authority-graph}}, {{zone-permission}}, {{default-config}}). · {#startup-assembles-outer-zones}
+  or a zoned module declared as an entrypoint grants nothing ({{startup-check}}, {{authority-graph}}, {{zone-permission}}, {{default-config}}). · {#startup-assembles-outer-zones}
   - Proof: {{source-fixture}}
 
 ## Writes

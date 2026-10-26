@@ -100,7 +100,7 @@
 - **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
   - Role: derived
   - Zone: core
-  - From: {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{finding}}, {{registration-check}}, {{snapshot}}, {{zone-authority-check}}
+  - From: {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{finding}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
 - **capability-context** — what every capability check reads: checked files, declared entrypoints, adapter contracts and native roots, and how a capability finding is categorised.
   - Role: derived
   - Zone: core
@@ -209,6 +209,10 @@
   - Role: derived
   - Zone: core
   - From: []
+- **startup-check** — the check that each declared entrypoint is an exact existing file outside every zone, and that entrypoint package contracts are well formed.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{finding}}, {{placement-of}}, {{snapshot}}
 - **term-inventory** — global term definitions and inline declarations interpreted from supplied Markdown, with retained prose and syntax findings.
   - Role: derived
   - Zone: core

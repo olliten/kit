@@ -6,6 +6,7 @@ import { compilerCheck } from "./compiler-check.js";
 import { constructionCheck } from "./construction-check.js";
 import { byDebtKey } from "./finding.js";
 import { registrationCheck } from "./registration-check.js";
+import { startupCheck } from "./startup-check.js";
 import { zoneAuthorityCheck } from "./zone-authority-check.js";
 
 export type { CapabilityFinding } from "./capability-context.js";
@@ -23,7 +24,8 @@ export interface CapabilityResult {
 export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
   const layerLimit = layerConfigLimit(snapshot);
   if (layerLimit !== undefined) return { requirements: [], findings: [layerLimit] };
-  const { context, findings: startupFindings } = capabilityContext(snapshot);
+  const { startups, findings: startupFindings } = startupCheck(snapshot);
+  const context = capabilityContext(snapshot, startups);
   const { graph, findings: graphFindings } = authorityGraph(snapshot, context);
   const findings = [
     ...startupFindings,
