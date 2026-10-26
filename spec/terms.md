@@ -81,6 +81,10 @@
 
 ## Reading contracts
 
+- **authority-graph** — what each checked file acquires from its own code and inherits through runtime imports, with the findings of acquiring it.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{dependency-check}}, {{snapshot}}
 - **behaviour-check** — the check that the core and readings take data or registered contracts, never other behaviour.
   - Role: derived
   - Zone: core
@@ -89,10 +93,14 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{module-references}}, {{snapshot}}
-- **capability-check** — capability requirements, structural findings and explicit limits derived from supplied compiler and configuration facts.
+- **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
   - Role: derived
   - Zone: core
-  - From: {{behaviour-check}}, {{construction-check}}, {{dependency-check}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
+  - From: {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{finding}}, {{registration-check}}, {{snapshot}}, {{zone-authority-check}}
+- **capability-context** — what every capability check reads: checked files, declared entrypoints, adapter contracts and native roots, and how a capability finding is categorised.
+  - Role: derived
+  - Zone: core
+  - From: {{compiler-facts}}, {{default-config}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
 - **claim-cohesion** — the check that the claims naming a module share the code of it their tests use.
   - Role: derived
   - Zone: core
@@ -109,6 +117,10 @@
   - Role: derived
   - Zone: core
   - From: {{zone}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{layer}}, {{snapshot}}
+- **compiler-check** — the check that checked files are compiled strictly, without errors or escape hatches.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
 - **construction-check** — the check that only an adapter builds its contract's values and only a declared core producer its write descriptions.
   - Role: derived
   - Zone: core
@@ -177,6 +189,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim-inventory}}, {{default-config}}, {{module-references}}, {{placement-of}}
+- **registration-check** — the check that adapter registrations resolve and legacy zone rows list existing legacy files.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
@@ -214,6 +230,14 @@
   - Role: derived
   - Zone: core
   - From: {{verification}}
+- **zone-authority-check** — the check that what each module, entrypoint and legacy edge holds is permitted where it is.
+  - Role: derived
+  - Zone: core
+  - From: {{authority-graph}}, {{capability-context}}, {{snapshot}}, {{zone-permission}}
+- **zone-permission** — whether code at a path may hold a capability, by its zone and the adapters registered for it.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
 
 ## Adapter contracts
 
