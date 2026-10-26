@@ -2,7 +2,9 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { dependencyExclusions } from "../../src/core/readings/dependency-exclusions.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { fixtureFiles } from "../core/readings/fixture-files.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 const actual = "src/core/readings/actual.ts";
 const model = "oracle/core/readings/reference.ts";
@@ -16,12 +18,21 @@ const files = {
   [relay]: "export function relay(n: number): number { return n + 1; }\n",
 };
 
+// The compiled fixture's imports in a snapshot of them alone; a fixture that doesn't compile throws.
+function importSnapshot(
+  files: Readonly<Record<string, string>>,
+  config: Partial<KitConfig>,
+  options: Parameters<typeof fixtureFiles>[2] = {},
+) {
+  return projectSnapshot(recordedImports(fixtureFiles(files, config, options), config), config);
+}
+
 function inspect(
   extra: Readonly<Record<string, string>> = {},
   rules: NonNullable<KitConfig["dependencyExclusions"]> = [policy],
-  options: Parameters<typeof sourceFixture>[2] = {},
+  options: Parameters<typeof fixtureFiles>[2] = {},
 ) {
-  const snapshot = sourceFixture(
+  const snapshot = importSnapshot(
     { "package.json": JSON.stringify({ type: "module" }), ...files, ...extra },
     {
       srcRoot: ["src", "oracle"],
@@ -29,7 +40,6 @@ function inspect(
     },
     options,
   );
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
   return { snapshot, result: dependencyExclusions(snapshot) };
 }
 
@@ -180,7 +190,7 @@ test("ambient declarations with multiple homes retain explicit boundary uncertai
 
 test("a model's opaque external dependency remains a limit even with a package purity declaration", () => {
   const { snapshot } = inspect();
-  const next = sourceFixture(
+  const next = importSnapshot(
     {
       ...files,
       "package.json": JSON.stringify({ type: "module" }),
@@ -197,7 +207,6 @@ test("a model's opaque external dependency remains a limit even with a package p
       },
     },
   );
-  expect(next.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
   const result = dependencyExclusions(next);
   expect(result.findings).toEqual([]);
   expect(result.limits).toContainEqual(

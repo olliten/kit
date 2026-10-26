@@ -101,10 +101,6 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{module-references}}, {{snapshot}}
-- **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
-  - Role: derived
-  - Zone: core
-  - From: {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{finding}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
 - **capability-context** — what every capability check reads: checked files, declared entrypoints, adapter contracts and native roots, and how a capability finding is categorised.
   - Role: derived
   - Zone: core
@@ -157,6 +153,10 @@
   - Role: derived
   - Zone: core
   - From: {{default-config}}
+- **fixture-files** — the files of a compiler fixture: a strict project over the declared roots, with the given sources.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}
 - **fixture-snapshot** — a headless snapshot derived from supplied case descriptions for structural proofs.
   - Role: derived
   - Zone: core
@@ -197,10 +197,18 @@
   - Role: derived
   - Zone: core
   - From: {{layer}}, {{zone}}
+- **project-snapshot** — a snapshot of one strict compiler project holding only the given facts, for a check proved on what it reads.
+  - Role: derived
+  - Zone: core
+  - From: {{compiler-facts}}, {{default-config}}, {{snapshot}}
 - **proof-reach** — the check that a claim's tests together reach, through the code they use, every placed module the claim names.
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
+- **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}
 - **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, and the baseline left after a change lands.
   - Role: derived
   - Zone: core
@@ -320,6 +328,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{default-config}}, {{filesystem}}, {{snapshot}}, {{snapshot-cache}}, {{snapshot-cache-key}}, {{snapshot-store}}, {{stopwatch}}
+- **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
+  - Role: composition
+  - Zone: core
+  - Of: {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{finding}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate
@@ -340,6 +352,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{file-scope}}
+- **fact-walk** — the one walk over a program's checked sources that hands every node to each recorder it is given.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{file-scope}}, {{program-scope}}
 - **file-scope** — one checked source file as its recorders see it: its path and the stable site key of a node there.
   - Role: composition
   - Zone: substrate
@@ -347,7 +363,7 @@
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
-  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
 - **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
   - Role: composition
   - Zone: substrate
@@ -356,10 +372,34 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{program-scope}}
+- **program-fixture** — the workflow that compiles a fixture and hands a test its program scope, so a proof uses only the recorders it names.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler}}, {{default-config}}, {{fixture-files}}, {{program-scope}}, {{temporary-project}}
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{file-scope}}, {{import-recorder}}, {{term-recorder}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{fact-walk}}, {{import-recorder}}, {{term-recorder}}
+- **recorded-authority** — the workflow that compiles a fixture and records only its parameters, accesses and globals.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{authority-recorder}}, {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{default-config}}, {{fact-walk}}, {{native-reading}}, {{program-fixture}}, {{syntax-reading}}
+- **recorded-contracts** — the workflow that compiles a fixture and records only its contracts and constructions.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{contract-recorder}}, {{default-config}}, {{fact-walk}}, {{native-reading}}, {{program-fixture}}
+- **recorded-escapes** — the workflow that compiles a fixture and records only its escape hatches.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{default-config}}, {{escape-recorder}}, {{fact-walk}}, {{program-fixture}}
+- **recorded-imports** — the workflow that compiles a fixture and records only its imports and exports.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{default-config}}, {{fact-walk}}, {{import-recorder}}, {{native-reading}}, {{program-fixture}}, {{syntax-reading}}
+- **recorded-terms** — the workflow that compiles a fixture and records only its term facts.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{default-config}}, {{fact-walk}}, {{program-fixture}}, {{syntax-reading}}, {{term-recorder}}
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
@@ -367,7 +407,7 @@
 - **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
   - Role: composition
   - Zone: substrate
-  - Of: {{default-config}}, {{read-snapshot}}, {{temporary-project}}
+  - Of: {{default-config}}, {{fixture-files}}, {{read-snapshot}}, {{temporary-project}}
 - **source-size** — the reading of a source file's statement count and the files its call statements reach.
   - Role: composition
   - Zone: substrate

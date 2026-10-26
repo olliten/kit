@@ -1,13 +1,15 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-
-const kit = fileURLToPath(new URL("../..", import.meta.url));
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { behaviourCheck } from "../../src/core/readings/behaviour-check.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 // The same value types are declared by the DOM library and, as globals, by Node's types; each host is
 // checked on its own and together.
@@ -21,37 +23,35 @@ function findings(
   host: keyof typeof hosts,
   files: Readonly<Record<string, string>>,
 ): readonly string[] {
-  const root = mkdtempSync(join(tmpdir(), "kit-value-types-"));
-  try {
-    const inputs = {
-      "tsconfig.json": JSON.stringify({
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          lib: hosts[host].lib,
-          types: hosts[host].types,
-          strict: true,
-          skipLibCheck: true,
-          noEmit: true,
-        },
-        include: ["src/**/*.ts"],
-      }),
-      "package.json": JSON.stringify({ type: "module" }),
-      ...files,
-    };
-    for (const [path, text] of Object.entries(inputs)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), text);
-    }
-    mkdirSync(join(root, "node_modules"));
-    symlinkSync(join(kit, "node_modules/@types"), join(root, "node_modules/@types"));
-    const snapshot = readSnapshot(root, DEFAULT_CONFIG);
-    expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-    return capabilityCheck(snapshot).findings.map((finding) => finding.debtKey);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const inputs = {
+    "tsconfig.json": JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        lib: hosts[host].lib,
+        types: hosts[host].types,
+        typeRoots: [fileURLToPath(new URL("../../node_modules/@types", import.meta.url))],
+        strict: true,
+        skipLibCheck: true,
+        noEmit: true,
+      },
+      include: ["src/**/*.ts"],
+    }),
+    "package.json": JSON.stringify({ type: "module" }),
+    ...files,
+  };
+  // A fixture that doesn't compile throws. What each reading holds, the zone rules over it and the behaviour
+  // it may not take; no fixture has legacy code, so no edge crosses placement.
+  const snapshot = projectSnapshot({ ...recordedAuthority(inputs), ...recordedImports(inputs) });
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const graph = authorityGraph(snapshot, context, parts, new Set());
+  return [
+    ...parts.flatMap((part) => part.findings),
+    ...zoneAuthorityCheck(snapshot, context, graph),
+    ...behaviourCheck(snapshot),
+  ].map((finding) => finding.debtKey);
 }
 
 describe.each(Object.keys(hosts) as (keyof typeof hosts)[])("with the %s host types", (host) => {

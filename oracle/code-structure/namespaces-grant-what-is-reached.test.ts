@@ -1,15 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { behaviourCheck } from "../../src/core/readings/behaviour-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
-import { ratchetFindings } from "../../src/core/readings/ratchet.js";
-
+// The globals and accesses a fixture records, and what the core composition it hands a callback is found to
+// take; a fixture that doesn't compile throws.
 function inspect(source: string, declarations: Readonly<Record<string, string>> = {}) {
-  const root = mkdtempSync(join(tmpdir(), "kit-namespace-footprint-"));
   const files = {
     "tsconfig.json": JSON.stringify({
       compilerOptions: {
@@ -30,21 +27,12 @@ function inspect(source: string, declarations: Readonly<Record<string, string>> 
     "src/legacy/main.ts": source,
     ...declarations,
   };
-  try {
-    for (const [path, content] of Object.entries(files)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), content);
-    }
-    const snapshot = readSnapshot(root, DEFAULT_CONFIG);
-    expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-    return {
-      snapshot,
-      findings: capabilityCheck(snapshot).findings,
-      globals: snapshot.compiler?.projects.flatMap((project) => project.globals) ?? [],
-    };
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const { globals, accesses } = recordedAuthority(files);
+  return {
+    accesses,
+    globals,
+    findings: behaviourCheck(projectSnapshot(recordedImports(files))),
+  };
 }
 
 test("a Window namespace does not grant every constructor exposed by globalThis", () => {
@@ -86,9 +74,7 @@ test("a method-free SDK holder retains its ports' authority when constructed in 
       .flatMap((global) => global.nativeAuthority ?? [])
       .map((authority) => authority.root.name),
   ).toContain("MessagePort");
-  expect(
-    ratchetFindings(result.findings, [], ["src/core/compositions/run.ts"], result.snapshot.imports),
-  ).toEqual(
+  expect(result.findings).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ path: "src/core/compositions/run.ts", rule: "R1", blocking: true }),
     ]),
@@ -101,15 +87,12 @@ test("selecting a namespace constructor still blocks its invocation in Core", ()
       "export function main(api: typeof globalThis): void { run(() => { void new api.WebSocket('wss://example.invalid'); }); }\n",
   );
   expect(
-    result.snapshot.compiler?.projects
-      .flatMap((project) => project.accesses)
+    result.accesses
       .filter((access) => access.file === "src/legacy/main.ts")
       .flatMap((access) => access.nativeAuthority ?? [])
       .map((authority) => authority.root.name),
   ).toContain("WebSocket");
-  expect(
-    ratchetFindings(result.findings, [], ["src/core/compositions/run.ts"], result.snapshot.imports),
-  ).toEqual(
+  expect(result.findings).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ path: "src/core/compositions/run.ts", rule: "R1", blocking: true }),
     ]),
@@ -123,15 +106,12 @@ test("selecting an authored ambient constructor retains its actual SDK authority
     { "src/ambient.d.ts": "declare var AmbientConstructor: typeof AbortController;\n" },
   );
   expect(
-    result.snapshot.compiler?.projects
-      .flatMap((project) => project.accesses)
+    result.accesses
       .filter((access) => access.file === "src/legacy/main.ts")
       .flatMap((access) => access.nativeAuthority ?? [])
       .map((authority) => authority.root.name),
   ).toContain("AbortController");
-  expect(
-    ratchetFindings(result.findings, [], ["src/core/compositions/run.ts"], result.snapshot.imports),
-  ).toEqual(
+  expect(result.findings).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ path: "src/core/compositions/run.ts", rule: "R1", blocking: true }),
     ]),

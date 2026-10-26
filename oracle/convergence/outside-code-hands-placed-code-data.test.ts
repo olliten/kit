@@ -2,7 +2,8 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { handoverCheck } from "../../src/core/readings/handover-check.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 
@@ -14,7 +15,9 @@ function boundary(
   config: Partial<KitConfig> = {},
   extra: Readonly<Record<string, string>> = {},
 ) {
-  const snapshot = sourceFixture(
+  const settings: Partial<KitConfig> = { layout: { legacy: ["legacy"] }, ...config };
+  // A fixture that doesn't compile is an error, so its imports and exports are a clean program's.
+  const facts = recordedImports(
     {
       "tsconfig.json": JSON.stringify({
         compilerOptions: {
@@ -50,10 +53,9 @@ function boundary(
       "legacy/index.ts": caller,
       ...extra,
     },
-    { layout: { legacy: ["legacy"] }, ...config },
+    settings,
   );
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return handoverCheck(snapshot);
+  return handoverCheck(projectSnapshot(facts, settings));
 }
 
 const keys = (caller: string): string[] => boundary(caller).map((item) => item.debtKey);

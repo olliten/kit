@@ -467,3 +467,17 @@ without naming the app.
   behaviour. #57's dynamic-constructor cases are kept under `authority-is-derived`; its two forbidden-flow cases
   now expect `takes-behaviour` on the Core module. #58's two tests exercised `accepts`, which no longer exists.
 
+## 2026-10-26 · A claim's tests reach only what it names
+
+- **Decision:** `proof-scope` is the converse of `proof-reach`. A placed module a claim's tests reach without
+  the claim naming it is debt. Modules of only types and the oracle's helpers need no name, though what a helper
+  reaches counts as the test's. A named composition outside the oracle covers what it imports, so an end-to-end
+  claim names the composition it is about. The debt is ratcheted, not a violation: a too-wide proof is imprecise
+  evidence, not broken architecture. Apps can adopt it with their current breadth in the baseline, and a new
+  claim starts exact.
+- **Why:** 69 of Kit's 87 test files ran the whole pipeline, so every claim appeared to depend on about 40
+  modules. That made `kit refs` and claim cohesion coarse, and nothing kept a test narrow.
+- **How a proof narrows:** compile a fixture and record only what one recorder reads (`recorded-contracts`),
+  build a snapshot of just those facts (`project-snapshot`), and call the one check the claim keeps. Helpers take
+  data and return data, because a test may hand placed code no behaviour.
+

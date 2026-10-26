@@ -1,8 +1,17 @@
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { behaviourCheck } from "../../src/core/readings/behaviour-check.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 const environment = "src/substrate/adapters/environment.ts";
 const diagnostic = "src/substrate/adapters/diagnostic.ts";
@@ -37,31 +46,48 @@ function inspect(
   files: Readonly<Record<string, string>> = {},
   adapters: NonNullable<KitConfig["adapters"]> = owners,
 ) {
-  const snapshot = sourceFixture(
-    {
-      "tsconfig.json": JSON.stringify({
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          lib: ["ES2022"],
-          types: ["node"],
-          typeRoots: [fileURLToPath(new URL("../../node_modules/@types", import.meta.url))],
-          strict: true,
-          skipLibCheck: true,
-          noEmit: true,
-        },
-        include: ["src/**/*.ts"],
-      }),
-      "package.json": JSON.stringify({ type: "module" }),
-      [environment]: environmentSource,
-      [diagnostic]: diagnosticSource,
-      ...files,
-    },
-    { adapters },
+  const inputs = {
+    "tsconfig.json": JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        lib: ["ES2022"],
+        types: ["node"],
+        typeRoots: [fileURLToPath(new URL("../../node_modules/@types", import.meta.url))],
+        strict: true,
+        skipLibCheck: true,
+        noEmit: true,
+      },
+      include: ["src/**/*.ts"],
+    }),
+    "package.json": JSON.stringify({ type: "module" }),
+    [environment]: environmentSource,
+    [diagnostic]: diagnosticSource,
+    ...files,
+  };
+  // A fixture that doesn't compile throws. What each module directly and transitively holds, the zone rules
+  // over it and the behaviour the core may not take; no fixture has legacy code, so no edge crosses placement.
+  const config = { adapters };
+  const snapshot = projectSnapshot(
+    { ...recordedAuthority(inputs, config), ...recordedImports(inputs, config), ...recordedContracts(inputs, config) },
+    config,
   );
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return capabilityCheck(snapshot);
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const graph = authorityGraph(snapshot, context, parts, new Set());
+  return {
+    requirements: [...graph.inherited].map(([path, capabilities]) => ({
+      path,
+      direct: [...(graph.direct.get(path) ?? [])].sort(),
+      inherited: [...capabilities].sort(),
+    })),
+    findings: [
+      ...parts.flatMap((part) => part.findings),
+      ...zoneAuthorityCheck(snapshot, context, graph),
+      ...behaviourCheck(snapshot),
+    ],
+  };
 }
 
 test.each([false, true])(

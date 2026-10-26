@@ -1,9 +1,13 @@
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import type { Snapshot } from "../../src/core/primitives/snapshot.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
 import { layoutCheck } from "../../src/core/readings/layout-check.js";
 import { legacySize } from "../../src/core/readings/legacy-size.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 import { ratchetFindings, startupCheckRoots } from "../../src/core/readings/ratchet.js";
@@ -11,6 +15,11 @@ const config: Partial<KitConfig> = {
   srcRoot: ["src", "oracle"],
   layout: { legacy: ["old-tests"] },
 };
+
+// What a checked file's own member accesses acquire: a clock sample outside its adapter is a raw primitive, and
+// dynamic code is a limit. Legacy code is checked like any other.
+const accesses = (snapshot: Snapshot, startups: readonly string[] = []) =>
+  accessAuthority(snapshot, capabilityContext(snapshot, startups));
 
 test("legacy helpers are extracted, sized and checked without acquiring placement", () => {
   const path = "old-tests/core/readings/now.ts";
@@ -20,7 +29,7 @@ test("legacy helpers are extracted, sized and checked without acquiring placemen
     expect.objectContaining({ path, statements: 1, calls: 0, category: "legacy-debt" }),
   ]);
   expect(placementOf(path, snapshot.config.srcRoot)).toEqual({ placed: false });
-  expect(capabilityCheck(snapshot).findings).toEqual(expect.arrayContaining([
+  expect(accesses(snapshot).findings).toEqual(expect.arrayContaining([
     expect.objectContaining({ path, debtKey: expect.stringContaining("raw-primitive"), category: "legacy-debt" }),
   ]));
 });
@@ -56,7 +65,7 @@ test.each(["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"])(
     expect(legacySize(snapshot)).toEqual([
       expect.objectContaining({ path, statements: 1, calls: 0, category: "legacy-debt" }),
     ]);
-    expect(capabilityCheck(snapshot).findings).toEqual(expect.arrayContaining([
+    expect(accesses(snapshot).findings).toEqual(expect.arrayContaining([
       expect.objectContaining({ path, debtKey: expect.stringContaining("raw-primitive"), category: "legacy-debt" }),
     ]));
   },
@@ -84,7 +93,7 @@ test.each([["mts", "mjs"], ["cts", "cjs"]])(
     expect(snapshot.imports.filter((edge) => edge.from === path)).toEqual([
       { from: path, to: helper },
     ]);
-    const limits = capabilityCheck(snapshot).findings.filter(
+    const limits = accesses(snapshot).findings.filter(
       (item) => item.path === helper && item.category === "checker-limit",
     );
     expect(limits.length).toBeGreaterThan(0);
@@ -125,10 +134,16 @@ test("placed code still cannot capture legacy clock authority through a helper",
     ...config, layout: { legacy: ["old-tests", "src"] },
     legacyZones: [{ root: "old-tests", zone: "substrate" }],
   });
-  const result = capabilityCheck(snapshot);
-  expect(result.findings.some((item) => item.path === path && item.category === "placed-violation")).toBe(true);
-  const baseline = Object.fromEntries(result.findings.map((item) => [item.debtKey, null]));
-  expect(ratchetFindings(result.findings, baseline, [path], snapshot.imports))
+  // The helper's clock sample is its own; the placed reading inherits it through the import.
+  const context = capabilityContext(snapshot, []);
+  const access = accessAuthority(snapshot, context);
+  const findings = [
+    ...access.findings,
+    ...zoneAuthorityCheck(snapshot, context, authorityGraph(snapshot, context, [access], new Set())),
+  ];
+  expect(findings.some((item) => item.path === path && item.category === "placed-violation")).toBe(true);
+  const baseline = Object.fromEntries(findings.map((item) => [item.debtKey, null]));
+  expect(ratchetFindings(findings, baseline, [path], snapshot.imports))
     .toEqual(expect.arrayContaining([expect.objectContaining({ path, category: "placed-violation" })]));
 });
 
@@ -137,9 +152,9 @@ test("declared legacy entrypoints retain blocking reachable checker limits", () 
   const snapshot = sourceFixture({
     [path]: "export const get = (name: string): unknown => Reflect.get(globalThis, name);",
   }, { ...config, exceptions: [path] });
-  const result = capabilityCheck(snapshot);
   const roots = startupCheckRoots(snapshot.config);
   expect(roots).toEqual([path]);
+  const result = accesses(snapshot, roots);
   const limits = result.findings.filter((item) => item.path === path && item.category === "checker-limit");
   expect(limits.length).toBeGreaterThan(0);
   const baseline = Object.fromEntries(result.findings.map((item) => [item.debtKey, null]));

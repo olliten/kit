@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, test } from "vitest";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { fixtureConfig } from "../core/readings/fixture-config.js";
 

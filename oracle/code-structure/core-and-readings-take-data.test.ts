@@ -1,7 +1,13 @@
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { behaviourCheck } from "../../src/core/readings/behaviour-check.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 const journal: NonNullable<KitConfig["adapters"]>[number] = {
   module: "substrate/adapters/journal",
@@ -12,19 +18,25 @@ const journal: NonNullable<KitConfig["adapters"]>[number] = {
   contract: { type: "Journal" },
 };
 
+// What the behaviour check finds, and what the zone rules find for a contract it leaves to them.
 function keys(files: Readonly<Record<string, string>>, adapters = [journal]): string[] {
-  const snapshot = sourceFixture(
-    {
-      "src/substrate/adapters/journal.ts":
-        "export interface Entry { note(text: string): void; }\n" +
-        "export interface Journal { open(): Entry; }\n" +
-        "export const journal: Journal = { open: () => ({ note: () => {} }) };\n",
-      ...files,
-    },
-    { adapters },
+  const config = { adapters };
+  const sources = {
+    "src/substrate/adapters/journal.ts":
+      "export interface Entry { note(text: string): void; }\n" +
+      "export interface Journal { open(): Entry; }\n" +
+      "export const journal: Journal = { open: () => ({ note: () => {} }) };\n",
+    ...files,
+  };
+  const snapshot = projectSnapshot(
+    { ...recordedImports(sources, config), ...recordedAuthority(sources, config), ...recordedContracts(sources, config) },
+    config,
   );
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return capabilityCheck(snapshot).findings.map((item) => item.debtKey);
+  const context = capabilityContext(snapshot, []);
+  return [
+    ...behaviourCheck(snapshot),
+    ...zoneAuthorityCheck(snapshot, context, authorityGraph(snapshot, context, [], new Set())),
+  ].map((item) => item.debtKey);
 }
 
 test.each([

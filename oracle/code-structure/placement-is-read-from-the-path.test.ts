@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
 
 describe("placementOf reads zone and layer from <root>/<zone>/<layer>/<name>", () => {
   test("a placed source file", () => {
@@ -106,25 +108,26 @@ test("placement and authority classify the same source filenames", () => {
   const paths = ["value.ts", "value.extra.ts", ".hidden.ts"].map(
     (name) => `src/core/readings/${name}`,
   );
-  const snapshot = sourceFixture({
-    "tsconfig.json": JSON.stringify({
-      compilerOptions: {
-        target: "ES2022",
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        strict: true,
-        types: [],
-        lib: ["ES2022"],
-      },
-      files: paths,
+  // One compiler project over exactly these files; a fixture that doesn't compile throws.
+  const snapshot = projectSnapshot(
+    recordedAuthority({
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          target: "ES2022",
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          strict: true,
+          types: [],
+          lib: ["ES2022"],
+        },
+        files: paths,
+      }),
+      ...Object.fromEntries(
+        paths.map((path) => [path, "export function value(): number { return Date.now(); }\n"]),
+      ),
     }),
-    ...Object.fromEntries(
-      paths.map((path) => [path, "export function value(): number { return Date.now(); }\n"]),
-    ),
-  });
-  expect(snapshot.compiler?.projects).toHaveLength(1);
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  const findings = capabilityCheck(snapshot).findings;
+  );
+  const findings = accessAuthority(snapshot, capabilityContext(snapshot, [])).findings;
   for (const path of paths) {
     expect(findings).toContainEqual(
       expect.objectContaining({

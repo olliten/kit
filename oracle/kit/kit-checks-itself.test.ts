@@ -61,7 +61,7 @@ test("the kit has unique global definitions and no retired scanned words (R3)", 
   expect(nameCheck(kit)).toEqual([]);
 });
 
-test("the gate finds no placed violation in Kit, and Kit carries no legacy debt", () => {
+test("the gate finds no placed violation in Kit, and Kit carries no debt", () => {
   const { findings } = gate(kit, config);
   expect(findings.filter((item) => item.category !== "checker-limit").map((item) => item.debtKey)).toEqual([]);
 });

@@ -1,19 +1,19 @@
 import type { Snapshot } from "../primitives/snapshot.js";
-import { accessAuthority } from "./access-authority.js";
-import { authorityGraph } from "./authority-graph.js";
-import { behaviourCheck } from "./behaviour-check.js";
-import { type CapabilityFinding, capabilityContext, layerConfigLimit } from "./capability-context.js";
-import { compilerCheck } from "./compiler-check.js";
-import { constructionCheck } from "./construction-check.js";
-import { edgeCheck } from "./edge-check.js";
-import { byDebtKey } from "./finding.js";
-import { globalAuthority } from "./global-authority.js";
-import { importAuthority } from "./import-authority.js";
-import { registrationCheck } from "./registration-check.js";
-import { startupCheck } from "./startup-check.js";
-import { zoneAuthorityCheck } from "./zone-authority-check.js";
+import { accessAuthority } from "../readings/access-authority.js";
+import { authorityGraph } from "../readings/authority-graph.js";
+import { behaviourCheck } from "../readings/behaviour-check.js";
+import { type CapabilityFinding, capabilityContext, layerConfigLimit } from "../readings/capability-context.js";
+import { compilerCheck } from "../readings/compiler-check.js";
+import { constructionCheck } from "../readings/construction-check.js";
+import { edgeCheck } from "../readings/edge-check.js";
+import { byDebtKey } from "../readings/finding.js";
+import { globalAuthority } from "../readings/global-authority.js";
+import { importAuthority } from "../readings/import-authority.js";
+import { registrationCheck } from "../readings/registration-check.js";
+import { startupCheck } from "../readings/startup-check.js";
+import { zoneAuthorityCheck } from "../readings/zone-authority-check.js";
 
-export type { CapabilityFinding } from "./capability-context.js";
+export type { CapabilityFinding } from "../readings/capability-context.js";
 
 export interface CapabilityResult {
   readonly requirements: readonly {

@@ -1,39 +1,29 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { edgeCheck } from "../../src/core/readings/edge-check.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
+// The fixture's import edges, what they carry, and what the import, edge and zone checks find in them; a
+// fixture that doesn't compile throws.
 function inspect(files: Readonly<Record<string, string>>, config: KitConfig = DEFAULT_CONFIG) {
-  const root = mkdtempSync(join(tmpdir(), "kit-migration-edge-"));
-  try {
-    const inputs = {
-      "tsconfig.json": JSON.stringify({
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          lib: ["ES2022"],
-          types: [],
-          strict: true,
-          isolatedDeclarations: true,
-          declaration: true,
-          noEmit: true,
-        },
-        include: ["src/**/*.ts"],
-      }),
-      ...files,
-    };
-    for (const [path, text] of Object.entries(inputs)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), text);
-    }
-    return capabilityCheck(readSnapshot(root, config));
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const snapshot = projectSnapshot(recordedImports(files, config), config);
+  const context = capabilityContext(snapshot, []);
+  const parts = [importAuthority(snapshot, context)];
+  const edges = edgeCheck(snapshot, context);
+  const graph = authorityGraph(snapshot, context, parts, edges.crossZoneFailures);
+  return {
+    requirements: [...graph.inherited].map(([path, capabilities]) => ({ path, inherited: [...capabilities].sort() })),
+    findings: [
+      ...parts.flatMap((part) => part.findings),
+      ...edges.findings,
+      ...zoneAuthorityCheck(snapshot, context, graph),
+    ],
+  };
 }
 
 describe("migration edges use actual zones and transitive capabilities", () => {

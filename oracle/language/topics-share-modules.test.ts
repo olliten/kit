@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { Snapshot } from "../../src/core/primitives/snapshot.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
 import { semanticReferences } from "../../src/core/readings/semantic-references.js";
 import { termInventory } from "../../src/core/readings/term-inventory.js";

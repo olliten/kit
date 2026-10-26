@@ -1,15 +1,39 @@
 import { expect, test } from "vitest";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { behaviourCheck } from "../../src/core/readings/behaviour-check.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { edgeCheck } from "../../src/core/readings/edge-check.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
+// What each module holds, the edges between modules, the zone rules over what each holds and the behaviour
+// the core may not take; a fixture that doesn't compile throws.
 function findings(
   files: Readonly<Record<string, string>>,
   adapters: NonNullable<KitConfig["adapters"]>,
 ) {
-  const snapshot = sourceFixture(files, { adapters });
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return capabilityCheck(snapshot).findings;
+  const config = { adapters };
+  const snapshot = projectSnapshot(
+    { ...recordedAuthority(files, config), ...recordedImports(files, config), ...recordedContracts(files, config) },
+    config,
+  );
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const edges = edgeCheck(snapshot, context);
+  const graph = authorityGraph(snapshot, context, parts, edges.crossZoneFailures);
+  return [
+    ...parts.flatMap((part) => part.findings),
+    ...edges.findings,
+    ...zoneAuthorityCheck(snapshot, context, graph),
+    ...behaviourCheck(snapshot),
+  ];
 }
 
 const registration = (

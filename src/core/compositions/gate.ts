@@ -1,6 +1,6 @@
 import type { KitConfig } from "../primitives/default-config.js";
 import type { Snapshot } from "../primitives/snapshot.js";
-import { capabilityCheck } from "../readings/capability-check.js";
+import { capabilityCheck } from "./capability-check.js";
 import { claimCohesion } from "../readings/claim-cohesion.js";
 import { claimProofBinder } from "../readings/claim-proof-binder.js";
 import { commentCheck } from "../readings/comment-check.js";
@@ -13,6 +13,7 @@ import { moduleReferences } from "../readings/module-references.js";
 import { nameCheck } from "../readings/name-check.js";
 import { placementOf } from "../readings/placement-of.js";
 import { proofReach } from "../readings/proof-reach.js";
+import { proofScope } from "../readings/proof-scope.js";
 import type { GateFinding } from "../readings/ratchet.js";
 import { referenceCheck } from "../readings/semantic-references.js";
 import { termModel } from "../readings/term-model.js";
@@ -76,6 +77,7 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
       ...legacySize(snapshot),
       ...layoutCheck(snapshot),
       ...handoverCheck(snapshot),
+      ...proofScope(topicSnapshot),
       ...structural,
       ...concepts.limits.map(limit),
       ...requiredLimits,

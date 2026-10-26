@@ -6,7 +6,6 @@ import { removeCacheApps, scratch, writeApp } from "../substrate/compositions/ca
 afterEach(removeCacheApps);
 
 const engine = resolve(import.meta.dirname, "../..");
-import { moduleClaims } from "../../src/substrate/compositions/refs-run.js";
 import { runCheck } from "../../src/substrate/compositions/check-run.js";
 
 test("--fresh-compare keeps evidence for code roots and proof entrypoints without waiving failures", async () => {
@@ -62,12 +61,6 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
   }
   expect(cold.stdout).toMatch(/"reused":false/);
   expect(warm.stdout, cold.stderr + warm.stderr).toMatch(/"reused":true/);
-
-  const refs = await moduleClaims(app, join(app, "kit/config.md"), "oracle/core/readings/reference.ts");
-  expect(refs?.module).toBe("oracle/core/readings/reference");
-  expect(refs?.claims.map((row) => row.tests)).toEqual([
-    ["proof/count/increments.test.ts"],
-  ]);
 
   const baseline = Object.fromEntries(
     ["oracle/core/readings/reference.ts", "src/core/readings/actual.ts"].flatMap((path) => [

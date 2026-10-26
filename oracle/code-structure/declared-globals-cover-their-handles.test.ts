@@ -1,16 +1,22 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import type { KitConfig } from "../../src/core/primitives/default-config.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 const surface = "src/shell/adapters/surface.ts";
 const transport = "src/shell/adapters/transport.ts";
 
+// What each module holds and the zone rules over it; a fixture that doesn't compile throws. No fixture has
+// legacy code, so no edge crosses placement.
 function inspect(files: Readonly<Record<string, string>>, adapters: NonNullable<KitConfig["adapters"]>) {
-  const root = mkdtempSync(join(tmpdir(), "kit-derived-handles-"));
   const inputs = {
     "tsconfig.json": JSON.stringify({
       compilerOptions: {
@@ -26,15 +32,15 @@ function inspect(files: Readonly<Record<string, string>>, adapters: NonNullable<
     }),
     ...files,
   };
-  try {
-    for (const [path, content] of Object.entries(inputs)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), content);
-    }
-    return capabilityCheck(readSnapshot(root, { ...DEFAULT_CONFIG, adapters })).findings;
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const config = { adapters };
+  const snapshot = projectSnapshot(
+    { ...recordedAuthority(inputs, config), ...recordedImports(inputs, config), ...recordedContracts(inputs, config) },
+    config,
+  );
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const graph = authorityGraph(snapshot, context, parts, new Set());
+  return [...parts.flatMap((part) => part.findings), ...zoneAuthorityCheck(snapshot, context, graph)];
 }
 
 const paint =
