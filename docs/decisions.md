@@ -406,3 +406,64 @@ without naming the app.
 - A roster that must equal the table under its term, entry for entry.
 - The ledger and topic view: each module's placement, findings, debt and proofs, and a feature's topic footprint.
 - A check that the Kit stays under a tenth of the code it governs.
+
+## 2026-10-26 · Authority is structural: behaviour crosses only as a contract
+
+- **Decision:** Kit no longer follows callables, closures and SDK handles across modules. Three rules replace
+  that inference. The core and readings take data: an export there that takes a callable, an accessor or an
+  object with operations is a finding, unless the position is typed as a registered adapter's contract or a port
+  its operations return. Code outside the zones, legacy or a declared entrypoint, hands placed code only data or
+  such a contract. Only an adapter constructs values of its contract and ports; a declared entrypoint may build
+  test doubles. Behaviour moves freely only between the compositions and adapters of one zone, which share its
+  permissions, and imports already keep zones apart. A package handle may be taken by the adapter that declares
+  its package. `accepts`, `contract.parameter`, callable and closure bindings, and their capture facts are gone.
+  This supersedes the 2026-10-17 entries on callable capture and same-file handle passing.
+- **Why:** the inference had grown to most of Kit's code and claims, and every new language corner added more. An
+  agent couldn't predict its findings without running it, and one legacy file could fail an unrelated placed
+  module. A module's authority is now what its imports and the contract types in its signatures show, which is
+  what the rules promised. The cost: a pure higher-order helper can't live in the core or a reading, and a fake
+  of a contract lives in an entrypoint or is registered as its own adapter.
+
+## 2026-10-26 · The README is the method on one page
+
+- **Decision:** the README holds the why, the two-phase workflow, topics, the rules and setup. Configuration
+  detail moved to `docs/reference.md`, the language-independent method to `docs/method.md`. The oracle adoption
+  inventory taken at `83ffb2a` left the README: it recorded six legacy oracle modules, 91 statements and 21 calls,
+  paid down to the cache fixture's 40 statements and six calls in `self-debt/legacy.json`.
+- **Why:** an agent or a person adopting Kit should be able to hold the method in one read; edge cases belong
+  where they are looked up.
+
+## 2026-10-26 · Kit checks all of itself
+
+- **Decision:** `scripts/` is a code root, and its launchers are declared entrypoints that hand a Kit command its
+  arguments, working directory and input and write its answer. The ratchet, config parsing, snapshot cache,
+  `kit refs`, `kit consumers` and the verification runner are placed modules with terms and claims. The source
+  loader is a placed JavaScript adapter, since nothing could load it otherwise; a registration names a JavaScript
+  module by its extension. The last legacy module, the cache fixture, is placed. Kit's baseline is empty and it
+  reports no checker limits.
+- **Why:** a checker whose own gate logic sits outside its rules can't show that the rules deliver what they
+  promise. Moving the logic exposed real gaps the check then named: undeclared host globals, a `performance`
+  clock outside an adapter, a loader handing callbacks to launchers, and commands no test reached because they
+  ran only in a subprocess. Commands are now functions from a request to a response, proved in-process.
+- **For apps:** `testRoots` moved to `src/core/readings/kit-configuration.ts`, and `verification` and
+  `runVerification` to `src/substrate/compositions/verification-runner.mjs`.
+
+## 2026-10-26 · Granularity is judged in plan review
+
+- **Decision:** no rule measures whether a module is too coarse. When a claim names a module other claims
+  already name, the phase-1 reviewer asks whether it needs the same code or a different part; a different part
+  is a new module. `kit refs` shows the claims a module keeps.
+- **Why:** every static measure tried on Kit failed without a size threshold. Claim cohesion can't see inside a
+  single entry. Requiring claims to reach distinguishable parts of a module flagged 43 of the 46 modules named by
+  more than one claim. Flagging a claim that reaches only part of a module flagged 40 small modules, a three-line
+  one included, and missed the 982-line snapshot reader, which has one export. Which code a claim relies on can
+  be measured, by mutation testing grouped by claim, but the machinery outweighs what it buys today.
+
+## 2026-10-26 · #57 and #58 are superseded by structural authority
+
+- **Decision:** the refinements #57 and #58 made to callable-binding inference (dynamic imports in captured
+  code, accepted handles passed on, adapter-only reach) are not carried over, because that inference is gone:
+  outside code hands placed code only data or a registered contract, and the core and readings take no
+  behaviour. #57's dynamic-constructor cases are kept under `authority-is-derived`; its two forbidden-flow cases
+  now expect `takes-behaviour` on the Core module. #58's two tests exercised `accepts`, which no longer exists.
+

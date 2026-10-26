@@ -6,6 +6,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "allowJs": true,
+    "checkJs": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -22,6 +23,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "**/*.mjs"],
   "exclude": ["node_modules"]
 }

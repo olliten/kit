@@ -226,16 +226,8 @@ test.each([false, true])(
           : "import { run } from '../../core/compositions/run.js';\n") +
         `export const result: string = ${relay ? "relay" : "run"}(() => environment.directory());\n`,
     });
-    expect(
-      result.findings.filter(
-        (row) =>
-          row.debtKey.startsWith("R1:closure-binding:") &&
-          row.debtKey.endsWith(":environment.read"),
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ status: "violation", blocking: true }),
-      ]),
+    expect(result.findings.map((row) => row.debtKey)).toContain(
+      "R1:takes-behaviour:src/core/compositions/run.ts:run",
     );
   },
 );

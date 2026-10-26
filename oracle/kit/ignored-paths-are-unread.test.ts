@@ -2,11 +2,10 @@ import { afterEach, expect, test } from "vitest";
 import type { CompilerRead } from "../../src/substrate/adapters/compiler.js";
 import type { FilesystemRead } from "../../src/substrate/adapters/filesystem.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { CACHE_APP, CACHE_CONFIG, removeCacheApps, scratch, writeApp } from "../lib/cache-fixture.js";
+import { removeCacheApps, scratch, writeApp, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
+import { CACHE_APP } from "../core/primitives/cache-app.js";
 
-const { configuredKit, kitConfig } = await import(
-  new URL("../../scripts/kit-config.mjs", import.meta.url).href
-);
+import { configuredKit, kitConfig } from "../../src/core/readings/kit-configuration.js";
 
 afterEach(removeCacheApps);
 

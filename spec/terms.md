@@ -2,15 +2,19 @@
 
 ## Primitive contracts
 
+- **cache-app** — the small app a cache proof extracts, and what its config ignores.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **case-inventory** — the independently supplied identities, conditions and input paths of the structural fixture cases.
   - Role: fact
   - Zone: core
   - Of: []
-- **change-history** — the files a change added, modified or deleted since its base, and its commit messages.
+- **claim** — a promise declared once in its topic and proved by tests.
   - Role: fact
   - Zone: core
   - Of: []
-- **claim** — a promise declared once in its topic and proved by tests.
+- **command** — what a launcher hands a Kit command and what the command answers.
   - Role: fact
   - Zone: core
   - Of: []
@@ -46,6 +50,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **program-scope** — what every fact reader over one compiler program shares: the program, its checker, the checked sources and the app-relative path of a file.
+  - Role: fact
+  - Zone: substrate
+  - Of: {{default-config}}
 - **reference** — a marked use that points to the home of a term, topic or claim.
   - Role: fact
   - Zone: core
@@ -54,6 +62,10 @@
   - Role: fact
   - Zone: core
   - Of: {{claim}}, {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{term}}
+- **snapshot-cache** — one stored extraction and the reads its trace replays, with the index and environment that key it.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **term** — a concept defined once in the global terms file, with its meaning and any declared contract metadata.
   - Role: fact
   - Zone: core
@@ -73,14 +85,34 @@
 
 ## Reading contracts
 
+- **access-authority** — what a module's own member accesses acquire: native roots, and clock or randomness samples only its adapter may take.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
+- **authority-graph** — what each checked file acquires from its own code and inherits through runtime imports.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
+- **behaviour-check** — the check that the core and readings take data or registered contracts, never other behaviour.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
 - **binding-findings** — findings from comparing claim homes, executable proofs and named modules in a supplied snapshot.
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{module-references}}, {{snapshot}}
-- **capability-check** — capability requirements, structural findings and explicit limits derived from supplied compiler and configuration facts.
+- **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
   - Role: derived
   - Zone: core
-  - From: {{dependency-check}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
+  - From: {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{finding}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
+- **capability-context** — what every capability check reads: checked files, declared entrypoints, adapter contracts and native roots, and how a capability finding is categorised.
+  - Role: derived
+  - Zone: core
+  - From: {{compiler-facts}}, {{default-config}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
+- **claim-cohesion** — the check that the claims naming a module share the code of it their tests use.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{proof-reach}}, {{snapshot}}
 - **claim-inventory** — claim declarations, module relationships and references interpreted from supplied Markdown.
   - Role: derived
   - Zone: core
@@ -93,10 +125,30 @@
   - Role: derived
   - Zone: core
   - From: {{zone}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{layer}}, {{snapshot}}
-- **dependency-check** — findings from import direction, cycles and explicit separation of compiled dependencies.
+- **compiler-check** — the check that checked files are compiled strictly, without errors or escape hatches.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
+- **construction-check** — the check that only an adapter builds its contract's values and only a declared core producer its write descriptions.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **consumer-report** — what one app check reports for that app: its failures by check beside the Kit commit it pins.
+  - Role: derived
+  - Zone: core
+  - From: []
+- **dependency-check** — findings from import direction and cycles between placed modules.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **dependency-exclusions** — findings and limits from the explicit separations an app declares between selected code.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **edge-check** — findings from import edges among checked code: entrypoint imports, layer and zone direction, legacy edges and cycles.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{dependency-check}}, {{snapshot}}
 - **finding** — what a check reports: its rule, a path, the fix and a debt key.
   - Role: derived
   - Zone: core
@@ -109,6 +161,22 @@
   - Role: derived
   - Zone: core
   - From: {{comment}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}
+- **global-authority** — what a module acquires through ambient globals, and which uses need a declared adapter.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
+- **handover-check** — findings where code outside the zones hands placed code behaviour that is no adapter contract.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **import-authority** — what a module acquires by importing outside the checked code: adapter packages, entrypoint packages and declared package rows.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
+- **kit-configuration** — the config an app declares, read from its YAML fence and validated, and the paths a check is given.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}
 - **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
   - Role: derived
   - Zone: core
@@ -133,10 +201,34 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
+- **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, and the baseline left after a change lands.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}, {{finding}}
+- **refs-description** — the claims that name a module, with their text and tests, and how they are listed.
+  - Role: derived
+  - Zone: core
+  - From: {{claim-inventory}}, {{default-config}}, {{module-references}}, {{placement-of}}
+- **registration-check** — the check that adapter registrations resolve and legacy zone rows list existing legacy files.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
   - From: {{reference}}, {{topic}}, {{finding}}, {{snapshot}}
+- **snapshot-cache-key** — the key a stored extraction answers, its settled trace, and how its root is written so worktrees share it.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}, {{snapshot-cache}}
+- **snapshot-comparison** — whether two snapshots are the same graph.
+  - Role: derived
+  - Zone: core
+  - From: []
+- **startup-check** — the check that each declared entrypoint is an exact existing file outside every zone, and that entrypoint package contracts are well formed.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{finding}}, {{placement-of}}, {{snapshot}}
 - **term-inventory** — global term definitions and inline declarations interpreted from supplied Markdown, with retained prose and syntax findings.
   - Role: derived
   - Zone: core
@@ -145,10 +237,10 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{term}}, {{finding}}, {{placement-of}}
-- **test-change-check** — the check that a change editing a claim's test changes the claim's topic too, or says why.
+- **term-order** — the check that each list in the terms file is in alphabetical order.
   - Role: derived
   - Zone: core
-  - From: {{change-history}}, {{snapshot}}, {{finding}}, {{claim-proof-binder}}
+  - From: {{finding}}, {{snapshot}}
 - **topic-shape** — the check that a topic is a title, a short intro, then only section headings and claims with optional module relationships.
   - Role: derived
   - Zone: core
@@ -162,13 +254,17 @@
   - Role: derived
   - Zone: core
   - From: {{verification}}
+- **zone-authority-check** — the check that what each module, entrypoint and legacy edge holds is permitted where it is.
+  - Role: derived
+  - Zone: core
+  - From: {{authority-graph}}, {{capability-context}}, {{snapshot}}, {{zone-permission}}
+- **zone-permission** — whether code at a path may hold a capability, by its zone and the adapters registered for it.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
 
 ## Adapter contracts
 
-- **change-log** — access to what a change did since it left a base ref, read from git.
-  - Role: adapter
-  - Zone: substrate
-  - Of: {{change-history}}
 - **compiler** — access to project loading and import resolution through a language compiler.
   - Role: adapter
   - Zone: substrate
@@ -181,25 +277,117 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
+- **processes** — access to running another program to completion.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **snapshot-store** — ownership of stored extractions: their objects, their index and its lock, and the environment that keys them.
+  - Role: adapter
+  - Zone: substrate
+  - Of: {{snapshot-cache}}
+- **source-loader** — access to Kit's TypeScript modules from a JavaScript launcher.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **stopwatch** — access to the time, for receipts and cache bookkeeping.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 - **temporary-project** — ownership of an isolated temporary directory, its fixture file writes and its disposal.
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **temporary-repository** — ownership of an isolated temporary git repository, its commits and branches, and its disposal.
+- **text-files** — access to plain text files outside a snapshot: configs, baselines and spec listings.
   - Role: adapter
   - Zone: substrate
   - Of: []
 
 ## Composition contracts
 
+- **authority-recorder** — the recorder of where a file's code can acquire authority: export parameters, raw primitives, dynamic code, native members and ambient globals.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{file-scope}}, {{native-reading}}, {{program-scope}}, {{syntax-reading}}
+- **behaviour-reading** — the reading of whether a type is or accepts behaviour: callable, an accessor, or an object with operations that is not a registered contract.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{contract-reading}}, {{native-reading}}, {{placement-of}}, {{program-scope}}
+- **cache-proof** — the workflow that builds cache apps in temporary directories and checks them through the cache, counting extractions.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{cache-app}}, {{cached-check}}, {{compiler}}, {{default-config}}, {{filesystem}}, {{read-snapshot}}, {{snapshot}}, {{temporary-project}}
+- **cached-check** — the workflow that reuses a stored extraction while every read it made still answers the same, and checks it again.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler}}, {{default-config}}, {{filesystem}}, {{snapshot}}, {{snapshot-cache}}, {{snapshot-cache-key}}, {{snapshot-store}}, {{stopwatch}}
+- **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{cached-check}}, {{compiler}}, {{default-config}}, {{filesystem}}, {{gate}}, {{kit-configuration}}, {{ratchet}}, {{read-snapshot}}, {{snapshot-comparison}}, {{text-files}}
+- **consumers-run** — the `kit consumers` workflow: check each app checkout against this Kit and report its work.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{consumer-report}}, {{kit-configuration}}, {{processes}}, {{text-files}}
+- **contract-reading** — the reading of the identities a type names in the checked sources: its contract, the ports its operations return and its named parts.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{program-scope}}
+- **contract-recorder** — the recorder of the contracts a file declares and the values of a named type it constructs.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{file-scope}}, {{native-reading}}, {{program-scope}}
+- **escape-recorder** — the recorder of the escape hatches in a file: `any`, type and non-null assertions, and compiler directive comments.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{file-scope}}
+- **file-scope** — one checked source file as its recorders see it: its path and the stable site key of a node there.
+  - Role: composition
+  - Zone: substrate
+  - Of: []
+- **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
+  - Role: composition
+  - Zone: core
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+- **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{file-scope}}, {{placement-of}}, {{program-scope}}, {{syntax-reading}}
+- **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{program-scope}}
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{file-scope}}, {{import-recorder}}, {{term-recorder}}
+- **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{text-files}}
 - **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
   - Role: composition
   - Zone: substrate
   - Of: {{default-config}}, {{read-snapshot}}, {{temporary-project}}
+- **source-size** — the reading of a source file's statement count and the files its call statements reach.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{file}}
+- **syntax-reading** — the reading of what a node's syntax resolves to: its declaration, a type-only import, a global, a raw primitive, a literal and an annotation's types.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{program-scope}}
+- **term-recorder** — the recorder of what the glossary checks read of a file: whether it holds only facts, and its declared types' properties.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{file-scope}}, {{program-scope}}, {{syntax-reading}}
+- **test-reach** — the workflow that follows a test's code into the files and top-level declarations it uses.
+  - Role: composition
+  - Zone: substrate
+  - Of: []
+- **verification-runner** — the workflow that runs a verification plan with the effects and capacity a caller supplies.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{source-loader}}
 
 ## Supporting vocabulary and roles
 

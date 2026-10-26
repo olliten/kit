@@ -1,4 +1,4 @@
-interface NativeAuthority {
+export interface NativeAuthority {
   readonly root: { readonly file: string; readonly name: string };
   readonly bases: readonly { readonly file: string; readonly name: string }[];
   // A DOM host type unavailable in the compiler's worker host declarations.
@@ -60,15 +60,12 @@ export interface CompilerFacts {
       readonly name: string;
       readonly callable: boolean;
       readonly accessor: boolean;
-      readonly executable?: boolean;
-      readonly exported?: boolean;
       readonly nativeAuthority?: readonly NativeAuthority[];
       readonly types: readonly { readonly file: string; readonly name: string }[];
     }[];
     readonly contracts: readonly {
       readonly file: string;
       readonly name: string;
-      readonly parameter: number | null;
       readonly operations: readonly string[];
       readonly type: { readonly file: string; readonly name: string } | null;
       readonly nativeAuthority?: readonly NativeAuthority[];
@@ -79,58 +76,26 @@ export interface CompilerFacts {
       readonly file: string;
       readonly start: number;
       readonly kind: "clock" | "randomness" | "dynamic" | "native";
+      // Where it is, by its enclosing names and syntax rather than its offset, so an edit elsewhere keeps it.
+      readonly site?: string;
       readonly nativeAuthority?: readonly NativeAuthority[];
     }[];
     readonly constructions: readonly {
       readonly file: string;
       readonly start: number;
+      readonly site?: string;
       readonly types: readonly { readonly file: string; readonly name: string }[];
       readonly spread: boolean;
       readonly callable: boolean;
     }[];
-    readonly connections: readonly {
-      readonly file: string;
-      readonly start: number;
-      readonly target: string | null;
-      // The called function is declared in this file and no other file can name it.
-      readonly local?: boolean;
-      readonly callableOrigins: readonly (string | null)[];
-      readonly callableBindings?: readonly {
-        readonly source: { readonly file: string; readonly start: number } | null;
-        readonly target: { readonly file: string; readonly start: number } | null;
-        // The value is built at the argument itself, a literal, rather than acquired elsewhere and passed on.
-        readonly fresh?: true;
-        // What the callable reaches when it is no parameter: absent, its whole origin file is charged.
-        readonly capture?: {
-          // Authority facts inside the code it reaches, and the files that code is in.
-          readonly positions: readonly { readonly file: string; readonly start: number }[];
-          readonly reached: readonly string[];
-          // Files it reaches in ways that can't be followed, charged whole.
-          readonly whole: readonly string[];
-          // The runtime import that contributes each package's authority; null preserves an unknown origin.
-          readonly packages: readonly { readonly file: string | null; readonly specifier: string }[];
-          // Its own module's parameters it captures, and the types of other modules' it reaches.
-          readonly parameters: readonly { readonly file: string; readonly start: number }[];
-          readonly types: readonly { readonly file: string; readonly name: string }[];
-          readonly nativeAuthority: readonly NativeAuthority[];
-        };
-      }[];
-      readonly builtin: boolean;
-    }[];
-    // Parameters whose arguments can't all be seen: their function is held as a value in the file `at`, or is an
-    // anonymous function handed on there.
-    readonly held?: readonly { readonly file: string; readonly start: number; readonly at: string }[];
-    // Values bound to a parameter outside an argument list, like an argument: a callable default, or what a call
-    // holds for the anonymous function handed to it.
-    readonly defaults?: readonly NonNullable<
-      CompilerFacts["projects"][number]["connections"][number]["callableBindings"]
-    >[number][];
-    // What each test file's code uses, followed as a callable's capture is: the files whose code it reaches, and
-    // the files it reaches in ways that can't be followed, charged whole.
+    // What each test file's code uses, followed through the declarations it names: the files whose code it
+    // reaches, and the files it reaches in ways that can't be followed, charged whole.
     readonly proofs?: readonly {
       readonly file: string;
       readonly reached: readonly string[];
       readonly whole: readonly string[];
+      // The top-level declarations of other files whose code it uses.
+      readonly declarations?: readonly { readonly file: string; readonly name: string }[];
     }[];
     readonly exports: readonly {
       readonly file: string;
@@ -144,6 +109,8 @@ export interface CompilerFacts {
       readonly union: boolean;
       readonly satisfies: string | null;
       readonly resultType: { readonly file: string; readonly name: string } | null;
+      // A caller can hand this value behaviour: a callable, an accessor or an object with operations.
+      readonly acceptsBehaviour?: true;
     }[];
     readonly globals: readonly {
       readonly file: string;

@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, expect, test } from "vitest";
-import { describeRefs, kitRefs } from "../../scripts/kit-refs.mjs";
+import { describeRefs } from "../../src/core/readings/refs-description.js";
+import { moduleClaims } from "../../src/substrate/compositions/refs-run.js";
 
 const engine = resolve(import.meta.dirname, "../..");
 const fixture = join(engine, "fixture");
@@ -23,12 +24,7 @@ const refs = (args: string[], input?: string): string =>
   );
 
 test("Kit's oracle module view distinguishes implementation and proof relationships", async () => {
-  const result = await kitRefs({
-    engineRoot: engine,
-    root: engine,
-    configPath: join(engine, "self-config.md"),
-    target: "oracle/core/readings/fixture-snapshot.ts",
-  });
+  const result = await moduleClaims(engine, join(engine, "self-config.md"), "oracle/core/readings/fixture-snapshot.ts");
   const claim = result?.claims.find(
     (row: { readonly anchor: string }) => row.anchor === "imports-point-inward",
   );

@@ -2,7 +2,8 @@ import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { CACHE_CONFIG, cacheApp, removeCacheApps } from "../lib/cache-fixture.js";
+import { cacheApp, removeCacheApps, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
+
 
 afterEach(removeCacheApps);
 

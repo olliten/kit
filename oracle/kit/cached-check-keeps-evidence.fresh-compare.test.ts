@@ -1,13 +1,13 @@
-import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { removeCacheApps, scratch, writeApp } from "../lib/cache-fixture.js";
+import { removeCacheApps, scratch, writeApp } from "../substrate/compositions/cache-proof.js";
 
 afterEach(removeCacheApps);
 
 const engine = resolve(import.meta.dirname, "../..");
-const { kitRefs } = await import(new URL("../../scripts/kit-refs.mjs", import.meta.url).href);
+import { moduleClaims } from "../../src/substrate/compositions/refs-run.js";
+import { runCheck } from "../../src/substrate/compositions/check-run.js";
 
 test("--fresh-compare keeps evidence for code roots and proof entrypoints without waiving failures", async () => {
   const base = scratch("kit-fresh-compare-");
@@ -43,26 +43,18 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
   });
   // Own the Git cache boundary instead of inheriting a parent checkout's store.
   mkdirSync(join(app, ".git"));
-  const run = (flags: readonly string[] = []) =>
-    spawnSync(
-      process.execPath,
-      [
-        join(engine, "scripts/kit-check.mjs"),
-        "--root=.",
-        "--config=kit/config.md",
-        "--baseline=kit/debt/legacy.json",
-        "--fresh-compare",
-        ...flags,
-      ],
-      {
-        cwd: app,
-        encoding: "utf8",
-        timeout: 240_000,
-        env: { ...process.env, XDG_CACHE_HOME: join(base, "cache") },
-      },
-    );
-  const cold = run();
-  const warm = run();
+  // The app owns its Git directory, so the cache lives there rather than in a shared store.
+  const run = async (flags: readonly string[] = []) => {
+    const response = await runCheck({
+      engineRoot: engine,
+      args: ["--root=.", "--config=kit/config.md", "--baseline=kit/debt/legacy.json", "--fresh-compare", ...flags],
+      cwd: app,
+      input: () => "",
+    });
+    return { status: response.exitCode, stdout: response.stdout, stderr: response.stderr };
+  };
+  const cold = await run();
+  const warm = await run();
   for (const result of [cold, warm]) {
     expect(result.status, result.stderr).toBe(0);
     expect(result.stderr).not.toMatch(/diverged/);
@@ -71,14 +63,9 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
   expect(cold.stdout).toMatch(/"reused":false/);
   expect(warm.stdout, cold.stderr + warm.stderr).toMatch(/"reused":true/);
 
-  const refs = await kitRefs({
-    engineRoot: engine,
-    root: app,
-    configPath: join(app, "kit/config.md"),
-    target: "oracle/core/readings/reference.ts",
-  });
-  expect(refs.module).toBe("oracle/core/readings/reference");
-  expect(refs.claims.map((row: { tests: string[] }) => row.tests)).toEqual([
+  const refs = await moduleClaims(app, join(app, "kit/config.md"), "oracle/core/readings/reference.ts");
+  expect(refs?.module).toBe("oracle/core/readings/reference");
+  expect(refs?.claims.map((row) => row.tests)).toEqual([
     ["proof/count/increments.test.ts"],
   ]);
 
@@ -98,7 +85,7 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
       [path]: `export function ${name}(n: number): number { return Date.now(); }\n`,
       "kit/debt/legacy.json": JSON.stringify(baseline),
     });
-    const red = run();
+    const red = await run();
     expect(red.status, red.stdout + red.stderr).toBe(1);
     expect(red.stdout).toMatch(/"reused":false/);
     expect(red.stdout).toMatch(/the cached snapshot equals a fresh extraction/);
@@ -113,7 +100,7 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
       "R1:raw-primitive:proof/count/increments.test.ts:clock": null,
     }),
   });
-  const proofRed = run();
+  const proofRed = await run();
   expect(proofRed.status, proofRed.stdout + proofRed.stderr).toBe(1);
   expect(proofRed.stdout).toMatch(/the cached snapshot equals a fresh extraction/);
   expect(proofRed.stderr).toContain("R1:raw-primitive:proof/count/increments.test.ts:clock");
@@ -134,7 +121,7 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
       "R1:external-boundary:oracle/core/readings/reference.ts:mystery": null,
     }),
   });
-  const limit = run();
+  const limit = await run();
   expect(limit.status, limit.stdout + limit.stderr).toBe(1);
   expect(limit.stdout).toMatch(/the cached snapshot equals a fresh extraction/);
   expect(limit.stderr.trim().split("\n")).toHaveLength(1);
@@ -147,7 +134,7 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
     [legacy]:
       "import { read } from 'mystery'; export function legacy(n: number): number { return read() + n; }\n",
   });
-  const report = run(["--report"]);
+  const report = await run(["--report"]);
   expect(report.status, report.stderr).toBe(0);
   const inventory = JSON.parse(report.stdout.slice(report.stdout.indexOf("{"))).findings;
   const legacyBaseline = Object.fromEntries(
@@ -169,14 +156,14 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
       [exclusionKey]: null,
     }),
   });
-  const unrelated = run();
+  const unrelated = await run();
   expect(unrelated.status, unrelated.stdout + unrelated.stderr).toBe(0);
   const policyConfig = configSource.replace(
     "\n```",
     `\ndependency-exclusions:\n  - from: ${legacy}\n    to: src/core/readings/actual.ts\n    imports: runtime\n    reach: transitive\n\`\`\``,
   );
   writeApp(app, { "kit/config.md": policyConfig });
-  const opaque = run();
+  const opaque = await run();
   expect(opaque.status, opaque.stdout + opaque.stderr).toBe(1);
   expect(opaque.stdout).toMatch(/the cached snapshot equals a fresh extraction/);
   expect(opaque.stderr).toContain(boundaryKey);
@@ -185,7 +172,7 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
     [legacy]:
       "import { actual } from '../src/core/readings/actual.js'; export function legacy(n: number): number { return actual(n); }\n",
   });
-  const dependent = run();
+  const dependent = await run();
   expect(dependent.status, dependent.stdout + dependent.stderr).toBe(1);
   expect(dependent.stderr).toContain(exclusionKey);
   expect(dependent.stdout).toMatch(/the cached snapshot equals a fresh extraction/);

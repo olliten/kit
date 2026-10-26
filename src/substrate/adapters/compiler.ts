@@ -134,6 +134,24 @@ const count = (value: CompilerRead["arguments"][number] | undefined): number | u
 
 let workerHostCache: { readonly text: string; readonly host: WorkerHost } | undefined;
 
+// A declaration file parses the same whenever its text and parse options are the same, and the standard and
+// installed declarations are most of every program, so their parse is kept for the next program. The text is
+// still read, and so traced, each time.
+const declarations = new Map<string, { readonly text: string; readonly file: ts.SourceFile }>();
+function sourceOf(
+  fileName: string,
+  text: string,
+  options: ts.ScriptTarget | ts.CreateSourceFileOptions,
+): ts.SourceFile {
+  if (!/\.d\.[mc]?ts$/.test(fileName)) return ts.createSourceFile(fileName, text, options);
+  const key = `${fileName}\u0000${JSON.stringify(options)}`;
+  const known = declarations.get(key);
+  if (known !== undefined && known.text === text) return known.file;
+  const file = ts.createSourceFile(fileName, text, options);
+  declarations.set(key, { text, file });
+  return file;
+}
+
 export const compilerWorkspace: CompilerWorkspace = {
   workerHost(trace) {
     const path = join(dirname(ts.getDefaultLibFilePath({})), "lib.webworker.d.ts");
@@ -182,9 +200,7 @@ export const compilerWorkspace: CompilerWorkspace = {
           onError?.(error instanceof Error ? error.message : String(error));
           source = "";
         }
-        return source === undefined
-          ? undefined
-          : ts.createSourceFile(fileName, source, languageVersionOrOptions);
+        return source === undefined ? undefined : sourceOf(fileName, source, languageVersionOrOptions);
       },
       useSourceOfProjectReferenceRedirect: () => true,
     };

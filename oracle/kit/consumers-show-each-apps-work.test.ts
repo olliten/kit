@@ -1,12 +1,10 @@
-import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, expect, test } from "vitest";
 
-const { pinnedKit, readCheck, describeConsumer } = await import(
-  new URL("../../scripts/kit-consumers.mjs", import.meta.url).href
-);
+import { describeConsumer, pinnedKit, readCheck } from "../../src/core/readings/consumer-report.js";
+import { runConsumers } from "../../src/substrate/compositions/consumers-run.js";
 
 const engine = resolve(import.meta.dirname, "../..");
 const scratch = mkdtempSync(join(tmpdir(), "kit-consumers-"));
@@ -19,8 +17,8 @@ test("an app's pinned Kit is read from its lockfile, and an app without one pins
   const app = join(scratch, "pinned");
   mkdirSync(app);
   writeFileSync(join(app, "package-lock.json"), lock("git+ssh://git@github.com/olliten/kit.git#552affb535b1"));
-  expect(pinnedKit(app)).toBe("552affb535b1");
-  expect(pinnedKit(join(scratch, "nowhere"))).toBeNull();
+  expect(pinnedKit(readFileSync(join(app, "package-lock.json"), "utf8"))).toBe("552affb535b1");
+  expect(pinnedKit(null)).toBeNull();
 });
 
 test("a check's failures are grouped by check, and its counts are kept", () => {
@@ -48,7 +46,7 @@ test("an app that passes says so; one that fails lists its work under its pin", 
   );
 });
 
-test("the real run checks an app checkout against this Kit and does not fail on the app's findings", () => {
+test("the real run checks an app checkout against this Kit and does not fail on the app's findings", async () => {
   const app = join(scratch, "tally");
   for (const folder of ["src", "spec", "oracle"]) cpSync(join(engine, "fixture", folder), join(app, folder), { recursive: true });
   mkdirSync(join(app, "kit/debt"), { recursive: true });
@@ -58,9 +56,8 @@ test("the real run checks an app checkout against this Kit and does not fail on 
   );
   writeFileSync(join(app, "kit/debt/legacy.json"), "{}");
   writeFileSync(join(app, "package-lock.json"), lock("git+https://github.com/olliten/kit.git#552affb"));
-  const output = execFileSync(process.execPath, [join(engine, "scripts/kit-consumers.mjs"), app], {
-    encoding: "utf8",
-  });
+  const { stdout: output, exitCode } = await runConsumers({ engineRoot: engine, args: [app], cwd: engine, input: () => "" });
+  expect(exitCode).toBe(0);
   expect(output).toMatch(/^tally: \d+ failing \(pins 552affb\): /);
   expect(output).toContain("  R4:unreferenced-module:substrate/compositions/save:");
 }, 120_000);

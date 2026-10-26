@@ -134,5 +134,5 @@ test("a method the project merges into URL is supplied behaviour, not part of th
       "src/core/readings/address.ts":
         "export function address(url: URL): string { return url.host; }\n",
     }),
-  ).toEqual(expect.arrayContaining(["R1:reading-callable:src/core/readings/address.ts:url"]));
+  ).toEqual(expect.arrayContaining(["R1:takes-behaviour:src/core/readings/address.ts:address"]));
 });

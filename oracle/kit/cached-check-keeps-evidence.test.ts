@@ -2,7 +2,9 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { CACHE_CONFIG, adapters, cacheApp, cachedKitCheck, removeCacheApps } from "../lib/cache-fixture.js";
+import { cacheApp, removeCacheApps, rereaders as adapters, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
+
+import { cachedKitCheck } from "../../src/substrate/compositions/cached-check.js";
 
 afterEach(removeCacheApps);
 

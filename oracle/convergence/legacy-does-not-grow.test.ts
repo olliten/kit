@@ -1,13 +1,9 @@
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import { type LegacySizeFinding, legacySize } from "../../src/core/readings/legacy-size.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
-const gateSource =
-  process.env.KIT_GATE_SOURCE ?? new URL("../../scripts/kit-check.mjs", import.meta.url).href;
-const { ratchetFindings, tightenedBaseline } = await import(gateSource);
+import { ratchetFindings, tightenedBaseline } from "../../src/core/readings/ratchet.js";
 
-const growth = DEFAULT_CONFIG.legacyGrowth;
 const legacy = "src/legacy/report.ts";
 const placed = {
   "src/core/readings/total.ts":
@@ -31,7 +27,7 @@ const report = (extra = ""): string =>
   "  return String(helper(sum));\n" +
   "}\n";
 
-type Baseline = Record<string, { statements: number; calls: number }>;
+type Baseline = Record<string, unknown>;
 
 function measure(files: Readonly<Record<string, string>>): LegacySizeFinding[] {
   return legacySize(sourceFixture({ ...placed, ...helper, ...files }));
@@ -43,7 +39,7 @@ const recorded = (findings: readonly LegacySizeFinding[]): Baseline =>
   );
 
 const failures = (findings: readonly LegacySizeFinding[], baseline: Baseline): string[] =>
-  ratchetFindings(findings, baseline, [], [], [], growth).map(
+  ratchetFindings(findings, baseline, [], [], []).map(
     (item: { readonly path: string }) => item.path,
   );
 
@@ -71,25 +67,11 @@ test("a legacy module's size is its statements, and those that only call into pl
   expect(failures(before, baseline)).toEqual([]);
 });
 
-test("the Kit allows a legacy module no growth, not even one call into a placed module", () => {
-  expect(growth).toBe(0);
-  const grown = measure({ [legacy]: report(calls(1)) });
-  expect(sizeOf(grown)).toEqual({ statements: 8, calls: 3 });
-  expect(failures(grown, baseline)).toEqual([legacy]);
-  const [failure] = ratchetFindings(grown, baseline, [], [], [], growth);
-  expect(failure.fix).toContain("may add no statements to a legacy module");
-  expect(failure.fix).not.toContain("at most");
-  expect(measure({ [legacy]: report() })[1]?.fix).toContain("Add no statements to this legacy module");
-});
-
-test("a supplied allowance admits only that many calls into placed modules", () => {
-  const allowance = 2;
-  const within = measure({ [legacy]: report(calls(allowance)) });
-  expect(ratchetFindings(within, baseline, [], [], [], allowance)).toEqual([]);
-  const beyond = measure({ [legacy]: report(calls(allowance + 1)) });
-  const [failure] = ratchetFindings(beyond, baseline, [], [], [], allowance);
-  expect(failure.path).toBe(legacy);
-  expect(failure.fix).toContain(`at most ${allowance}`);
+test("a legacy module may gain any number of calls into placed modules", () => {
+  const grown = measure({ [legacy]: report(calls(3)) });
+  expect(sizeOf(grown)).toEqual({ statements: 10, calls: 5 });
+  expect(failures(grown, baseline)).toEqual([]);
+  expect(measure({ [legacy]: report() })[1]?.fix).toContain("only calls into placed modules");
 });
 
 test("one added statement that is not a call into a placed module fails", () => {
@@ -98,6 +80,8 @@ test("one added statement that is not a call into a placed module fails", () => 
     const grown = measure({ [legacy]: report(extra) });
     expect(sizeOf(grown)?.statements).toBe(8);
     expect(failures(grown, baseline)).toEqual([legacy]);
+    const [failure] = ratchetFindings(grown, baseline, [], [], []);
+    expect(failure?.fix).toContain("Move the new code into a placed module");
   }
   const nested = measure({ [legacy]: report("  total([1].map((value) => {\n    return value * 2;\n  }));\n") });
   expect(sizeOf(nested)).toEqual({ statements: 9, calls: 3 });
@@ -113,7 +97,7 @@ test("a shrink tightens the baseline, so later growth counts from the smaller si
   const tightened = tightenedBaseline(baseline, shrunk);
   expect(tightened[`R1:legacy-size:${legacy}`]).toEqual({ statements: 5, calls: 2 });
   const regrown = measure({
-    [legacy]: report(calls(growth + 1)).replace(ifBlock, ""),
+    [legacy]: report("  helper(sum);\n").replace(ifBlock, ""),
   });
   expect(failures(regrown, baseline)).toEqual([]);
   expect(failures(regrown, tightened)).toEqual([legacy]);

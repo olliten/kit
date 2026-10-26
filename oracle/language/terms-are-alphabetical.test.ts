@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
-import { termOrder } from "../../src/core/readings/term-model.js";
+import { termOrder } from "../../src/core/readings/term-order.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
 const order = (text: string) =>

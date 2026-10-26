@@ -50,14 +50,11 @@ a claim depends on are named in it, so each module's claims are found from its n
 - A claim's tests together reach every placed module the claim names through the code they use, followed
   into helpers and modules as a capture is, and the modules of only types that code is written in; a named
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}
-  - Implementation: {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}
+  - Implementation: {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}, {{test-reach}}
   - Proof: {{fixture-snapshot}}
-
-## Changes
-
-- Given a base, `kit check --base <ref>` also checks what the change did since it left that ref. A claim's
-  test it edited is a finding unless the claim's topic changed too, or a commit says why in a line
-  `Test fix: <test path>: <reason>`. An added or deleted test, and a shared proof module, change no promise.
-  · {#tests-change-with-their-topic}
-  - Implementation: {{test-change-check}}, {{change-log}}, {{change-history}}
-  - Proof: {{fixture-snapshot}}, {{temporary-repository}}
+- Two claims that share no code share no module. When the claims naming a placed module fall into groups
+  whose tests use disjoint top-level declarations of it, the module is a finding: split it so each group has
+  its own. A module of only types links no claims, and a module a test reaches in ways that can't be followed
+  counts as used whole. · {#claims-that-share-no-code-share-no-module}
+  - Implementation: {{claim-cohesion}}, {{proof-reach}}, {{read-snapshot}}, {{test-reach}}
+  - Proof: {{source-fixture}}

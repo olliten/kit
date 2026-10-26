@@ -9,12 +9,14 @@ its config, and its debt in its own baseline.
   accepts only the supported root fields and shapes. `roots.src` accepts one code-root path or a set of
   paths, checked together in one snapshot and graph; extraction, authority, structural checks, references
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
+  - Implementation: {{kit-configuration}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
 - Test discovery includes the configured proof root and only explicitly configured
   `legacy-test-roots`, with no application directory names built in. Each is a relative directory
   without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy
   discovery grants no placement or capability permission. · {#proof-discovery-is-configured}
+  - Implementation: {{kit-configuration}}
 
 - An app may opt into directory roles with `layout: { legacy: [...] }`. Source and shared proof code
   belong in its governed code roots, tests in its proof root, and Markdown in its specification root
@@ -24,7 +26,7 @@ its config, and its debt in its own baseline.
   debt fails the ratchet. Missing or malformed legacy locations fail configuration. Legacy locations
   grant no module placement, capability or executable-entrypoint permission. Without a layout declaration,
   existing configuration keeps its behavior. · {#directory-roles-are-configured}
-  - Implementation: {{layout-check}}, {{placement-of}}, {{read-snapshot}}
+  - Implementation: {{layout-check}}, {{kit-configuration}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 
 - {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
@@ -37,17 +39,28 @@ its config, and its debt in its own baseline.
   extraction or checking rejects the result. `kit check --fresh-compare` also extracts afresh and fails when
   the cached snapshot or its findings differ. Snapshots too large for JSON remain reusable in their original
   checkout. A storage failure is reported and leaves the fresh check authoritative. · {#cached-check-keeps-evidence}
+  - Implementation: {{cached-check}}, {{check-run}}, {{snapshot-cache}}, {{snapshot-cache-key}}, {{snapshot-comparison}}, {{snapshot-store}}, {{stopwatch}}
+  - Proof: {{cache-app}}, {{cache-proof}}
 - A cached snapshot is reused only while every read its extraction made through {{filesystem}} and
   {{compiler}} returns the same: each file's bytes, each directory listing and each probe that found nothing.
   A change nothing read misses no entry, and worktrees of one repository share one cache. · {#cache-keys-on-what-was-read}
+  - Implementation: {{cached-check}}, {{snapshot-cache-key}}, {{snapshot-store}}
+  - Proof: {{cache-app}}, {{cache-proof}}
 - A path the config ignores is never listed or read by {{read-snapshot}}, and an import into it is an error,
   never a missing edge. · {#ignored-paths-are-unread}
+  - Implementation: {{kit-configuration}}, {{read-snapshot}}
+  - Proof: {{cache-app}}, {{cache-proof}}
 - `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
   list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}
+  - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}
 - `kit consumers <app>…` checks each app checkout against this Kit, with the app's own config and baseline, and
   lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins; an app
   that fails does not fail the run. · {#consumers-show-each-apps-work}
-- Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. · {#paths-from-the-caller}
+  - Implementation: {{consumer-report}}, {{consumers-run}}, {{processes}}
+- Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. A
+  launcher in `scripts/` hands its command the arguments, working directory and input, and answers the terminal
+  with the command's output and exit status. · {#paths-from-the-caller}
+  - Implementation: {{kit-configuration}}
 
 ## Checking itself
 
@@ -57,8 +70,8 @@ its config, and its debt in its own baseline.
   - Implementation: {{source-fixture}}, {{temporary-project}}
 
 - Kit's production source is placed and its imports obey the dependency rules; its claims, modules and
-  tests bind with no finding, its placed modules bind to terms without supporting-word terms, its terms
+  tests bind with no finding, claims that share no code share no module, its placed modules bind to terms without supporting-word terms, its terms
   are defined once, its names and prose use no retired word, and its comments cite nothing and carry no
   debt. These checks use one snapshot of the actual configured repository. · {#kit-checks-itself}
-  - Implementation: {{comment-check}}, {{dependency-check}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
+  - Implementation: {{claim-cohesion}}, {{comment-check}}, {{dependency-check}}, {{gate}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
   - Proof: {{binding-findings}}

@@ -36,9 +36,6 @@ export interface KitConfig {
   readonly ignore?: readonly string[];
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
-  // How many statements one change may add to a legacy module, each only a call into placed code. It is
-  // the Kit's, like the words above: an app's config can't raise it, since the rule holds in every app.
-  readonly legacyGrowth: number;
   readonly layerNames?: {
     readonly primitives: string;
     readonly readings: string;
@@ -58,13 +55,11 @@ export interface KitConfig {
     readonly capability: string;
     readonly kind: "external" | "produce" | "apply";
     readonly zones: readonly ("core" | "shell" | "substrate")[];
-    readonly contract?: { readonly type: string } | { readonly parameter: number };
+    readonly contract?: { readonly type: string };
     readonly primitives?: readonly ("clock" | "randomness")[];
     readonly globals?: readonly string[];
     // Packages only this adapter's module may import at runtime, granting its capability there.
     readonly packages?: readonly string[];
-    // Package handle types this adapter accepts from its callers: a value of one passed to it is its to hold.
-    readonly accepts?: readonly { readonly package: string; readonly types: readonly string[] }[];
   }[];
 }
 
@@ -77,5 +72,4 @@ export const DEFAULT_CONFIG: KitConfig = {
   plurals: ["s", "es"],
   anchor: "\\{#[\\w-]+\\}",
   debtMarkers: ["TODO", "FIXME", "XXX", "HACK"],
-  legacyGrowth: 0,
 };

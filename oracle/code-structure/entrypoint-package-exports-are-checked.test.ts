@@ -144,28 +144,20 @@ test("a helper cannot import the entrypoint package on the proof's behalf", () =
   );
 });
 
-test.each([
-  { body: "return 7;", blocked: false },
-  { body: "expect(1).toBe(1); return 7;", blocked: true },
-])("callbacks keep runner authority when supplied to core: $blocked", ({ body, blocked }) => {
-  const core = "src/core/compositions/run.ts";
-  const { result } = inspect(
-    "import { test, expect } from 'vitest';\nimport { run } from '../../src/core/compositions/run.js';\n" +
-      `test('case', () => { run(() => { ${body} }); });\n`,
-    {
-      [core]: "export function run(action: () => number): number { return action(); }\n",
-    },
-  );
-  if (!blocked) expect(result.findings).toEqual([]);
-  else
-    expect(result.findings).toContainEqual(
-      expect.objectContaining({
-        path: core,
-        debtKey: expect.stringContaining(`R1:closure-binding:${core}:${proof}:`),
-        blocking: true,
-      }),
+test.each(["return 7;", "expect(1).toBe(1); return 7;"])(
+  "core takes no callback, whatever an entrypoint hands it: %s",
+  (body) => {
+    const core = "src/core/compositions/run.ts";
+    const { result } = inspect(
+      "import { test, expect } from 'vitest';\nimport { run } from '../../src/core/compositions/run.js';\n" +
+        `test('case', () => { run(() => { ${body} }); });\n`,
+      {
+        [core]: "export function run(action: () => number): number { return action(); }\n",
+      },
     );
-});
+    expect(result.findings.map((item) => item.debtKey)).toEqual([`R1:takes-behaviour:${core}:run`]);
+  },
+);
 
 test("a package owned by an adapter remains unavailable to direct entrypoint imports", () => {
   const { result } = inspect(

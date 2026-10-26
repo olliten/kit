@@ -12,7 +12,7 @@ why the code is built the way it is.
 
 - Each list in the terms file is in alphabetical order, so agents adding different terms edit different
   lines. · {#terms-are-alphabetical}
-  - Implementation: {{term-inventory}}, {{term-model}}
+  - Implementation: {{term-inventory}}, {{term-order}}
   - Proof: {{fixture-snapshot}}
 
 - An app without its configured terms file has a finding naming that file; an empty terms file is enough. · {#terms-file-is-required}
@@ -33,7 +33,7 @@ why the code is built the way it is.
 
 - A placed module and its term bind both ways, and the term's From and Of name the module's actual direct
   owners; a supporting type or a selected field creates no other module. · {#modules-bind-to-terms}
-  - Implementation: {{term-model}}, {{exported-symbol}}
+  - Implementation: {{term-model}}, {{exported-symbol}}, {{term-recorder}}
   - Proof: {{fixture-snapshot}}
 
 - A supporting exported type needs no term for its ordinary words, and a retired word in it is still a

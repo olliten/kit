@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { expect, test } from "vitest";
 
-const { kitCheckPaths } = await import(new URL("../../scripts/kit-config.mjs", import.meta.url).href);
+import { kitCheckPaths } from "../../src/core/readings/kit-configuration.js";
 
 const engine = "/opt/kit";
 const app = "/work/app";

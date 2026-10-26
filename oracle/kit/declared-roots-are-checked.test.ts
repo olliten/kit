@@ -1,9 +1,7 @@
 import { expect, test } from "vitest";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 
-const { configuredKit } = await import(
-  new URL("../../scripts/kit-config.mjs", import.meta.url).href
-);
+import { configuredKit } from "../../src/core/readings/kit-configuration.js";
 const roots = { src: "src/", spec: "spec/", oracle: "oracle/" };
 
 test("the existing single-root declaration keeps its configuration", () => {
