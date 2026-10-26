@@ -452,6 +452,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{default-config}}, {{fact-walk}}, {{import-recorder}}, {{native-reading}}, {{program-fixture}}, {{syntax-reading}}
+- **recorded-reach** — the workflow that compiles a fixture and follows one of its tests into what it reaches.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{default-config}}, {{program-fixture}}, {{test-reach}}
 - **recorded-terms** — the workflow that compiles a fixture and records only its term facts.
   - Role: composition
   - Zone: substrate
