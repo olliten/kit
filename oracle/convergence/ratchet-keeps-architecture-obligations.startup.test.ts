@@ -1,12 +1,35 @@
 import { expect, test } from "vitest";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
+import type { Snapshot } from "../../src/core/primitives/snapshot.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { edgeCheck } from "../../src/core/readings/edge-check.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
+import { startupCheck } from "../../src/core/readings/startup-check.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 import { ratchetFindings, startupCheckRoots } from "../../src/core/readings/ratchet.js";
 const startup = "src/start.ts";
 const vendor = "declare module 'unregistered' { export function wire(): void; }\n";
+
+// The findings an entrypoint can raise: which exceptions are entrypoints, what code acquires through its
+// accesses, globals and imports, its import edges, and the authority each file holds where it is.
+function entrypointFindings(snapshot: Snapshot) {
+  const { startups, findings } = startupCheck(snapshot);
+  const context = capabilityContext(snapshot, startups);
+  const parts = [accessAuthority, globalAuthority, importAuthority].map((part) => part(snapshot, context));
+  const edges = edgeCheck(snapshot, context);
+  return [
+    ...findings,
+    ...parts.flatMap((part) => part.findings),
+    ...edges.findings,
+    ...zoneAuthorityCheck(snapshot, context, authorityGraph(snapshot, context, parts, edges.crossZoneFailures)),
+  ];
+}
 
 function inspect(
   files: Readonly<Record<string, string>>,
@@ -15,7 +38,7 @@ function inspect(
 ) {
   const snapshot = sourceFixture(files, { ...config, exceptions });
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  const findings = capabilityCheck(snapshot).findings;
+  const findings = entrypointFindings(snapshot);
   const placed = snapshot.files
     .filter(
       (file) => file.type === "source" && placementOf(file.path, snapshot.config.srcRoot).placed,
