@@ -412,3 +412,53 @@ test.each([
     ).filter((item) => item.debtKey.startsWith(`R1:callable-binding:${run}:legacy/index.ts:`)).length,
   ).toBeGreaterThan(0);
 });
+
+test("an installed package only a registered adapter imports keeps its limits in that adapter", () => {
+  const files = {
+    "src/substrate/adapters/journal.ts":
+      "import { load } from 'unregistered';\nexport interface Journal { note(text: string): void; }\n" +
+      "export const journal: Journal = { note: (text) => { void (text + load()); } };\n",
+    "legacy/unregistered.d.ts": "declare module 'unregistered' { export function load(): string; }\n",
+  };
+  const outside = (importer: string) => {
+    const snapshot = sourceFixture(
+      {
+        [run]:
+          "import type { Journal } from '../adapters/journal.js';\nexport function record(journal: Journal): void { journal.note('ran'); }\n" +
+          "export function run(read: () => string): string { return read(); }\n",
+        ...files,
+        "legacy/index.ts":
+          "import { record, run } from '../src/substrate/compositions/run.js';\nimport { journal } from '../src/substrate/adapters/journal.js';\n" +
+          (importer === "legacy"
+            ? "import { load } from 'unregistered';\nrun(() => String(load));\n"
+            : "record(journal);\n"),
+      },
+      { layout: { legacy: ["legacy"] }, adapters },
+    );
+    // A capture charged an installed package's file whole, as one reached through a dynamic import would be.
+    const compiler = {
+      version: snapshot.compiler?.version ?? "",
+      projects: (snapshot.compiler?.projects ?? []).map((project) => ({
+        ...project,
+        connections: project.connections.map((connection) => ({
+          ...connection,
+          ...(connection.callableBindings === undefined
+            ? {}
+            : {
+                callableBindings: connection.callableBindings.map((binding) =>
+                  binding.capture === undefined
+                    ? binding
+                    : { ...binding, capture: { ...binding.capture, whole: [...binding.capture.whole, "node_modules/unregistered/index.d.ts"] } },
+                ),
+              }),
+        })),
+      })),
+    };
+    return capabilityCheck({ ...snapshot, compiler }).findings
+      .map((item) => item.debtKey)
+      .filter((key) => key.startsWith(`R1:callable-binding:${run}:`));
+  };
+  // The adapter's own value reaches the package through the adapter; a legacy callable reaches it directly.
+  expect(outside("adapter")).toEqual([]);
+  expect(outside("legacy").length).toBeGreaterThan(0);
+});
