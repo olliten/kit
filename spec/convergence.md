@@ -9,7 +9,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
   module roots or acquiring layers. Existing unplaced code inside a target root remains ordinary debt;
   location debt and architectural debt drain independently. Neither a legacy location nor its baseline
   can waive a placed violation or reachable checker limit. · {#legacy-locations-stay-under-the-ratchet}
-  - Implementation: {{layout-check}}, {{legacy-size}}, {{capability-context}}, {{placement-of}}, {{read-snapshot}}
+  - Implementation: {{layout-check}}, {{legacy-size}}, {{capability-context}}, {{placement-of}}, {{read-snapshot}}, {{source-size}}
   - Proof: {{source-fixture}}
 
 - A finding carries its rule, path and fix, and a debt key made of rule, check, path and detail
@@ -30,6 +30,6 @@ and its size are debt that may only shrink, and placed code is held to every rul
   - Implementation: {{handover-check}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 - A legacy module's size is debt that may only shrink. A change may add to a legacy module only statements
-  that call into placed modules; new code is placed first ({{legacy-size}}, {{read-snapshot}},
+  that call into placed modules; new code is placed first ({{legacy-size}}, {{source-size}},
   {{finding}}, {{ratchet}}, {{check-run}}, {{command}}). · {#legacy-does-not-grow}
   - Proof: {{source-fixture}}

@@ -50,6 +50,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **program-scope** — what every fact reader over one compiler program shares: the program, its checker, the checked sources and the app-relative path of a file.
+  - Role: fact
+  - Zone: substrate
+  - Of: {{default-config}}
 - **reference** — a marked use that points to the home of a term, topic or claim.
   - Role: fact
   - Zone: core
@@ -303,7 +307,7 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{test-reach}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{type-reading}}
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
@@ -312,10 +316,22 @@
   - Role: composition
   - Zone: substrate
   - Of: {{default-config}}, {{read-snapshot}}, {{temporary-project}}
+- **source-size** — the reading of a source file's statement count and the files its call statements reach.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{file}}
+- **syntax-reading** — the reading of what a node's syntax resolves to: its declaration, a type-only import, a global, a raw primitive, a literal and an annotation's types.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{program-scope}}
 - **test-reach** — the workflow that follows a test's code into the files and top-level declarations it uses.
   - Role: composition
   - Zone: substrate
   - Of: []
+- **type-reading** — the reading of what the checker says a type carries: its native authority, the identities it names, and whether it is or accepts behaviour.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{placement-of}}, {{program-scope}}
 - **verification-runner** — the workflow that runs a verification plan with the effects and capacity a caller supplies.
   - Role: composition
   - Zone: substrate
