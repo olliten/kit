@@ -1,46 +1,39 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
 
-const kit = fileURLToPath(new URL("../..", import.meta.url));
+const path = "src/core/readings/read.ts";
 
-function authority(source: string) {
-  const root = mkdtempSync(join(tmpdir(), "kit-node-globals-"));
-  try {
-    const inputs = {
-      "tsconfig.json": JSON.stringify({
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          lib: ["ES2022"],
-          types: ["node"],
-          strict: true,
-          skipLibCheck: true,
-          noEmit: true,
-        },
-        include: ["src/**/*.ts"],
-      }),
-      "package.json": JSON.stringify({ type: "module" }),
-      "src/core/readings/read.ts": source,
-    };
-    for (const [path, text] of Object.entries(inputs)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), text);
-    }
-    mkdirSync(join(root, "node_modules"));
-    symlinkSync(join(kit, "node_modules/@types"), join(root, "node_modules/@types"));
-    return capabilityCheck(readSnapshot(root, DEFAULT_CONFIG))
-      .findings.filter((finding) => finding.path === "src/core/readings/read.ts")
-      .map((finding) => finding.debtKey.split(":").slice(0, 2).join(":"));
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+// What the reading's own globals and accesses acquire; a fixture that doesn't compile throws.
+function authority(source: string): string[] {
+  const facts = recordedAuthority({
+    "tsconfig.json": JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        lib: ["ES2022"],
+        types: ["node"],
+        typeRoots: [fileURLToPath(new URL("../../node_modules/@types", import.meta.url))],
+        strict: true,
+        skipLibCheck: true,
+        noEmit: true,
+      },
+      include: ["src/**/*.ts"],
+    }),
+    "package.json": JSON.stringify({ type: "module" }),
+    [path]: source,
+  });
+  const snapshot = projectSnapshot(facts);
+  const context = capabilityContext(snapshot, []);
+  return [accessAuthority(snapshot, context), globalAuthority(snapshot, context)]
+    .flatMap((part) => part.findings)
+    .filter((finding) => finding.path === path)
+    .map((finding) => finding.debtKey.split(":").slice(0, 2).join(":"));
 }
 
 test.each([

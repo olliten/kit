@@ -1,10 +1,23 @@
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import type { Snapshot } from "../../src/core/primitives/snapshot.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { behaviourCheck } from "../../src/core/readings/behaviour-check.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { startupCheck } from "../../src/core/readings/startup-check.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { fixtureFiles } from "../core/readings/fixture-files.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
-const proof = "oracle/count/increments.test.ts";
+// The declared entrypoint. A compiled fixture records only source files, so the proof that registers its
+// cases is an exact entrypoint without a test suffix; an entrypoint's permission doesn't depend on one.
+const proof = "oracle/count/increments.ts";
 const contract = {
   name: "vitest",
   capabilities: ["test-runner"],
@@ -13,18 +26,38 @@ const contract = {
 const source =
   "import { test, expect } from 'vitest'; test('increments', () => { expect(1 + 1).toBe(2); });\n";
 
+// Which declared exceptions are entrypoints, what each module holds, the zone rules over it and the behaviour
+// the core may not take. No fixture has legacy code between zones, so no edge crosses placement.
+function check(snapshot: Snapshot) {
+  const { startups, findings } = startupCheck(snapshot);
+  const context = capabilityContext(snapshot, startups);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const graph = authorityGraph(snapshot, context, parts, new Set());
+  return {
+    direct: (path: string) => [...(graph.direct.get(path) ?? [])].sort(),
+    findings: [
+      ...findings,
+      ...parts.flatMap((part) => part.findings),
+      ...zoneAuthorityCheck(snapshot, context, graph),
+      ...behaviourCheck(snapshot),
+    ],
+  };
+}
+
+// A fixture that doesn't compile throws.
 function inspect(
   code = source,
   files: Readonly<Record<string, string>> = {},
   config: Partial<KitConfig> = {},
 ) {
-  const snapshot = sourceFixture(
+  const settings: Partial<KitConfig> = { srcRoot: ["src", "oracle"], exceptions: [proof], packages: [contract], ...config };
+  const sources = fixtureFiles(
     {
       "package.json": JSON.stringify({ type: "module" }),
       [proof]: code,
       ...files,
     },
-    { srcRoot: ["src", "oracle"], exceptions: [proof], packages: [contract], ...config },
+    settings,
     {
       skipLibCheck: true,
       paths: {
@@ -34,14 +67,17 @@ function inspect(
       },
     },
   );
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return { snapshot, result: capabilityCheck(snapshot) };
+  const snapshot = projectSnapshot(
+    { ...recordedAuthority(sources, settings), ...recordedImports(sources, settings) },
+    settings,
+  );
+  return { snapshot, result: check(snapshot) };
 }
 
 test("real Vitest registration and assertions are an effectful entrypoint contract", () => {
   const { result } = inspect();
   expect(result.findings).toEqual([]);
-  expect(result.requirements.find((row) => row.path === proof)?.direct).toEqual(["test-runner"]);
+  expect(result.direct(proof)).toEqual(["test-runner"]);
 });
 
 test("named aliases and erased imports retain their original runtime export names", () => {
@@ -81,7 +117,7 @@ test("type-only imports do not acquire the runner's authority", () => {
     "import type { VitestUtils } from 'vitest'; type Tools = VitestUtils;\n",
   );
   expect(result.findings).toEqual([]);
-  expect(result.requirements.find((row) => row.path === proof)?.direct).toEqual([]);
+  expect(result.direct(proof)).toEqual([]);
 });
 
 test("hook registration uses the same explicit effectful boundary", () => {
@@ -207,7 +243,7 @@ test("restricted contracts reject subpaths, absent compiler evidence and malform
         ),
       })),
     };
-    expect(capabilityCheck({ ...snapshot, compiler }).findings).toContainEqual(
+    expect(check({ ...snapshot, compiler }).findings).toContainEqual(
       expect.objectContaining({
         path: proof,
         debtKey: expect.stringContaining(`R1:entrypoint-package:${proof}:vitest`),
@@ -225,6 +261,6 @@ test("restricted contracts reject subpaths, absent compiler evidence and malform
     [contract, { name: "vitest", capabilities: [] }],
   ])
     expect(() =>
-      capabilityCheck({ ...snapshot, config: { ...snapshot.config, packages } }),
+      check({ ...snapshot, config: { ...snapshot.config, packages } }),
     ).toThrow(/entrypoint package contract/);
 });

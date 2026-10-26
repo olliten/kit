@@ -1,90 +1,103 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import type { KitConfig } from "../../src/core/primitives/default-config.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { behaviourCheck } from "../../src/core/readings/behaviour-check.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { edgeCheck } from "../../src/core/readings/edge-check.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 function inspect(
   files: Readonly<Record<string, string>>,
   extraAdapters: NonNullable<KitConfig["adapters"]> = [],
   adapterDirectory: "adapters" | "ports" = "adapters",
 ) {
-  const root = mkdtempSync(join(tmpdir(), "kit-native-arguments-"));
-  try {
-    const inputs = {
-      "tsconfig.json": JSON.stringify({
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          lib: ["ES2022", "DOM"],
-          types: [],
-          strict: true,
-          noEmit: true,
-          declaration: true,
-          isolatedDeclarations: true,
-        },
-        include: ["src/**/*.ts"],
-      }),
-      [`src/substrate/${adapterDirectory}/clock.ts`]:
-        "export interface Clock { now(): number; }\nexport const clock: Clock = { now: () => Date.now() };\n",
-      [`src/shell/${adapterDirectory}/render.ts`]:
-        "export interface Rendering { create(): HTMLElement; paint(element: HTMLElement, view: { readonly text: string }): void; }\n" +
-        "export const rendering: Rendering = { create: () => document.createElement('button'), paint: (element, view) => { element.textContent = view.text; } };\n",
-      [`src/shell/${adapterDirectory}/focus.ts`]:
-        "export interface Focus { to(element: HTMLElement): void; }\n" +
-        "export const focus: Focus = { to: (element) => element.focus() };\n",
-      ...files,
-    };
-    for (const [path, text] of Object.entries(inputs)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), text);
-    }
-    const snapshot = readSnapshot(root, {
-      ...DEFAULT_CONFIG,
-      layerNames: {
-        primitives: "primitives",
-        readings: "readings",
-        adapters: adapterDirectory,
-        compositions: "compositions",
+  const inputs = {
+    "tsconfig.json": JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        lib: ["ES2022", "DOM"],
+        types: [],
+        strict: true,
+        noEmit: true,
+        declaration: true,
+        isolatedDeclarations: true,
       },
-      adapters: [
-        {
-          module: "substrate/adapters/clock",
-          export: "clock",
-          capability: "clock.read",
-          kind: "external",
-          zones: ["substrate"],
-          contract: { type: "Clock" },
-          primitives: ["clock"],
-        },
-        {
-          module: "shell/adapters/render",
-          export: "rendering",
-          capability: "dom.render",
-          kind: "external",
-          zones: ["shell"],
-          contract: { type: "Rendering" },
-          globals: ["document"],
-        },
-        {
-          module: "shell/adapters/focus",
-          export: "focus",
-          capability: "dom.focus",
-          kind: "external",
-          zones: ["shell"],
-          contract: { type: "Focus" },
-        },
-        ...extraAdapters,
-      ],
-    });
-    expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-    return capabilityCheck(snapshot);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+      include: ["src/**/*.ts"],
+    }),
+    [`src/substrate/${adapterDirectory}/clock.ts`]:
+      "export interface Clock { now(): number; }\nexport const clock: Clock = { now: () => Date.now() };\n",
+    [`src/shell/${adapterDirectory}/render.ts`]:
+      "export interface Rendering { create(): HTMLElement; paint(element: HTMLElement, view: { readonly text: string }): void; }\n" +
+      "export const rendering: Rendering = { create: () => document.createElement('button'), paint: (element, view) => { element.textContent = view.text; } };\n",
+    [`src/shell/${adapterDirectory}/focus.ts`]:
+      "export interface Focus { to(element: HTMLElement): void; }\n" +
+      "export const focus: Focus = { to: (element) => element.focus() };\n",
+    ...files,
+  };
+  const config: Partial<KitConfig> = {
+    layerNames: {
+      primitives: "primitives",
+      readings: "readings",
+      adapters: adapterDirectory,
+      compositions: "compositions",
+    },
+    adapters: [
+      {
+        module: "substrate/adapters/clock",
+        export: "clock",
+        capability: "clock.read",
+        kind: "external",
+        zones: ["substrate"],
+        contract: { type: "Clock" },
+        primitives: ["clock"],
+      },
+      {
+        module: "shell/adapters/render",
+        export: "rendering",
+        capability: "dom.render",
+        kind: "external",
+        zones: ["shell"],
+        contract: { type: "Rendering" },
+        globals: ["document"],
+      },
+      {
+        module: "shell/adapters/focus",
+        export: "focus",
+        capability: "dom.focus",
+        kind: "external",
+        zones: ["shell"],
+        contract: { type: "Focus" },
+      },
+      ...extraAdapters,
+    ],
+  };
+  // A fixture that doesn't compile throws. What each module holds, the edges between them, the zone rules
+  // over what they hold and the behaviour the core may not take.
+  const snapshot = projectSnapshot(
+    { ...recordedAuthority(inputs, config), ...recordedImports(inputs, config), ...recordedContracts(inputs, config) },
+    config,
+  );
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const edges = edgeCheck(snapshot, context);
+  const graph = authorityGraph(snapshot, context, parts, edges.crossZoneFailures);
+  return {
+    findings: [
+      ...parts.flatMap((part) => part.findings),
+      ...edges.findings,
+      ...zoneAuthorityCheck(snapshot, context, graph),
+      ...behaviourCheck(snapshot),
+    ],
+  };
 }
 
 test.each(["paint", "focus"])(
