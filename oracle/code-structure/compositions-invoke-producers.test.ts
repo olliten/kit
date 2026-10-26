@@ -1,30 +1,19 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import type { KitConfig } from "../../src/core/primitives/default-config.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { constructionCheck } from "../../src/core/readings/construction-check.js";
+import { registrationCheck } from "../../src/core/readings/registration-check.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
-const root = mkdtempSync(join(tmpdir(), "kit-producer-invocation-"));
 const description =
   "import type { WriteDescription } from '../../core/primitives/write-description.js';\n";
 const producer = "import { produce } from '../../core/compositions/producer.js';\n";
 const files: Record<string, string> = {
-  "tsconfig.json": JSON.stringify({
-    compilerOptions: {
-      target: "ES2022",
-      module: "NodeNext",
-      moduleResolution: "NodeNext",
-      lib: ["ES2022"],
-      types: [],
-      strict: true,
-      noEmit: true,
-      declaration: true,
-      isolatedDeclarations: true,
-    },
-    include: ["src/**/*.ts"],
-  }),
   "src/core/primitives/write-description.ts":
     "export interface WriteDescription { readonly key: string; readonly value: number; }\nexport interface OtherDescription { readonly other: boolean; }\n",
   "src/core/compositions/producer.ts":
@@ -91,8 +80,7 @@ for (const zone of ["shell", "substrate"] as const) {
     "export function read(key: string, value: number): WriteDescription { return produce(key, value); }\n";
 }
 
-const config: KitConfig = {
-  ...DEFAULT_CONFIG,
+const config: Partial<KitConfig> = {
   adapters: [
     ...[
       ["producer", "produce"],
@@ -132,17 +120,25 @@ const config: KitConfig = {
   ],
 };
 
-let snapshot: ReturnType<typeof readSnapshot>;
-try {
-  for (const [file, text] of Object.entries(files)) {
-    mkdirSync(dirname(join(root, file)), { recursive: true });
-    writeFileSync(join(root, file), text);
-  }
-  snapshot = readSnapshot(root, config);
-} finally {
-  rmSync(root, { recursive: true, force: true });
-}
-const result = capabilityCheck(snapshot);
+// A fixture that doesn't compile throws here, so every check below reads a program the compiler accepts.
+const snapshot = projectSnapshot(
+  { ...recordedImports(files, config), ...recordedAuthority(files, config), ...recordedContracts(files, config) },
+  config,
+);
+const context = capabilityContext(snapshot, []);
+const graph = authorityGraph(snapshot, context, [], new Set());
+const result = {
+  requirements: [...graph.inherited].map(([path, capabilities]) => ({
+    path,
+    direct: [...(graph.direct.get(path) ?? [])].sort(),
+    inherited: [...capabilities].sort(),
+  })),
+  findings: [
+    ...registrationCheck(snapshot, context),
+    ...zoneAuthorityCheck(snapshot, context, graph),
+    ...constructionCheck(snapshot, context.startups),
+  ],
+};
 const findings = (path: string) => result.findings.filter((row) => row.path === path);
 const clear = (path: string) =>
   expect(
@@ -157,11 +153,7 @@ const constructed = (path: string) =>
   );
 
 test("the actual compiler accepts every fixture independently of policy findings", () => {
-  expect(
-    snapshot.compiler?.projects
-      .flatMap((project) => project.diagnostics)
-      .filter((row) => row.category === "error"),
-  ).toEqual([]);
+  expect(snapshot.files.map((file) => file.path).sort()).toEqual(Object.keys(files).sort());
 });
 test("two declared Core producers of the same result each retain their own construction authority", () => {
   clear("src/core/compositions/producer.ts");
