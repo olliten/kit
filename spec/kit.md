@@ -29,7 +29,7 @@ its config, and its debt in its own baseline.
   - Implementation: {{layout-check}}, {{kit-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 
-- {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
+- {{read-snapshot}} reads the fixture as its files, imports, claims, terms and references through {{filesystem}} and
   {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
   - Implementation: {{dependency-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{claim-proof-binder}}
   - Proof: {{binding-findings}}

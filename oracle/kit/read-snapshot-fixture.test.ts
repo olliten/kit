@@ -37,6 +37,8 @@ test("the fixture reads as its files, imports, claims and terms", () => {
     from: "src/shell/readings/screen.ts",
     to: "src/substrate/compositions/save.ts",
   });
+  // Each spec file's marked references reach the snapshot, so the reference rules check them.
+  expect(s.semanticReferences).toContainEqual({ namespace: "term", name: "total", line: 7, file: "spec/tally.md" });
   // Comments, not strings: a `//` inside a URL is not one.
   expect(s.comments).toContainEqual({
     file: "src/core/primitives/limits.ts",
