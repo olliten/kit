@@ -9,7 +9,7 @@ its config, and its debt in its own baseline.
   accepts only the supported root fields and shapes. `roots.src` accepts one code-root path or a set of
   paths, checked together in one snapshot and graph; extraction, authority, structural checks, references
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
-  - Implementation: {{kit-configuration}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{claim-proof-binder}}, {{term-model}}, {{legacy-size}}, {{ratchet}}
+  - Implementation: {{kit-configuration}}, {{config-values}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{claim-proof-binder}}, {{term-model}}, {{legacy-size}}, {{ratchet}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
 - Test discovery includes the configured proof root and only explicitly configured
@@ -53,7 +53,7 @@ its config, and its debt in its own baseline.
   - Proof: {{cache-app}}, {{cache-proof}}
 - `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
   list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}
-  - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}
+  - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}, {{source-loader}}
 - `kit consumers <app>…` checks each app checkout against this Kit, with the app's own config and baseline, and
   lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins; an app
   that fails does not fail the run. · {#consumers-show-each-apps-work}

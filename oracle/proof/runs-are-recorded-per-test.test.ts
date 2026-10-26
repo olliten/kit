@@ -47,7 +47,7 @@ test("the record holds each placed module's and test's digest, and the named fun
     { path: "lib/old.ts", type: "source" as const, digest: "b" },
     { path: "oracle/sums/total-sums.test.ts", type: "test" as const, digest: "c" },
   ];
-  expect(testRuns([{ test: "oracle/sums/total-sums.test.ts", texts: [report] }], files, "/app", { srcRoot: "src", oracleRoot: "oracle" })).toEqual({
+  expect(testRuns([{ test: "oracle/sums/total-sums.test.ts", lcov: [report], v8: [] }], files, "/app", { srcRoot: "src", oracleRoot: "oracle" })).toEqual({
     digests: { "src/core/readings/total.ts": "a", "oracle/sums/total-sums.test.ts": "c" },
     tests: { "oracle/sums/total-sums.test.ts": { "src/core/readings/total.ts": ["total@1", "visit@9"] } },
   });
@@ -115,4 +115,33 @@ test("kit runs runs each test file alone with the app's command and records what
   } finally {
     project.dispose();
   }
+});
+
+test("raw V8 coverage, which covers the processes a test starts, counts only where it matches the source", () => {
+  const text = "export function total(values: number[]): number {\n  return values.length;\n}\nexport const half = (n: number): number => n / 2;\n";
+  const v8 = JSON.stringify({
+    result: [
+      {
+        url: "file:///app/src/core/readings/total.ts",
+        functions: [
+          { functionName: "", ranges: [{ startOffset: 0, endOffset: text.length, count: 1 }] },
+          { functionName: "total", ranges: [{ startOffset: 0, endOffset: 60, count: 2 }] },
+          { functionName: "half", ranges: [{ startOffset: 3, endOffset: 9, count: 1 }] },
+          { functionName: "unused", ranges: [{ startOffset: 0, endOffset: 9, count: 0 }] },
+        ],
+      },
+      { url: "node:internal/main", functions: [] },
+    ],
+  });
+  const files = [
+    { path: "src/core/readings/total.ts", type: "source" as const, digest: "a" },
+    { path: "oracle/sums/total-sums.test.ts", type: "test" as const, digest: "c" },
+  ];
+  const functions = [
+    { file: "src/core/readings/total.ts", name: "total", line: 1, id: "total", holder: null },
+    { file: "src/core/readings/total.ts", name: "half", line: 4, id: "half", holder: null },
+  ];
+  expect(
+    testRuns([{ test: "oracle/sums/total-sums.test.ts", lcov: [], v8: [v8, "not json"] }], files, "/app", { srcRoot: "src", oracleRoot: "oracle" }, functions, new Map([["src/core/readings/total.ts", text]])).tests,
+  ).toEqual({ "oracle/sums/total-sums.test.ts": { "src/core/readings/total.ts": ["total@1"] } });
 });

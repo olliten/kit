@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { afterAll, expect, test } from "vitest";
 import { describeRefs } from "../../src/core/readings/refs-description.js";
 import { moduleClaims } from "../../src/substrate/compositions/refs-run.js";
+import { sourceLoader } from "../../src/substrate/adapters/source-loader.mjs";
 
 const engine = resolve(import.meta.dirname, "../..");
 const fixture = join(engine, "fixture");
@@ -67,4 +68,11 @@ test("as a read hook, opening a module adds its claims and opening any other fil
   expect(output.hookSpecificOutput.additionalContext).toContain("#average-of-amounts:");
   expect(read(join(fixture, "src/main.ts"))).toBe("");
   expect(read(join(fixture, "spec/tally.md"))).toBe("");
+});
+
+test("a launcher runs its command only when it is the file node was started with, also through a link", () => {
+  const launcher = new URL("../../scripts/kit-refs.mjs", import.meta.url).href;
+  expect(sourceLoader.isMain(launcher, join(engine, "scripts/kit-refs.mjs"))).toBe(true);
+  expect(sourceLoader.isMain(launcher, join(engine, "scripts/kit-check.mjs"))).toBe(false);
+  expect(sourceLoader.isMain(launcher, undefined)).toBe(false);
 });

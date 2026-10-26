@@ -8,17 +8,22 @@ export interface Processes {
     args: readonly string[],
     cwd?: string,
   ): { readonly stdout: string; readonly stderr: string; readonly status: number | null };
-  // Shell command lines, as many at once as the machine runs in parallel, each with its own directory.
+  // Shell command lines, as many at once as the machine runs in parallel, in one directory, each with its own
+  // added environment variables.
   shells(
-    lines: readonly string[],
+    lines: readonly { readonly line: string; readonly env: Readonly<Record<string, string>> }[],
     cwd: string,
   ): Promise<readonly { readonly stdout: string; readonly stderr: string; readonly status: number | null }[]>;
   node(): string;
 }
 
-function shell(line: string, cwd: string): Promise<{ stdout: string; stderr: string; status: number | null }> {
+function shell(
+  line: string,
+  cwd: string,
+  env: Readonly<Record<string, string>>,
+): Promise<{ stdout: string; stderr: string; status: number | null }> {
   return new Promise((resolve) => {
-    const child = spawn(line, { cwd, shell: true });
+    const child = spawn(line, { cwd, shell: true, env: { ...process.env, ...env } });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString("utf8")));
@@ -42,8 +47,8 @@ export const processes: Processes = {
     let next = 0;
     const worker = async (): Promise<void> => {
       for (let at = next++; at < lines.length; at = next++) {
-        const line = lines[at];
-        if (line !== undefined) results[at] = await shell(line, cwd);
+        const job = lines[at];
+        if (job !== undefined) results[at] = await shell(job.line, cwd, job.env);
       }
     };
     await Promise.all(Array.from({ length: Math.min(availableParallelism(), lines.length) }, worker));

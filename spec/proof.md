@@ -70,7 +70,8 @@ a claim depends on are named in it, so each module's claims are found from its n
 ## Runs
 
 - `kit runs` runs each test file alone with the app's own test command, which writes an LCOV report of the
-  named functions it ran, and records for every placed module which of its named functions each test ran,
+  named functions it ran; raw V8 coverage adds the processes a test starts, where a function's reported name and
+  line match the source. It records for every placed module which of its named functions each test ran,
   with the digest of every placed module and test it ran over. A check reads the record only while each of
   those files still has its recorded digest; a missing or stale record is a finding until `kit runs` is run
   again. · {#runs-are-recorded-per-test}

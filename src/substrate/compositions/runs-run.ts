@@ -31,23 +31,32 @@ export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promis
   const dirs = tests.map((_, index) => `${scratch}/${index}`);
   for (const dir of dirs) textFiles.directory(dir);
   const { each } = config.runs;
+  // Raw V8 coverage also covers the processes a test starts, such as a launcher it runs.
   const results = await processes.shells(
-    tests.map((test, index) => each.replaceAll("{test}", test).replaceAll("{dir}", dirs[index] ?? scratch)),
+    tests.map((test, index) => {
+      const dir = dirs[index] ?? scratch;
+      return { line: each.replaceAll("{test}", test).replaceAll("{dir}", dir), env: { NODE_V8_COVERAGE: `${dir}/v8` } };
+    }),
     root,
   );
+  const read = (dir: string): string[] =>
+    textFiles.exists(dir)
+      ? textFiles
+          .entries(dir)
+          .filter((entry) => entry.file)
+          .map((entry) => textFiles.read(`${dir}/${entry.name}`))
+      : [];
   const reports = tests.map((test, index) => {
     const dir = dirs[index] ?? scratch;
-    const texts = textFiles
-      .entries(dir)
-      .filter((entry) => entry.file)
-      .map((entry) => textFiles.read(`${dir}/${entry.name}`));
-    return { test, texts };
+    return { test, lcov: read(dir), v8: read(`${dir}/v8`) };
   });
   textFiles.remove(scratch);
-  const runs = testRuns(reports, snapshot.files, root, config);
+  const functions = (snapshot.compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
+  const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
+  const runs = testRuns(reports, snapshot.files, root, config, functions, texts);
   textFiles.write(`${root}/${config.runs.record}`, JSON.stringify(runs, null, 2) + "\n");
   const failed = tests.filter((_, index) => results[index]?.status !== 0);
-  const unreported = reports.filter((report) => report.texts.length === 0).map((report) => report.test);
+  const unreported = reports.filter((report) => report.lcov.length === 0).map((report) => report.test);
   return {
     stdout: `Kit runs recorded ${tests.length} tests in ${config.runs.record}.\n`,
     stderr: [

@@ -292,7 +292,7 @@
 - **test-runs** — the runs record built from each test's coverage reports and the digests of the files they ran over.
   - Role: derived
   - Zone: core
-  - From: {{coverage-report}}, {{file}}, {{placement-of}}, {{runs}}
+  - From: {{compiler-facts}}, {{coverage-report}}, {{default-config}}, {{file}}, {{placement-of}}, {{runs}}
 - **topic-shape** — the check that a topic is a title, a short intro, then only section headings and claims with optional module relationships.
   - Role: derived
   - Zone: core
