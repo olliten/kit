@@ -36,7 +36,7 @@ compositions wire the others into behaviour.
   aliases and re-exports. Runtime separation ignores only established erased edges. Direct boundaries may
   use classified package contracts; transitive separation requires checked import evidence throughout,
   including through helpers. Missing evidence remains a blocking limit, and a baseline cannot waive an
-  explicit exclusion or its limits ({{dependency-check}}, {{default-config}}). · {#dependency-exclusions-are-checked}
+  explicit exclusion or its limits ({{dependency-exclusions}}, {{default-config}}). · {#dependency-exclusions-are-checked}
   - Proof: {{source-fixture}}
 - An adapter is a module like any other: its path is its identity and its imports may not form a cycle. · {#adapters-follow-the-same-rules}
   - Implementation: {{dependency-check}}

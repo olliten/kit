@@ -52,3 +52,9 @@ a claim depends on are named in it, so each module's claims are found from its n
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}
   - Implementation: {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}
   - Proof: {{fixture-snapshot}}
+- Two claims that share no code share no module. When the claims naming a placed module fall into groups
+  whose tests use disjoint top-level declarations of it, the module is a finding: split it so each group has
+  its own. A module of only types links no claims, and a module a test reaches in ways that can't be followed
+  counts as used whole. · {#claims-that-share-no-code-share-no-module}
+  - Implementation: {{claim-cohesion}}, {{proof-reach}}, {{read-snapshot}}
+  - Proof: {{source-fixture}}

@@ -12,7 +12,7 @@ why the code is built the way it is.
 
 - Each list in the terms file is in alphabetical order, so agents adding different terms edit different
   lines. · {#terms-are-alphabetical}
-  - Implementation: {{term-inventory}}, {{term-model}}
+  - Implementation: {{term-inventory}}, {{term-order}}
   - Proof: {{fixture-snapshot}}
 
 - An app without its configured terms file has a finding naming that file; an empty terms file is enough. · {#terms-file-is-required}

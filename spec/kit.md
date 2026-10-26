@@ -57,8 +57,8 @@ its config, and its debt in its own baseline.
   - Implementation: {{source-fixture}}, {{temporary-project}}
 
 - Kit's production source is placed and its imports obey the dependency rules; its claims, modules and
-  tests bind with no finding, its placed modules bind to terms without supporting-word terms, its terms
+  tests bind with no finding, claims that share no code share no module, its placed modules bind to terms without supporting-word terms, its terms
   are defined once, its names and prose use no retired word, and its comments cite nothing and carry no
   debt. These checks use one snapshot of the actual configured repository. · {#kit-checks-itself}
-  - Implementation: {{comment-check}}, {{dependency-check}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
+  - Implementation: {{claim-cohesion}}, {{comment-check}}, {{dependency-check}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
   - Proof: {{binding-findings}}

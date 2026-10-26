@@ -1513,7 +1513,7 @@ function readCompiler(
         .getSourceFiles()
         .filter((sf) => !sf.isDeclarationFile && tests.has(local(sf.fileName)))
         .map((sf) => {
-          const { reached, whole } = proofOf(sf);
+          const { reached, whole, declarations } = proofOf(sf);
           // An import for its effect alone runs the module it names.
           const run = sf.statements.flatMap((statement) =>
             ts.isImportDeclaration(statement) &&
@@ -1522,7 +1522,12 @@ function readCompiler(
               ? [importTarget(statement.moduleSpecifier.text, sf.fileName) ?? []].flat()
               : [],
           );
-          return { file: local(sf.fileName), reached, whole: [...new Set([...whole, ...run])].sort() };
+          return {
+            file: local(sf.fileName),
+            reached,
+            whole: [...new Set([...whole, ...run])].sort(),
+            declarations: declarations.filter((declaration) => declaration.file !== local(sf.fileName)),
+          };
         });
       const zone = /^tsconfig\.(core|shell|substrate)\.json$/.exec(basename(file))?.[1];
       return {
@@ -1687,8 +1692,28 @@ function resolve(from: string, specifier: string, known: ReadonlySet<string>): s
   return candidates.find((c) => known.has(c));
 }
 
-// The files a test's code reaches, and those it reaches in ways that can't be followed, charged whole.
-type CaptureReach = { readonly reached: readonly string[]; readonly whole: readonly string[] };
+// The files a test's code reaches, the top-level declarations in them it uses, and the files it reaches in
+// ways that can't be followed, charged whole.
+type CaptureReach = {
+  readonly reached: readonly string[];
+  readonly whole: readonly string[];
+  readonly declarations: readonly { readonly file: string; readonly name: string }[];
+};
+
+// The names a piece of code's top-level statement declares: the module-level declaration it belongs to.
+function topLevelNames(node: ts.Node): readonly string[] {
+  let top = node;
+  while (top.parent !== undefined && !ts.isSourceFile(top.parent)) top = top.parent;
+  if (ts.isSourceFile(top)) return [];
+  const names = (name: ts.BindingName): string[] =>
+    ts.isIdentifier(name)
+      ? [name.text]
+      : name.elements.flatMap((element) => (ts.isBindingElement(element) ? names(element.name) : []));
+  if (ts.isVariableStatement(top)) return top.declarationList.declarations.flatMap((each) => names(each.name));
+  const name =
+    ts.isFunctionDeclaration(top) || ts.isClassDeclaration(top) || ts.isEnumDeclaration(top) ? top.name : undefined;
+  return name === undefined ? [] : [name.text];
+}
 
 // A callable carries what it can run or hold: the code its free names reach, followed through the
 // declarations they name, and every statement that can change a mutable value it holds, since a handle
@@ -2334,7 +2359,7 @@ function captureReach(
   };
   // Everything a piece leads to, as one set of item ids. A cycle of pieces shares one set.
   const items = new Map<string, number>();
-  const values: { readonly kind: "reached" | "whole"; readonly name: string }[] = [];
+  const values: { readonly kind: "reached" | "whole" | "declaration"; readonly name: string }[] = [];
   const bit = (key: string, value: (typeof values)[number]): bigint => {
     let id = items.get(key);
     if (id === undefined) {
@@ -2349,6 +2374,8 @@ function captureReach(
     if (!isSelected(key) && !isResults(key) && !isSymbol(key)) {
       const file = local(key.getSourceFile().fileName);
       bits |= bit(`r:${file}`, { kind: "reached", name: file });
+      for (const name of topLevelNames(key))
+        bits |= bit(`d:${file}:${name}`, { kind: "declaration", name: `${file}\u0000${name}` });
     }
     for (const file of piece.whole) bits |= bit(`w:${file}`, { kind: "whole", name: file });
     return bits;
@@ -2408,13 +2435,22 @@ function captureReach(
     const bits = summarize(argument).toString(2);
     const reached = new Set<string>();
     const whole = new Set<string>();
+    const declarations = new Set<string>();
     for (let index = 0; index < bits.length; index++) {
       if (bits[bits.length - 1 - index] !== "1") continue;
       const value = values[index];
       if (value?.kind === "reached") reached.add(value.name);
       else if (value?.kind === "whole") whole.add(value.name);
+      else if (value?.kind === "declaration") declarations.add(value.name);
     }
-    return { reached: [...reached].sort(), whole: [...whole].sort() };
+    return {
+      reached: [...reached].sort(),
+      whole: [...whole].sort(),
+      declarations: [...declarations].sort().map((key) => {
+        const [file = "", name = ""] = key.split("\u0000");
+        return { file, name };
+      }),
+    };
   };
 }
 

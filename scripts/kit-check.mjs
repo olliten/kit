@@ -125,15 +125,17 @@ async function main() {
     const { filesystem } = await load("src/substrate/adapters/filesystem.ts");
     const { compilerWorkspace } = await load("src/substrate/adapters/compiler.ts");
     const { capabilityCheck } = await load("src/core/readings/capability-check.ts");
-    const { dependencyExclusions } = await load("src/core/readings/dependency-check.ts");
+    const { dependencyExclusions } = await load("src/core/readings/dependency-exclusions.ts");
     const { moduleReferences } = await load("src/core/readings/module-references.ts");
     const { claimProofBinder } = await load("src/core/readings/claim-proof-binder.ts");
     const { proofReach } = await load("src/core/readings/proof-reach.ts");
+    const { claimCohesion } = await load("src/core/readings/claim-cohesion.ts");
     const { byDebtKey } = await load("src/core/readings/finding.ts");
     const { nameCheck } = await load("src/core/readings/name-check.ts");
     const { commentCheck } = await load("src/core/readings/comment-check.ts");
     const { referenceCheck } = await load("src/core/readings/semantic-references.ts");
-    const { termModel, termOrder } = await load("src/core/readings/term-model.ts");
+    const { termModel } = await load("src/core/readings/term-model.ts");
+    const { termOrder } = await load("src/core/readings/term-order.ts");
     const { placementOf } = await load("src/core/readings/placement-of.ts");
     const { topicShape } = await load("src/core/readings/topic-shape.ts");
     const { legacySize } = await load("src/core/readings/legacy-size.ts");
@@ -156,6 +158,7 @@ async function main() {
           ...moduleReferences(topicSnapshot),
           ...claimProofBinder(topicSnapshot),
           ...proofReach(topicSnapshot),
+          ...claimCohesion(topicSnapshot),
         ].sort(byDebtKey),
         ...nameCheck(snapshot),
         ...commentCheck(snapshot),

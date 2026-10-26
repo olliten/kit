@@ -77,6 +77,10 @@
   - Role: derived
   - Zone: core
   - From: {{dependency-check}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
+- **claim-cohesion** — the check that the claims naming a module share the code of it their tests use.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{proof-reach}}, {{snapshot}}
 - **claim-inventory** — claim declarations, module relationships and references interpreted from supplied Markdown.
   - Role: derived
   - Zone: core
@@ -89,7 +93,11 @@
   - Role: derived
   - Zone: core
   - From: {{zone}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{layer}}, {{snapshot}}
-- **dependency-check** — findings from import direction, cycles and explicit separation of compiled dependencies.
+- **dependency-check** — findings from import direction and cycles between placed modules.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **dependency-exclusions** — findings and limits from the explicit separations an app declares between selected code.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
@@ -145,6 +153,10 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{term}}, {{finding}}, {{placement-of}}
+- **term-order** — the check that each list in the terms file is in alphabetical order.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{snapshot}}
 - **topic-shape** — the check that a topic is a title, a short intro, then only section headings and claims with optional module relationships.
   - Role: derived
   - Zone: core

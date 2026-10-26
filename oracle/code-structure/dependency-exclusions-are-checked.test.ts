@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { dependencyExclusions } from "../../src/core/readings/dependency-check.js";
+import { dependencyExclusions } from "../../src/core/readings/dependency-exclusions.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const actual = "src/core/readings/actual.ts";

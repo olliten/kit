@@ -6,6 +6,7 @@ import { commentCheck } from "../../src/core/readings/comment-check.js";
 import { nameCheck } from "../../src/core/readings/name-check.js";
 import { placementOf } from "../../src/core/readings/placement-of.js";
 import { proofReach } from "../../src/core/readings/proof-reach.js";
+import { claimCohesion } from "../../src/core/readings/claim-cohesion.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
@@ -36,6 +37,7 @@ test("the kit's claims, modules and tests bind with no finding", () => {
   expect(kit.claims?.length ?? 0).toBeGreaterThan(0);
   expect(bindingFindings(kit)).toEqual([]);
   expect(proofReach(kit)).toEqual([]);
+  expect(claimCohesion(kit)).toEqual([]);
 });
 
 test("the kit's own comments cite nothing and carry no debt (R3)", () => {

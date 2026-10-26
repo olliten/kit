@@ -94,6 +94,8 @@ export interface CompilerFacts {
       readonly file: string;
       readonly reached: readonly string[];
       readonly whole: readonly string[];
+      // The top-level declarations of other files whose code it uses.
+      readonly declarations?: readonly { readonly file: string; readonly name: string }[];
     }[];
     readonly exports: readonly {
       readonly file: string;
