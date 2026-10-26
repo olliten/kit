@@ -9,7 +9,7 @@ its config, and its debt in its own baseline.
   accepts only the supported root fields and shapes. `roots.src` accepts one code-root path or a set of
   paths, checked together in one snapshot and graph; extraction, authority, structural checks, references
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
-  - Implementation: {{kit-configuration}}
+  - Implementation: {{kit-configuration}}, {{read-snapshot}}, {{capability-check}}, {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{startup-check}}, {{zone-authority-check}}, {{zone-permission}}, {{dependency-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{claim-proof-binder}}, {{term-model}}, {{legacy-size}}, {{ratchet}}, {{finding}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
 - Test discovery includes the configured proof root and only explicitly configured
@@ -26,11 +26,12 @@ its config, and its debt in its own baseline.
   debt fails the ratchet. Missing or malformed legacy locations fail configuration. Legacy locations
   grant no module placement, capability or executable-entrypoint permission. Without a layout declaration,
   existing configuration keeps its behavior. · {#directory-roles-are-configured}
-  - Implementation: {{layout-check}}, {{kit-configuration}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
+  - Implementation: {{layout-check}}, {{kit-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 
 - {{read-snapshot}} reads the fixture as its files, imports, claims and terms through {{filesystem}} and
   {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
+  - Implementation: {{dependency-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{claim-proof-binder}}
   - Proof: {{binding-findings}}
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
@@ -44,7 +45,7 @@ its config, and its debt in its own baseline.
 - A cached snapshot is reused only while every read its extraction made through {{filesystem}} and
   {{compiler}} returns the same: each file's bytes, each directory listing and each probe that found nothing.
   A change nothing read misses no entry, and worktrees of one repository share one cache. · {#cache-keys-on-what-was-read}
-  - Implementation: {{cached-check}}, {{snapshot-cache-key}}, {{snapshot-store}}
+  - Implementation: {{cached-check}}, {{read-snapshot}}, {{snapshot-cache-key}}, {{snapshot-store}}
   - Proof: {{cache-app}}, {{cache-proof}}
 - A path the config ignores is never listed or read by {{read-snapshot}}, and an import into it is an error,
   never a missing edge. · {#ignored-paths-are-unread}
@@ -75,5 +76,5 @@ its config, and its debt in its own baseline.
   tests bind with no finding, claims that share no code share no module, its placed modules bind to terms without supporting-word terms, its terms
   are defined once, its names and prose use no retired word, and its comments cite nothing and carry no
   debt. These checks use one snapshot of the actual configured repository. · {#kit-checks-itself}
-  - Implementation: {{claim-cohesion}}, {{comment-check}}, {{dependency-check}}, {{gate}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
+  - Implementation: {{claim-cohesion}}, {{comment-check}}, {{dependency-check}}, {{gate}}, {{kit-configuration}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
   - Proof: {{binding-findings}}
