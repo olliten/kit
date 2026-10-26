@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { Snapshot } from "../../src/core/primitives/snapshot.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";

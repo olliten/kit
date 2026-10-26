@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 
 test.each([

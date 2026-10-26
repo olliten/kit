@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 import { configuredKit, kitConfig } from "../../src/core/readings/kit-configuration.js";
 

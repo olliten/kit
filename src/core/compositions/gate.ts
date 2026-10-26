@@ -1,6 +1,6 @@
 import type { KitConfig } from "../primitives/default-config.js";
 import type { Snapshot } from "../primitives/snapshot.js";
-import { capabilityCheck } from "../readings/capability-check.js";
+import { capabilityCheck } from "./capability-check.js";
 import { claimCohesion } from "../readings/claim-cohesion.js";
 import { claimProofBinder } from "../readings/claim-proof-binder.js";
 import { commentCheck } from "../readings/comment-check.js";

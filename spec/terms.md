@@ -101,10 +101,6 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{module-references}}, {{snapshot}}
-- **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
-  - Role: derived
-  - Zone: core
-  - From: {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{finding}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
 - **capability-context** — what every capability check reads: checked files, declared entrypoints, adapter contracts and native roots, and how a capability finding is categorised.
   - Role: derived
   - Zone: core
@@ -332,6 +328,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{default-config}}, {{filesystem}}, {{snapshot}}, {{snapshot-cache}}, {{snapshot-cache-key}}, {{snapshot-store}}, {{stopwatch}}
+- **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
+  - Role: composition
+  - Zone: core
+  - Of: {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{finding}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate

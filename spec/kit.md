@@ -9,7 +9,7 @@ its config, and its debt in its own baseline.
   accepts only the supported root fields and shapes. `roots.src` accepts one code-root path or a set of
   paths, checked together in one snapshot and graph; extraction, authority, structural checks, references
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
-  - Implementation: {{kit-configuration}}, {{read-snapshot}}, {{capability-check}}, {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{startup-check}}, {{zone-authority-check}}, {{zone-permission}}, {{dependency-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{claim-proof-binder}}, {{term-model}}, {{legacy-size}}, {{ratchet}}, {{finding}}
+  - Implementation: {{kit-configuration}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{claim-proof-binder}}, {{term-model}}, {{legacy-size}}, {{ratchet}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
 - Test discovery includes the configured proof root and only explicitly configured

@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { claimProofBinder } from "../../src/core/readings/claim-proof-binder.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 

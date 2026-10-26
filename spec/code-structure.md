@@ -60,7 +60,7 @@ compositions wire the others into behaviour.
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
   never purity ({{capability-check}}, {{authority-graph}}, {{access-authority}}, {{import-authority}}, {{capability-context}}, {{compiler-check}}, {{compiler-facts}}, {{program-scope}}, {{syntax-reading}}, {{escape-recorder}},
   {{native-reading}}). · {#authority-is-derived}
-  - Implementation: {{read-snapshot}}, {{global-authority}}, {{registration-check}}, {{startup-check}}, {{edge-check}}, {{zone-authority-check}}, {{zone-permission}}, {{behaviour-check}}, {{construction-check}}, {{dependency-check}}, {{finding}}, {{placement-of}}
+  - Implementation: {{capability-check}}, {{read-snapshot}}
   - Proof: {{fixture-config}}, {{source-fixture}}
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
@@ -138,7 +138,7 @@ compositions wire the others into behaviour.
   does not pass to what it imports or exempt it from the capability, write, compiler and cycle checks.
   A proof keeps its topic binding; a test suffix grants no permission. A directory, a pattern, a missing file
   or a zoned module declared as an entrypoint grants nothing ({{startup-check}}, {{authority-graph}}, {{edge-check}}, {{zone-permission}}, {{default-config}}). · {#startup-assembles-outer-zones}
-  - Implementation: {{read-snapshot}}, {{capability-check}}, {{capability-context}}, {{registration-check}}, {{compiler-check}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{dependency-check}}, {{zone-authority-check}}, {{behaviour-check}}, {{construction-check}}, {{claim-proof-binder}}, {{kit-configuration}}, {{finding}}
+  - Implementation: {{read-snapshot}}, {{capability-check}}, {{claim-proof-binder}}, {{kit-configuration}}
   - Proof: {{source-fixture}}
 
 ## Writes

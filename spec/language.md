@@ -34,10 +34,7 @@ why the code is built the way it is.
 - A placed module and its term bind both ways, and the term's From and Of name the module's actual direct
   owners; a supporting type or a selected field creates no other module, and a term grants no authority. · {#modules-bind-to-terms}
   - Implementation: {{term-model}}, {{exported-symbol}}, {{term-recorder}}, {{term-inventory}}, {{import-recorder}}, {{authority-recorder}},
-    {{fact-walk}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{compiler}}, {{finding}}, {{placement-of}},
-    {{capability-check}}, {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}},
-    {{compiler-check}}, {{construction-check}}, {{dependency-check}}, {{edge-check}}, {{global-authority}},
-    {{import-authority}}, {{registration-check}}, {{startup-check}}, {{zone-authority-check}}, {{zone-permission}}
+    {{fact-walk}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{compiler}}, {{capability-check}}
   - Proof: {{fixture-snapshot}}, {{recorded-terms}}, {{recorded-imports}}, {{recorded-authority}}, {{project-snapshot}}
 
 - A supporting exported type needs no term for its ordinary words, and a retired word in it is still a
@@ -56,11 +53,7 @@ why the code is built the way it is.
   - Proof: {{binding-findings}}
 - Claims in several topics may name one module, and regrouping topics changes no import permission or
   source binding. · {#topics-share-modules}
-  - Implementation: {{semantic-references}}, {{term-inventory}}, {{term-model}}, {{module-references}}, {{claim-proof-binder}}, {{finding}},
-    {{placement-of}},
-    {{capability-check}}, {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}},
-    {{compiler-check}}, {{construction-check}}, {{dependency-check}}, {{edge-check}}, {{global-authority}},
-    {{import-authority}}, {{registration-check}}, {{startup-check}}, {{zone-authority-check}}, {{zone-permission}}
+  - Implementation: {{capability-check}}, {{semantic-references}}, {{term-inventory}}, {{term-model}}, {{module-references}}, {{claim-proof-binder}}
   - Proof: {{fixture-snapshot}}, {{binding-findings}}
 
 ## Comments
