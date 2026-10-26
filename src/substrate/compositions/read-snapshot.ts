@@ -19,7 +19,7 @@ import { behaviourReading } from "./behaviour-reading.js";
 import { contractReading } from "./contract-reading.js";
 import { contractRecorder } from "./contract-recorder.js";
 import { escapeRecorder } from "./escape-recorder.js";
-import { fileScope } from "./file-scope.js";
+import { factWalk } from "./fact-walk.js";
 import { importRecorder } from "./import-recorder.js";
 import { nativeReading } from "./native-reading.js";
 import { sourceSize } from "./source-size.js";
@@ -296,35 +296,7 @@ function readCompiler(
       const contractFacts = contractRecorder(scope, natives, contractTypes, behaviour);
       const escapeFacts = escapeRecorder();
       const termFacts = termRecorder(scope, syntax);
-      for (const sf of program.getSourceFiles()) {
-        const path = local(sf.fileName);
-        if (!source.has(path)) continue;
-        const file = fileScope(sf, path);
-        // One walk visits every node once for every recorder; a node is runtime code unless it sits in a type,
-        // a type declaration or an import or export declaration.
-        const visit = (node: ts.Node): void => {
-          let runtime = true;
-          for (let parent: ts.Node | undefined = node; parent !== undefined; parent = parent.parent)
-            if (
-              ts.isTypeNode(parent) ||
-              ts.isInterfaceDeclaration(parent) ||
-              ts.isTypeAliasDeclaration(parent) ||
-              ts.isImportDeclaration(parent) ||
-              ts.isExportDeclaration(parent) ||
-              (ts.isImportClause(parent) && parent.isTypeOnly)
-            )
-              runtime = false;
-          escapeFacts.visit(file, node);
-          importFacts.visit(file, node);
-          contractFacts.visit(file, node);
-          authorityFacts.visit(file, node, runtime);
-          ts.forEachChild(node, visit);
-        };
-        visit(sf);
-        termFacts.end(file);
-        importFacts.end(file);
-        escapeFacts.end(file);
-      }
+      factWalk(scope, [escapeFacts, importFacts, contractFacts, authorityFacts, termFacts]);
       // A test reaches what its code uses, followed into helpers and modules as a capture is, so a helper that
       // imports many modules lends a test only the ones the code it calls uses.
       const proofOf = testReach(

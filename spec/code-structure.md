@@ -92,8 +92,9 @@ compositions wire the others into behaviour.
 - Only an adapter constructs values of its contract and its ports: an object literal of such a type, or a
   class implementing one, outside the adapter's file is a finding, so a value of a contract carries what the
   adapter's file shows. A declared entrypoint may construct them as test doubles
-  ({{construction-check}}, {{contract-recorder}}, {{file-scope}}, {{contract-reading}}). · {#only-adapters-construct-contracts}
-  - Proof: {{source-fixture}}
+  ({{construction-check}}, {{contract-recorder}}, {{file-scope}}, {{contract-reading}}, {{fact-walk}}, {{finding}},
+  {{compiler}}). · {#only-adapters-construct-contracts}
+  - Proof: {{recorded-contracts}}, {{project-snapshot}}
 - A native handle or event handler stays authority: a reading or a core composition taking one is a finding. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
   host function it is handed to, such as `fetch`, stays authority ({{authority-graph}}, {{zone-authority-check}}). · {#native-handles-stay-in-adapters}
 - A native capability contract is usable in an outer zone only when both its host boundary and its

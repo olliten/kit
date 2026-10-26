@@ -1,7 +1,8 @@
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { constructionCheck } from "../../src/core/readings/construction-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
 
 const adapter = "src/substrate/adapters/journal.ts";
 const registration: NonNullable<KitConfig["adapters"]> = [
@@ -16,7 +17,8 @@ const registration: NonNullable<KitConfig["adapters"]> = [
 ];
 
 function keys(files: Readonly<Record<string, string>>, exceptions: string[] = []): string[] {
-  const snapshot = sourceFixture(
+  const config = { adapters: registration, exceptions };
+  const facts = recordedContracts(
     {
       [adapter]:
         "export interface Entry { note(text: string): void; }\n" +
@@ -24,10 +26,9 @@ function keys(files: Readonly<Record<string, string>>, exceptions: string[] = []
         "export const journal: Journal = { open: () => ({ note: () => {} }) };\n",
       ...files,
     },
-    { adapters: registration, exceptions },
+    config,
   );
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return capabilityCheck(snapshot).findings
+  return constructionCheck(projectSnapshot(facts, config), exceptions)
     .map((item) => item.debtKey)
     .filter((key) => key.startsWith("R1:contract-construction:"));
 }

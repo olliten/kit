@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { expect, test } from "vitest";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 test("projects with the same prefix own separate files and can be disposed repeatedly", () => {
@@ -91,5 +92,21 @@ test("source fixtures preserve multiple code roots and compiler path mappings", 
       from: "proof/core/readings/double.ts",
       to: "app/core/primitives/value.ts",
     }),
+  );
+});
+
+test("a recorded fixture compiles its sources and records only what its recorder reads", () => {
+  const facts = recordedContracts({
+    "src/core/primitives/total.ts": "export interface Total { readonly value: number; }\n",
+    "src/core/readings/total.test.ts": "export {};\n",
+  });
+  expect(facts.files).toEqual(["src/core/primitives/total.ts"]);
+  expect(facts.contracts.map((contract) => contract.name)).toEqual(["Total"]);
+  expect(facts.constructions).toEqual([]);
+});
+
+test("a fixture that doesn't compile is an error, so no proof reads facts from a broken program", () => {
+  expect(() => recordedContracts({ "src/core/readings/broken.ts": "export const broken: number = 'text';\n" })).toThrow(
+    /not assignable/,
   );
 });

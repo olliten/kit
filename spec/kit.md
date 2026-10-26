@@ -66,8 +66,9 @@ its config, and its debt in its own baseline.
 
 - Source fixtures own separate temporary directories, write supplied relative paths only inside their
   directory with the declared compiler settings and roots, and dispose the directory on return or
-  failure. · {#source-fixtures-own-their-files}
-  - Implementation: {{source-fixture}}, {{temporary-project}}
+  failure. A recorded fixture compiles its files and records only what one recorder reads, so a proof need not
+  read a whole snapshot; a fixture that doesn't compile is an error. · {#source-fixtures-own-their-files}
+  - Implementation: {{source-fixture}}, {{program-fixture}}, {{fixture-files}}, {{temporary-project}}, {{fact-walk}}, {{read-snapshot}}, {{compiler}}
 
 - Kit's production source is placed and its imports obey the dependency rules; its claims, modules and
   tests bind with no finding, claims that share no code share no module, its placed modules bind to terms without supporting-word terms, its terms

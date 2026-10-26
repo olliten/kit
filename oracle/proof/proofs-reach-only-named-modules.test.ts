@@ -67,3 +67,13 @@ test("unplaced code needs no name", () => {
     }),
   ).toEqual([]);
 });
+
+test("naming an oracle helper covers only the helper, not what it composes", () => {
+  expect(
+    keys({
+      files: ["oracle/substrate/compositions/fixture.ts", "src/core/readings/total.ts", test_],
+      imports: [`${test_} > oracle/substrate/compositions/fixture.ts`, "oracle/substrate/compositions/fixture.ts > src/core/readings/total.ts"],
+      claims: [claim(["fixture"])],
+    }),
+  ).toEqual(["R4:proof-scope:spec/topic.md:total-sums:src/core/readings/total.ts"]);
+});
