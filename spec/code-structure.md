@@ -53,8 +53,8 @@ compositions wire the others into behaviour.
   The compiler's DOM and worker declarations distinguish Window-only types and globals from shared
   host APIs; HTTP and cancellation remain available to Substrate. Imports retain this requirement.
   · {#window-authority-stays-in-shell}
-  - Implementation: {{authority-graph}}, {{global-authority}}, {{zone-authority-check}}, {{zone-permission}}, {{compiler-facts}}, {{compiler}}, {{authority-recorder}}, {{native-reading}}
-  - Proof: {{source-fixture}}
+  - Implementation: {{authority-graph}}, {{global-authority}}, {{zone-authority-check}}, {{zone-permission}}, {{compiler-facts}}, {{compiler}}, {{authority-recorder}}, {{native-reading}}, {{access-authority}}, {{import-authority}}, {{capability-context}}, {{edge-check}}, {{dependency-check}}, {{behaviour-check}}, {{finding}}, {{import-recorder}}, {{contract-recorder}}, {{fact-walk}}
+  - Proof: {{recorded-authority}}, {{recorded-imports}}, {{recorded-contracts}}, {{project-snapshot}}
 
 - A module's authority is derived from its actual inputs: runtime imports, ambient globals and parameters
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
@@ -72,21 +72,28 @@ compositions wire the others into behaviour.
   - Proof: {{recorded-imports}}, {{recorded-authority}}, {{recorded-contracts}}, {{project-snapshot}}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
   holding only the adapter's plain contract holds no native authority ({{authority-graph}}, {{global-authority}}, {{zone-authority-check}}). · {#declared-globals-cover-their-handles}
-  - Proof: {{source-fixture}}
+  - Implementation: {{access-authority}}, {{import-authority}}, {{capability-context}}, {{behaviour-check}}, {{zone-permission}}, {{finding}}, {{authority-recorder}}, {{import-recorder}}, {{contract-recorder}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-authority}}, {{recorded-imports}}, {{recorded-contracts}}, {{project-snapshot}}
 - An ambient host global such as `process` is authority: used outside an adapter that declares it, also as
   `globalThis.<name>` or through a cast of `globalThis`, it is a limit ({{global-authority}}, {{syntax-reading}}). · {#host-globals-need-an-adapter}
+  - Implementation: {{access-authority}}, {{capability-context}}, {{finding}}, {{authority-recorder}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-authority}}, {{project-snapshot}}
 - A package an adapter declares in its `packages` is that adapter's to import: there the import grants the
   adapter's capability, and anywhere else, the core included, a runtime import of it is a finding even where a
   package row declares it; a package no row declares stays a limit ({{import-authority}}). · {#declared-packages-stay-in-their-adapter}
-  - Proof: {{source-fixture}}
+  - Implementation: {{access-authority}}, {{global-authority}}, {{capability-context}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{finding}}, {{authority-recorder}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-authority}}, {{recorded-imports}}, {{project-snapshot}}
 - An effectful package contract may restrict runtime imports to selected named exports in exact declared
   entrypoints. Aliases retain the original export name and erased imports grant no authority; other access
   forms, subpaths and missing import evidence stay limits. The permission does not extend to helpers, and
   adapter package ownership takes precedence
   ({{import-authority}}, {{startup-check}}, {{zone-permission}}, {{compiler-facts}}, {{default-config}}, {{import-recorder}}). · {#entrypoint-package-exports-are-checked}
-  - Proof: {{source-fixture}}
+  - Implementation: {{access-authority}}, {{global-authority}}, {{capability-context}}, {{authority-graph}}, {{zone-authority-check}}, {{behaviour-check}}, {{finding}}, {{authority-recorder}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{fixture-files}}, {{recorded-authority}}, {{recorded-imports}}, {{project-snapshot}}
 - A namespace such as `Window` grants only what is reached through it, and a constructor selected from it
-  keeps its own authority ({{authority-graph}}, {{zone-authority-check}}). · {#namespaces-grant-what-is-reached}
+  keeps its own authority ({{authority-recorder}}, {{native-reading}}). · {#namespaces-grant-what-is-reached}
+  - Implementation: {{behaviour-check}}, {{finding}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-authority}}, {{recorded-imports}}, {{project-snapshot}}
 - A type, a type alias or a declaration merge grants no runtime authority; the value it describes still does
   ({{authority-graph}}, {{compiler-facts}}). · {#erased-types-grant-no-authority}
   - Implementation: {{global-authority}}, {{access-authority}}, {{import-authority}}, {{zone-authority-check}}, {{zone-permission}}, {{capability-context}}, {{finding}}, {{authority-recorder}}, {{syntax-reading}}, {{contract-reading}}, {{behaviour-reading}}, {{fact-walk}}, {{compiler}}
@@ -107,11 +114,14 @@ compositions wire the others into behaviour.
   - Proof: {{recorded-contracts}}, {{project-snapshot}}
 - A native handle or event handler stays authority: a reading or a core composition taking one is a finding. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
   host function it is handed to, such as `fetch`, stays authority ({{authority-graph}}, {{zone-authority-check}}). · {#native-handles-stay-in-adapters}
+  - Implementation: {{access-authority}}, {{global-authority}}, {{import-authority}}, {{capability-context}}, {{edge-check}}, {{dependency-check}}, {{behaviour-check}}, {{zone-permission}}, {{finding}}, {{authority-recorder}}, {{import-recorder}}, {{contract-recorder}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-authority}}, {{recorded-imports}}, {{recorded-contracts}}, {{project-snapshot}}
 - A native capability contract is usable in an outer zone only when both its host boundary and its
   registered adapter permit it, and its operation contract establishes the access. Window-only authority
   stays in Shell; the core stays forbidden, and undeclared native authority stays a limit
   ({{zone-permission}}, {{zone-authority-check}}). · {#native-contracts-follow-permitted-zones}
-  - Proof: {{source-fixture}}
+  - Implementation: {{access-authority}}, {{global-authority}}, {{import-authority}}, {{capability-context}}, {{authority-graph}}, {{behaviour-check}}, {{finding}}, {{authority-recorder}}, {{import-recorder}}, {{contract-recorder}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-authority}}, {{recorded-imports}}, {{recorded-contracts}}, {{project-snapshot}}
 - An import between legacy and placed code obeys zone boundaries and carries capabilities transitively,
   and a legacy module is not given a layer ({{authority-graph}}, {{edge-check}}, {{zone-authority-check}}, {{dependency-check}}). · {#legacy-edges-keep-zones}
   - Implementation: {{capability-context}}, {{import-authority}}, {{zone-permission}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}, {{finding}}

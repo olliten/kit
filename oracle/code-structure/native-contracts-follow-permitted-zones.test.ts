@@ -1,7 +1,34 @@
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { behaviourCheck } from "../../src/core/readings/behaviour-check.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
+
+// What each module of a fixture holds and the zone rules over it, with the behaviour the core may not take; a
+// fixture that doesn't compile throws. No fixture has legacy code, so no edge crosses placement.
+function zoneFindings(files: Readonly<Record<string, string>>, adapters: NonNullable<KitConfig["adapters"]>) {
+  const config = { adapters };
+  const snapshot = projectSnapshot(
+    { ...recordedAuthority(files, config), ...recordedImports(files, config), ...recordedContracts(files, config) },
+    config,
+  );
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const graph = authorityGraph(snapshot, context, parts, new Set());
+  return [
+    ...parts.flatMap((part) => part.findings),
+    ...zoneAuthorityCheck(snapshot, context, graph),
+    ...behaviourCheck(snapshot),
+  ];
+}
 
 const adapter = "src/substrate/adapters/cancellation.ts";
 const contract =
@@ -20,9 +47,7 @@ const registration: NonNullable<KitConfig["adapters"]> = [
 ];
 
 function inspect(files: Readonly<Record<string, string>>, adapters = registration) {
-  const snapshot = sourceFixture({ [adapter]: contract, ...files }, { adapters });
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return capabilityCheck(snapshot).findings;
+  return zoneFindings({ [adapter]: contract, ...files }, adapters);
 }
 
 test("a real declared Substrate native contract is usable in its permitted composition", () => {
@@ -104,9 +129,7 @@ const renderingRegistration: NonNullable<KitConfig["adapters"]> = [
 ];
 
 function inspectRendering(files: Readonly<Record<string, string>>, body = genericRendering) {
-  const snapshot = sourceFixture({ [renderingAdapter]: body, ...files }, { adapters: renderingRegistration });
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return capabilityCheck(snapshot).findings;
+  return zoneFindings({ [renderingAdapter]: body, ...files }, renderingRegistration);
 }
 
 test.each([
@@ -185,7 +208,7 @@ test("an indexed mapped contract establishes its shared cancellation handle in S
 
 test("an indexed mapped Window contract stays forbidden in Substrate", () => {
   const path = "src/substrate/compositions/read.ts";
-  const snapshot = sourceFixture({
+  const findings = zoneFindings({
     "src/substrate/adapters/view.ts":
       "type Handles = { [K in 'view']: Window };\n" +
       "export interface View { create<K extends keyof Handles>(kind: K): Handles[K]; }\n" +
@@ -193,19 +216,16 @@ test("an indexed mapped Window contract stays forbidden in Substrate", () => {
       "export const view: View = { create: (kind) => handles[kind] };\n",
     [path]: "import { view } from '../adapters/view.js';\n" +
       "export function read(): Window { return view.create('view'); }\n",
-  }, {
-    adapters: [{
-      module: "substrate/adapters/view",
-      export: "view",
-      capability: "view",
-      kind: "external",
-      zones: ["substrate"],
-      contract: { type: "View" },
-      globals: ["window"],
-    }],
-  });
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  expect(capabilityCheck(snapshot).findings).toEqual(
+  }, [{
+    module: "substrate/adapters/view",
+    export: "view",
+    capability: "view",
+    kind: "external",
+    zones: ["substrate"],
+    contract: { type: "View" },
+    globals: ["window"],
+  }]);
+  expect(findings).toEqual(
     expect.arrayContaining([expect.objectContaining({ path, blocking: true })]),
   );
 });

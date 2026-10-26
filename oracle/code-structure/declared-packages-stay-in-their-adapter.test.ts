@@ -1,8 +1,15 @@
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 const adapter = "src/substrate/adapters/file-access.ts";
 const adapterSource =
@@ -24,37 +31,46 @@ const owner: NonNullable<KitConfig["adapters"]>[number] = {
   globals: ["process", "Buffer"],
 };
 
+// What the fixture's imports, globals and accesses grant, and the zone rules over what each module then holds;
+// a fixture that doesn't compile throws. It has no legacy code, so no edge crosses placement.
 function inspect(
   files: Readonly<Record<string, string>> = {},
   config: Partial<KitConfig> = {},
 ) {
-  const snapshot = sourceFixture(
-    {
-      "tsconfig.json": JSON.stringify({
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          lib: ["ES2022"],
-          types: ["node"],
-          typeRoots: [fileURLToPath(new URL("../../node_modules/@types", import.meta.url))],
-          strict: true,
-          skipLibCheck: true,
-          noEmit: true,
-        },
-        include: ["src/**/*.ts"],
-      }),
-      "package.json": JSON.stringify({ type: "module" }),
-      [adapter]: adapterSource,
-      ...files,
-    },
-    { adapters: [owner], ...config },
+  const sources = {
+    "tsconfig.json": JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        lib: ["ES2022"],
+        types: ["node"],
+        typeRoots: [fileURLToPath(new URL("../../node_modules/@types", import.meta.url))],
+        strict: true,
+        skipLibCheck: true,
+        noEmit: true,
+      },
+      include: ["src/**/*.ts"],
+    }),
+    "package.json": JSON.stringify({ type: "module" }),
+    [adapter]: adapterSource,
+    ...files,
+  };
+  const settings = { adapters: [owner], ...config };
+  const snapshot = projectSnapshot(
+    { ...recordedAuthority(sources, settings), ...recordedImports(sources, settings) },
+    settings,
   );
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return capabilityCheck(snapshot);
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const graph = authorityGraph(snapshot, context, parts, new Set());
+  return {
+    direct: (path: string) => [...(graph.direct.get(path) ?? [])].sort(),
+    findings: [...parts.flatMap((part) => part.findings), ...zoneAuthorityCheck(snapshot, context, graph)],
+  };
 }
 
-const keys = (result: ReturnType<typeof capabilityCheck>, path: string) =>
+const keys = (result: ReturnType<typeof inspect>, path: string) =>
   result.findings
     .filter((finding) => finding.path === path)
     .map((finding) => `${finding.category}:${finding.debtKey.split(":").slice(0, 2).join(":")}`);
@@ -62,7 +78,7 @@ const keys = (result: ReturnType<typeof capabilityCheck>, path: string) =>
 test("a package and the globals an adapter declares are its own: the adapter holds them with no finding", () => {
   const result = inspect();
   expect(result.findings).toEqual([]);
-  expect(result.requirements.find((row) => row.path === adapter)?.direct).toEqual(["filesystem"]);
+  expect(result.direct(adapter)).toEqual(["filesystem"]);
 });
 
 test.each([
