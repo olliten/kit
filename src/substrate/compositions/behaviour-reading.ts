@@ -233,3 +233,5 @@ export function behaviourReading(
   };
   return { typeFacts, parameterFacts, acceptsBehaviour };
 }
+
+export type BehaviourReading = ReturnType<typeof behaviourReading>;

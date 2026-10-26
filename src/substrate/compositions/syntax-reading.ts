@@ -196,3 +196,5 @@ export function syntaxReading({ checker, local }: ProgramScope) {
   };
   return { targetOf, typeOnlyOf, rawAccess, globalName, literal, annotation };
 }
+
+export type SyntaxReading = ReturnType<typeof syntaxReading>;

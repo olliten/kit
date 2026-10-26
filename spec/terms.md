@@ -304,6 +304,10 @@
 
 ## Composition contracts
 
+- **authority-recorder** — the recorder of where a file's code can acquire authority: export parameters, raw primitives, dynamic code, native members and ambient globals.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{file-scope}}, {{native-reading}}, {{program-scope}}, {{syntax-reading}}
 - **behaviour-reading** — the reading of whether a type is or accepts behaviour: callable, an accessor, or an object with operations that is not a registered contract.
   - Role: composition
   - Zone: substrate
@@ -328,10 +332,26 @@
   - Role: composition
   - Zone: substrate
   - Of: {{program-scope}}
+- **contract-recorder** — the recorder of the contracts a file declares and the values of a named type it constructs.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{file-scope}}, {{native-reading}}, {{program-scope}}
+- **escape-recorder** — the recorder of the escape hatches in a file: `any`, type and non-null assertions, and compiler directive comments.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{file-scope}}
+- **file-scope** — one checked source file as its recorders see it: its path and the stable site key of a node there.
+  - Role: composition
+  - Zone: substrate
+  - Of: []
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
   - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+- **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{file-scope}}, {{placement-of}}, {{program-scope}}, {{syntax-reading}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate
@@ -339,7 +359,7 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{file-scope}}, {{import-recorder}}, {{term-recorder}}
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
@@ -356,6 +376,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{program-scope}}
+- **term-recorder** — the recorder of what the glossary checks read of a file: whether it holds only facts, and its declared types' properties.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{file-scope}}, {{program-scope}}, {{syntax-reading}}
 - **test-reach** — the workflow that follows a test's code into the files and top-level declarations it uses.
   - Role: composition
   - Zone: substrate

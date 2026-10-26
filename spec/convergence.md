@@ -27,7 +27,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
   an object with operations, through a parameter, a writable property or a mutable collection, is a finding
   keyed by the importer and the export: debt in legacy code, a violation in an entrypoint. A type-only import
   is none. · {#outside-code-hands-placed-code-data}
-  - Implementation: {{handover-check}}, {{read-snapshot}}
+  - Implementation: {{handover-check}}, {{import-recorder}}
   - Proof: {{source-fixture}}
 - A legacy module's size is debt that may only shrink. A change may add to a legacy module only statements
   that call into placed modules; new code is placed first ({{legacy-size}}, {{source-size}},

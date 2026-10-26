@@ -9,16 +9,22 @@ import type { ImportEdge } from "../../core/primitives/import.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
-import { legacyCodeOf, moduleFileOf, rootOf } from "../../core/readings/placement-of.js";
+import { legacyCodeOf, rootOf } from "../../core/readings/placement-of.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
 import { type FilesystemRead, filesystem } from "../adapters/filesystem.js";
+import { authorityRecorder } from "./authority-recorder.js";
 import { behaviourReading } from "./behaviour-reading.js";
 import { contractReading } from "./contract-reading.js";
-import { type NativeAuthority, VALUE_STATICS, nativeReading } from "./native-reading.js";
+import { contractRecorder } from "./contract-recorder.js";
+import { escapeRecorder } from "./escape-recorder.js";
+import { fileScope } from "./file-scope.js";
+import { importRecorder } from "./import-recorder.js";
+import { nativeReading } from "./native-reading.js";
 import { sourceSize } from "./source-size.js";
 import { syntaxReading } from "./syntax-reading.js";
+import { termRecorder } from "./term-recorder.js";
 import { testReach } from "./test-reach.js";
 
 // The kit's only effect: read one snapshot of the codebase at `appRoot`. Only imports that resolve to a file
@@ -280,144 +286,22 @@ function readCompiler(
                   ? "suggestion"
                   : "message",
         }));
-      const imports: Project["imports"][number][] = [];
-      const exports: Project["exports"][number][] = [];
-      const globals: Project["globals"][number][] = [];
-      const escapes: Project["escapes"][number][] = [];
-      const parameters = new Map<ts.ParameterDeclaration, Project["parameters"][number]>();
-      const contracts: Project["contracts"][number][] = [];
-      const accesses: Project["accesses"][number][] = [];
-      const constructions: Project["constructions"][number][] = [];
-      const termSources: NonNullable<Project["termFacts"]>["sources"][number][] = [];
-      const termTypes: NonNullable<Project["termFacts"]>["types"][number][] = [];
       const scope = { appRoot, config, program, checker, local, source, workerTypes };
-      const { targetOf, typeOnlyOf, rawAccess, globalName, literal, annotation } = syntaxReading(scope);
+      const syntax = syntaxReading(scope);
       const natives = nativeReading(scope);
       const contractTypes = contractReading(scope);
-      const { nativeLibrary, hostValue, nativeMember, nativeAuthorityOf, nativeMemberAuthority, nativeContract } =
-        natives;
-      const { operationsOf, portsOf, contractIdentity, typeNames } = contractTypes;
-      const { typeFacts, parameterFacts, acceptsBehaviour } = behaviourReading(scope, natives, contractTypes);
-      const exportedDeclarations = new Map<ts.SourceFile, ReadonlySet<ts.Node>>();
-      const exportedFrom = (sf: ts.SourceFile): ReadonlySet<ts.Node> => {
-        const known = exportedDeclarations.get(sf);
-        if (known !== undefined) return known;
-        const module = checker.getSymbolAtLocation(sf);
-        const found = new Set<ts.Node>(
-          (module === undefined ? [] : checker.getExportsOfModule(module)).flatMap((exported) =>
-            ((exported.flags & ts.SymbolFlags.Alias) !== 0
-              ? checker.getAliasedSymbol(exported)
-              : exported
-            ).declarations ?? [],
-          ),
-        );
-        exportedDeclarations.set(sf, found);
-        return found;
-      };
-      // Whether another file can name this function: through its own export, its exported class or the
-      // exported record that holds it. A function nested in another's body, a private method and an unexported
-      // declaration are reached only from their own file.
-      const nameable = (node: ts.Node): boolean => {
-        if (exportedFrom(node.getSourceFile()).has(node)) return true;
-        if (
-          ts.isFunctionDeclaration(node) ||
-          ts.isVariableDeclaration(node) ||
-          ts.isClassDeclaration(node)
-        ) {
-          const statement = ts.isVariableDeclaration(node) ? node.parent.parent : node;
-          return !(
-            ts.isSourceFile(statement.parent) ||
-            ts.findAncestor(node.parent, ts.isFunctionLike) !== undefined
-          );
-        }
-        if (ts.isObjectLiteralExpression(node.parent)) {
-          const holder = ts.findAncestor(node.parent, (parent) => !ts.isObjectLiteralExpression(parent));
-          return (
-            holder === undefined ||
-            !(ts.isVariableDeclaration(holder) || ts.isPropertyAssignment(holder)) ||
-            nameable(holder)
-          );
-        }
-        if (ts.isClassElement(node)) {
-          if (
-            (node.name !== undefined && ts.isPrivateIdentifier(node.name)) ||
-            (ts.canHaveModifiers(node) &&
-              ts.getModifiers(node)?.some(
-                (modifier) =>
-                  modifier.kind === ts.SyntaxKind.PrivateKeyword ||
-                  modifier.kind === ts.SyntaxKind.ProtectedKeyword,
-              ) === true)
-          )
-            return false;
-          return !ts.isClassDeclaration(node.parent) || nameable(node.parent);
-        }
-        return true;
-      };
-      const recordParameter = (parameter: ts.ParameterDeclaration): void => {
-        const sf = parameter.getSourceFile();
-        const file = local(sf.fileName);
-        if (sf.isDeclarationFile || !source.has(file)) return;
-        parameters.set(parameter, {
-          file,
-          start: parameter.getStart(sf),
-          name: parameter.name.getText(sf),
-          ...parameterFacts(checker.getTypeAtLocation(parameter)),
-        });
-      };
+      const behaviour = behaviourReading(scope, natives, contractTypes);
+      const importFacts = importRecorder(scope, importTarget, ambientTargets, syntax, contractTypes, behaviour);
+      const authorityFacts = authorityRecorder(scope, workerGlobals, syntax, natives, behaviour);
+      const contractFacts = contractRecorder(scope, natives, contractTypes, behaviour);
+      const escapeFacts = escapeRecorder();
+      const termFacts = termRecorder(scope, syntax);
       for (const sf of program.getSourceFiles()) {
         const path = local(sf.fileName);
         if (!source.has(path)) continue;
-        const comments = new Map<number, ts.CommentRange>();
-        const escapeOccurrences = new Map<string, number>();
-        const syntaxOf = (node: ts.Node): readonly (readonly [string, string])[] => {
-          const tokens: [string, string][] = [];
-          const visitToken = (child: ts.Node): void => {
-            if (ts.isJSDoc(child)) return;
-            const children = child.getChildren(sf);
-            if (children.length === 0) tokens.push([ts.SyntaxKind[child.kind], child.getText(sf)]);
-            else for (const nested of children) visitToken(nested);
-          };
-          visitToken(node);
-          return tokens;
-        };
-        const escapeSite = (
-          node: ts.Node,
-          kind: string,
-          syntax: unknown = syntaxOf(node),
-        ): string => {
-          const scope: (readonly [string, readonly (readonly [string, string])[]])[] = [];
-          for (let parent: ts.Node | undefined = node.parent; parent !== undefined; parent = parent.parent) {
-            const name =
-              ts.isVariableDeclaration(parent) ||
-              ts.isBindingElement(parent) ||
-              ts.isFunctionDeclaration(parent) ||
-              ts.isFunctionExpression(parent) ||
-              ts.isClassDeclaration(parent) ||
-              ts.isClassExpression(parent) ||
-              ts.isInterfaceDeclaration(parent) ||
-              ts.isTypeAliasDeclaration(parent) ||
-              ts.isTypeParameterDeclaration(parent) ||
-              ts.isParameter(parent) ||
-              ts.isMethodDeclaration(parent) ||
-              ts.isMethodSignature(parent) ||
-              ts.isPropertyDeclaration(parent) ||
-              ts.isPropertySignature(parent) ||
-              ts.isPropertyAssignment(parent) ||
-              ts.isGetAccessorDeclaration(parent) ||
-              ts.isSetAccessorDeclaration(parent) ||
-              ts.isEnumDeclaration(parent) ||
-              ts.isEnumMember(parent) ||
-              ts.isModuleDeclaration(parent)
-                ? parent.name
-                : undefined;
-            if (name !== undefined)
-              scope.unshift([ts.SyntaxKind[parent.kind], syntaxOf(name)]);
-          }
-          const identity = JSON.stringify([kind, scope, syntax]);
-          const occurrence = (escapeOccurrences.get(identity) ?? 0) + 1;
-          escapeOccurrences.set(identity, occurrence);
-          return JSON.stringify([scope, syntax, occurrence]);
-        };
+        const file = fileScope(sf, path);
+        // One walk visits every node once for every recorder; a node is runtime code unless it sits in a type,
+        // a type declaration or an import or export declaration.
         const visit = (node: ts.Node): void => {
           let runtime = true;
           for (let parent: ts.Node | undefined = node; parent !== undefined; parent = parent.parent)
@@ -430,425 +314,16 @@ function readCompiler(
               (ts.isImportClause(parent) && parent.isTypeOnly)
             )
               runtime = false;
-          for (const comment of [
-            ...(ts.getLeadingCommentRanges(sf.text, node.pos) ?? []),
-            ...(ts.getTrailingCommentRanges(sf.text, node.end) ?? []),
-          ])
-            comments.set(comment.pos, comment);
-          if (
-            (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-            node.moduleSpecifier !== undefined &&
-            ts.isStringLiteral(node.moduleSpecifier)
-          ) {
-            imports.push({
-              file: path,
-              specifier: node.moduleSpecifier.text,
-              target: importTarget(node.moduleSpecifier.text, sf.fileName),
-              ...ambientTargets.get(JSON.stringify(node.moduleSpecifier.text)),
-              typeOnly: typeOnlyOf(node),
-              namedImports: ts.isImportDeclaration(node) &&
-                node.importClause?.name === undefined &&
-                node.importClause?.namedBindings !== undefined &&
-                ts.isNamedImports(node.importClause.namedBindings)
-                ? node.importClause.namedBindings.elements
-                  .filter((binding) => !binding.isTypeOnly)
-                  .map((binding) => (binding.propertyName ?? binding.name).text)
-                : null,
-            });
-          }
-          if (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node))
-            contracts.push({
-              file: path,
-              name: node.name.text,
-              operations: operationsOf(checker.getTypeAtLocation(node)),
-              type: contractIdentity(checker.getTypeAtLocation(node)),
-              ...nativeContract(checker.getTypeAtLocation(node)),
-              ...portsOf(checker.getTypeAtLocation(node)),
-            });
-          if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
-            if (node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword))
-              for (const parameter of node.parameters) recordParameter(parameter);
-          }
-          if (
-            (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
-            ts.isVariableDeclaration(node.parent) &&
-            ts.isVariableDeclarationList(node.parent.parent) &&
-            ts.isVariableStatement(node.parent.parent.parent) &&
-            node.parent.parent.parent.modifiers?.some(
-              (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-            )
-          ) {
-            for (const parameter of node.parameters) recordParameter(parameter);
-          }
-          if (ts.isObjectLiteralExpression(node)) {
-            const type = checker.getContextualType(node) ?? checker.getTypeAtLocation(node);
-            constructions.push({
-              file: path,
-              start: node.getStart(sf),
-              site: escapeSite(node, "construction"),
-              callable: typeFacts(type).callable,
-              types: [
-                ...typeNames(type),
-                ...node.properties.flatMap((property) =>
-                  ts.isSpreadAssignment(property)
-                    ? typeNames(checker.getTypeAtLocation(property.expression))
-                    : [],
-                ),
-              ],
-              spread: node.properties.some(ts.isSpreadAssignment),
-            });
-          }
-          // A class implementing an interface constructs that interface's values as a literal does.
-          if (ts.isClassLike(node))
-            for (const clause of node.heritageClauses ?? [])
-              if (clause.token === ts.SyntaxKind.ImplementsKeyword)
-                for (const implemented of clause.types)
-                  constructions.push({
-                    file: path,
-                    start: implemented.getStart(sf),
-                    site: escapeSite(implemented, "construction"),
-                    callable: false,
-                    types: typeNames(checker.getTypeAtLocation(implemented)),
-                    spread: false,
-                  });
-          if (ts.isCallExpression(node)) {
-            if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-              const specifier = node.arguments[0];
-              if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
-                imports.push({
-                  file: path,
-                  specifier: specifier.text,
-                  target: importTarget(specifier.text, sf.fileName),
-                  ...ambientTargets.get(JSON.stringify(specifier.text)),
-                  typeOnly: false,
-                  namedImports: null,
-                });
-              } else accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
-            }
-            if (
-              ts.isPropertyAccessExpression(node.expression) &&
-              globalName(node.expression.expression) === "Reflect" &&
-              node.expression.name.text === "get" &&
-              node.arguments[0] !== undefined &&
-              globalName(node.arguments[0]) === "globalThis"
-            )
-              accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
-            const raw = rawAccess(node.expression);
-            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw, site: escapeSite(node, raw) });
-          }
-          if (ts.isPropertyAccessExpression(node)) {
-            const raw = runtime ? rawAccess(node) : null;
-            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw, site: escapeSite(node, raw) });
-          }
-          if (
-            runtime &&
-            (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node))
-          ) {
-            const receiver = checker.getTypeAtLocation(node.expression);
-            const key = ts.isElementAccessExpression(node)
-              ? checker.getTypeAtLocation(node.argumentExpression)
-              : null;
-            const member = ts.isPropertyAccessExpression(node)
-              ? checker.getSymbolAtLocation(node.name)
-              : key?.isStringLiteral()
-                ? receiver.getProperty(key.value)
-                : undefined;
-            const authority =
-              member === undefined ? [] : nativeMemberAuthority(member, receiver, node);
-            if (member !== undefined && (nativeMember(member) || authority.length > 0))
-              accesses.push({
-                file: path,
-                start: node.getStart(sf),
-                kind: "native",
-                site: escapeSite(node, "native"),
-                nativeAuthority: authority,
-              });
-          }
-          if (ts.isBindingElement(node) && ts.isIdentifier(node.name)) {
-            const raw = rawAccess(node.name);
-            if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw, site: escapeSite(node, raw) });
-            const owner = node.parent.parent;
-            const key = node.propertyName ?? node.name;
-            if (
-              runtime &&
-              ts.isObjectBindingPattern(node.parent) &&
-              ts.isVariableDeclaration(owner) &&
-              owner.initializer !== undefined &&
-              (ts.isIdentifier(key) || ts.isStringLiteralLike(key))
-            ) {
-              const receiver = checker.getTypeAtLocation(owner.initializer);
-              const member = receiver.getProperty(key.text);
-              const authority =
-                member === undefined ? [] : nativeMemberAuthority(member, receiver, node);
-              if (member !== undefined && (nativeMember(member) || authority.length > 0))
-                accesses.push({
-                  file: path,
-                  start: node.getStart(sf),
-                  kind: "native",
-                  site: escapeSite(node, "native"),
-                  nativeAuthority: authority,
-                });
-            }
-          }
-          // A cast erases which global is reached, so the authority it acquires has no identity.
-          if (
-            (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) &&
-            globalName(node.expression) === "globalThis"
-          )
-            accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
-          if (ts.isNewExpression(node)) {
-            const name = globalName(node.expression);
-            const kind =
-              name === "Date" && (node.arguments?.length ?? 0) === 0
-                ? "clock"
-                : name === "Function"
-                  ? "dynamic"
-                  : null;
-            if (kind !== null) accesses.push({ file: path, start: node.getStart(sf), kind, site: escapeSite(node, kind) });
-          }
-          if (
-            ts.isElementAccessExpression(node) &&
-            (node.expression.getText(sf) === "globalThis" ||
-              ["Date", "Math", "Reflect"].includes(globalName(node.expression) ?? ""))
-          )
-            accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
-          if (ts.isIdentifier(node)) {
-            if (
-              runtime &&
-              !(ts.isVariableDeclaration(node.parent) && node.parent.name === node) &&
-              rawAccess(node) === "dynamic"
-            )
-              accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic", site: escapeSite(node, "dynamic") });
-            const symbol = checker.getSymbolAtLocation(node);
-            const declaration = symbol?.declarations?.find(
-              (d) => d.getSourceFile().isDeclarationFile,
-            );
-            if (
-              declaration !== undefined &&
-              !(ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) &&
-              !(ts.isPropertyAssignment(node.parent) && node.parent.name === node)
-            ) {
-              const type = checker.getTypeAtLocation(node);
-              // A host function such as fetch hands out the native handles it returns, so calling it is
-              // their authority even when the caller never touches a member of the result.
-              const returned =
-                ts.isFunctionDeclaration(declaration) && nativeLibrary(declaration)
-                  ? type
-                      .getCallSignatures()
-                      .flatMap((signature) =>
-                        nativeAuthorityOf(checker.getReturnTypeOfSignature(signature)),
-                      )
-                  : [];
-              const reached =
-                ts.isPropertyAccessExpression(node.parent) && node.parent.expression === node
-                  ? node.parent.name.text
-                  : null;
-              const windowAuthority: readonly NativeAuthority[] =
-                nativeLibrary(declaration) && !workerGlobals.has(node.text)
-                  ? [{
-                      root: { file: local(declaration.getSourceFile().fileName), name: "Window" },
-                      bases: [],
-                      windowOnly: true,
-                    }]
-                  : [];
-              globals.push({
-                file: path,
-                name: node.text,
-                start: node.getStart(sf),
-                declarationFile: local(declaration.getSourceFile().fileName),
-                runtime,
-                nativeAuthority: [
-                  ...new Map(
-                    [...nativeAuthorityOf(type), ...returned, ...windowAuthority].map((authority) => [
-                      `${authority.root.file}:${authority.root.name}`,
-                      authority,
-                    ]),
-                  ).values(),
-                ],
-                ...(hostValue(symbol) &&
-                (reached === null || reached === "prototype" || VALUE_STATICS.includes(reached))
-                  ? { value: true }
-                  : {}),
-              });
-            }
-          }
-          if (ts.isPropertyAccessExpression(node)) {
-            const symbol = checker.getSymbolAtLocation(node.name);
-            const declaration = symbol?.declarations?.find(
-              (d) => d.getSourceFile().isDeclarationFile,
-            );
-            if (declaration !== undefined)
-              globals.push({
-                file: path,
-                name: node.getText(sf),
-                start: node.getStart(sf),
-                declarationFile: local(declaration.getSourceFile().fileName),
-                runtime,
-                ...(globalName(node.expression) === "globalThis" && nativeLibrary(declaration) &&
-                !workerGlobals.has(node.name.text)
-                  ? { nativeAuthority: [{
-                      root: { file: local(declaration.getSourceFile().fileName), name: "Window" },
-                      bases: [],
-                      windowOnly: true as const,
-                    }] }
-                  : {}),
-              });
-          }
-          const kind =
-            node.kind === ts.SyntaxKind.AnyKeyword
-              ? "any"
-              : (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) &&
-                  !(
-                    ts.isTypeReferenceNode(node.type) &&
-                    ts.isIdentifier(node.type.typeName) &&
-                    node.type.typeName.text === "const"
-                  )
-                ? "assertion"
-                : ts.isNonNullExpression(node) && !ts.isElementAccessExpression(node.expression)
-                  ? "non-null"
-                  : null;
-          if (kind !== null)
-            escapes.push({ file: path, start: node.getStart(sf), kind, site: escapeSite(node, kind) });
+          escapeFacts.visit(file, node);
+          importFacts.visit(file, node);
+          contractFacts.visit(file, node);
+          authorityFacts.visit(file, node, runtime);
           ts.forEachChild(node, visit);
         };
         visit(sf);
-        const module = checker.getSymbolAtLocation(sf);
-        termSources.push({
-          file: path,
-          factOnly: sf.statements.every(
-            (statement) =>
-              ts.isInterfaceDeclaration(statement) ||
-              ts.isTypeAliasDeclaration(statement) ||
-              ts.isImportDeclaration(statement) ||
-              ts.isExportDeclaration(statement) ||
-              (ts.isVariableStatement(statement) &&
-                (statement.declarationList.flags & ts.NodeFlags.Const) !== 0 &&
-                statement.declarationList.declarations.every(
-                  (declaration) =>
-                    declaration.initializer !== undefined && literal(declaration.initializer),
-                )),
-          ),
-        });
-        for (const statement of sf.statements) {
-          if (!ts.isInterfaceDeclaration(statement) && !ts.isTypeAliasDeclaration(statement))
-            continue;
-          const type = checker.getTypeAtLocation(statement);
-          const properties = checker.getPropertiesOfType(type).map((property) => {
-            const declaration = property.declarations?.find(ts.isPropertySignature);
-            const facts = declaration?.type
-              ? annotation(declaration.type)
-              : { types: [], absence: [], other: false, unsupported: true };
-            const absence: ("undefined" | "null")[] = [...facts.absence];
-            if (declaration?.questionToken && !absence.includes("undefined"))
-              absence.push("undefined");
-            return { name: property.name, ...facts, absence };
-          });
-          termTypes.push({ file: path, name: statement.name.text, properties });
-        }
-        for (const exported of module === undefined ? [] : checker.getExportsOfModule(module)) {
-          const target =
-            (exported.flags & ts.SymbolFlags.Alias) !== 0
-              ? checker.getAliasedSymbol(exported)
-              : exported;
-          const declaration = target.valueDeclaration ?? target.declarations?.[0];
-          if (declaration === undefined) continue;
-          const type = checker.getTypeAtLocation(declaration);
-          const explicit =
-            ts.isVariableDeclaration(declaration) ||
-            ts.isFunctionDeclaration(declaration) ||
-            ts.isPropertyDeclaration(declaration)
-              ? declaration.type !== undefined
-              : ts.isInterfaceDeclaration(declaration) ||
-                ts.isTypeAliasDeclaration(declaration) ||
-                ts.isClassDeclaration(declaration) ||
-                ts.isEnumDeclaration(declaration);
-          const initializer = ts.isVariableDeclaration(declaration)
-            ? declaration.initializer
-            : undefined;
-          const signatures = type.getCallSignatures();
-          const returnNode =
-            signatures.length === 1 ? signatures[0]?.getDeclaration()?.type : undefined;
-          const resultDeclaration =
-            returnNode !== undefined && ts.isTypeReferenceNode(returnNode)
-              ? targetOf(returnNode.typeName)
-              : undefined;
-          const returned =
-            signatures.length === 1 && signatures[0] !== undefined
-              ? checker.getReturnTypeOfSignature(signatures[0])
-              : undefined;
-          const actualResultSymbol = returned?.aliasSymbol ?? returned?.symbol;
-          const actualResultIdentity = returned === undefined ? null : contractIdentity(returned);
-          const resultType =
-            resultDeclaration !== undefined &&
-            (ts.isInterfaceDeclaration(resultDeclaration) ||
-              ts.isTypeAliasDeclaration(resultDeclaration)) &&
-            actualResultSymbol?.name === resultDeclaration.name.text &&
-            source.has(local(resultDeclaration.getSourceFile().fileName))
-              ? actualResultIdentity
-              : null;
-          exports.push({
-            file: path,
-            name: exported.name,
-            declarationFile: local(declaration.getSourceFile().fileName),
-            type: checker.typeToString(type),
-            explicit,
-            any: (type.flags & ts.TypeFlags.Any) !== 0,
-            unknown: (type.flags & ts.TypeFlags.Unknown) !== 0,
-            primitive:
-              (type.flags &
-                (ts.TypeFlags.String |
-                  ts.TypeFlags.Number |
-                  ts.TypeFlags.Boolean |
-                  ts.TypeFlags.BigInt |
-                  ts.TypeFlags.ESSymbol)) !==
-              0,
-            union: type.isUnion(),
-            satisfies:
-              initializer !== undefined && ts.isSatisfiesExpression(initializer)
-                ? initializer.type.getText(declaration.getSourceFile())
-                : null,
-            resultType,
-            ...((target.flags & ts.SymbolFlags.Value) !== 0 &&
-            acceptsBehaviour(
-              checker.getTypeOfSymbolAtLocation(target, declaration),
-              (config.adapters ?? []).flatMap((adapter) =>
-                adapter.kind === "external" &&
-                moduleFileOf(adapter.module, config.srcRoot, config.layerNames) === path
-                  ? (adapter.packages ?? [])
-                  : [],
-              ),
-            )
-              ? { acceptsBehaviour: true as const }
-              : {}),
-          });
-        }
-        for (const comment of comments.values()) {
-          for (const match of sf.text
-            .slice(comment.pos, comment.end)
-            .matchAll(/@ts-(ignore|nocheck|expect-error)\b/g)) {
-            const kind = match[1];
-            if (kind === "ignore" || kind === "nocheck" || kind === "expect-error") {
-              let target: ts.Node = sf;
-              const following = (node: ts.Node): void => {
-                if (node.getFullStart() <= comment.pos && node.end >= comment.end) {
-                  target = node;
-                  if (!ts.isSourceFile(node) && node.getStart(sf) >= comment.end) return;
-                  ts.forEachChild(node, following);
-                }
-              };
-              if (kind !== "nocheck") following(sf);
-              escapes.push({
-                file: path,
-                start: comment.pos + match.index,
-                kind,
-                site: escapeSite(target, kind, [
-                  sf.text.slice(comment.pos, comment.end).replace(/\s+/g, " ").trim(),
-                  ts.isSourceFile(target) ? [] : syntaxOf(target),
-                ]),
-              });
-            }
-          }
-        }
+        termFacts.end(file);
+        importFacts.end(file);
+        escapeFacts.end(file);
       }
       // A test reaches what its code uses, followed into helpers and modules as a capture is, so a helper that
       // imports many modules lends a test only the ones the code it calls uses.
@@ -902,16 +377,16 @@ function readCompiler(
           .filter((sf) => sf.isDeclarationFile)
           .map((sf) => local(sf.fileName)),
         diagnostics,
-        imports,
-        exports,
-        globals,
-        escapes,
-        parameters: [...parameters.values()],
-        contracts,
-        accesses,
-        constructions,
+        imports: importFacts.imports,
+        exports: importFacts.exports,
+        globals: authorityFacts.globals,
+        escapes: escapeFacts.escapes,
+        parameters: [...authorityFacts.parameters.values()],
+        contracts: contractFacts.contracts,
+        accesses: authorityFacts.accesses,
+        constructions: contractFacts.constructions,
         proofs,
-        termFacts: { sources: termSources, types: termTypes },
+        termFacts: { sources: termFacts.sources, types: termFacts.types },
       };
     });
   return { facts: { version: ts.version, projects }, scopes };
