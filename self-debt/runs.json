@@ -9,7 +9,7 @@
     "oracle/code-structure/authority-is-derived.inline-types.test.ts": "0c02e373b5a62a5174da6193befa944f92e1e2df3de494baef63dbea3d3cfa0c",
     "oracle/code-structure/authority-is-derived.test.ts": "c209fcca8c351a59e051650e9cd8af30054fe97951526ff5b7741b6ab25aebb7",
     "oracle/code-structure/compositions-invoke-producers.test.ts": "e9cac64a8f149cd1adc7b5e3e4d45dea0f0de776e1f97641fdc309aaa1c58c77",
-    "oracle/code-structure/core-and-readings-take-data.test.ts": "2e52ea15596cb539c0a51ff29488fdf8024ebb9b1b3178b6322df47006dde2f3",
+    "oracle/code-structure/core-and-readings-take-data.test.ts": "4e05bb03a01586e8608f5a068d5aff9e8f1ab7d11fb580b825b74f3a82373020",
     "oracle/code-structure/declared-globals-cover-their-handles.shared-process.test.ts": "fc1c71421d37225a2e0a491577254ca102d5df125b75d90c17bf6226ccb4f92c",
     "oracle/code-structure/declared-globals-cover-their-handles.test.ts": "ddcf633bc64d577693eb8d5aa9cac7dd97b09f76a9548cd2fa6030306860e366",
     "oracle/code-structure/declared-packages-stay-in-their-adapter.test.ts": "93d71f1243e2744421bd05dc2d728753404cf5b92b3fa72e00f18b9a8ecf9287",
@@ -195,7 +195,7 @@
     "src/substrate/adapters/stopwatch.ts": "d5e22526fc9c865a262d5df46e174a0f73c52128f8bf24cee018e0ae7dc243a2",
     "src/substrate/adapters/text-files.ts": "e659d03ec074befb4f925335619caebc8112e8f0574f2cc6dbf70eddd868a9ec",
     "src/substrate/compositions/authority-recorder.ts": "a86300ed1007c31e66a93a7605a31a3508e422601e8ce9a7d2ea7f0d08dce229",
-    "src/substrate/compositions/behaviour-reading.ts": "627384b5eb1ebc7ef0cadc6fdc97fac143d84af179baf11debcf16e2a9f21b5c",
+    "src/substrate/compositions/behaviour-reading.ts": "0526b1c12efc16930c327d87aafe21114b7296b3ec74cc88bb9c8989b1da9eaf",
     "src/substrate/compositions/cached-check.ts": "8d61467b9fb5a5de1e3814d25581b555637ce67c67cd5cc3a99934dc0086bc57",
     "src/substrate/compositions/check-run.ts": "06e2ac29b8832b27dc6fe6912e658e64f7b2bbd6d5b88ac5d8caf8af512be222",
     "src/substrate/compositions/consumers-run.ts": "6afca105c26a6342ab1fe7212e088994bb7a4b5ece5e7b3d3549d81081fef2b4",
@@ -327,14 +327,14 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -480,11 +480,11 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "libCollection@50",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "libCollection@70",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -631,7 +631,7 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "behaviourReading@37"
+        "behaviourReading@57"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -815,14 +815,14 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -1011,14 +1011,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -1190,12 +1190,12 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "handleOf@195",
-        "libCollection@50",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "handleOf@215",
+        "libCollection@70",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -1385,14 +1385,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -1571,14 +1571,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -1706,14 +1706,15 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "constAsserted@36",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -1850,14 +1851,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -1995,14 +1996,14 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -2138,14 +2139,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -2232,14 +2233,14 @@
         "workerHost@156"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -2360,14 +2361,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -2484,7 +2485,7 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "behaviourReading@37"
+        "behaviourReading@57"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractReading@6"
@@ -2571,10 +2572,10 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "behaviourReading@37",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "behaviourReading@57",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractReading@6"
@@ -2741,14 +2742,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -2874,14 +2875,14 @@
         "workerHost@156"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -2971,14 +2972,14 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -3116,14 +3117,14 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -3279,14 +3280,14 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -3421,14 +3422,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -3524,9 +3525,9 @@
         "workerHost@156"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "behaviourReading@37",
-        "libCollection@50",
-        "typeFacts@56"
+        "behaviourReading@57",
+        "libCollection@70",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -3638,14 +3639,14 @@
         "workerHost@156"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -3744,7 +3745,7 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "behaviourReading@37"
+        "behaviourReading@57"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractReading@6"
@@ -3869,11 +3870,11 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "handleOf@195",
-        "libCollection@50"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "handleOf@215",
+        "libCollection@70"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -4084,14 +4085,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -4332,14 +4333,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -4531,14 +4532,14 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -4809,14 +4810,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/cached-check.ts": [
         "cachedKitCheck@263",
@@ -4968,14 +4969,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -5147,14 +5148,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -5318,11 +5319,11 @@
         "workerHost@156"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "handleOf@195",
-        "libCollection@50"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "handleOf@215",
+        "libCollection@70"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -5406,14 +5407,15 @@
         "workerHost@156"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "constAsserted@36",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -5666,11 +5668,11 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "handleOf@195",
-        "libCollection@50"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "handleOf@215",
+        "libCollection@70"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -5898,14 +5900,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/cached-check.ts": [
         "cachedKitCheck@263",
@@ -6107,14 +6109,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/cached-check.ts": [
         "cachedKitCheck@263",
@@ -6311,14 +6313,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/cached-check.ts": [
         "cachedKitCheck@263",
@@ -6690,14 +6692,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/cached-check.ts": [
         "cachedKitCheck@263",
@@ -6927,14 +6929,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/cached-check.ts": [
         "cachedKitCheck@263",
@@ -7137,14 +7139,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/cached-check.ts": [
         "cachedKitCheck@263",
@@ -7405,14 +7407,14 @@
         "windowRoot@35"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -7670,11 +7672,11 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "handleOf@195",
-        "libCollection@50"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "handleOf@215",
+        "libCollection@70"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -7831,14 +7833,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -8138,14 +8140,15 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "constAsserted@36",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -8420,14 +8423,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -8548,14 +8551,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -8835,14 +8838,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -9154,14 +9157,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -9379,14 +9382,15 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "constAsserted@36",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -9891,14 +9895,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -10252,14 +10256,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -10535,14 +10539,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -10787,14 +10791,14 @@
         "visit@44"
       ],
       "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@202",
-        "behaviourReading@37",
-        "contractType@175",
-        "executable@205",
-        "handleOf@195",
-        "libCollection@50",
-        "parameterFacts@159",
-        "typeFacts@56"
+        "acceptsBehaviour@222",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@225",
+        "handleOf@215",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",

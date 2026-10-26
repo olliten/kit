@@ -32,6 +32,26 @@ const DATA_COLLECTIONS: readonly string[] = [
   "BigUint64Array",
 ];
 
+// A const assertion makes every property of the literal it covers readonly, however deeply nested.
+function constAsserted(declaration: ts.Node): boolean {
+  let node = declaration.parent;
+  while (
+    node !== undefined &&
+    (ts.isObjectLiteralExpression(node) ||
+      ts.isArrayLiteralExpression(node) ||
+      ts.isPropertyAssignment(node) ||
+      ts.isParenthesizedExpression(node))
+  )
+    node = node.parent;
+  return (
+    node !== undefined &&
+    (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) &&
+    ts.isTypeReferenceNode(node.type) &&
+    ts.isIdentifier(node.type.typeName) &&
+    node.type.typeName.text === "const"
+  );
+}
+
 // Whether a type is or accepts behaviour: callable, an accessor, or an object with operations a caller can hand
 // it, apart from a registered adapter's contract and the handles of the packages that adapter declares.
 export function behaviourReading(
@@ -227,7 +247,8 @@ export function behaviourReading(
           ts.isPropertyAssignment(declaration) ||
           ts.isShorthandPropertyAssignment(declaration) ||
           ts.isSetAccessorDeclaration(declaration)) &&
-        (ts.getCombinedModifierFlags(declaration) & ts.ModifierFlags.Readonly) === 0;
+        (ts.getCombinedModifierFlags(declaration) & ts.ModifierFlags.Readonly) === 0 &&
+        !constAsserted(declaration);
       return (writable && executable(value)) || acceptsBehaviour(value, packages, seen);
     });
   };

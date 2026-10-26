@@ -45,6 +45,7 @@ test.each([
   ["a returned function taking a callback", "src/core/compositions/make.ts", "export const make = () => (read: () => number): number => read();\n", "make"],
   ["a writable callable field", "src/core/compositions/holder.ts", "export class Holder { handler: () => number = () => 0; }\n", "Holder"],
   ["a mutable array of callables", "src/core/compositions/register.ts", "export const register: (() => number)[] = [];\n", "register"],
+  ["a table of operations without a const assertion", "src/core/compositions/ops.ts", "export const OPS = { add: (n: number): number => n + 1 };\n", "OPS"],
   ["a reading outside the core", "src/substrate/readings/apply.ts", "export function apply(read: () => number): number { return read(); }\n", "apply"],
 ])("an export taking %s in the core or a reading is a finding", (_, path, source, name) => {
   expect(keys({ [path]: source })).toContain(`R1:takes-behaviour:${path}:${name}`);
@@ -53,6 +54,7 @@ test.each([
 test.each([
   ["data", "src/core/readings/total.ts", "export function total(values: readonly number[]): number { return values.length; }\n"],
   ["a readonly array of callables", "src/core/primitives/listed.ts", "export const listed: readonly (() => number)[] = [];\n"],
+  ["a table of operations under a const assertion", "src/core/compositions/ops.ts", "export const OPS = { add: (n: number): number => n + 1, nested: { add: (n: number): number => n + 1 } } as const;\n"],
   ["behaviour in a Substrate composition", "src/substrate/compositions/run.ts", "export function run(read: () => number): number { return read(); }\n"],
 ])("an export taking %s is no finding", (_, path, source) => {
   expect(keys({ [path]: source }).filter((key) => key.startsWith("R1:takes-behaviour:"))).toEqual([]);
