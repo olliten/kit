@@ -2,7 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { expect, test } from "vitest";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
 import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedEscapes } from "../substrate/compositions/recorded-escapes.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
+import { recordedTerms } from "../substrate/compositions/recorded-terms.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 test("projects with the same prefix own separate files and can be disposed repeatedly", () => {
@@ -109,4 +113,19 @@ test("a fixture that doesn't compile is an error, so no proof reads facts from a
   expect(() => recordedContracts({ "src/core/readings/broken.ts": "export const broken: number = 'text';\n" })).toThrow(
     /not assignable/,
   );
+});
+
+test("each recorded fixture records only its own recorder's facts", () => {
+  const files = {
+    "src/core/readings/value.ts":
+      'import { other } from "./other.js";\nexport function value(input: string): number { return Date.now() + other + (input as unknown as number); }\n',
+    "src/core/readings/other.ts": "export const other = 1;\n",
+  };
+  expect(recordedImports(files).imports.map((edge) => edge.target)).toEqual(["src/core/readings/other.ts"]);
+  expect([...new Set(recordedAuthority(files).accesses.map((access) => access.kind))]).toEqual(["clock"]);
+  expect(recordedEscapes(files).escapes.map((escape) => escape.kind)).toEqual(["assertion", "assertion"]);
+  expect(recordedTerms(files).termFacts?.sources.map((source) => [source.file, source.factOnly])).toEqual([
+    ["src/core/readings/other.ts", true],
+    ["src/core/readings/value.ts", false],
+  ]);
 });

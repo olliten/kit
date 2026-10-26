@@ -380,10 +380,26 @@
   - Role: composition
   - Zone: substrate
   - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{fact-walk}}, {{import-recorder}}, {{term-recorder}}
+- **recorded-authority** — the workflow that compiles a fixture and records only its parameters, accesses and globals.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{authority-recorder}}, {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{default-config}}, {{fact-walk}}, {{native-reading}}, {{program-fixture}}, {{syntax-reading}}
 - **recorded-contracts** — the workflow that compiles a fixture and records only its contracts and constructions.
   - Role: composition
   - Zone: substrate
   - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{contract-recorder}}, {{default-config}}, {{fact-walk}}, {{native-reading}}, {{program-fixture}}
+- **recorded-escapes** — the workflow that compiles a fixture and records only its escape hatches.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{default-config}}, {{escape-recorder}}, {{fact-walk}}, {{program-fixture}}
+- **recorded-imports** — the workflow that compiles a fixture and records only its imports and exports.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{behaviour-reading}}, {{compiler-facts}}, {{contract-reading}}, {{default-config}}, {{fact-walk}}, {{import-recorder}}, {{native-reading}}, {{program-fixture}}, {{syntax-reading}}
+- **recorded-terms** — the workflow that compiles a fixture and records only its term facts.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler-facts}}, {{default-config}}, {{fact-walk}}, {{program-fixture}}, {{syntax-reading}}, {{term-recorder}}
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
