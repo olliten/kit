@@ -35,6 +35,16 @@ export interface CapabilityContext {
   readonly natives: ReadonlyMap<string, NativeAuthority>;
 }
 
+// What one kind of input grants: capabilities per file, native roots reached, Window objects reached through a
+// global, the raw uses already reported as findings, and those findings.
+export interface AuthorityPart {
+  readonly grants: readonly { readonly file: string; readonly capability: string }[];
+  readonly natives: readonly { readonly file: string; readonly key: string }[];
+  readonly globalWindow: readonly string[];
+  readonly rawFailures: readonly string[];
+  readonly findings: readonly CapabilityFinding[];
+}
+
 export const WINDOW_AUTHORITY = "host:window";
 export const HOST_LIBRARY = /(?:^|\/)lib\.dom(?:\.[\w-]+)*\.d\.ts$/;
 

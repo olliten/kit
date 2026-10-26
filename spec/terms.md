@@ -85,10 +85,14 @@
 
 ## Reading contracts
 
-- **authority-graph** — what each checked file acquires from its own code and inherits through runtime imports, with the findings of acquiring it.
+- **access-authority** — what a module's own member accesses acquire: native roots, and clock or randomness samples only its adapter may take.
   - Role: derived
   - Zone: core
-  - From: {{capability-context}}, {{dependency-check}}, {{snapshot}}
+  - From: {{capability-context}}, {{snapshot}}
+- **authority-graph** — what each checked file acquires from its own code and inherits through runtime imports.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
 - **behaviour-check** — the check that the core and readings take data or registered contracts, never other behaviour.
   - Role: derived
   - Zone: core
@@ -100,7 +104,7 @@
 - **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
   - Role: derived
   - Zone: core
-  - From: {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{finding}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
+  - From: {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{finding}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
 - **capability-context** — what every capability check reads: checked files, declared entrypoints, adapter contracts and native roots, and how a capability finding is categorised.
   - Role: derived
   - Zone: core
@@ -141,6 +145,10 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **edge-check** — findings from import edges among checked code: entrypoint imports, layer and zone direction, legacy edges and cycles.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{dependency-check}}, {{snapshot}}
 - **finding** — what a check reports: its rule, a path, the fix and a debt key.
   - Role: derived
   - Zone: core
@@ -153,10 +161,18 @@
   - Role: derived
   - Zone: core
   - From: {{comment}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}
+- **global-authority** — what a module acquires through ambient globals, and which uses need a declared adapter.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
 - **handover-check** — findings where code outside the zones hands placed code behaviour that is no adapter contract.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **import-authority** — what a module acquires by importing outside the checked code: adapter packages, entrypoint packages and declared package rows.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
 - **kit-configuration** — the config an app declares, read from its YAML fence and validated, and the paths a check is given.
   - Role: derived
   - Zone: core
