@@ -1,19 +1,16 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, expect, test } from "vitest";
-import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
+import { expect, test } from "vitest";
+import type { Snapshot } from "../../src/core/primitives/snapshot.js";
 import { capabilityCheck } from "../../src/core/readings/capability-check.js";
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { termModel } from "../../src/core/readings/term-model.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
-
-const roots: string[] = [];
-afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
-});
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
+import { recordedTerms } from "../substrate/compositions/recorded-terms.js";
 
 test("an adopted placed source needs a module concept even without a term declaration", () => {
   const { result } = inspect({ "src/core/primitives/value.ts": valueSource }, "# Terms\n");
@@ -56,32 +53,31 @@ test("a supporting exported schema does not require glossary fragments or anothe
     },
     moduleTerm("term", "fact"),
   );
-  expect(snapshot.symbols.map((symbol) => symbol.name)).toContain("TermSyntaxIssue");
+  expect(snapshot.compiler?.projects.flatMap((project) => project.exports).map((symbol) => symbol.name)).toContain(
+    "TermSyntaxIssue",
+  );
   expect(snapshot.terms.map((term) => term.term)).toEqual(["term"]);
   expect(result).toEqual({ findings: [], limits: [] });
 });
 
 test("a resolved external declaration is not a local owner and still needs package authority evidence", () => {
-  const { result, snapshot } = inspect(
-    {
-      "src/core/readings/read.ts":
-        "import { consume } from 'example-package';\nexport function read(value: string): string { return consume(value); }\n",
-      "node_modules/example-package/package.json": JSON.stringify({
-        name: "example-package",
-        type: "module",
-        types: "index.d.ts",
-      }),
-      "node_modules/example-package/index.d.ts":
-        "export declare function consume(value: string): string;\n",
-    },
-    moduleTerm("read", "derived"),
-  );
+  const files = {
+    "src/core/readings/read.ts":
+      "import { consume } from 'example-package';\nexport function read(value: string): string { return consume(value); }\n",
+    "node_modules/example-package/package.json": JSON.stringify({
+      name: "example-package",
+      type: "module",
+      types: "index.d.ts",
+    }),
+    "node_modules/example-package/index.d.ts": "export declare function consume(value: string): string;\n",
+  };
+  const { result, snapshot } = inspect(files, moduleTerm("read", "derived"));
   const edge = snapshot.compiler?.projects
     .flatMap((project) => project.imports)
     .find((edge) => edge.specifier === "example-package");
   expect(edge?.target).toContain("node_modules/example-package/index.d.ts");
   expect(result).toEqual({ findings: [], limits: [] });
-  expect(capabilityCheck(snapshot).findings).toEqual(
+  expect(capabilityCheck(authority(files, moduleTerm("read", "derived"))).findings).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         debtKey: expect.stringContaining(":external-boundary:"),
@@ -92,37 +88,17 @@ test("a resolved external declaration is not a local owner and still needs packa
 });
 
 test("a local owner outside src remains an undeclared owner through a TypeScript path alias", () => {
-  const root = mkdtempSync(join(tmpdir(), "term-model-local-alias-"));
-  roots.push(root);
-  const files = {
-    "src/core/readings/read.ts": "export type { Value } from '@local/value';\n",
-    "helpers/value.ts": valueSource,
-    "spec/terms.md": moduleTerm("read", "derived"),
-    "spec/prototype.md": "### core/readings/read\nThe local imported owner.\n",
-    "tsconfig.json": JSON.stringify({
-      compilerOptions: {
-        strict: true,
-        target: "ES2022",
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        types: [],
-        skipLibCheck: true,
-        baseUrl: ".",
-        paths: { "@local/*": ["helpers/*"] },
-      },
-      include: ["src/**/*.ts", "helpers/**/*.ts"],
-    }),
-  };
-  for (const [path, text] of Object.entries(files)) {
-    const file = join(root, path);
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, text);
-  }
-  const snapshot = readSnapshot(root, DEFAULT_CONFIG);
+  const { snapshot, result } = inspect(
+    {
+      "src/core/readings/read.ts": "export type { Value } from '@local/value';\n",
+      "helpers/value.ts": valueSource,
+    },
+    moduleTerm("read", "derived"),
+    { compilerOptions: { baseUrl: ".", paths: { "@local/*": ["helpers/*"] } }, include: ["helpers/**/*.ts"] },
+  );
   expect(snapshot.files).toEqual(
     expect.arrayContaining([expect.objectContaining({ path: "helpers/value.ts", type: "source" })]),
   );
-  const result = termModel(snapshot);
   expect(result.findings).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -183,51 +159,60 @@ test("a placed source still binds through its global term, never a legacy path",
 });
 
 test("declaring a legacy path grants no clock capability to a core reading", () => {
-  const { snapshot, result } = inspect(
-    {
-      "src/core/legacy/value.ts": "export function value() { return Date.now(); }\n",
-      "src/core/readings/read.ts":
-        "import { value } from '../legacy/value.js';\nexport function read() { return value(); }\n",
-    },
-    moduleTerm("read", "derived", "`src/core/legacy/value.ts`"),
-  );
+  const files = {
+    "src/core/legacy/value.ts": "export function value() { return Date.now(); }\n",
+    "src/core/readings/read.ts":
+      "import { value } from '../legacy/value.js';\nexport function read() { return value(); }\n",
+  };
+  const terms = moduleTerm("read", "derived", "`src/core/legacy/value.ts`");
+  const { result } = inspect(files, terms);
   expect(result).toEqual({ findings: [], limits: [] });
   expect(
-    capabilityCheck(snapshot).findings.some(
+    capabilityCheck(authority(files, terms)).findings.some(
       (item) => item.path === "src/core/readings/read.ts" && item.status === "violation",
     ),
   ).toBe(true);
 });
 
-function inspect(files: Readonly<Record<string, string>>, terms: string) {
-  const root = mkdtempSync(join(tmpdir(), "term-model-proof-"));
-  roots.push(root);
-  const paths = {
-    ...files,
-    "spec/terms.md": terms,
-    "spec/prototype.md": Object.keys(files)
-      .filter((path) => path.startsWith("src/") && path.endsWith(".ts"))
-      .map((path) => `### ${path.slice(4, -3)}\nThe supplied contract.`)
-      .join("\n\n"),
-    "tsconfig.json": JSON.stringify({
-      compilerOptions: {
-        strict: true,
-        target: "ES2022",
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        types: [],
-        skipLibCheck: true,
-      },
-      include: ["src/**/*.ts"],
-    }),
+// The compiler project the fixtures are read as; a fixture may add compiler options and included roots.
+function project(extra: { compilerOptions?: Record<string, unknown>; include?: string[] } = {}): string {
+  return JSON.stringify({
+    compilerOptions: {
+      strict: true,
+      target: "ES2022",
+      module: "NodeNext",
+      moduleResolution: "NodeNext",
+      types: [],
+      skipLibCheck: true,
+      ...extra.compilerOptions,
+    },
+    include: ["src/**/*.ts", ...(extra.include ?? [])],
+  });
+}
+
+// The snapshot termModel reads: the fixture's sources with the imports and term facts the compiler records
+// for them, and the terms file's declarations.
+function evidence(terms: string, facts: Partial<NonNullable<Snapshot["compiler"]>["projects"][number]>): Snapshot {
+  const inventory = termInventory(terms);
+  const base = projectSnapshot(facts);
+  return {
+    ...base,
+    files: [...base.files, { path: "spec/terms.md", type: "spec" }],
+    terms: inventory.terms,
+    termSyntax: inventory.issues,
   };
-  for (const [path, text] of Object.entries(paths)) {
-    const file = join(root, path);
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, text);
-  }
-  const snapshot = readSnapshot(root, DEFAULT_CONFIG);
+}
+
+function inspect(files: Readonly<Record<string, string>>, terms: string, extra: Parameters<typeof project>[0] = {}) {
+  const sources = { ...files, "tsconfig.json": project(extra) };
+  const snapshot = evidence(terms, { ...recordedImports(sources), ...recordedTerms(sources) });
   return { snapshot, result: termModel(snapshot) };
+}
+
+// The same snapshot with the authority facts the compiler records, for the capability rules.
+function authority(files: Readonly<Record<string, string>>, terms: string): Snapshot {
+  const sources = { ...files, "tsconfig.json": project() };
+  return evidence(terms, { ...recordedImports(sources), ...recordedTerms(sources), ...recordedAuthority(sources) });
 }
 
 const fieldTerms =
@@ -434,7 +419,7 @@ test("a declared named type owner needs a real source home", () => {
   const { result } = inspect(
     {
       "src/core/primitives/model.ts":
-        "import type { Value } from './value.js';\nexport interface Model { readonly value: Value | undefined }\n",
+        "// @ts-expect-error The owner's home is missing.\nimport type { Value } from './value.js';\nexport interface Model { readonly value: Value | undefined }\n",
     },
     fieldTerms,
   );
