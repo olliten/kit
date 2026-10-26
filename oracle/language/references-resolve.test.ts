@@ -1,6 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import type { Snapshot } from "../../src/core/primitives/snapshot.js";
@@ -11,7 +9,7 @@ import {
   semanticReferenceInventory,
   semanticReferences,
 } from "../../src/core/readings/semantic-references.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { bindingFindings } from "../core/readings/binding-findings.js";
 
 function snapshot(
@@ -29,18 +27,21 @@ function snapshot(
   };
 }
 
+// Spec documents read as a snapshot holds them: each file's markers come from its raw text, and the terms
+// file contributes its terms and the prose around their definitions.
 function readDocuments(documents: Readonly<Record<string, string>>): Snapshot {
-  const root = mkdtempSync(join(tmpdir(), "kit-semantic-oracle-"));
-  try {
-    for (const [path, text] of Object.entries(documents)) {
-      const file = join(root, path);
-      mkdirSync(dirname(file), { recursive: true });
-      writeFileSync(file, text);
-    }
-    return readSnapshot(root, DEFAULT_CONFIG);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const terms = termInventory(documents[DEFAULT_CONFIG.termsFile] ?? "");
+  return {
+    ...snapshot(documents),
+    terms: terms.terms,
+    prose: Object.entries(documents).map(([file, text]) => ({
+      file,
+      text: file === DEFAULT_CONFIG.termsFile ? terms.prose : text,
+    })),
+    semanticReferences: Object.entries(documents).flatMap(([file, text]) =>
+      semanticReferenceInventory(text).references.map((reference) => ({ ...reference, file })),
+    ),
+  };
 }
 
 test("real extraction retains references on term definitions and their original source lines", () => {
