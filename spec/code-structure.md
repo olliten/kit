@@ -46,8 +46,8 @@ compositions wire the others into behaviour.
 
 - Window-only host authority stays in Shell, even if an adapter declaration permits another zone.
   The compiler's DOM and worker declarations distinguish Window-only types and globals from shared
-  host APIs; HTTP and cancellation remain available to Substrate. Imports and captured callbacks retain
-  this requirement. · {#window-authority-stays-in-shell}
+  host APIs; HTTP and cancellation remain available to Substrate. Imports retain this requirement.
+  · {#window-authority-stays-in-shell}
   - Implementation: {{capability-check}}, {{compiler-facts}}, {{compiler}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 
@@ -58,13 +58,9 @@ compositions wire the others into behaviour.
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
   hosts no external adapter. In an explicit root set, a registration names the root-qualified module
-  identity rather than choosing a default root. A registered external adapter may declare the package
-  handle types it `accepts`: a value of an accepted type passed to that adapter is the adapter's to hold, so
-  the native roots its type graph reaches, the accepted type and the host types its members name, belong to
-  the adapter's capability, and only the adapter's contract leaves it.
-  Accepting a handle grants no host global: the adapter still declares those it uses. Nor does a contract:
-  the window object reached through a global needs a declared global, whatever types the contract names. Every other argument,
-  an undeclared type, and what the caller adds to the value, a host global included, stay checked ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#adapters-create-authority}
+  identity rather than choosing a default root. A contract grants no host global: the window object reached
+  through a global needs a declared global, whatever types the contract names
+  ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#adapters-create-authority}
   - Proof: {{source-fixture}}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
   holding only the adapter's plain contract holds no native authority ({{capability-check}}). · {#declared-globals-cover-their-handles}
@@ -77,33 +73,28 @@ compositions wire the others into behaviour.
   - Proof: {{source-fixture}}
 - An effectful package contract may restrict runtime imports to selected named exports in exact declared
   entrypoints. Aliases retain the original export name and erased imports grant no authority; other access
-  forms, subpaths and missing import evidence stay limits. The permission does not extend to helpers or
-  remove captured callback authority, and adapter package ownership takes precedence
+  forms, subpaths and missing import evidence stay limits. The permission does not extend to helpers, and
+  adapter package ownership takes precedence
   ({{capability-check}}, {{compiler-facts}}, {{default-config}}, {{read-snapshot}}). · {#entrypoint-package-exports-are-checked}
   - Proof: {{source-fixture}}
 - A namespace such as `Window` grants only what is reached through it, and a constructor selected from it
   keeps its own authority ({{capability-check}}). · {#namespaces-grant-what-is-reached}
 - A type, a type alias or a declaration merge grants no runtime authority; the value it describes still does
   ({{capability-check}}, {{compiler-facts}}). · {#erased-types-grant-no-authority}
-- A function carries the authority of what it captures: the code its names reach through the declarations
-  they name, the writes a mutable value it holds receives in that value's module, and the parameters it
-  captures; what can't be followed is charged its whole module. So a callback, getter or method that
-  holds the clock can't enter the core, while one that reaches only pure code can, even from a module that
-  imports authority ({{capability-check}}, {{compiler-facts}}). · {#functions-carry-their-authority}
+- The core decides and a reading derives, so neither takes behaviour. An export of a core module or of a
+  reading that takes a callable, an accessor or an object with operations, through a parameter, a writable
+  property or a mutable collection, is a finding, unless that position is typed as a registered adapter's
+  contract or a port its operations return, whose capability the zone rules then check. Behaviour moves
+  freely only between the compositions and adapters of one zone, which share its permissions
+  ({{capability-check}}, {{read-snapshot}}). · {#core-and-readings-take-data}
   - Proof: {{source-fixture}}
-- A native handle or event handler passed as an argument stays authority: it can't enter a reading or a core
-  composition. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
+- Only an adapter constructs values of its contract and its ports: an object literal of such a type, or a
+  class implementing one, outside the adapter's file is a finding, so a value of a contract carries what the
+  adapter's file shows. A declared entrypoint may construct them as test doubles
+  ({{capability-check}}, {{read-snapshot}}). · {#only-adapters-construct-contracts}
+  - Proof: {{source-fixture}}
+- A native handle or event handler stays authority: a reading or a core composition taking one is a finding. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
   host function it is handed to, such as `fetch`, stays authority ({{capability-check}}). · {#native-handles-stay-in-adapters}
-- Registering a handler or carrying a record passes on no authority the caller lacks: a clock closure, a map
-  of callbacks or a native handle can't reach the core through a registration, a record or a private
-  endpoint. A composition or registered external adapter handing a handle to a function only its own file
-  can name crosses no boundary; the module's own authority stays checked. A
-  function another file can name, through an export, an exported record or a public method of an exported
-  class, is one. A value whose type is a registered adapter's contract, or a port type that contract's
-  operations return, is an established binding carrying exactly that adapter's capability; what a literal of
-  that type captures beyond it, and the zone and reading rules, stay checked
-  ({{capability-check}}, {{compiler-facts}}, {{read-snapshot}}). · {#registration-passes-no-authority}
-  - Proof: {{source-fixture}}
 - A native capability contract is usable in an outer zone only when both its host boundary and its
   registered adapter permit it, and its operation contract establishes the access. Window-only authority
   stays in Shell; the core stays forbidden, and undeclared native authority stays a limit

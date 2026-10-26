@@ -105,11 +105,11 @@
   - Role: derived
   - Zone: core
   - From: {{comment}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}
-- **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
+- **handover-check** — findings where code outside the zones hands placed code behaviour that is no adapter contract.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
-- **legacy-boundary** — findings where legacy code imports a placed export that takes behaviour.
+- **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}

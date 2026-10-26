@@ -55,13 +55,11 @@ export interface KitConfig {
     readonly capability: string;
     readonly kind: "external" | "produce" | "apply";
     readonly zones: readonly ("core" | "shell" | "substrate")[];
-    readonly contract?: { readonly type: string } | { readonly parameter: number };
+    readonly contract?: { readonly type: string };
     readonly primitives?: readonly ("clock" | "randomness")[];
     readonly globals?: readonly string[];
     // Packages only this adapter's module may import at runtime, granting its capability there.
     readonly packages?: readonly string[];
-    // Package handle types this adapter accepts from its callers: a value of one passed to it is its to hold.
-    readonly accepts?: readonly { readonly package: string; readonly types: readonly string[] }[];
   }[];
 }
 

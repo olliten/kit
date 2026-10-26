@@ -104,24 +104,19 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         .filter(
           (fact) =>
             fact.file === file &&
-            ("type" in contract
-              ? fact.parameter === null && fact.name === contract.type
-              : fact.parameter === contract.parameter && fact.name === adapter.export),
+            fact.name === contract.type,
         );
       return [adapter, facts];
     }),
   );
   const contractTypes = adapters.flatMap((adapter) =>
     (contracts.get(adapter) ?? []).flatMap((fact) =>
-      fact.type === null ||
-      (adapter.kind === "external" && fact.parameter !== null &&
-        !files.includes(fact.type.file) && fact.nativeAuthority?.some((authority) =>
-          authority.root.file === fact.type?.file && authority.root.name === fact.type?.name))
+      fact.type === null
         ? []
         : [
             { capability: adapter.capability, type: fact.type, kind: adapter.kind },
             // A port the contract returns carries the same capability, and no other.
-            ...(adapter.kind === "external" && fact.parameter === null ? (fact.ports ?? []) : []).map((port) => ({
+            ...(adapter.kind === "external" ? (fact.ports ?? []) : []).map((port) => ({
               capability: adapter.capability,
               type: port,
               kind: adapter.kind,
@@ -129,71 +124,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           ],
     ),
   );
-  // The installed package a declaration file belongs to, as an adapter's accepted types name it.
-  const packageOf = (file: string): string | undefined => {
-    const at = file.lastIndexOf("node_modules/");
-    if (at < 0) return undefined;
-    const parts = file.slice(at + "node_modules/".length).split("/");
-    return parts[0]?.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
-  };
-  for (const adapter of adapters)
-    for (const accepted of adapter.accepts ?? [])
-      if (
-        adapter.kind !== "external" ||
-        typeof accepted.package !== "string" ||
-        !accepted.package.trim() ||
-        /^[.#/]/.test(accepted.package) ||
-        !packages.some((row) => row.name === accepted.package) ||
-        !Array.isArray(accepted.types) ||
-        accepted.types.length === 0 ||
-        Array.from(accepted.types).some((name) => typeof name !== "string" || !/^[A-Za-z_$][\w$]*$/.test(name)) ||
-        new Set(accepted.types).size !== accepted.types.length
-      )
-        throw new Error(
-          "Declare accepts only on an external adapter, as a declared package and its distinct named handle types.",
-        );
-  const accepting = (path: string, type: { readonly file: string; readonly name: string } | undefined) =>
-    adapters.find(
-      (adapter) =>
-        adapter.kind === "external" &&
-        pathOf(adapter.module) === path &&
-        type !== undefined &&
-        (adapter.accepts ?? []).some(
-          (accepted) => accepted.types.includes(type.name) && packageOf(type.file) === accepted.package,
-        ),
-    );
-  const sdkInputs = adapters.flatMap((adapter) =>
-    adapter.kind !== "external" ? [] :
-      (contracts.get(adapter) ?? []).flatMap((fact) =>
-        fact.parameter === null || fact.type === null || files.includes(fact.type.file) ||
-        !fact.nativeAuthority?.some((authority) =>
-          authority.root.file === fact.type?.file && authority.root.name === fact.type?.name)
-          ? [] : [{ file: pathOf(adapter.module), type: fact.type }],
-      ),
-  );
-  // The native roots an accepted handle reaches through its own type graph, as the compiler resolved them at the
-  // accepting adapter's parameters: the accepted types and the host types their members mention, nothing else.
-  const acceptedCache = new Map<(typeof adapters)[number], Set<string>>();
-  const acceptedRoots = (adapter: (typeof adapters)[number]): Set<string> => {
-    const cached = acceptedCache.get(adapter);
-    if (cached !== undefined) return cached;
-    const roots = new Set(
-      (adapter.accepts ?? []).length === 0
-        ? []
-        : (snapshot.compiler?.projects ?? []).flatMap((project) =>
-            project.parameters
-              .filter((parameter) => accepting(pathOf(adapter.module), parameter.types[0]) === adapter)
-              .flatMap((parameter) =>
-                (parameter.nativeAuthority ?? []).flatMap((authority) => [
-                  nativeKey(authority.root),
-                  ...(authority.windowOnly === true ? [windowAuthority] : []),
-                ]),
-              ),
-          ),
-    );
-    acceptedCache.set(adapter, roots);
-    return roots;
-  };
   const externalAdapterPaths = new Set(
     adapters
       .filter((adapter) => adapter.kind === "external")
@@ -207,11 +137,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         ...project.parameters,
         ...project.accesses,
         ...project.globals,
-        ...project.connections.flatMap((connection) =>
-          (connection.callableBindings ?? []).flatMap((binding) =>
-            binding.capture === undefined ? [] : [binding.capture],
-          ),
-        ),
       ].flatMap((entry) =>
         (entry.nativeAuthority ?? []).map(
           (authority) => [nativeKey(authority.root), authority] as const,
@@ -219,18 +144,7 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       ),
     ),
   );
-  // Each capability a fact grants at its position, so a callable is charged only the code it reaches.
-  const positioned = new Map<string, string[]>();
   const windowAuthority = "host:window";
-  const grantAt = (file: string, start: number, capability: string): void => {
-    const key = `${file}:${start}`;
-    const list = positioned.get(key);
-    const granted = nativeAuthorities.get(capability)?.windowOnly === true
-      ? [capability, windowAuthority]
-      : [capability];
-    if (list === undefined) positioned.set(key, granted);
-    else list.push(...granted);
-  };
 
   const direct = new Map(files.map((path) => [path, new Set<string>()]));
   const internalNative = new Map(
@@ -426,37 +340,32 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             project.file,
           );
     for (const parameter of project.parameters) {
-      for (const authority of parameter.nativeAuthority ?? []) {
+      for (const authority of parameter.nativeAuthority ?? [])
         recordNative(parameter.file, nativeKey(authority.root));
-        grantAt(parameter.file, parameter.start, nativeKey(authority.root));
-      }
       for (const contract of contractTypes)
         if (
           (contract.kind !== "produce" || parameter.callable || parameter.accessor) &&
           parameter.types.some(
             (type) => type.file === contract.type.file && type.name === contract.type.name,
           )
-        ) {
+        )
           direct.get(parameter.file)?.add(contract.capability);
-          grantAt(parameter.file, parameter.start, contract.capability);
-        }
+    }
+    // The core decides and a reading derives, so neither takes behaviour: what they are handed is data, or a
+    // registered adapter's contract, whose capability the zone rules then check.
+    for (const symbol of project.exports)
       if (
-        parameter.exported !== false &&
-        placement(parameter.file)?.layer === "readings" &&
-        (parameter.callable || parameter.accessor)
+        symbol.acceptsBehaviour === true &&
+        (placement(symbol.file)?.zone === "core" || placement(symbol.file)?.layer === "readings")
       )
         add(
           "R1",
-          "reading-callable",
-          parameter.file,
-          "Pass data to this reading instead of supplied behavior.",
-          parameter.name,
+          "takes-behaviour",
+          symbol.file,
+          "Take data here, or a registered adapter's contract; keep supplied behaviour in compositions outside the core.",
+          symbol.name,
         );
-    }
     for (const access of project.accesses) {
-      if (access.kind === "native")
-        for (const authority of access.nativeAuthority ?? [])
-          grantAt(access.file, access.start, nativeKey(authority.root));
       if (!direct.has(access.file)) continue;
       if (access.kind === "native") {
         for (const authority of access.nativeAuthority ?? [])
@@ -478,7 +387,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
         if (adapter === undefined) {
           direct.get(access.file)?.add(access.kind);
-          grantAt(access.file, access.start, access.kind);
           rawFailures.add(`${access.file}:${access.kind}`);
           add(
             "R1",
@@ -530,11 +438,9 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           recordNative(global.file, nativeKey(authority.root));
           if (hostLibrary.test(authority.root.file) && authority.root.name === "Window")
             globalWindow.add(`${global.file}:${nativeKey(authority.root)}`);
-          grantAt(global.file, global.start, nativeKey(authority.root));
         }
       for (const adapter of owners.length > 0 ? owners : declaredAdapters) {
         direct.get(global.file)?.add(adapter.capability);
-        grantAt(global.file, global.start, adapter.capability);
         if (global.file !== pathOf(adapter.module)) {
           rawFailures.add(`${global.file}:${adapter.capability}`);
           add(
@@ -810,9 +716,8 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           pathOf(adapter.module) === path &&
           adapter.kind === "external" &&
           ((hostLibrary.test(native.root.file) && declaresHostGlobal(adapter, path)) ||
-          // The window object itself needs a declared global, whatever its handles' types or contract mention.
-          (acceptedRoots(adapter).has(capability) && !globalWindow.has(`${path}:${capability}`)) ||
           [
+            // The window object itself needs a declared global, whatever the contract's types mention.
             ...(globalWindow.has(`${path}:${capability}`)
               ? []
               : (contracts.get(adapter) ?? []).flatMap((contract) => contract.nativeAuthority ?? [])),
@@ -836,243 +741,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
           capability,
         );
     }
-  const connections = projects
-    .flatMap((project) => project.connections)
-    .filter(
-      (connection) =>
-        direct.has(connection.file) && connection.target !== null && direct.has(connection.target),
-    );
-  const keyOf = (input: { readonly file: string; readonly start: number }): string =>
-    `${input.file}:${input.start}`;
-  const bindingOf = (
-    connection: (typeof connections)[number],
-    index: number,
-  ): {
-    readonly origin: string | null;
-    readonly source: { readonly file: string; readonly start: number } | null;
-    readonly target: { readonly file: string; readonly start: number } | null;
-    readonly supported: boolean;
-    readonly capture: NonNullable<typeof connection.callableBindings>[number]["capture"];
-    // The module the value is handed to.
-    readonly into: string | null;
-  } => ({
-    origin: connection.callableOrigins[index] ?? null,
-    source: connection.callableBindings?.[index]?.source ?? null,
-    target: connection.callableBindings?.[index]?.target ?? null,
-    supported: connection.callableBindings?.[index] !== undefined,
-    capture: connection.callableBindings?.[index]?.capture,
-    into: connection.target,
-  });
-  const bindings = connections.flatMap((connection) =>
-    connection.callableOrigins.map((_, index) => bindingOf(connection, index)),
-  );
-  const parameterExecutability = new Map(
-    projects.flatMap((project) =>
-      project.parameters.map((parameter) => [keyOf(parameter), parameter.executable] as const),
-    ),
-  );
-  const inputs = new Map(
-    projects.flatMap((project) =>
-      project.parameters
-        .filter((parameter) => parameter.executable ?? (parameter.callable || parameter.accessor))
-        .map((parameter) => [keyOf(parameter), parameter.file] as const),
-    ),
-  );
-  for (const binding of bindings)
-    for (const input of [binding.source, binding.target])
-      if (input !== null && parameterExecutability.get(keyOf(input)) !== false)
-        inputs.set(keyOf(input), input.file);
-  const known = new Set<string>();
-  const suppliedCapabilities = new Map([...inputs.keys()].map((key) => [key, new Set<string>()]));
-  for (const parameter of projects.flatMap((project) => project.parameters)) {
-    for (const contract of contractTypes)
-      if (
-        (contract.kind !== "produce" || parameter.callable || parameter.accessor) &&
-        parameter.types[0]?.file === contract.type.file &&
-        parameter.types[0]?.name === contract.type.name
-      ) {
-        const key = keyOf(parameter);
-        known.add(key);
-        suppliedCapabilities.get(key)?.add(contract.capability);
-      }
-    for (const input of sdkInputs)
-      if (parameter.types[0]?.file === input.type.file && parameter.types[0]?.name === input.type.name) {
-        const key = keyOf(parameter);
-        known.add(key);
-        suppliedCapabilities.get(key)?.add(nativeKey(input.type));
-      }
-  }
-  // A value bound to a parameter typed as a registered adapter's contract or port, or to a package handle an
-  // adapter accepts, is that adapter's: the binding is established and carries exactly its capability. A
-  // literal or closure supplied there is still judged by what it captures.
-  const held = new Map<string, (typeof adapters)[number]>();
-  for (const parameter of projects.flatMap((project) => project.parameters)) {
-    const type = parameter.types[0];
-    const contract = contractTypes.find(
-      (candidate) =>
-        candidate.kind !== "produce" && type?.file === candidate.type.file && type?.name === candidate.type.name,
-    );
-    const owner = accepting(parameter.file, type);
-    const holder = contract === undefined ? owner : adapters.find((adapter) =>
-      adapter.kind === "external" && adapter.capability === contract.capability &&
-      (contracts.get(adapter) ?? []).some((fact) => fact.type !== null &&
-        [fact.type, ...(fact.ports ?? [])].some((port) => port.file === type?.file && port.name === type?.name)));
-    if (holder !== undefined) held.set(keyOf(parameter), holder);
-  }
-  const parameterFacts = new Map(
-    projects.flatMap((project) => project.parameters.map((parameter) => [keyOf(parameter), parameter] as const)),
-  );
-  // The handle a binding passes: the caller's own parameter, named directly or as the one value its argument uses.
-  const passed = (binding: (typeof bindings)[number]) => {
-    const source = binding.source ?? (binding.capture?.parameters.length === 1 ? binding.capture.parameters[0] : undefined);
-    return source === undefined ? undefined : parameterFacts.get(keyOf(source));
-  };
-  const heldBy = (binding: (typeof bindings)[number]) =>
-    !binding.supported
-      ? undefined
-      : ((binding.target === null ? undefined : held.get(keyOf(binding.target))) ??
-        accepting(binding.into ?? "", passed(binding)?.types[0]));
-  // What a held value brings beyond its adapter: the adapter's own authority and the roots of the handle types it
-  // accepts are its; anything else captured, a host global included, stays the caller's and is checked.
-  const beyond = (binding: (typeof bindings)[number], holder: (typeof adapters)[number]): string[] => {
-    const own = inherited.get(pathOf(holder.module)) ?? new Set<string>();
-    // A root the caller's own code reaches, such as a captured window, is the caller's even when the handle's
-    // type mentions it too.
-    const brought = new Set(
-      (binding.capture?.positions ?? [])
-        .filter((position) => !adapterPaths.has(position.file))
-        .flatMap((position) => positioned.get(`${position.file}:${position.start}`) ?? []),
-    );
-    return [...(binding.capture === undefined ? [] : captured(binding.capture))].filter((capability) => {
-      return !own.has(capability) && (!acceptedRoots(holder).has(capability) || brought.has(capability));
-    });
-  };
-  const heldCarry = (binding: (typeof bindings)[number]): string[] | undefined => {
-    const holder = heldBy(binding);
-    return holder === undefined ? undefined : [holder.capability, ...beyond(binding, holder)];
-  };
-  const established = (binding: (typeof bindings)[number]): boolean =>
-    heldCarry(binding)?.length === 1 ||
-    binding.supported &&
-    (binding.capture === undefined || binding.capture.parameters.every(
-      (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
-    )) &&
-    (binding.source !== null
-      ? known.has(keyOf(binding.source))
-      : binding.origin !== null &&
-        inherited.has(binding.origin) &&
-        // A reading keeps every binding: what it hands on is checked by its file's inputs, captured or not.
-        (binding.capture === undefined || placement(binding.origin)?.layer === "readings"
-          ? [...inputs].every(([key, file]) => file !== binding.origin || known.has(key))
-          : binding.capture.parameters.every(
-              (parameter) => !inputs.has(keyOf(parameter)) || known.has(keyOf(parameter)),
-            )));
-  // A file a callable reaches only in part grants what its reached code grants; an adapter's file, or
-  // one the capture could not follow, is charged whole.
-  const adapterPaths = new Set(adapters.map((adapter) => pathOf(adapter.module)));
-  const capturedCapabilities = new Map<object, readonly string[]>();
-  const captured = (capture: NonNullable<(typeof bindings)[number]["capture"]>): readonly string[] => {
-    const cached = capturedCapabilities.get(capture);
-    if (cached !== undefined) return cached;
-    const whole = (file: string): readonly string[] => [...(inherited.get(file) ?? [])];
-    const grants = (position: { readonly file: string; readonly start: number }): readonly string[] =>
-      positioned.get(`${position.file}:${position.start}`) ?? [];
-    const result = [
-      ...new Set([
-        ...capture.reached.filter((file) => adapterPaths.has(file)).flatMap(whole),
-        ...capture.positions
-          .filter((position) => !adapterPaths.has(position.file))
-          .flatMap(grants),
-        ...capture.whole.flatMap(whole),
-        ...capture.packages.flatMap(({ file, specifier }) => {
-          const name = specifier.startsWith("@")
-            ? specifier.split("/").slice(0, 2).join("/")
-            : specifier.split("/")[0];
-          // A package an adapter declares is that adapter's capability, as at its import.
-          const bound = adapters.filter(
-            (adapter) =>
-              adapter.kind === "external" &&
-              name !== undefined &&
-              adapter.packages?.includes(name) === true,
-          );
-          const owners = bound.filter((adapter) => pathOf(adapter.module) === file);
-          return bound.length > 0
-            ? (owners.length > 0 ? owners : bound).map((adapter) => adapter.capability)
-            : (snapshot.config.packages?.find((row) => row.name === name)?.capabilities ?? []);
-        }),
-        ...capture.parameters.flatMap(grants),
-        ...contractTypes
-          .filter(
-            (contract) =>
-              contract.kind !== "produce" &&
-              capture.types.some(
-                (type) => type.file === contract.type.file && type.name === contract.type.name,
-              ),
-          )
-          .map((contract) => contract.capability),
-        ...capture.nativeAuthority.flatMap((authority) => [
-          nativeKey(authority.root),
-          ...(authority.windowOnly === true ? [windowAuthority] : []),
-        ]),
-      ]),
-    ];
-    capturedCapabilities.set(capture, result);
-    return result;
-  };
-  const bindingCapabilities = (binding: (typeof bindings)[number]): Set<string> =>
-    new Set(
-      heldCarry(binding) !== undefined
-        ? (heldCarry(binding) ?? [])
-        : binding.capture !== undefined
-        ? [
-            ...captured(binding.capture),
-            ...binding.capture.parameters.flatMap((parameter) => [
-              ...(suppliedCapabilities.get(keyOf(parameter)) ?? []),
-            ]),
-          ]
-        : [
-            ...(inherited.get(binding.origin ?? "") ?? []),
-            ...(binding.source !== null
-              ? (suppliedCapabilities.get(keyOf(binding.source)) ?? [])
-              : [...inputs]
-                  .filter(([, file]) => file === binding.origin)
-                  .flatMap(([key]) => [...(suppliedCapabilities.get(key) ?? [])])),
-          ],
-    );
-  changed = true;
-  while (changed) {
-    changed = false;
-    for (const [key] of inputs) {
-      const incoming = bindings.filter(
-        (binding) =>
-          binding.target !== null &&
-          keyOf(binding.target) === key &&
-          (binding.source === null || keyOf(binding.source) !== key),
-      );
-      if (!known.has(key) && incoming.length > 0 && incoming.every(established)) {
-        known.add(key);
-        changed = true;
-      }
-      for (const binding of incoming)
-        for (const capability of bindingCapabilities(binding)) {
-          const caps = suppliedCapabilities.get(key);
-          if (caps !== undefined && !caps.has(capability)) {
-            caps.add(capability);
-            changed = true;
-          }
-        }
-    }
-  }
-  const capabilityUniverse = new Set([
-    ...adapters.map((adapter) => adapter.capability),
-    ...[...inherited.values()].flatMap((capabilities) => [...capabilities]),
-  ]);
-  const restricted = (path: string): boolean =>
-    startups.has(path) ||
-    placement(path)?.zone === "core" ||
-    placement(path)?.layer === "readings" ||
-    [...capabilityUniverse].some((capability) => !permits(path, capability));
-  const nativeFailures = new Set<string>();
   for (const [path, caps] of inherited) {
     if (placement(path) === null && !startups.has(path)) continue;
     for (const capability of caps) {
@@ -1084,15 +752,13 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         continue;
       }
       if (nativeAuthorities.has(capability)) {
-        if (!permits(path, capability)) {
-          nativeFailures.add(`${path}:${capability}`);
+        if (!permits(path, capability))
           unresolved(
             "native-authority",
             path,
             "This native SDK handle grants authority outside a matching permitted adapter boundary.",
             capability,
           );
-        }
         continue;
       }
       if (placement(path)?.layer === "readings")
@@ -1143,9 +809,33 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
     }
   }
+  // Only an adapter builds values of its contract, so what one carries is what the adapter's file shows.
+  const contractHomes = new Map(
+    adapters.flatMap((adapter) =>
+      adapter.kind !== "external"
+        ? []
+        : (contracts.get(adapter) ?? []).flatMap((fact) =>
+            [...(fact.type === null ? [] : [fact.type]), ...(fact.ports ?? [])].map(
+              (type) => [`${type.file}:${type.name}`, pathOf(adapter.module)] as const,
+            ),
+          ),
+    ),
+  );
   for (const project of projects) {
     for (const construction of project.constructions) {
       if (!direct.has(construction.file)) continue;
+      if (!startups.has(construction.file))
+        for (const type of construction.types) {
+          const home = contractHomes.get(`${type.file}:${type.name}`);
+          if (home !== undefined && home !== construction.file)
+            add(
+              "R1",
+              "contract-construction",
+              construction.file,
+              "Let the adapter construct values of its contract, and hand those along instead.",
+              type.name,
+            );
+        }
       const matchingDescriptions = descriptions.filter((adapter) =>
         construction.types.some(
           (type) => type.file === adapter.type.file && type.name === adapter.type.name,
@@ -1172,81 +862,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
             "Describe the operation and its arguments as data rather than a closure.",
             String(construction.start),
           );
-      }
-    }
-    for (const connection of project.connections) {
-      if (!direct.has(connection.file)) continue;
-      if (connection.target === null || placement(connection.target) === null) continue;
-      // A composition or registered external adapter handing a handle to a function only it can name
-      // crosses no module boundary. Its own authority and every connection out remain checked.
-      if (
-        connection.local === true &&
-        (placement(connection.file)?.layer === "compositions" ||
-          externalAdapterPaths.has(connection.file))
-      )
-        continue;
-      const invocation = adapters.some(
-        (adapter) => adapter.kind === "external" && pathOf(adapter.module) === connection.target,
-      )
-        ? connection.file
-        : connection.target;
-      const relocated = placement(connection.file) === null;
-      const boundary = relocated
-        ? placement(invocation) === null
-          ? connection.target
-          : invocation
-        : connection.file;
-      const detail = `${relocated ? `${connection.file}:` : ""}${connection.target}:${connection.start}`;
-      for (const [index, origin] of connection.callableOrigins.entries()) {
-        const binding = bindingOf(connection, index);
-        if (
-          !established(binding) && (restricted(connection.target) ||
-            sdkInputs.some((input) => input.file === connection.target))
-        )
-          unresolved(
-            "callable-binding",
-            boundary,
-            relocated
-              ? `The executable input supplied by ${connection.file} has no established capability boundary.`
-              : "The supplied executable input has no established capability boundary.",
-            detail,
-          );
-        if (origin === null && binding.capture === undefined) continue;
-        for (const capability of bindingCapabilities(binding)) {
-          // An accepted handle handed to its adapter is that adapter's to hold, not its caller's to grant.
-          if (capability === heldBy(binding)?.capability && pathOf(heldBy(binding)?.module ?? "") === connection.target) continue;
-          if (nativeAuthorities.has(capability)) {
-            const receiver = sdkInputs.some((input) =>
-              input.file === connection.target && nativeKey(input.type) === capability,
-            ) ? connection.target : invocation;
-            if (
-              !permits(receiver, capability) &&
-              !nativeFailures.has(`${connection.file}:${capability}`)
-            )
-              unresolved(
-                "native-authority",
-                boundary,
-                relocated
-                  ? `The callable supplied by ${connection.file} retains native SDK authority outside this boundary's matching permitted adapter contract.`
-                  : "This callable retains native SDK authority outside a matching permitted adapter boundary.",
-                `${detail}:${capability}`,
-              );
-            continue;
-          }
-          if (
-            !permits(invocation, capability) ||
-            placement(connection.target)?.layer === "readings"
-          )
-            add(
-              "R1",
-              "closure-binding",
-              boundary,
-              relocated
-                ? `Connect the callable supplied by ${connection.file} only where its creation capabilities are permitted.`
-                : "Connect this callable only where its creation capabilities are permitted.",
-              `${detail}:${capability}`,
-            );
-        }
       }
     }
   }

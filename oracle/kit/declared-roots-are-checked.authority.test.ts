@@ -38,10 +38,6 @@ function inspect(
         },
         include: ["src/**/*.ts", "oracle/**/*.ts"],
       }),
-      "src/core/compositions/run.ts":
-        "export function run(read: () => number): number { return read(); }\n",
-      "oracle/core/compositions/run.ts":
-        "export function run(read: () => number): number { return read(); }\n",
       "oracle/core/readings/model.ts": "export function model(): number { return 7; }\n",
       "oracle/substrate/adapters/clock.ts":
         "export function clock(): number { return Date.now(); }\n",
@@ -92,11 +88,14 @@ test("one authority graph admits pure cross-root calls and registered adapters r
   ).toEqual(result);
 });
 
+const run = "export function run(read: () => number): number { return read(); }\n";
+
 test.each([
   ["src", "oracle"],
   ["oracle", "src"],
 ])("a clock closure from %s cannot enter the core in %s", (caller, target) => {
   const snapshot = inspect({
+    [`${target}/core/compositions/run.ts`]: run,
     [`${caller}/substrate/compositions/probe.ts`]:
       `import { run } from '../../../${target}/core/compositions/run.js';\n` +
       `import { clock } from '../../../oracle/substrate/adapters/clock.js';\n` +
@@ -106,7 +105,7 @@ test.each([
     expect.objectContaining({
       status: "violation",
       blocking: true,
-      debtKey: expect.stringContaining(":closure-binding:"),
+      debtKey: `R1:takes-behaviour:${target}/core/compositions/run.ts:run`,
     }),
   );
 });
@@ -149,6 +148,7 @@ test("a native handle captured across roots cannot enter a core callback", () =>
   const snapshot = inspect(
     {
       "oracle/shell/adapters/focus.ts": focusSource,
+      "oracle/core/compositions/run.ts": run,
       "src/shell/compositions/probe.ts":
         "import { run } from '../../../oracle/core/compositions/run.js';\nexport function probe(element: HTMLElement): number { return run(() => { element.focus(); return 7; }); }\n",
     },
@@ -156,7 +156,7 @@ test("a native handle captured across roots cannot enter a core callback", () =>
   );
   expect(
     capabilityCheck(snapshot).findings.some(
-      (item) => item.blocking && /native-authority|closure-binding/.test(item.debtKey),
+      (item) => item.blocking && item.debtKey === "R1:takes-behaviour:oracle/core/compositions/run.ts:run",
     ),
   ).toBe(true);
 });

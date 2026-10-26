@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { deserialize, serialize } from "node:v8";
 import ts from "typescript";
 
-const VERSION = 2;
+const VERSION = 3;
 const CANDIDATES = 8;
 const DEFAULT_MAX_BYTES = 2 * 1024 ** 3;
 const ENGINE = resolve(dirname(fileURLToPath(import.meta.url)), "..");

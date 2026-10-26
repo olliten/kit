@@ -406,3 +406,20 @@ without naming the app.
 - A roster that must equal the table under its term, entry for entry.
 - The ledger and topic view: each module's placement, findings, debt and proofs, and a feature's topic footprint.
 - A check that the Kit stays under a tenth of the code it governs.
+
+## 2026-10-26 · Authority is structural: behaviour crosses only as a contract
+
+- **Decision:** Kit no longer follows callables, closures and SDK handles across modules. Three rules replace
+  that inference. The core and readings take data: an export there that takes a callable, an accessor or an
+  object with operations is a finding, unless the position is typed as a registered adapter's contract or a port
+  its operations return. Code outside the zones, legacy or a declared entrypoint, hands placed code only data or
+  such a contract. Only an adapter constructs values of its contract and ports; a declared entrypoint may build
+  test doubles. Behaviour moves freely only between the compositions and adapters of one zone, which share its
+  permissions, and imports already keep zones apart. A package handle may be taken by the adapter that declares
+  its package. `accepts`, `contract.parameter`, callable and closure bindings, and their capture facts are gone.
+  This supersedes the 2026-10-17 entries on callable capture and same-file handle passing.
+- **Why:** the inference had grown to most of Kit's code and claims, and every new language corner added more. An
+  agent couldn't predict its findings without running it, and one legacy file could fail an unrelated placed
+  module. A module's authority is now what its imports and the contract types in its signatures show, which is
+  what the rules promised. The cost: a pure higher-order helper can't live in the core or a reading, and a fake
+  of a contract lives in an entrypoint or is registered as its own adapter.

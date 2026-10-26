@@ -22,10 +22,12 @@ and its size are debt that may only shrink, and placed code is held to every rul
   beside them takes none, and each listed file is debt, so the row may shrink but a file added to it is new debt
   the ratchet rejects; a listed path that is placed or missing is a finding ({{capability-check}}, {{finding}}). · {#legacy-zone-rows-only-shrink}
   - Proof: {{source-fixture}}
-- Legacy hands placed code data, never behaviour. A legacy module's runtime import of a placed export that
-  takes a callable, an accessor or an object with operations, through a parameter, a writable property or a
-  mutable collection, is legacy debt keyed by the importer and the export; a type-only import is none. · {#legacy-hands-placed-code-data}
-  - Implementation: {{legacy-boundary}}, {{read-snapshot}}
+- Code outside the zones, legacy or a declared entrypoint, hands placed code data or a registered adapter's
+  contract, never other behaviour. Its runtime import of a placed export that takes a callable, an accessor or
+  an object with operations, through a parameter, a writable property or a mutable collection, is a finding
+  keyed by the importer and the export: debt in legacy code, a violation in an entrypoint. A type-only import
+  is none. · {#outside-code-hands-placed-code-data}
+  - Implementation: {{handover-check}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 - A legacy module's size is debt that may only shrink. A change may add to a legacy module only statements
   that call into placed modules; new code is placed first ({{legacy-size}}, {{read-snapshot}},

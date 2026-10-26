@@ -99,7 +99,7 @@ test("a plain adapter contract cannot hide Window authority from a transitive Su
   );
 });
 
-test("captured Window authority cannot enter a Substrate callback boundary", () => {
+test("a Shell callback cannot reach a Substrate composition, since Shell cannot import it", () => {
   expect(
     findings(
       {
@@ -115,7 +115,7 @@ test("captured Window authority cannot enter a Substrate callback boundary", () 
   ).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        debtKey: expect.stringMatching(/^R1:closure-binding:.*:host:window$/),
+        debtKey: "R2:layer-edge:src/shell/compositions/view.ts:src/substrate/compositions/apply.ts",
       }),
     ]),
   );

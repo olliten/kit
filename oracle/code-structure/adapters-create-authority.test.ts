@@ -90,7 +90,7 @@ test("one registered adapter owns a multi-operation contract and its implementat
   );
 });
 
-test("a fake uses the colocated interface through a type-only import without reaching real authority", () => {
+test("a fake built outside its adapter reaches no authority, but constructing the contract there is a finding", () => {
   const path = "src/substrate/compositions/fake-clock.ts";
   const { snapshot, result } = inspect({
     [path]:
@@ -104,7 +104,9 @@ test("a fake uses the colocated interface through a type-only import without rea
     direct: [],
     inherited: [],
   });
-  expect(result.findings.filter((row) => row.path === path)).toEqual([]);
+  expect(result.findings.filter((row) => row.path === path).map((row) => row.debtKey)).toEqual([
+    `R1:contract-construction:${path}:Clock`,
+  ]);
 });
 
 test("a composition receiving the registered interface gains its capability", () => {

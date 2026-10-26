@@ -146,12 +146,12 @@ describe("runtime authority is conservatively derived from actual module inputs"
     violation("src/substrate/readings/write-cell.ts");
   });
 
-  test("A2: a parameter selector derives the named port without a runtime adapter import", () => {
+  test("A2: a registered contract type derives the named port without a runtime adapter import", () => {
     const config = {
       ...fixtureConfig,
       adapters: (fixtureConfig.adapters ?? []).map((adapter) =>
         adapter.module === "substrate/primitives/cell-store"
-          ? { ...adapter, contract: { parameter: 0 } }
+          ? { ...adapter, contract: { type: "CellWriter" } }
           : adapter,
       ),
     };
@@ -169,35 +169,6 @@ describe("runtime authority is conservatively derived from actual module inputs"
     });
     expect(actual.findings.filter((finding) => finding.path === path)).toEqual(
       expect.arrayContaining([expect.objectContaining({ status: "violation", blocking: true })]),
-    );
-  });
-
-  test("A2: an anonymous selected authority contract stays explicitly unresolved", () => {
-    const config = {
-      ...fixtureConfig,
-      adapters: [
-        ...(fixtureConfig.adapters ?? []),
-        {
-          module: "substrate/primitives/anonymous-store",
-          export: "put",
-          capability: "anonymous.apply",
-          kind: "apply" as const,
-          zones: ["substrate" as const],
-          contract: { parameter: 0 },
-        },
-      ],
-    };
-    const actual = capabilityCheck(readSnapshot(fixtureRoot, config));
-    expect(actual.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: "src/substrate/primitives/anonymous-store.ts",
-          debtKey: "R1:adapter-contract:src/substrate/primitives/anonymous-store.ts:put",
-          status: "unresolved",
-          blocking: true,
-          limit: expect.stringMatching(/\S/),
-        }),
-      ]),
     );
   });
 
@@ -243,14 +214,12 @@ describe("runtime authority is conservatively derived from actual module inputs"
     const broad = contracts.find(
       (contract) =>
         contract.file === "src/substrate/primitives/broad-service.ts" &&
-        contract.name === "BroadService" &&
-        contract.parameter === null,
+        contract.name === "BroadService",
     );
     const narrow = contracts.find(
       (contract) =>
         contract.file === "src/substrate/primitives/cell-store.ts" &&
-        contract.name === "CellWriter" &&
-        contract.parameter === null,
+        contract.name === "CellWriter",
     );
     expect(broad?.operations.slice().sort()).toEqual(["put", "read", "remove"]);
     expect(narrow?.operations).toEqual(["put"]);
@@ -548,7 +517,7 @@ test("C2: absence of authority does not certify the identity wrapper's compositi
   );
 });
 
-test("C4: the actual clock-bearing connection differs from the supported pure closure neighbour", () => {
+test("C4: a core composition taking a callback is the finding, whatever its callers hand it", () => {
   expect(requirements("src/substrate/compositions/clock-probe.ts").inherited).toContain(
     "clock.read",
   );
@@ -557,11 +526,11 @@ test("C4: the actual clock-bearing connection differs from the supported pure cl
     inherited: [],
   });
   clear("src/substrate/compositions/pure-probe.ts");
-  const connections = findings("src/substrate/compositions/clock-probe.ts");
-  expect(connections).toEqual(
-    expect.arrayContaining([expect.objectContaining({ blocking: true })]),
+  expect(findings("src/core/compositions/run.ts")).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ debtKey: "R1:takes-behaviour:src/core/compositions/run.ts:run", blocking: true }),
+    ]),
   );
-  console.info("C4 actual connection diagnostics", connections);
 });
 
 test("an unknown package is reported at its import rather than as every call's provenance", () => {

@@ -60,15 +60,12 @@ export interface CompilerFacts {
       readonly name: string;
       readonly callable: boolean;
       readonly accessor: boolean;
-      readonly executable?: boolean;
-      readonly exported?: boolean;
       readonly nativeAuthority?: readonly NativeAuthority[];
       readonly types: readonly { readonly file: string; readonly name: string }[];
     }[];
     readonly contracts: readonly {
       readonly file: string;
       readonly name: string;
-      readonly parameter: number | null;
       readonly operations: readonly string[];
       readonly type: { readonly file: string; readonly name: string } | null;
       readonly nativeAuthority?: readonly NativeAuthority[];
@@ -88,35 +85,8 @@ export interface CompilerFacts {
       readonly spread: boolean;
       readonly callable: boolean;
     }[];
-    readonly connections: readonly {
-      readonly file: string;
-      readonly start: number;
-      readonly target: string | null;
-      // The called function is declared in this file and no other file can name it.
-      readonly local?: boolean;
-      readonly callableOrigins: readonly (string | null)[];
-      readonly callableBindings?: readonly {
-        readonly source: { readonly file: string; readonly start: number } | null;
-        readonly target: { readonly file: string; readonly start: number } | null;
-        // What the callable reaches when it is no parameter: absent, its whole origin file is charged.
-        readonly capture?: {
-          // Authority facts inside the code it reaches, and the files that code is in.
-          readonly positions: readonly { readonly file: string; readonly start: number }[];
-          readonly reached: readonly string[];
-          // Files it reaches in ways that can't be followed, charged whole.
-          readonly whole: readonly string[];
-          // The runtime import that contributes each package's authority; null preserves an unknown origin.
-          readonly packages: readonly { readonly file: string | null; readonly specifier: string }[];
-          // Its own module's parameters it captures, and the types of other modules' it reaches.
-          readonly parameters: readonly { readonly file: string; readonly start: number }[];
-          readonly types: readonly { readonly file: string; readonly name: string }[];
-          readonly nativeAuthority: readonly NativeAuthority[];
-        };
-      }[];
-      readonly builtin: boolean;
-    }[];
-    // What each test file's code uses, followed as a callable's capture is: the files whose code it reaches, and
-    // the files it reaches in ways that can't be followed, charged whole.
+    // What each test file's code uses, followed through the declarations it names: the files whose code it
+    // reaches, and the files it reaches in ways that can't be followed, charged whole.
     readonly proofs?: readonly {
       readonly file: string;
       readonly reached: readonly string[];

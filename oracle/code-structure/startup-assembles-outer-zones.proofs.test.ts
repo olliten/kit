@@ -106,11 +106,11 @@ test("an entrypoint declaration grants no raw authority to its driver", () => {
 });
 
 test.each([
-  { name: "pure", callback: "() => 7", blocked: false },
-  { name: "clock-capturing", callback: "() => clock()", blocked: true },
+  { name: "pure", callback: "() => 7" },
+  { name: "clock-capturing", callback: "() => clock()" },
 ])(
-  "a $name callback in a proof keeps its authority when connected to core",
-  ({ callback, blocked }) => {
+  "core takes no callback, whatever a proof hands it: $name",
+  ({ callback }) => {
     const { snapshot, result } = inspect(
       {
         "oracle/substrate/adapters/clock.ts":
@@ -136,18 +136,13 @@ test.each([
       },
     );
     expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-    if (!blocked) expect(result.findings).toEqual([]);
-    else
-      expect(result.findings).toContainEqual(
-        expect.objectContaining({
-          path: "src/core/compositions/run.ts",
-          debtKey: expect.stringContaining(
-            `R1:closure-binding:src/core/compositions/run.ts:${proof}:`,
-          ),
-          category: "placed-violation",
-          blocking: true,
-        }),
-      );
+    expect(result.findings).toEqual([
+      expect.objectContaining({
+        debtKey: "R1:takes-behaviour:src/core/compositions/run.ts:run",
+        category: "placed-violation",
+        blocking: true,
+      }),
+    ]);
   },
 );
 

@@ -139,7 +139,7 @@ An agent gets the task *decline a whole article with one reason*.
 
 Window-only host authority belongs to shell, regardless of adapter permissions. Kit derives that
 boundary from the compiler's DOM and worker declarations; shared HTTP and cancellation APIs remain
-available to substrate. Imports and callbacks retain the requirement. Plain supplied options are data.
+available to substrate. Imports retain the requirement. Plain supplied options are data.
 
 Each zone has four layers:
 
@@ -182,8 +182,8 @@ exists without a promise it keeps.
 
 A change that breaks a rule fails the check. Existing code is legacy until it's moved into place; its findings
 are debt that may only shrink, and so is its size. A change may add to a legacy module only calls into placed
-modules; new code is placed first, so nothing new lands in the old shape. Legacy hands placed code data, never
-behaviour: importing a placed export that takes a callback is legacy debt too.
+modules; new code is placed first, so nothing new lands in the old shape. Legacy hands placed code data or an
+adapter's contract, never other behaviour: importing a placed export that takes a callback is legacy debt too.
 
 ## Headless and modular
 
@@ -251,7 +251,7 @@ packages:
 
 This effectful boundary is available only in exact declared entrypoints. Aliases and type-only imports
 are supported; namespace imports, dynamic imports, re-exports and package subpaths stay unresolved.
-Test bodies and captured callbacks remain checked. Shared comparisons can return plain data to the
+Test bodies remain checked. Shared comparisons can return plain data to the
 entrypoint's assertions; helpers gain no runner permission from a proof that calls them. A package owned
 by an adapter still belongs to that adapter. This contract restricts top-level exports, not individual
 members of an exported API.

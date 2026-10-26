@@ -147,7 +147,7 @@ test("startup does not let a descendant carry external authority into Core", () 
   ).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        debtKey: expect.stringContaining("R1:closure-binding:"),
+        debtKey: "R1:takes-behaviour:src/core/compositions/read.ts:read",
         blocking: true,
       }),
     ]),

@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
-import { legacyBoundary } from "../../src/core/readings/legacy-boundary.js";
+import type { KitConfig } from "../../src/core/primitives/default-config.js";
+import { handoverCheck } from "../../src/core/readings/handover-check.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const gateSource =
@@ -10,7 +11,11 @@ const { ratchetFindings } = await import(gateSource);
 const run = "src/substrate/compositions/run.ts";
 const store = "src/substrate/compositions/store.ts";
 
-function boundary(caller: string) {
+function boundary(
+  caller: string,
+  config: Partial<KitConfig> = {},
+  extra: Readonly<Record<string, string>> = {},
+) {
   const snapshot = sourceFixture(
     {
       "tsconfig.json": JSON.stringify({
@@ -45,15 +50,16 @@ function boundary(caller: string) {
       "src/substrate/adapters/journal.ts":
         "export interface Journal { note(text: string): void; }\nexport const journal: Journal = { note: () => {} };\n",
       "legacy/index.ts": caller,
+      ...extra,
     },
-    { layout: { legacy: ["legacy"] } },
+    { layout: { legacy: ["legacy"] }, ...config },
   );
   expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  return legacyBoundary(snapshot);
+  return handoverCheck(snapshot);
 }
 
 const keys = (caller: string): string[] => boundary(caller).map((item) => item.debtKey);
-const key = (target: string, name: string): string => `R1:legacy-behaviour:legacy/index.ts:${target}#${name}`;
+const key = (target: string, name: string): string => `R1:handover:legacy/index.ts:${target}#${name}`;
 
 test.each([
   ["separate callables", "import { run } from '../src/substrate/compositions/run.js';\nrun(() => '', () => {});\n", run, "run"],
@@ -94,5 +100,41 @@ test("a baseline holds existing boundary debt, and a new crossing fails", () => 
   );
   expect(ratchetFindings(after, baseline, [], []).map((item: { debtKey: string }) => item.debtKey)).toEqual([
     key(run, "record"),
+  ]);
+});
+
+test("a registered contract crosses, and a declared entrypoint's crossing is a violation", () => {
+  const adapters: NonNullable<KitConfig["adapters"]> = [
+    {
+      module: "substrate/adapters/journal",
+      export: "journal",
+      capability: "journal",
+      kind: "external",
+      zones: ["substrate"],
+      contract: { type: "Journal" },
+    },
+  ];
+  const caller = "import { record, run } from '../src/substrate/compositions/run.js';\nvoid record;\nvoid run;\n";
+  expect(boundary(caller, { adapters }).map((item) => item.debtKey)).toEqual([key(run, "run")]);
+  const start = "legacy/index.ts";
+  expect(boundary(caller, { adapters, exceptions: [start] }).map((item) => item.category)).toEqual([
+    "placed-violation",
+  ]);
+});
+
+test("a package handle crosses only into the adapter that declares its package", () => {
+  const sdk = "src/shell/adapters/browser.ts";
+  const files = {
+    "node_modules/browser-sdk/index.d.ts": "export interface Page { title(): string; }\n",
+    "node_modules/browser-sdk/package.json": JSON.stringify({ name: "browser-sdk", types: "index.d.ts" }),
+    [sdk]: "import type { Page } from 'browser-sdk';\nexport function title(page: Page): string { return page.title(); }\n",
+  };
+  const caller = "import { title } from '../src/shell/adapters/browser.js';\nvoid title;\n";
+  const adapter = (packages: string[]): NonNullable<KitConfig["adapters"]> => [
+    { module: "shell/adapters/browser", export: "title", capability: "rendering", kind: "external", zones: ["shell"], packages },
+  ];
+  expect(boundary(caller, { adapters: adapter(["browser-sdk"]) }, files)).toEqual([]);
+  expect(boundary(caller, { adapters: adapter([]) }, files).map((item) => item.debtKey)).toEqual([
+    `R1:handover:legacy/index.ts:${sdk}#title`,
   ]);
 });

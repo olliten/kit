@@ -9,7 +9,7 @@ import type { ImportEdge } from "../../core/primitives/import.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
-import { legacyCodeOf, moduleFileOf, placementOf, rootOf } from "../../core/readings/placement-of.js";
+import { legacyCodeOf, moduleFileOf, rootOf } from "../../core/readings/placement-of.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
@@ -261,20 +261,6 @@ function readCompiler(
     }
     return path;
   };
-  const shellCompositions = new Set(
-    [...source].filter((path) => {
-      const at = placementOf(path, config.srcRoot, config.layerNames);
-      return at.placed && at.zone === "shell" && at.layer === "compositions";
-    }),
-  );
-  const externalAdapters = new Set(
-    (config.adapters ?? []).flatMap((adapter) => {
-      if (adapter.kind !== "external") return [];
-      const path = moduleFileOf(adapter.module, config.srcRoot, config.layerNames);
-      const at = placementOf(path, config.srcRoot, config.layerNames);
-      return at.placed && at.zone !== "core" && at.layer === "adapters" ? [path] : [];
-    }),
-  );
   const projects = paths
     .filter((path) => /^tsconfig(?:\.[\w-]+)*\.json$/.test(basename(path)))
     .map((file): Project => {
@@ -323,23 +309,12 @@ function readCompiler(
       const exports: Project["exports"][number][] = [];
       const globals: Project["globals"][number][] = [];
       const escapes: Project["escapes"][number][] = [];
-      const parameters = new Map<
-        ts.ParameterDeclaration,
-        Project["parameters"][number] & { readonly exported: boolean }
-      >();
+      const parameters = new Map<ts.ParameterDeclaration, Project["parameters"][number]>();
       const contracts: Project["contracts"][number][] = [];
       const accesses: Project["accesses"][number][] = [];
       const constructions: Project["constructions"][number][] = [];
-      const connections: Project["connections"][number][] = [];
       const termSources: NonNullable<Project["termFacts"]>["sources"][number][] = [];
       const termTypes: NonNullable<Project["termFacts"]>["types"][number][] = [];
-      type CallableBinding = {
-        -readonly [Key in keyof NonNullable<
-          Project["connections"][number]["callableBindings"]
-        >[number]]: NonNullable<Project["connections"][number]["callableBindings"]>[number][Key];
-      };
-      const pendingCaptures: { readonly argument: ts.Expression; readonly binding: CallableBinding }[] =
-        [];
       const targetOf = (node: ts.Node): ts.Declaration | undefined => {
         let symbol = checker.getSymbolAtLocation(node);
         if (symbol !== undefined && (symbol.flags & ts.SymbolFlags.Alias) !== 0)
@@ -415,34 +390,6 @@ function readCompiler(
         (type.objectFlags & ts.ObjectFlags.Reference) !== 0;
       type NativeAuthority = NonNullable<Project["parameters"][number]["nativeAuthority"]>[number];
       type NativeType = NativeAuthority["root"];
-      const nativeInputs = new Set<ts.ParameterDeclaration>();
-      const sdkTypes = new Map<ts.Symbol, NativeType>();
-      for (const adapter of config.adapters ?? []) {
-        if (adapter.kind !== "external" || adapter.contract === undefined || !("parameter" in adapter.contract)) continue;
-        const path = moduleFileOf(adapter.module, config.srcRoot, config.layerNames);
-        if (!externalAdapters.has(path)) continue;
-        const file = program.getSourceFile(join(appRoot, path));
-        const module = file === undefined ? undefined : checker.getSymbolAtLocation(file);
-        const exported = module === undefined ? undefined : checker.getExportsOfModule(module).find((symbol) => symbol.name === adapter.export);
-        const declarations = exported?.declarations ?? [];
-        if (declarations.length !== 1) continue;
-        const declaration = declarations[0];
-        const operation = declaration !== undefined && ts.isVariableDeclaration(declaration) ? declaration.initializer : declaration;
-        if (operation === undefined || !ts.isFunctionLike(operation)) continue;
-        const parameter = operation.parameters[adapter.contract.parameter];
-        if (parameter === undefined) continue;
-        const type = checker.getTypeAtLocation(parameter);
-        const symbol = type.aliasSymbol ?? type.symbol;
-        const owners = symbol?.declarations ?? [];
-        const owner = owners[0];
-        if (symbol === undefined || owners.length !== 1 || owner === undefined ||
-          (type.flags & ts.TypeFlags.Object) === 0 || type.getCallSignatures().length !== 0 ||
-          !(ts.isInterfaceDeclaration(owner) || ts.isClassDeclaration(owner) || ts.isTypeAliasDeclaration(owner)) ||
-          !owner.getSourceFile().isDeclarationFile || program.isSourceFileDefaultLibrary(owner.getSourceFile()) ||
-          source.has(local(owner.getSourceFile().fileName))) continue;
-        sdkTypes.set(symbol, { file: local(owner.getSourceFile().fileName), name: symbol.name });
-        nativeInputs.add(parameter);
-      }
       const nativeLibrary = (node: ts.Node): boolean =>
         program.isSourceFileDefaultLibrary(node.getSourceFile()) &&
         /^lib\.dom(?:\.[\w-]+)*\.d\.ts$/.test(basename(node.getSourceFile().fileName));
@@ -490,8 +437,6 @@ function readCompiler(
               ts.isSetAccessorDeclaration(node)),
         ) === true;
       const nativeType = (type: ts.Type): NativeType | null => {
-        const sdk = sdkTypes.get(type.aliasSymbol ?? type.symbol);
-        if (sdk !== undefined) return sdk;
         const symbol = type.symbol;
         if (hostValue(symbol)) return null;
         const declaration = symbol?.declarations?.find(
@@ -548,7 +493,7 @@ function readCompiler(
           result = [{
             root,
             bases,
-            ...(!sdkTypes.has(type.aliasSymbol ?? type.symbol) && !workerTypes.has(root.name) ? { windowOnly: true as const } : {}),
+            ...(!workerTypes.has(root.name) ? { windowOnly: true as const } : {}),
           }];
         } else {
           const constraint =
@@ -606,7 +551,7 @@ function readCompiler(
             const identity = nativeType(type);
             return identity !== null && !workerTypes.has(identity.name);
           });
-        if (nativeMember(member) || windowReceiver || sdkTypes.has(receiver.aliasSymbol ?? receiver.symbol)) return nativeAuthorityOf(receiver);
+        if (nativeMember(member) || windowReceiver) return nativeAuthorityOf(receiver);
         const type = checker.getTypeOfSymbolAtLocation(member, location);
         return type.getConstructSignatures().length > 0 ? nativeAuthorityOf(type) : [];
       };
@@ -760,17 +705,46 @@ function readCompiler(
           nativeAuthority: nativeAuthorityOf(type),
         };
       };
+      // A registered adapter's contract, and each port its operations return, name the adapter whose behaviour
+      // they carry, so a module taking one shows that adapter in its types.
+      let registered: Set<string> | undefined;
+      const contractType = (type: ts.Type): boolean => {
+        if (registered === undefined) {
+          registered = new Set();
+          for (const adapter of config.adapters ?? []) {
+            const name = adapter.contract?.type;
+            const file = program.getSourceFile(
+              join(appRoot, moduleFileOf(adapter.module, config.srcRoot, config.layerNames)),
+            );
+            const module = file === undefined ? undefined : checker.getSymbolAtLocation(file);
+            const symbol = module === undefined ? undefined : checker.getExportsOfModule(module).find((each) => each.name === name);
+            if (symbol === undefined) continue;
+            const declared = checker.getDeclaredTypeOfSymbol(symbol);
+            for (const identity of [contractIdentity(declared), ...(portsOf(declared).ports ?? [])])
+              if (identity !== null) registered.add(`${identity.file}:${identity.name}`);
+          }
+        }
+        const identity = contractIdentity(type);
+        return identity !== null && registered.has(`${identity.file}:${identity.name}`);
+      };
+      // A handle of a package an adapter declares is that adapter's to take.
+      const handleOf = (type: ts.Type, packages: readonly string[]): boolean => {
+        const home = (type.aliasSymbol ?? type.symbol)?.declarations?.[0]?.getSourceFile().fileName ?? "";
+        return packages.some((name) => home.includes(`/node_modules/${name}/`));
+      };
       // What a caller can hand a value: behaviour, when a parameter, a writable property or a mutable collection
-      // it exposes takes a callable, an accessor or an object with operations.
-      const acceptsBehaviour = (type: ts.Type, seen = new Set<ts.Type>()): boolean => {
-        if (seen.has(type)) return false;
+      // it exposes takes a callable, an accessor or an object with operations that is not a registered contract,
+      // nor a handle of a package the value's own adapter declares.
+      const acceptsBehaviour = (type: ts.Type, packages: readonly string[] = [], seen = new Set<ts.Type>()): boolean => {
+        if (seen.has(type) || contractType(type) || handleOf(type, packages)) return false;
         seen.add(type);
-        const executable = (candidate: ts.Type): boolean => parameterFacts(candidate).executable;
-        if (type.isUnionOrIntersection()) return type.types.some((member) => acceptsBehaviour(member, seen));
+        const executable = (candidate: ts.Type): boolean =>
+          parameterFacts(candidate).executable && !contractType(candidate) && !handleOf(candidate, packages);
+        if (type.isUnionOrIntersection()) return type.types.some((member) => acceptsBehaviour(member, packages, seen));
         for (const signature of [...type.getCallSignatures(), ...type.getConstructSignatures()])
           if (
             signature.getParameters().some((parameter) => executable(checker.getTypeOfSymbol(parameter))) ||
-            acceptsBehaviour(checker.getReturnTypeOfSignature(signature), seen)
+            acceptsBehaviour(checker.getReturnTypeOfSignature(signature), packages, seen)
           )
             return true;
         if (checker.isArrayType(type) || libCollection(type.symbol))
@@ -790,10 +764,10 @@ function readCompiler(
               ts.isShorthandPropertyAssignment(declaration) ||
               ts.isSetAccessorDeclaration(declaration)) &&
             (ts.getCombinedModifierFlags(declaration) & ts.ModifierFlags.Readonly) === 0;
-          return (writable && executable(value)) || acceptsBehaviour(value, seen);
+          return (writable && executable(value)) || acceptsBehaviour(value, packages, seen);
         });
       };
-      const recordParameter = (parameter: ts.ParameterDeclaration, exported = false): void => {
+      const recordParameter = (parameter: ts.ParameterDeclaration): void => {
         const sf = parameter.getSourceFile();
         const file = local(sf.fileName);
         if (sf.isDeclarationFile || !source.has(file)) return;
@@ -802,7 +776,6 @@ function readCompiler(
           start: parameter.getStart(sf),
           name: parameter.name.getText(sf),
           ...parameterFacts(checker.getTypeAtLocation(parameter)),
-          exported: exported || parameters.get(parameter)?.exported === true,
         });
       };
       const operationsOf = (type: ts.Type): string[] =>
@@ -836,9 +809,7 @@ function readCompiler(
         }
         return ports.size === 0 ? {} : { ports: [...ports.values()] };
       };
-      const contractIdentity = (type: ts.Type, nativeInput = false): { file: string; name: string } | null => {
-        const sdk = nativeInput ? sdkTypes.get(type.aliasSymbol ?? type.symbol) : undefined;
-        if (sdk !== undefined) return sdk;
+      const contractIdentity = (type: ts.Type): { file: string; name: string } | null => {
         const symbol = type.aliasSymbol ?? type.symbol;
         const declaration = symbol?.declarations?.[0];
         return declaration !== undefined &&
@@ -1139,25 +1110,14 @@ function readCompiler(
             contracts.push({
               file: path,
               name: node.name.text,
-              parameter: null,
               operations: operationsOf(checker.getTypeAtLocation(node)),
               type: contractIdentity(checker.getTypeAtLocation(node)),
               ...nativeContract(checker.getTypeAtLocation(node)),
               ...portsOf(checker.getTypeAtLocation(node)),
             });
           if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
-            for (const [index, parameter] of node.parameters.entries()) {
-              contracts.push({
-                file: path,
-                name: node.name.text,
-                parameter: index,
-                operations: operationsOf(checker.getTypeAtLocation(parameter)),
-                type: contractIdentity(checker.getTypeAtLocation(parameter), nativeInputs.has(parameter)),
-                ...nativeContract(checker.getTypeAtLocation(parameter)),
-              });
-              if (node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword))
-                recordParameter(parameter, true);
-            }
+            if (node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword))
+              for (const parameter of node.parameters) recordParameter(parameter);
           }
           if (
             (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
@@ -1168,19 +1128,7 @@ function readCompiler(
               (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
             )
           ) {
-            for (const [index, parameter] of node.parameters.entries()) {
-              const type = checker.getTypeAtLocation(parameter);
-              const name = node.parent.name.getText(sf);
-              contracts.push({
-                file: path,
-                name,
-                parameter: index,
-                operations: operationsOf(type),
-                type: contractIdentity(type, nativeInputs.has(parameter)),
-                ...nativeContract(type),
-              });
-              recordParameter(parameter, true);
-            }
+            for (const parameter of node.parameters) recordParameter(parameter);
           }
           if (ts.isObjectLiteralExpression(node)) {
             const type = checker.getContextualType(node) ?? checker.getTypeAtLocation(node);
@@ -1199,6 +1147,18 @@ function readCompiler(
               spread: node.properties.some(ts.isSpreadAssignment),
             });
           }
+          // A class implementing an interface constructs that interface's values as a literal does.
+          if (ts.isClassLike(node))
+            for (const clause of node.heritageClauses ?? [])
+              if (clause.token === ts.SyntaxKind.ImplementsKeyword)
+                for (const implemented of clause.types)
+                  constructions.push({
+                    file: path,
+                    start: implemented.getStart(sf),
+                    callable: false,
+                    types: typeNames(checker.getTypeAtLocation(implemented)),
+                    spread: false,
+                  });
           if (ts.isCallExpression(node)) {
             if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
               const specifier = node.arguments[0];
@@ -1221,126 +1181,8 @@ function readCompiler(
               globalName(node.arguments[0]) === "globalThis"
             )
               accesses.push({ file: path, start: node.getStart(sf), kind: "dynamic" });
-            const declaration = targetOf(node.expression);
             const raw = rawAccess(node.expression);
             if (raw !== null) accesses.push({ file: path, start: node.getStart(sf), kind: raw });
-            const nativeDestination =
-              declaration !== undefined &&
-              (externalAdapters.has(local(declaration.getSourceFile().fileName)) ||
-                shellCompositions.has(local(declaration.getSourceFile().fileName)));
-            const callableArguments = node.arguments.flatMap((argument, index) => {
-              const facts = typeFacts(
-                checker.getTypeAtLocation(argument),
-                new Set(),
-                nativeDestination ? "adapter" : true,
-              );
-              if (!facts.callable && !facts.accessor) return [];
-              let input = argument;
-              while (
-                ts.isParenthesizedExpression(input) ||
-                ts.isPropertyAccessExpression(input) ||
-                ts.isElementAccessExpression(input)
-              )
-                input = input.expression;
-              let source = targetOf(input);
-              while (source !== undefined && ts.isBindingElement(source)) {
-                const parent = source.parent.parent;
-                source = ts.isParameter(parent) ? parent : undefined;
-              }
-              const parameter = source !== undefined && ts.isParameter(source) ? source : null;
-              const argumentType = checker.getTypeAtLocation(argument);
-              const argumentSymbol = argumentType.aliasSymbol ?? argumentType.symbol;
-              const acquisition = ts.isCallExpression(argument) && argumentSymbol !== undefined && sdkTypes.has(argumentSymbol)
-                ? checker.getResolvedSignature(argument)?.declaration
-                : undefined;
-              const origin =
-                parameter !== null
-                  ? parameter
-                  : ts.isArrowFunction(argument) ||
-                      ts.isFunctionExpression(argument) ||
-                      ts.isObjectLiteralExpression(argument) ||
-                      ts.isArrayLiteralExpression(argument) ||
-                      ts.isNewExpression(argument)
-                    ? argument
-                    : targetOf(argument) ?? acquisition;
-              const called =
-                declaration !== undefined && ts.isVariableDeclaration(declaration)
-                  ? declaration.initializer
-                  : declaration;
-              const targetParameter =
-                called !== undefined && ts.isFunctionLike(called)
-                  ? called.parameters[index]
-                  : undefined;
-              if (parameter !== null) recordParameter(parameter);
-              if (targetParameter !== undefined) recordParameter(targetParameter);
-              const binding: CallableBinding = {
-                source:
-                  parameter === null
-                    ? null
-                    : {
-                        file: local(parameter.getSourceFile().fileName),
-                        start: parameter.getStart(),
-                      },
-                target:
-                  targetParameter === undefined ||
-                  targetParameter.getSourceFile().isDeclarationFile
-                    ? null
-                    : {
-                        file: local(targetParameter.getSourceFile().fileName),
-                        start: targetParameter.getStart(),
-                      },
-              };
-              pendingCaptures.push({ argument, binding });
-              return [
-                {
-                  binding,
-                  origin:
-                    origin === undefined || origin.getSourceFile().isDeclarationFile
-                      ? null
-                      : local(origin.getSourceFile().fileName),
-                },
-              ];
-            });
-            if (callableArguments.length > 0)
-              connections.push({
-                file: path,
-                start: node.getStart(sf),
-                target:
-                  declaration === undefined || declaration.getSourceFile().isDeclarationFile
-                    ? null
-                    : local(declaration.getSourceFile().fileName),
-                ...(declaration !== undefined &&
-                declaration.getSourceFile() === sf &&
-                !nameable(declaration)
-                  ? { local: true }
-                  : {}),
-                callableOrigins: callableArguments.map((argument) => argument.origin),
-                callableBindings: callableArguments.map(({ binding }) => binding),
-                builtin:
-                  raw === "clock" ||
-                  raw === "randomness" ||
-                  (declaration !== undefined &&
-                    ts.isMethodSignature(declaration) &&
-                    ts.isInterfaceDeclaration(declaration.parent) &&
-                    /^lib\.es[\w.]*\.d\.ts$/.test(basename(declaration.getSourceFile().fileName)) &&
-                    ((["Array", "ReadonlyArray"].includes(declaration.parent.name.text) &&
-                      [
-                        "sort",
-                        "map",
-                        "filter",
-                        "reduce",
-                        "reduceRight",
-                        "flatMap",
-                        "some",
-                        "every",
-                        "find",
-                        "findIndex",
-                        "forEach",
-                        "toSorted",
-                      ].includes(declaration.name.getText())) ||
-                      (declaration.parent.name.text === "String" &&
-                        ["trim", "localeCompare"].includes(declaration.name.getText())))),
-              });
           }
           if (ts.isPropertyAccessExpression(node)) {
             const raw = runtime ? rawAccess(node) : null;
@@ -1613,7 +1455,15 @@ function readCompiler(
                 : null,
             resultType,
             ...((target.flags & ts.SymbolFlags.Value) !== 0 &&
-            acceptsBehaviour(checker.getTypeOfSymbolAtLocation(target, declaration))
+            acceptsBehaviour(
+              checker.getTypeOfSymbolAtLocation(target, declaration),
+              (config.adapters ?? []).flatMap((adapter) =>
+                adapter.kind === "external" &&
+                moduleFileOf(adapter.module, config.srcRoot, config.layerNames) === path
+                  ? (adapter.packages ?? [])
+                  : [],
+              ),
+            )
               ? { acceptsBehaviour: true as const }
               : {}),
           });
@@ -1646,85 +1496,6 @@ function readCompiler(
           }
         }
       }
-      // Only facts that can grant authority are positions a capture lists, one per kind and file.
-      const adapterGlobals = new Set(
-        (config.adapters ?? []).flatMap((adapter) => adapter.globals ?? []),
-      );
-      const natives = (entry: { readonly nativeAuthority?: readonly NativeAuthority[] }): string[] =>
-        (entry.nativeAuthority ?? []).map((authority) => `${authority.root.file}:${authority.root.name}`);
-      const grantingFacts = [
-        ...accesses
-          .filter((access) => access.kind !== "dynamic")
-          .map((access) => ({ fact: access, kind: JSON.stringify(["access", access.kind, natives(access)]) })),
-        ...globals
-          .filter(
-            (global) =>
-              global.runtime &&
-              ((global.nativeAuthority ?? []).length > 0 || adapterGlobals.has(global.name)),
-          )
-          .map((global) => ({ fact: global, kind: JSON.stringify(["global", global.name, natives(global)]) })),
-        ...[...parameters.values()]
-          .filter(
-            (parameter) =>
-              (parameter.nativeAuthority ?? []).length > 0 || parameter.types.length > 0,
-          )
-          .map((parameter) => ({
-            fact: parameter,
-            kind: JSON.stringify([
-              "parameter",
-              parameter.callable || parameter.accessor,
-              parameter.types,
-              natives(parameter),
-            ]),
-          })),
-      ].sort((a, b) => a.fact.start - b.fact.start);
-      const facts = new Map<string, { start: number; position: number }[]>();
-      const firsts = new Map<string, number>();
-      for (const { fact, kind } of grantingFacts) {
-        const identity = `${fact.file}\u0000${kind}`;
-        const position = firsts.get(identity) ?? fact.start;
-        firsts.set(identity, position);
-        const list = facts.get(fact.file);
-        if (list === undefined) facts.set(fact.file, [{ start: fact.start, position }]);
-        else list.push({ start: fact.start, position });
-      }
-      const captureOf = captureReach(
-        program,
-        checker,
-        source,
-        local,
-        importTarget,
-        facts,
-        nativeInputs,
-        new Set(sdkTypes.keys()),
-      );
-      for (const { argument, binding } of pendingCaptures) {
-        const { heldParameters, ...capture } = captureOf(argument);
-        const natives = new Map<string, CapturedNative>();
-        const types = new Map<string, { readonly file: string; readonly name: string }>();
-        const argumentType = checker.getTypeAtLocation(argument);
-        const argumentSymbol = argumentType.aliasSymbol ?? argumentType.symbol;
-        for (const authority of nativeAuthorityOf(argumentType))
-          if (argumentSymbol !== undefined && sdkTypes.has(argumentSymbol))
-            natives.set(`${authority.root.file}:${authority.root.name}`, authority);
-        // Authority enrichment belongs to compiler fact extraction; proof reachability needs only reach.
-        for (const parameter of heldParameters) {
-          const type = checker.getTypeAtLocation(parameter);
-          for (const authority of nativeAuthorityOf(type))
-            natives.set(`${authority.root.file}:${authority.root.name}`, authority);
-          for (const identity of typeFacts(type).types)
-            types.set(`${identity.file}:${identity.name}`, identity);
-        }
-        binding.capture = {
-          ...capture,
-          types: [...types.values()].sort(
-            (a, b) => a.file.localeCompare(b.file) || a.name.localeCompare(b.name),
-          ),
-          nativeAuthority: [...natives.values()].sort((a, b) =>
-            `${a.root.file}:${a.root.name}`.localeCompare(`${b.root.file}:${b.root.name}`),
-          ),
-        };
-      }
       // A test reaches what its code uses, followed into helpers and modules as a capture is, so a helper that
       // imports many modules lends a test only the ones the code it calls uses.
       const proofOf = captureReach(
@@ -1733,7 +1504,6 @@ function readCompiler(
         new Set([...source, ...tests]),
         local,
         importTarget,
-        facts,
       );
       const proofs = program
         .getSourceFiles()
@@ -1781,7 +1551,6 @@ function readCompiler(
         contracts,
         accesses,
         constructions,
-        connections,
         proofs,
         termFacts: { sources: termSources, types: termTypes },
       };
@@ -1914,16 +1683,8 @@ function resolve(from: string, specifier: string, known: ReadonlySet<string>): s
   return candidates.find((c) => known.has(c));
 }
 
-type Capture = NonNullable<
-  NonNullable<
-    CompilerFacts["projects"][number]["connections"][number]["callableBindings"]
-  >[number]["capture"]
->;
-type CapturedNative = Capture["nativeAuthority"][number];
-type CapturedPackage = Capture["packages"][number];
-type CaptureReach = Omit<Capture, "types" | "nativeAuthority"> & {
-  readonly heldParameters: readonly ts.ParameterDeclaration[];
-};
+// The files a test's code reaches, and those it reaches in ways that can't be followed, charged whole.
+type CaptureReach = { readonly reached: readonly string[]; readonly whole: readonly string[] };
 
 // A callable carries what it can run or hold: the code its free names reach, followed through the
 // declarations they name, and every statement that can change a mutable value it holds, since a handle
@@ -1935,10 +1696,6 @@ function captureReach(
   source: ReadonlySet<string>,
   local: (file: string) => string,
   importTarget: (specifier: string, containingFile: string) => string | null,
-  // Per file, in order, each fact that can grant authority and the first position of its kind there.
-  facts: ReadonlyMap<string, readonly { readonly start: number; readonly position: number }[]>,
-  nativeInputs: ReadonlySet<ts.ParameterDeclaration> = new Set(),
-  sdkTypes: ReadonlySet<ts.Symbol> = new Set(),
 ): (argument: ts.Node) => CaptureReach {
   const unaliased = (symbol: ts.Symbol): ts.Symbol => {
     if ((symbol.flags & ts.SymbolFlags.Alias) === 0) return symbol;
@@ -2074,34 +1831,14 @@ function captureReach(
           readonlyProperty(property) && immutable(checker.getTypeOfSymbol(property), seen),
       );
   };
-  const packageKey = ({ file, specifier }: CapturedPackage): string => JSON.stringify([file, specifier]);
-  const packageOf = (symbol: ts.Symbol): CapturedPackage | null => {
-    for (const declaration of symbol.declarations ?? []) {
-      let current: ts.Node | undefined = declaration;
-      while (current !== undefined && !ts.isImportDeclaration(current)) current = current.parent;
-      if (current === undefined || !ts.isStringLiteral(current.moduleSpecifier)) continue;
-      const specifier = current.moduleSpecifier.text;
-      const imported = { file: local(current.getSourceFile().fileName), specifier };
-      if (!specifier.startsWith(".")) return imported;
-      // A relative import that reaches no checked source, such as a declaration beside a JavaScript file
-      // outside the project, is as unclassified as an unknown package.
-      const target = importTarget(specifier, current.getSourceFile().fileName);
-      if (target === null || !source.has(target) || /\.d\.[mc]?ts$/.test(target)) return imported;
-    }
-    return null;
-  };
   // One piece of code, or every statement that can change one mutable binding, and where it leads.
   type Piece = {
     readonly edges: Key[];
     readonly whole: Set<string>;
-    readonly packages: Map<string, CapturedPackage>;
-    readonly parameters: Set<ts.ParameterDeclaration>;
   };
   const empty = (): Piece => ({
     edges: [],
     whole: new Set(),
-    packages: new Map(),
-    parameters: new Set(),
   });
   const pieces = new Map<Key, Piece>();
   const aliases = new Map<ts.Symbol, Map<string, Selected>>();
@@ -2111,15 +1848,6 @@ function captureReach(
     const identity = JSON.stringify([path, result]);
     let key = paths.get(identity);
     if (key === undefined) paths.set(identity, key = { selected: symbol, path, result });
-    return key;
-  };
-  const retainedKeys = new Map<ts.Node, Map<string, Retained>>();
-  const retainedOf = (node: ts.Node, path: readonly string[] = []): Retained => {
-    let paths = retainedKeys.get(node);
-    if (paths === undefined) retainedKeys.set(node, paths = new Map());
-    const name = JSON.stringify(path);
-    let key = paths.get(name);
-    if (key === undefined) paths.set(name, key = { retained: node, path });
     return key;
   };
   const resultKeys = new Map<ts.Symbol, Results>();
@@ -2142,7 +1870,6 @@ function captureReach(
       target = target.parent;
     if (target.getSourceFile().isDeclarationFile) return;
     if (ts.isParameter(target)) {
-      piece.parameters.add(target);
       // What the enclosing code writes into a mutable argument is held too.
       piece.edges.push(...bindingSymbols(target.name));
       return;
@@ -2265,7 +1992,7 @@ function captureReach(
           : undefined;
       const parameter = parameters?.[Math.min(position, parameters.length - 1)];
       if (parameter !== undefined) {
-        if (!nativeInputs.has(parameter)) piece.edges.push(...bindingSymbols(parameter.name));
+        piece.edges.push(...bindingSymbols(parameter.name));
       }
       else {
         // A library call may copy the value into any other argument or its receiver, and return it.
@@ -2486,7 +2213,7 @@ function captureReach(
         const operation = called !== undefined && ts.isMethodSignature(called) && ts.isInterfaceDeclaration(called.parent) &&
           ["Array", "ReadonlyArray"].includes(called.parent.name.text) && program.isSourceFileDefaultLibrary(called.getSourceFile());
         if (input !== undefined && index >= 0) {
-          if (!nativeInputs.has(input)) bind(input.name, remaining);
+          bind(input.name, remaining);
         } else if (operation && receiver !== undefined && ts.isPropertyAccessExpression(parent.expression) &&
             ["push", "unshift"].includes(parent.expression.name.text)) {
           const holder = holderOf(receiver);
@@ -2558,10 +2285,6 @@ function captureReach(
         if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
           const target = importTarget(specifier.text, sf.fileName);
           if (target !== null) piece.whole.add(target);
-          else {
-            const imported = { file: local(sf.fileName), specifier: specifier.text };
-            piece.packages.set(packageKey(imported), imported);
-          }
         }
       }
       if (ts.isIdentifier(node)) {
@@ -2580,10 +2303,8 @@ function captureReach(
             const runtime = declarations.filter(
               (declaration) => !declaration.getSourceFile().isDeclarationFile,
             );
-            if (runtime.length === 0) {
-              const imported = property ? null : packageOf(raw);
-              if (imported !== null) piece.packages.set(packageKey(imported), imported);
-            } else if (
+            if (
+              runtime.length > 0 &&
               !property ||
               runtime.some(
                 (declaration) =>
@@ -2599,145 +2320,17 @@ function captureReach(
     visit(root);
     return piece;
   };
-  // Acquiring a native handle executes its creator; it does not retain that execution. Follow the
-  // returned value and its mutations instead. Factory arguments remain captures: a native SDK may
-  // hold any callback or option it receives. Ordinary callable/proof captures still follow code.
-  const retained = ({ retained: node, path }: Retained): Piece => {
-    const piece = empty();
-    const next = (value: ts.Node, keys = path): void => { piece.edges.push(retainedOf(value, keys)); };
-    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) ||
-        ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node) || ts.isAwaitExpression(node)) {
-      next(node.expression);
-    } else if (ts.isPropertyAccessExpression(node)) {
-      next(node.expression, [node.name.text, ...path]);
-    } else if (ts.isElementAccessExpression(node) &&
-        (ts.isStringLiteralLike(node.argumentExpression) || ts.isNumericLiteral(node.argumentExpression))) {
-      next(node.expression, [node.argumentExpression.text, ...path]);
-    } else if (ts.isIdentifier(node)) {
-      const raw = rawSymbolOf(node);
-      const symbol = raw === undefined ? undefined : unaliased(raw);
-      const declarations = symbol?.declarations ?? [];
-      if (declarations.length === 0) piece.edges.push(node);
-      // Reading a binding holds any value assigned into its selected slot. Tracking an already held
-      // value's mutations is separate: replacing a container slot does not mutate its former member.
-      if (symbol !== undefined) for (const reference of homeReferences(symbol)) {
-        let target: ts.Node = reference;
-        let selected = path;
-        for (;;) {
-          const parent = target.parent;
-          if (ts.isPropertyAccessExpression(parent) && parent.expression === target && selected[0] === parent.name.text) {
-            target = parent;
-            selected = selected.slice(1);
-          } else if (ts.isElementAccessExpression(parent) && parent.expression === target &&
-              selected.length > 0 && (!(ts.isStringLiteralLike(parent.argumentExpression) || ts.isNumericLiteral(parent.argumentExpression)) || selected[0] === parent.argumentExpression.text)) {
-            target = parent;
-            selected = selected.slice(1);
-          } else if (ts.isParenthesizedExpression(parent) || ts.isNonNullExpression(parent) ||
-              ts.isAsExpression(parent) || ts.isSatisfiesExpression(parent)) {
-            target = parent;
-          } else break;
-        }
-        if (assignment(target.parent) && target.parent.left === target) next(target.parent.right, selected);
-      }
-      for (const declaration of declarations) {
-        if (ts.isVariableDeclaration(declaration) && declaration.initializer !== undefined) {
-          next(declaration.initializer);
-          for (const symbol of bindingSymbols(declaration.name)) piece.edges.push(selectedOf(symbol, path));
-        } else if (ts.isBindingElement(declaration)) {
-          if (declaration.initializer !== undefined) piece.edges.push(declaration.initializer);
-          let binding: ts.Node = declaration.parent;
-          while (ts.isBindingElement(binding) || ts.isObjectBindingPattern(binding) || ts.isArrayBindingPattern(binding)) binding = binding.parent;
-          if (ts.isVariableDeclaration(binding) && binding.initializer !== undefined && ts.isIdentifier(declaration.name)) {
-            next(binding.initializer, [declaration.propertyName?.getText() ?? declaration.name.text, ...path]);
-            for (const symbol of bindingSymbols(declaration.name)) piece.edges.push(selectedOf(symbol, path));
-          } else piece.edges.push(node);
-        } else if (ts.isParameter(declaration)) {
-          piece.parameters.add(declaration);
-          if (declaration.initializer !== undefined) piece.edges.push(declaration.initializer);
-          for (const symbol of bindingSymbols(declaration.name)) piece.edges.push(selectedOf(symbol, path));
-        } else reach(declaration, piece);
-      }
-    } else if (ts.isObjectLiteralExpression(node) && path.length > 0) {
-      // Later spreads may replace the selected property; retain every possible overriding value.
-      // An explicit later property, however, makes earlier entries irrelevant to this selection.
-      for (const property of [...node.properties].reverse()) {
-        if (ts.isSpreadAssignment(property)) next(property.expression);
-        else if (property.name?.getText().replace(/^['"]|['"]$/g, "") === path[0]) {
-          if (ts.isPropertyAssignment(property)) next(property.initializer, path.slice(1));
-          else if (ts.isShorthandPropertyAssignment(property)) next(property.name, path.slice(1));
-          else piece.edges.push(property);
-          break;
-        } else if (property.name !== undefined && ts.isComputedPropertyName(property.name)) {
-          piece.edges.push(property);
-        }
-      }
-    } else if (ts.isCallExpression(node)) {
-      if (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression)) {
-        const receiver = node.expression.expression;
-        const type = checker.getTypeAtLocation(receiver);
-        const symbol = type.aliasSymbol ?? type.symbol;
-        if (symbol !== undefined && sdkTypes.has(symbol)) next(receiver, []);
-      }
-      const declaration = checker.getResolvedSignature(node)?.declaration;
-      if (declaration !== undefined && ts.isFunctionLike(declaration) &&
-          !declaration.getSourceFile().isDeclarationFile && "body" in declaration && declaration.body !== undefined) {
-        const returns = (child: ts.Node): void => {
-          if (ts.isReturnStatement(child)) {
-            if (child.expression !== undefined) next(child.expression);
-          } else if (!ts.isFunctionLike(child)) ts.forEachChild(child, returns);
-        };
-        if (ts.isBlock(declaration.body)) returns(declaration.body);
-        else next(declaration.body);
-      } else if (declaration === undefined) piece.edges.push(node);
-      // The factory's execution and package ownership are checked at its call site. Its inputs may
-      // be retained in the result even when their declaration is unavailable.
-      piece.edges.push(...node.arguments);
-    } else piece.edges.push(node);
-    return piece;
-  };
   const pieceOf = (key: Key): Piece => {
     let piece = pieces.get(key);
     if (piece === undefined) {
-      piece = isSelected(key) ? selected(key) : isRetained(key) ? retained(key) : isResults(key) ? results(key.results) : isSymbol(key) ? changes(key) : code(key);
+      piece = isSelected(key) ? selected(key) : isResults(key) ? results(key.results) : isSymbol(key) ? changes(key) : code(key);
       pieces.set(key, piece);
     }
     return piece;
   };
-  // The representative fact positions inside one piece of code.
-  const positions = new Map<ts.Node, readonly number[]>();
-  const positionsOf = (root: ts.Node, file: string): readonly number[] => {
-    let found = positions.get(root);
-    if (found === undefined) {
-      const sf = root.getSourceFile();
-      const start = root.getStart(sf);
-      const list = facts.get(file) ?? [];
-      let low = 0;
-      let high = list.length;
-      while (low < high) {
-        const middle = (low + high) >> 1;
-        if ((list[middle]?.start ?? 0) < start) low = middle + 1;
-        else high = middle;
-      }
-      const representatives = new Set<number>();
-      for (let at = low; at < list.length; at++) {
-        const fact = list[at];
-        if (fact === undefined || fact.start >= root.end) break;
-        representatives.add(fact.position);
-      }
-      found = [...representatives];
-      positions.set(root, found);
-    }
-    return found;
-  };
   // Everything a piece leads to, as one set of item ids. A cycle of pieces shares one set.
   const items = new Map<string, number>();
-  const values: (
-    | { readonly kind: "position"; readonly file: string; readonly start: number }
-    | { readonly kind: "reached" | "whole"; readonly name: string }
-    | ({ readonly kind: "package" } & CapturedPackage)
-    | { readonly kind: "parameter"; readonly parameter: ts.ParameterDeclaration }
-  )[] = [];
-  const parameterIds = new Map<ts.ParameterDeclaration, number>();
+  const values: { readonly kind: "reached" | "whole"; readonly name: string }[] = [];
   const bit = (key: string, value: (typeof values)[number]): bigint => {
     let id = items.get(key);
     if (id === undefined) {
@@ -2749,24 +2342,11 @@ function captureReach(
   };
   const own = (key: Key, piece: Piece): bigint => {
     let bits = 0n;
-    if (!isSelected(key) && !isRetained(key) && !isResults(key) && !isSymbol(key)) {
+    if (!isSelected(key) && !isResults(key) && !isSymbol(key)) {
       const file = local(key.getSourceFile().fileName);
       bits |= bit(`r:${file}`, { kind: "reached", name: file });
-      for (const start of positionsOf(key, file))
-        bits |= bit(`p:${file}:${start}`, { kind: "position", file, start });
     }
     for (const file of piece.whole) bits |= bit(`w:${file}`, { kind: "whole", name: file });
-    for (const imported of piece.packages.values())
-      bits |= bit(`k:${packageKey(imported)}`, { kind: "package", ...imported });
-    for (const parameter of piece.parameters) {
-      let id = parameterIds.get(parameter);
-      if (id === undefined) {
-        id = values.length;
-        parameterIds.set(parameter, id);
-        values.push({ kind: "parameter", parameter });
-      }
-      bits |= 1n << BigInt(id);
-    }
     return bits;
   };
   const summaries = new Map<Key, bigint>();
@@ -2821,69 +2401,26 @@ function captureReach(
     return summaries.get(start) ?? 0n;
   };
   return (argument) => {
-    let root: Key = argument;
-    // A whole-file proof root has no expression type. Only the source-input reader supplies SDK
-    // roots; ordinary/proof captures do not ask the checker about their root.
-    if (sdkTypes.size > 0) {
-      const type = checker.getTypeAtLocation(argument);
-      const symbol = type.aliasSymbol ?? type.symbol;
-      if (symbol !== undefined && sdkTypes.has(symbol)) root = retainedOf(argument);
-    }
-    const bits = summarize(root).toString(2);
-    const found: { file: string; start: number }[] = [];
+    const bits = summarize(argument).toString(2);
     const reached = new Set<string>();
     const whole = new Set<string>();
-    const packages = new Map<string, CapturedPackage>();
-    const parameters: { file: string; start: number }[] = [];
-    const heldParameters: ts.ParameterDeclaration[] = [];
-    const home = argument.getSourceFile();
     for (let index = 0; index < bits.length; index++) {
       if (bits[bits.length - 1 - index] !== "1") continue;
       const value = values[index];
-      if (value === undefined) continue;
-      if (value.kind === "position") found.push({ file: value.file, start: value.start });
-      else if (value.kind === "reached") reached.add(value.name);
-      else if (value.kind === "whole") whole.add(value.name);
-      else if (value.kind === "package")
-        packages.set(packageKey(value), { file: value.file, specifier: value.specifier });
-      else if (value.kind === "parameter") {
-        const sf = value.parameter.getSourceFile();
-        // A captured parameter holds what its declared type grants, also when a handle reached it by a
-        // call inside this module that crossed no boundary. Its own module's inputs also carry what their
-        // callers supply.
-        if (sf === home)
-          parameters.push({ file: local(sf.fileName), start: value.parameter.getStart(sf) });
-        heldParameters.push(value.parameter);
-      }
+      if (value?.kind === "reached") reached.add(value.name);
+      else if (value?.kind === "whole") whole.add(value.name);
     }
-    const position = (
-      a: { readonly file: string; readonly start: number },
-      b: { readonly file: string; readonly start: number },
-    ): number => a.file.localeCompare(b.file) || a.start - b.start;
-    return {
-      positions: found.sort(position),
-      reached: [...reached].sort(),
-      whole: [...whole].sort(),
-      packages: [...packages.values()].sort((a, b) =>
-        (a.file ?? "").localeCompare(b.file ?? "") || a.specifier.localeCompare(b.specifier)),
-      parameters: parameters.sort(position),
-      heldParameters,
-    };
+    return { reached: [...reached].sort(), whole: [...whole].sort() };
   };
 }
 
 // A piece is keyed by its code, by a binding whose changes it holds, or by a function whose results it holds.
 type Results = { readonly results: ts.Symbol };
-type Retained = { readonly retained: ts.Node; readonly path: readonly string[] };
 type Selected = { readonly selected: ts.Symbol; readonly path: readonly string[]; readonly result: boolean };
-type Key = ts.Node | ts.Symbol | Results | Retained | Selected;
+type Key = ts.Node | ts.Symbol | Results | Selected;
 
 function isSelected(key: Key): key is Selected {
   return "selected" in key;
-}
-
-function isRetained(key: Key): key is Retained {
-  return "retained" in key;
 }
 
 function isResults(key: Key): key is Results {
