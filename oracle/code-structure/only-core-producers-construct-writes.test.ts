@@ -1,22 +1,25 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import type { KitConfig } from "../../src/core/primitives/default-config.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { constructionCheck } from "../../src/core/readings/construction-check.js";
+import { registrationCheck } from "../../src/core/readings/registration-check.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
+// What the write rules decide for one registered operation: the capability its registration grants, and what
+// the registration, zone and construction checks find.
 function inspect(
   zone: "core" | "substrate",
   layer: string,
   kind: "produce" | "apply" | "external",
   declaredZone?: "core" | "substrate",
 ) {
-  const root = mkdtempSync(join(tmpdir(), "kit-producer-boundary-"));
   const module = `${zone}/${layer}/operation`;
   const path = `src/${module}.ts`;
-  const config: KitConfig = {
-    ...DEFAULT_CONFIG,
+  const config: Partial<KitConfig> = {
     adapters: [
       {
         module,
@@ -29,21 +32,7 @@ function inspect(
       },
     ],
   };
-  const inputs = {
-    "tsconfig.json": JSON.stringify({
-      compilerOptions: {
-        target: "ES2022",
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        lib: ["ES2022"],
-        types: [],
-        strict: true,
-        noEmit: true,
-        declaration: true,
-        isolatedDeclarations: true,
-      },
-      include: ["src/**/*.ts"],
-    }),
+  const files = {
     [path]:
       kind === "produce"
         ? "export interface WriteSet { readonly key: string; readonly value: string; }\nexport function operation(key: string, value: string): WriteSet { return { key, value }; }\n"
@@ -51,21 +40,20 @@ function inspect(
           ? "export function operation(): number { return Date.now(); }\n"
           : "export function operation(values: Map<string, string>, key: string, value: string): void { values.set(key, value); }\n",
   };
-  try {
-    for (const [file, source] of Object.entries(inputs)) {
-      mkdirSync(dirname(join(root, file)), { recursive: true });
-      writeFileSync(join(root, file), source);
-    }
-    const result = capabilityCheck(readSnapshot(root, config));
-    return { path, result };
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const snapshot = projectSnapshot({ ...recordedImports(files, config), ...recordedContracts(files, config) }, config);
+  const context = capabilityContext(snapshot, []);
+  const graph = authorityGraph(snapshot, context, [], new Set());
+  const findings = [
+    ...registrationCheck(snapshot, context),
+    ...zoneAuthorityCheck(snapshot, context, graph),
+    ...constructionCheck(snapshot, []),
+  ];
+  return { path, result: { direct: [...(graph.direct.get(path) ?? [])].sort(), findings } };
 }
 
 test("a core composition may produce an actual write set without a primitive constructor wrapper", () => {
   const { path, result } = inspect("core", "compositions", "produce");
-  expect(result.requirements.find((row) => row.path === path)?.direct).toEqual(["cell.produce"]);
+  expect(result.direct).toEqual(["cell.produce"]);
   expect(result.findings.filter((row) => row.path === path)).toEqual([]);
 });
 
@@ -84,7 +72,7 @@ test("a reading cannot gain production authority by being registered as a produc
 
 test("a substrate composition may apply writes directly", () => {
   const { path, result } = inspect("substrate", "compositions", "apply");
-  expect(result.requirements.find((row) => row.path === path)?.direct).toEqual(["cell.apply"]);
+  expect(result.direct).toEqual(["cell.apply"]);
   expect(result.findings.filter((row) => row.path === path)).toEqual([]);
 });
 

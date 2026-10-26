@@ -55,6 +55,7 @@ compositions wire the others into behaviour.
   whose types grant it; a type-only import grants none, and what the checker can't establish is a limit,
   never purity ({{capability-check}}, {{authority-graph}}, {{access-authority}}, {{import-authority}}, {{capability-context}}, {{compiler-check}}, {{compiler-facts}}, {{program-scope}}, {{syntax-reading}}, {{escape-recorder}},
   {{native-reading}}). · {#authority-is-derived}
+  - Implementation: {{read-snapshot}}, {{global-authority}}, {{registration-check}}, {{startup-check}}, {{edge-check}}, {{zone-authority-check}}, {{zone-permission}}, {{behaviour-check}}, {{construction-check}}, {{dependency-check}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-config}}, {{source-fixture}}
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
@@ -62,7 +63,8 @@ compositions wire the others into behaviour.
   identity rather than choosing a default root. A contract grants no host global: the window object reached
   through a global needs a declared global, whatever types the contract names
   ({{registration-check}}, {{authority-graph}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{zone-authority-check}}, {{compiler-facts}}, {{default-config}}, {{authority-recorder}}, {{contract-recorder}}, {{contract-reading}}). · {#adapters-create-authority}
-  - Proof: {{source-fixture}}
+  - Implementation: {{construction-check}}, {{dependency-check}}, {{zone-permission}}, {{capability-context}}, {{finding}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-imports}}, {{recorded-authority}}, {{recorded-contracts}}, {{project-snapshot}}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
   holding only the adapter's plain contract holds no native authority ({{authority-graph}}, {{global-authority}}, {{zone-authority-check}}). · {#declared-globals-cover-their-handles}
   - Proof: {{source-fixture}}
@@ -82,13 +84,16 @@ compositions wire the others into behaviour.
   keeps its own authority ({{authority-graph}}, {{zone-authority-check}}). · {#namespaces-grant-what-is-reached}
 - A type, a type alias or a declaration merge grants no runtime authority; the value it describes still does
   ({{authority-graph}}, {{compiler-facts}}). · {#erased-types-grant-no-authority}
+  - Implementation: {{global-authority}}, {{access-authority}}, {{import-authority}}, {{zone-authority-check}}, {{zone-permission}}, {{capability-context}}, {{finding}}, {{authority-recorder}}, {{syntax-reading}}, {{contract-reading}}, {{behaviour-reading}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-authority}}, {{project-snapshot}}
 - The core decides and a reading derives, so neither takes behaviour. An export of a core module or of a
   reading that takes a callable, an accessor or an object with operations, through a parameter, a writable
   property or a mutable collection, is a finding, unless that position is typed as a registered adapter's
   contract or a port its operations return, whose capability the zone rules then check. Behaviour moves
   freely only between the compositions and adapters of one zone, which share its permissions
   ({{behaviour-check}}, {{behaviour-reading}}). · {#core-and-readings-take-data}
-  - Proof: {{source-fixture}}
+  - Implementation: {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{capability-context}}, {{finding}}, {{import-recorder}}, {{authority-recorder}}, {{contract-recorder}}, {{syntax-reading}}, {{contract-reading}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-imports}}, {{recorded-authority}}, {{recorded-contracts}}, {{project-snapshot}}
 - Only an adapter constructs values of its contract and its ports: an object literal of such a type, or a
   class implementing one, outside the adapter's file is a finding, so a value of a contract carries what the
   adapter's file shows. A declared entrypoint may construct them as test doubles
@@ -120,5 +125,9 @@ compositions wire the others into behaviour.
 
 - Only a declared core producer constructs a write set, and only a substrate composition applies one; a
   reading does neither, even when it is registered as a producer ({{construction-check}}, {{zone-permission}}). · {#only-core-producers-construct-writes}
+  - Implementation: {{authority-graph}}, {{zone-authority-check}}, {{registration-check}}, {{capability-context}}, {{finding}}, {{import-recorder}}, {{contract-recorder}}, {{syntax-reading}}, {{contract-reading}}, {{behaviour-reading}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-imports}}, {{recorded-contracts}}, {{project-snapshot}}
 - Shell and substrate compositions may invoke a core producer and carry its write sets without gaining the
   right to construct them, and a reading can't invoke a producer ({{zone-permission}}). · {#compositions-invoke-producers}
+  - Implementation: {{authority-graph}}, {{zone-authority-check}}, {{construction-check}}, {{registration-check}}, {{capability-context}}, {{finding}}, {{import-recorder}}, {{authority-recorder}}, {{contract-recorder}}, {{syntax-reading}}, {{contract-reading}}, {{behaviour-reading}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-imports}}, {{recorded-authority}}, {{recorded-contracts}}, {{project-snapshot}}

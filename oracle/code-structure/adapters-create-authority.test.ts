@@ -1,17 +1,24 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
 import { fakeClock } from "../../fixture/adapter-contracts/fake-clock.js";
-import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import type { KitConfig } from "../../src/core/primitives/default-config.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { constructionCheck } from "../../src/core/readings/construction-check.js";
 import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { registrationCheck } from "../../src/core/readings/registration-check.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
+// What the authority rules decide over a compiled fixture: each file's derived capabilities, and what the
+// registration, authority, zone and construction checks find. A fixture that doesn't compile throws.
 function inspect(extra: Readonly<Record<string, string>>, configChange?: Partial<KitConfig>) {
-  const root = mkdtempSync(join(tmpdir(), "kit-adapter-contract-"));
-  const config: KitConfig = {
-    ...DEFAULT_CONFIG,
+  const config: Partial<KitConfig> = {
     adapters: [
       {
         module: "substrate/adapters/clock",
@@ -34,36 +41,38 @@ function inspect(extra: Readonly<Record<string, string>>, configChange?: Partial
     ...configChange,
   };
   const inputs = {
-    "tsconfig.json": JSON.stringify({
-      compilerOptions: {
-        target: "ES2022",
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        lib: ["ES2022", "DOM"],
-        types: [],
-        strict: true,
-        noEmit: true,
-        declaration: true,
-        isolatedDeclarations: true,
-      },
-      include: ["src/**/*.ts"],
-    }),
     "src/substrate/adapters/clock.ts":
       "export interface Clock { now(): number; sample(): number; }\n" +
       "export const clock: Clock = { now: () => Date.now(), sample: () => Date.now() };\n",
     "src/shell/adapters/render.ts": "export function title(): string { return document.title; }\n",
     ...extra,
   };
-  try {
-    for (const [path, content] of Object.entries(inputs)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), content);
-    }
-    const snapshot = readSnapshot(root, config);
-    return { snapshot, result: capabilityCheck(snapshot) };
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const facts = {
+    ...recordedImports(inputs, config),
+    ...recordedAuthority(inputs, config),
+    ...recordedContracts(inputs, config),
+  };
+  const snapshot = {
+    ...projectSnapshot(facts, config),
+    imports: facts.imports.flatMap((edge) => (edge.target === null ? [] : [{ from: edge.file, to: edge.target }])),
+  };
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const graph = authorityGraph(snapshot, context, parts, new Set());
+  const result = {
+    requirements: [...graph.inherited].map(([path, capabilities]) => ({
+      path,
+      direct: [...(graph.direct.get(path) ?? [])].sort(),
+      inherited: [...capabilities].sort(),
+    })),
+    findings: [
+      ...registrationCheck(snapshot, context),
+      ...parts.flatMap((part) => part.findings),
+      ...zoneAuthorityCheck(snapshot, context, graph),
+      ...constructionCheck(snapshot, context.startups),
+    ],
+  };
+  return { snapshot, result };
 }
 
 test("executing the fake does not load the real implementation beside its interface", () => {

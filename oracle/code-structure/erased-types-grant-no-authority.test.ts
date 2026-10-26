@@ -1,44 +1,25 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
-import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
 
+// The globals a source records, and what deriving its authority and checking its zone find. A fixture that
+// doesn't compile throws.
 function inspect(source: string) {
-  const root = mkdtempSync(join(tmpdir(), "kit-erased-declarations-"));
-  try {
-    const files = {
-      "tsconfig.json": JSON.stringify({
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          lib: ["ES2022", "DOM"],
-          types: [],
-          strict: true,
-          noEmit: true,
-          declaration: true,
-          isolatedDeclarations: true,
-        },
-        include: ["src/**/*.ts"],
-      }),
-      "src/core/compositions/sample.ts": source,
-    };
-    for (const [path, content] of Object.entries(files)) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), content);
-    }
-    const snapshot = readSnapshot(root, DEFAULT_CONFIG);
-    expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-    return {
-      globals: snapshot.compiler?.projects.flatMap((project) => project.globals) ?? [],
-      findings: capabilityCheck(snapshot).findings,
-    };
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const facts = recordedAuthority({ "src/core/compositions/sample.ts": source });
+  const snapshot = projectSnapshot(facts);
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const graph = authorityGraph(snapshot, context, parts, new Set());
+  return {
+    globals: facts.globals,
+    findings: [...parts.flatMap((part) => part.findings), ...zoneAuthorityCheck(snapshot, context, graph)],
+  };
 }
 
 test("augmenting the event type map does not acquire its merged SDK capabilities", () => {
