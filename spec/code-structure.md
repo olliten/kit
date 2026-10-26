@@ -86,12 +86,12 @@ compositions wire the others into behaviour.
   property or a mutable collection, is a finding, unless that position is typed as a registered adapter's
   contract or a port its operations return, whose capability the zone rules then check. Behaviour moves
   freely only between the compositions and adapters of one zone, which share its permissions
-  ({{capability-check}}, {{read-snapshot}}). · {#core-and-readings-take-data}
+  ({{behaviour-check}}, {{capability-check}}, {{read-snapshot}}). · {#core-and-readings-take-data}
   - Proof: {{source-fixture}}
 - Only an adapter constructs values of its contract and its ports: an object literal of such a type, or a
   class implementing one, outside the adapter's file is a finding, so a value of a contract carries what the
   adapter's file shows. A declared entrypoint may construct them as test doubles
-  ({{capability-check}}, {{read-snapshot}}). · {#only-adapters-construct-contracts}
+  ({{construction-check}}, {{capability-check}}, {{read-snapshot}}). · {#only-adapters-construct-contracts}
   - Proof: {{source-fixture}}
 - A native handle or event handler stays authority: a reading or a core composition taking one is a finding. A host value type (`URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`) is data, and the
   host function it is handed to, such as `fetch`, stays authority ({{capability-check}}). · {#native-handles-stay-in-adapters}
@@ -117,6 +117,6 @@ compositions wire the others into behaviour.
 ## Writes
 
 - Only a declared core producer constructs a write set, and only a substrate composition applies one; a
-  reading does neither, even when it is registered as a producer ({{capability-check}}). · {#only-core-producers-construct-writes}
+  reading does neither, even when it is registered as a producer ({{construction-check}}, {{capability-check}}). · {#only-core-producers-construct-writes}
 - Shell and substrate compositions may invoke a core producer and carry its write sets without gaining the
   right to construct them, and a reading can't invoke a producer ({{capability-check}}). · {#compositions-invoke-producers}

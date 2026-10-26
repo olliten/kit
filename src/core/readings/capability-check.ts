@@ -1,3 +1,5 @@
+import { behaviourCheck } from "./behaviour-check.js";
+import { constructionCheck } from "./construction-check.js";
 import { cycles } from "./dependency-check.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
 import { legacyCodeOf, moduleFileOf, placementOf, rootOf } from "./placement-of.js";
@@ -296,25 +298,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
     }
   }
-  const descriptions = adapters
-    .filter((adapter) => adapter.kind === "produce")
-    .flatMap((adapter) => {
-      const path = pathOf(adapter.module);
-      const results = projects
-        .flatMap((project) => project.exports)
-        .filter((symbol) => symbol.file === path && symbol.name === adapter.export);
-      const types = results.flatMap((symbol) =>
-        symbol.resultType === null ? [] : [symbol.resultType],
-      );
-      if (types.length === 0)
-        unresolved(
-          "producer-result",
-          path,
-          "The declared producer result has no supported direct named data contract; unions and wrapped results are not guessed.",
-          adapter.export,
-        );
-      return types.map((type) => ({ ...adapter, type }));
-    });
   for (const project of projects) {
     if (!project.settings.noImplicitAny || !project.settings.strictNullChecks)
       for (const path of project.files)
@@ -351,20 +334,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         )
           direct.get(parameter.file)?.add(contract.capability);
     }
-    // The core decides and a reading derives, so neither takes behaviour: what they are handed is data, or a
-    // registered adapter's contract, whose capability the zone rules then check.
-    for (const symbol of project.exports)
-      if (
-        symbol.acceptsBehaviour === true &&
-        (placement(symbol.file)?.zone === "core" || placement(symbol.file)?.layer === "readings")
-      )
-        add(
-          "R1",
-          "takes-behaviour",
-          symbol.file,
-          "Take data here, or a registered adapter's contract; keep supplied behaviour in compositions outside the core.",
-          symbol.name,
-        );
     for (const access of project.accesses) {
       if (!direct.has(access.file)) continue;
       if (access.kind === "native") {
@@ -809,62 +778,6 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
         );
     }
   }
-  // Only an adapter builds values of its contract, so what one carries is what the adapter's file shows.
-  const contractHomes = new Map(
-    adapters.flatMap((adapter) =>
-      adapter.kind !== "external"
-        ? []
-        : (contracts.get(adapter) ?? []).flatMap((fact) =>
-            [...(fact.type === null ? [] : [fact.type]), ...(fact.ports ?? [])].map(
-              (type) => [`${type.file}:${type.name}`, pathOf(adapter.module)] as const,
-            ),
-          ),
-    ),
-  );
-  for (const project of projects) {
-    for (const construction of project.constructions) {
-      if (!direct.has(construction.file)) continue;
-      if (!startups.has(construction.file))
-        for (const type of construction.types) {
-          const home = contractHomes.get(`${type.file}:${type.name}`);
-          if (home !== undefined && home !== construction.file)
-            add(
-              "R1",
-              "contract-construction",
-              construction.file,
-              "Let the adapter construct values of its contract, and hand those along instead.",
-              type.name,
-            );
-        }
-      const matchingDescriptions = descriptions.filter((adapter) =>
-        construction.types.some(
-          (type) => type.file === adapter.type.file && type.name === adapter.type.name,
-        ),
-      );
-      if (matchingDescriptions.length > 0) {
-        if (
-          !matchingDescriptions.some(
-            (adapter) => coreProducer(adapter) && construction.file === pathOf(adapter.module),
-          )
-        )
-          add(
-            "R2",
-            "write-construction",
-            construction.file,
-            "Construct this description only in its declared Core producer.",
-            construction.site ?? String(construction.start),
-          );
-        if (construction.callable)
-          add(
-            "R1",
-            "description-callable",
-            construction.file,
-            "Describe the operation and its arguments as data rather than a closure.",
-            construction.site ?? String(construction.start),
-          );
-      }
-    }
-  }
   return {
     requirements: [...inherited].map(([path, caps]) => ({
       path,
@@ -872,7 +785,12 @@ export function capabilityCheck(snapshot: Snapshot): CapabilityResult {
       inherited: [...caps].sort(),
     })),
     findings: [
-      ...new Map(findings.map((result) => [`${result.debtKey}:${result.path}`, result])).values(),
+      ...new Map(
+        [...findings, ...behaviourCheck(snapshot), ...constructionCheck(snapshot, [...startups])].map((result) => [
+          `${result.debtKey}:${result.path}`,
+          result,
+        ]),
+      ).values(),
     ].sort(byDebtKey),
   };
 }

@@ -69,6 +69,10 @@
 
 ## Reading contracts
 
+- **behaviour-check** — the check that the core and readings take data or registered contracts, never other behaviour.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
 - **binding-findings** — findings from comparing claim homes, executable proofs and named modules in a supplied snapshot.
   - Role: derived
   - Zone: core
@@ -76,7 +80,7 @@
 - **capability-check** — capability requirements, structural findings and explicit limits derived from supplied compiler and configuration facts.
   - Role: derived
   - Zone: core
-  - From: {{dependency-check}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
+  - From: {{behaviour-check}}, {{construction-check}}, {{dependency-check}}, {{finding}}, {{layer}}, {{placement-of}}, {{snapshot}}
 - **claim-cohesion** — the check that the claims naming a module share the code of it their tests use.
   - Role: derived
   - Zone: core
@@ -93,6 +97,10 @@
   - Role: derived
   - Zone: core
   - From: {{zone}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{layer}}, {{snapshot}}
+- **construction-check** — the check that only an adapter builds its contract's values and only a declared core producer its write descriptions.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
 - **dependency-check** — findings from import direction and cycles between placed modules.
   - Role: derived
   - Zone: core
@@ -195,11 +203,15 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{test-reach}}
 - **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
   - Role: composition
   - Zone: substrate
   - Of: {{default-config}}, {{read-snapshot}}, {{temporary-project}}
+- **test-reach** — the workflow that follows a test's code into the files and top-level declarations it uses.
+  - Role: composition
+  - Zone: substrate
+  - Of: []
 
 ## Supporting vocabulary and roles
 
