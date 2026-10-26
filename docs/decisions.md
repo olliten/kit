@@ -423,3 +423,12 @@ without naming the app.
   module. A module's authority is now what its imports and the contract types in its signatures show, which is
   what the rules promised. The cost: a pure higher-order helper can't live in the core or a reading, and a fake
   of a contract lives in an entrypoint or is registered as its own adapter.
+
+## 2026-10-26 · The README is the method on one page
+
+- **Decision:** the README holds the why, the two-phase workflow, topics, the rules and setup. Configuration
+  detail moved to `docs/reference.md`, the language-independent method to `docs/method.md`. The oracle adoption
+  inventory taken at `83ffb2a` left the README: it recorded six legacy oracle modules, 91 statements and 21 calls,
+  paid down to the cache fixture's 40 statements and six calls in `self-debt/legacy.json`.
+- **Why:** an agent or a person adopting Kit should be able to hold the method in one read; edge cases belong
+  where they are looked up.
