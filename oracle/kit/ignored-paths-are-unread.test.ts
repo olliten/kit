@@ -5,7 +5,7 @@ import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js"
 import { removeCacheApps, scratch, writeApp, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
 import { CACHE_APP } from "../core/primitives/cache-app.js";
 
-import { configuredKit, kitConfig } from "../../src/core/readings/kit-configuration.js";
+import { configuredKit, kitConfig } from "../../src/core/compositions/kit-configuration.js";
 
 afterEach(removeCacheApps);
 

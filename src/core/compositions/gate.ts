@@ -14,6 +14,9 @@ import { nameCheck } from "../readings/name-check.js";
 import { placementOf } from "../readings/placement-of.js";
 import { proofReach } from "../readings/proof-reach.js";
 import { proofScope } from "../readings/proof-scope.js";
+import { excerptCohesion } from "../readings/excerpt-cohesion.js";
+import { functionGovernance } from "../readings/function-governance.js";
+import { runsRecord } from "../readings/runs-record.js";
 import type { GateFinding } from "../readings/ratchet.js";
 import { referenceCheck } from "../readings/semantic-references.js";
 import { termModel } from "../readings/term-model.js";
@@ -71,6 +74,9 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
     ...concepts.findings,
   ].map(violation);
   const requiredLimits = exclusions.limits.map(limit);
+  // Which named functions each test ran, while the record describes this code.
+  const record = runsRecord(snapshot);
+  const runs = record.runs === null ? [] : [...functionGovernance(topicSnapshot, record.runs), ...excerptCohesion(topicSnapshot, record.runs)];
   return {
     findings: [
       ...capabilityCheck(snapshot).findings,
@@ -78,6 +84,8 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
       ...layoutCheck(snapshot),
       ...handoverCheck(snapshot),
       ...proofScope(topicSnapshot),
+      ...runs,
+      ...record.findings.map(violation),
       ...structural,
       ...concepts.limits.map(limit),
       ...requiredLimits,

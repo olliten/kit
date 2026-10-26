@@ -4,7 +4,7 @@ import { layoutCheck } from "../../src/core/readings/layout-check.js";
 import { legacySize } from "../../src/core/readings/legacy-size.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
-import { configuredKit } from "../../src/core/readings/kit-configuration.js";
+import { configuredKit } from "../../src/core/compositions/kit-configuration.js";
 import { ratchetFindings, tightenedBaseline } from "../../src/core/readings/ratchet.js";
 const config: Partial<KitConfig> = {
   srcRoot: ["implementation", "proofs"], oracleRoot: "proofs", specRoot: "promises",

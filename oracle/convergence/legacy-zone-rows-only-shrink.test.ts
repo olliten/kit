@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { legacyZones } from "../../src/core/readings/legacy-zone-configuration.js";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { capabilityContext } from "../../src/core/readings/capability-context.js";
 import { edgeCheck } from "../../src/core/readings/edge-check.js";
@@ -98,4 +99,19 @@ test("a row that names a placed module or a missing file is a finding, never a z
   const { findings } = gate(sources, row([...recorded, placed, "src/gone.ts"]), []);
   expect(checksOf(findings, placed)).toEqual(["legacy-zone-row"]);
   expect(checksOf(findings, "src/gone.ts")).toEqual(["legacy-zone-row"]);
+});
+
+test("a config declares a legacy zone row by root or by exact files, and nothing else", () => {
+  expect(
+    legacyZones([
+      { root: "lib/", zone: "core" },
+      { files: ["lib/a.ts", "lib/b.ts"], zone: "shell" },
+    ]),
+  ).toEqual([
+    { root: "lib/", zone: "core" },
+    { files: ["lib/a.ts", "lib/b.ts"], zone: "shell" },
+  ]);
+  expect(legacyZones(undefined)).toEqual([]);
+  expect(() => legacyZones([{ root: "lib/", zone: "edge" }])).toThrow(/legacy zone row/);
+  expect(() => legacyZones({ root: "lib/" })).toThrow(/must list rows/);
 });

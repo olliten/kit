@@ -128,5 +128,14 @@ export interface CompilerFacts {
       readonly site?: string;
       readonly kind: "any" | "assertion" | "non-null" | "ignore" | "nocheck" | "expect-error";
     }[];
+    // The named functions of each checked source: the name a runtime reports, the line it starts on, an id
+    // unique in its file, and the id of the named function holding it.
+    readonly functions?: readonly {
+      readonly file: string;
+      readonly name: string;
+      readonly line: number;
+      readonly id: string;
+      readonly holder: string | null;
+    }[];
   }[];
 }

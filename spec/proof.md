@@ -53,7 +53,7 @@ a claim depends on are named in it, so each module's claims are found from its n
   into helpers and modules as a capture is, and the modules of only types that code is written in; a named
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}
   - Implementation: {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}, {{test-reach}}
-  - Proof: {{fixture-snapshot}}
+  - Proof: {{fixture-snapshot}}, {{recorded-reach}}
 - A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. The
   modules of only types and the oracle's own helpers need no name, though what a helper reaches counts as the
   test's, and naming a composition names what it composes. A module a claim's tests reach without its name is
@@ -66,3 +66,26 @@ a claim depends on are named in it, so each module's claims are found from its n
   counts as used whole. · {#claims-that-share-no-code-share-no-module}
   - Implementation: {{claim-cohesion}}, {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}, {{test-reach}}
   - Proof: {{source-fixture}}
+
+## Runs
+
+- `kit runs` runs each test file alone with the app's own test command, which writes an LCOV report of the
+  named functions it ran; raw V8 coverage adds the processes a test starts, where a function's reported name and
+  line match the source. It records for every placed module which of its named functions each test ran,
+  with the digest of every placed module and test it ran over. A check reads the record only while each of
+  those files still has its recorded digest; a missing or stale record is a finding until `kit runs` is run
+  again. · {#runs-are-recorded-per-test}
+  - Implementation: {{runs-run}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{runs-record}}, {{processes}}, {{text-files}}
+- Every named function of a placed module is run by a test of a claim that names the module, so each piece of
+  code is governed by a claim that promises something about it. A named function none of those claims runs is
+  debt: proved only incidentally by another claim, or by none. A module of only types has no functions, and an
+  anonymous function belongs to the named function that holds it. · {#every-function-is-governed}
+  - Implementation: {{function-governance}}, {{claim-runs}}, {{function-recorder}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-functions}}, {{project-snapshot}}
+- Claims that share a module share its code. A named function only one claim's tests run, and that no named
+  function other claims run holds, is that claim's excerpt; a module that holds the excerpts of two or more
+  claims is several modules, and each excerpt moves to its own. Code that every claim runs is the module's
+  shared core and stays. An adapter is defined by its operations, so it is exempt. · {#claims-keep-their-excerpts-apart}
+  - Implementation: {{excerpt-cohesion}}, {{claim-runs}}, {{function-recorder}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{recorded-functions}}, {{project-snapshot}}
+

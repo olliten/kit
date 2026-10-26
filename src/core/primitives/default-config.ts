@@ -36,6 +36,9 @@ export interface KitConfig {
   readonly ignore?: readonly string[];
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
+  // Where `kit runs` records which named functions each test ran, and the app's command that runs one test file
+  // `{test}` and writes an LCOV report into the directory `{dir}`. Declaring it turns on the rules that read it.
+  readonly runs?: { readonly record: string; readonly each: string };
   readonly layerNames?: {
     readonly primitives: string;
     readonly readings: string;

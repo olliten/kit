@@ -1,6 +1,7 @@
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
 import { DEFAULT_CONFIG } from "../../core/primitives/default-config.js";
-import { configuredKit, kitConfig, normalizedPath } from "../../core/readings/kit-configuration.js";
+import { configuredKit, kitConfig } from "../../core/compositions/kit-configuration.js";
+import { normalizedPath } from "../../core/readings/config-values.js";
 import { describeRefs, moduleRefs } from "../../core/readings/refs-description.js";
 import { textFiles } from "../adapters/text-files.js";
 

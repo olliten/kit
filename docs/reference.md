@@ -107,7 +107,7 @@ home, such as Node built-in declarations; several homes retain uncertainty.
   across placement keep zone boundaries.
 - `legacy-areas`: spec files in an older format, outside the topic shape until they gain Implementation rows.
 - `legacy-test-roots`: test directories the runner should still discover; read by `testRoots()` in
-  `src/core/readings/kit-configuration.ts`.
+  `src/core/readings/test-roots.ts`.
 
 ## Portable verification
 
@@ -119,3 +119,28 @@ strength; the caller supplies discovery, input tracking, evidence storage and po
 For checks with declared filesystem inputs, `declaredInputFiles` in
 `src/substrate/adapters/declared-input-files.ts` resolves files, suffix-filtered trees and path-kind probes into an
 input key. It keys only declared inputs: it does not discover a check's reads or choose its cache policy.
+
+## Runs
+
+```yaml
+runs:
+  record: kit/runs.json
+  each: node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}
+```
+
+`kit runs` runs each test file under the proof root alone with `each`, with `{test}` replaced by the file and
+`{dir}` by a directory of its own, where the command writes an LCOV report. It also sets `NODE_V8_COVERAGE`, so
+processes a test starts count too. The record holds every placed module's and test's digest and, per test, the
+named functions of each placed module it ran. Commit it; `kit check` reads it while every digest still matches,
+and reports `runs-stale` until `kit runs` is run again.
+
+With vitest, `each` is `npx vitest run {test} --coverage.enabled --coverage.provider=v8
+--coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}`, with
+`@vitest/coverage-v8` installed.
+
+Two rules read the record, and their findings are debt that may only shrink:
+
+- `ungoverned-function`: a named function no test of a claim naming its module runs.
+- `excerpt-cohesion`: a module holding, for two or more claims, code that only that claim runs and that no
+  code other claims run holds. Adapters are exempt.
+

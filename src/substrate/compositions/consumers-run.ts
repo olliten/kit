@@ -1,6 +1,6 @@
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
 import { describeConsumer, pinnedKit, readCheck } from "../../core/readings/consumer-report.js";
-import { normalizedPath } from "../../core/readings/kit-configuration.js";
+import { normalizedPath } from "../../core/readings/config-values.js";
 import { processes } from "../adapters/processes.js";
 import { textFiles } from "../adapters/text-files.js";
 

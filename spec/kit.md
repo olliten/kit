@@ -9,14 +9,14 @@ its config, and its debt in its own baseline.
   accepts only the supported root fields and shapes. `roots.src` accepts one code-root path or a set of
   paths, checked together in one snapshot and graph; extraction, authority, structural checks, references
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
-  - Implementation: {{kit-configuration}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{claim-proof-binder}}, {{term-model}}, {{legacy-size}}, {{ratchet}}
+  - Implementation: {{kit-configuration}}, {{config-values}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{claim-proof-binder}}, {{term-model}}, {{legacy-size}}, {{ratchet}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
 - Test discovery includes the configured proof root and only explicitly configured
   `legacy-test-roots`, with no application directory names built in. Each is a relative directory
   without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy
   discovery grants no placement or capability permission. · {#proof-discovery-is-configured}
-  - Implementation: {{kit-configuration}}
+  - Implementation: {{test-roots}}, {{config-values}}
 
 - An app may opt into directory roles with `layout: { legacy: [...] }`. Source and shared proof code
   belong in its governed code roots, tests in its proof root, and Markdown in its specification root
@@ -26,7 +26,7 @@ its config, and its debt in its own baseline.
   debt fails the ratchet. Missing or malformed legacy locations fail configuration. Legacy locations
   grant no module placement, capability or executable-entrypoint permission. Without a layout declaration,
   existing configuration keeps its behavior. · {#directory-roles-are-configured}
-  - Implementation: {{layout-check}}, {{kit-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
+  - Implementation: {{layout-check}}, {{kit-configuration}}, {{layout-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 
 - {{read-snapshot}} reads the fixture as its files, imports, claims, terms and references through {{filesystem}} and
@@ -53,7 +53,7 @@ its config, and its debt in its own baseline.
   - Proof: {{cache-app}}, {{cache-proof}}
 - `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
   list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}
-  - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}
+  - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}, {{source-loader}}
 - `kit consumers <app>…` checks each app checkout against this Kit, with the app's own config and baseline, and
   lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins; an app
   that fails does not fail the run. · {#consumers-show-each-apps-work}
@@ -61,7 +61,7 @@ its config, and its debt in its own baseline.
 - Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. A
   launcher in `scripts/` hands its command the arguments, working directory and input, and answers the terminal
   with the command's output and exit status. · {#paths-from-the-caller}
-  - Implementation: {{kit-configuration}}
+  - Implementation: {{check-paths}}, {{config-values}}
 
 ## Checking itself
 

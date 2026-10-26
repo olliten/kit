@@ -11,7 +11,7 @@ import { gate } from "../../src/core/compositions/gate.js";
 import { termModel } from "../../src/core/readings/term-model.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import { configuredKit, kitConfig } from "../../src/core/readings/kit-configuration.js";
+import { configuredKit, kitConfig } from "../../src/core/compositions/kit-configuration.js";
 import { bindingFindings } from "../core/readings/binding-findings.js";
 
 // The kit follows its own layout: its claims name its modules, and its tests name its claims.
