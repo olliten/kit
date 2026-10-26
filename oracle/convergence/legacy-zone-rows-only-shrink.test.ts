@@ -1,7 +1,11 @@
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { edgeCheck } from "../../src/core/readings/edge-check.js";
+import { byDebtKey } from "../../src/core/readings/finding.js";
+import { registrationCheck } from "../../src/core/readings/registration-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
 import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 
@@ -23,8 +27,11 @@ const row = (files: readonly string[]): Partial<KitConfig> => ({
 });
 
 function gate(files: Readonly<Record<string, string>>, config: Partial<KitConfig>, baseline: readonly string[]) {
-  const snapshot = sourceFixture(files, config);
-  const findings = capabilityCheck(snapshot).findings;
+  // A row's zone and its debt are the registration check's; an edge into a legacy file with no zone is the edge
+  // check's limit. No fixture declares an entrypoint, so there are no startups.
+  const snapshot = projectSnapshot(recordedImports(files, config), config);
+  const context = capabilityContext(snapshot, []);
+  const findings = [...registrationCheck(snapshot, context), ...edgeCheck(snapshot, context).findings].sort(byDebtKey);
   const placedPaths = snapshot.files
     .filter((file) => file.type === "source" && file.path.startsWith("src/substrate/"))
     .map((file) => file.path);
