@@ -15,9 +15,8 @@ import { projectSnapshot } from "../core/readings/project-snapshot.js";
 import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
 import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
-// The declared entrypoint. A compiled fixture records only source files, so the proof that registers its
-// cases is an exact entrypoint without a test suffix; an entrypoint's permission doesn't depend on one.
-const proof = "oracle/count/increments.ts";
+// The declared entrypoint: a claim proof that registers its cases.
+const proof = "oracle/count/increments.test.ts";
 const contract = {
   name: "vitest",
   capabilities: ["test-runner"],

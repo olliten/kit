@@ -1,4 +1,5 @@
 import type { CompilerFacts } from "../../../src/core/primitives/compiler-facts.js";
+import type { CompilerOptions } from "typescript";
 import type { KitConfig } from "../../../src/core/primitives/default-config.js";
 import { behaviourReading } from "../../../src/substrate/compositions/behaviour-reading.js";
 import { contractReading } from "../../../src/substrate/compositions/contract-reading.js";
@@ -13,15 +14,12 @@ type Project = CompilerFacts["projects"][number];
 export function recordedContracts(
   files: Readonly<Record<string, string>>,
   config: Partial<KitConfig> = {},
+  compilerOptions: Pick<CompilerOptions, "paths" | "skipLibCheck"> = {},
 ): Pick<Project, "files" | "contracts" | "constructions"> {
-  const fixture = openProgram(files, config);
-  try {
-    const natives = nativeReading(fixture.scope);
-    const contracts = contractReading(fixture.scope);
-    const recorder = contractRecorder(fixture.scope, natives, contracts, behaviourReading(fixture.scope, natives, contracts));
-    factWalk(fixture.scope, [recorder]);
-    return { files: fixture.files, contracts: recorder.contracts, constructions: recorder.constructions };
-  } finally {
-    fixture.dispose();
-  }
+  const fixture = openProgram(files, config, compilerOptions);
+  const natives = nativeReading(fixture.scope);
+  const contracts = contractReading(fixture.scope);
+  const recorder = contractRecorder(fixture.scope, natives, contracts, behaviourReading(fixture.scope, natives, contracts));
+  factWalk(fixture.scope, [recorder]);
+  return { files: fixture.files, contracts: recorder.contracts, constructions: recorder.constructions };
 }

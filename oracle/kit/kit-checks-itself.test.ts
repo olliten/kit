@@ -61,10 +61,7 @@ test("the kit has unique global definitions and no retired scanned words (R3)", 
   expect(nameCheck(kit)).toEqual([]);
 });
 
-test("the gate finds no placed violation in Kit, and Kit's only debt is the proof scope its baseline holds", () => {
+test("the gate finds no placed violation in Kit, and Kit carries no debt", () => {
   const { findings } = gate(kit, config);
-  const baseline = Object.keys(JSON.parse(readFileSync(new URL("../../self-debt/legacy.json", import.meta.url), "utf8")));
-  const debt = findings.filter((item) => item.category !== "checker-limit").map((item) => item.debtKey);
-  expect(debt.filter((key) => !key.startsWith("R4:proof-scope:"))).toEqual([]);
-  expect(debt.filter((key) => !baseline.includes(key))).toEqual([]);
+  expect(findings.filter((item) => item.category !== "checker-limit").map((item) => item.debtKey)).toEqual([]);
 });

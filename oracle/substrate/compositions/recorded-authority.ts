@@ -1,4 +1,5 @@
 import type { CompilerFacts } from "../../../src/core/primitives/compiler-facts.js";
+import type { CompilerOptions } from "typescript";
 import type { KitConfig } from "../../../src/core/primitives/default-config.js";
 import { authorityRecorder } from "../../../src/substrate/compositions/authority-recorder.js";
 import { behaviourReading } from "../../../src/substrate/compositions/behaviour-reading.js";
@@ -14,26 +15,23 @@ type Project = CompilerFacts["projects"][number];
 export function recordedAuthority(
   files: Readonly<Record<string, string>>,
   config: Partial<KitConfig> = {},
+  compilerOptions: Pick<CompilerOptions, "paths" | "skipLibCheck"> = {},
 ): Pick<Project, "files" | "parameters" | "accesses" | "globals"> {
-  const fixture = openProgram(files, config);
-  try {
-    const natives = nativeReading(fixture.scope);
-    const contracts = contractReading(fixture.scope);
-    const recorder = authorityRecorder(
-      fixture.scope,
-      fixture.workerGlobals,
-      syntaxReading(fixture.scope),
-      natives,
-      behaviourReading(fixture.scope, natives, contracts),
-    );
-    factWalk(fixture.scope, [recorder]);
-    return {
-      files: fixture.files,
-      parameters: [...recorder.parameters.values()],
-      accesses: recorder.accesses,
-      globals: recorder.globals,
-    };
-  } finally {
-    fixture.dispose();
-  }
+  const fixture = openProgram(files, config, compilerOptions);
+  const natives = nativeReading(fixture.scope);
+  const contracts = contractReading(fixture.scope);
+  const recorder = authorityRecorder(
+    fixture.scope,
+    fixture.workerGlobals,
+    syntaxReading(fixture.scope),
+    natives,
+    behaviourReading(fixture.scope, natives, contracts),
+  );
+  factWalk(fixture.scope, [recorder]);
+  return {
+    files: fixture.files,
+    parameters: [...recorder.parameters.values()],
+    accesses: recorder.accesses,
+    globals: recorder.globals,
+  };
 }

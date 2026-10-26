@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { expect, test } from "vitest";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
@@ -129,3 +130,18 @@ test("each recorded fixture records only its own recorder's facts", () => {
     ["src/core/readings/value.ts", false],
   ]);
 });
+
+test("a recorded fixture checks a test file declared as an entrypoint, and leaves no project behind", () => {
+  const before = readdirSync(tmpdir()).filter((name) => name.startsWith("kit-program-")).length;
+  const files = {
+    "src/core/readings/total.ts": "export const total = 1;\n",
+    "oracle/count/total.test.ts": "export const stamp: number = Date.now();\n",
+  };
+  const config = { srcRoot: ["src", "oracle"], exceptions: ["oracle/count/total.test.ts"] };
+  const facts = recordedAuthority(files, config);
+  expect([...facts.files].sort()).toEqual(["oracle/count/total.test.ts", "src/core/readings/total.ts"]);
+  expect(facts.accesses.map((access) => [access.file, access.kind])).toContainEqual(["oracle/count/total.test.ts", "clock"]);
+  expect(recordedImports(files, config).files).toEqual(facts.files);
+  expect(readdirSync(tmpdir()).filter((name) => name.startsWith("kit-program-")).length).toBeLessThanOrEqual(before);
+});
+

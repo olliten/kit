@@ -1,4 +1,5 @@
 import type { CompilerFacts } from "../../../src/core/primitives/compiler-facts.js";
+import type { CompilerOptions } from "typescript";
 import type { KitConfig } from "../../../src/core/primitives/default-config.js";
 import { factWalk } from "../../../src/substrate/compositions/fact-walk.js";
 import { syntaxReading } from "../../../src/substrate/compositions/syntax-reading.js";
@@ -11,13 +12,10 @@ type Project = CompilerFacts["projects"][number];
 export function recordedTerms(
   files: Readonly<Record<string, string>>,
   config: Partial<KitConfig> = {},
+  compilerOptions: Pick<CompilerOptions, "paths" | "skipLibCheck"> = {},
 ): Pick<Project, "files" | "termFacts"> {
-  const fixture = openProgram(files, config);
-  try {
-    const recorder = termRecorder(fixture.scope, syntaxReading(fixture.scope));
-    factWalk(fixture.scope, [recorder]);
-    return { files: fixture.files, termFacts: { sources: recorder.sources, types: recorder.types } };
-  } finally {
-    fixture.dispose();
-  }
+  const fixture = openProgram(files, config, compilerOptions);
+  const recorder = termRecorder(fixture.scope, syntaxReading(fixture.scope));
+  factWalk(fixture.scope, [recorder]);
+  return { files: fixture.files, termFacts: { sources: recorder.sources, types: recorder.types } };
 }
