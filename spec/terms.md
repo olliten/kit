@@ -201,6 +201,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
+- **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}
 - **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, and the baseline left after a change lands.
   - Role: derived
   - Zone: core
@@ -347,7 +351,7 @@
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
-  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
 - **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
   - Role: composition
   - Zone: substrate
