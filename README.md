@@ -48,6 +48,10 @@ gate without waiting on the others.
 - contract types in `primitives`, so a test and a module can be written against the same signatures;
 - adapter registrations in `kit/config.md`, since which effects exist is a design decision.
 
+The reviewer also judges granularity. When a claim names a module that other claims already name, ask whether
+it needs the same code or a different part of it; a different part is a new module, planned now. `kit refs`
+shows which claims a module already keeps.
+
 **Phase 2, the work, is parallel.** Each agent writes one claim's test file or one term's module. Paths follow
 from the plan: `oracle/<topic>/<anchor>.test.ts` and `src/<zone>/<layer>/<term>.ts`. Two agents never edit the
 same file. A phase-2 change that needs to edit a shared file means the plan was incomplete: it goes back to

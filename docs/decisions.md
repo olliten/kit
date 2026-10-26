@@ -447,3 +447,14 @@ without naming the app.
   ran only in a subprocess. Commands are now functions from a request to a response, proved in-process.
 - **For apps:** `testRoots` moved to `src/core/readings/kit-configuration.ts`, and `verification` and
   `runVerification` to `src/substrate/compositions/verification-runner.mjs`.
+
+## 2026-10-26 · Granularity is judged in plan review
+
+- **Decision:** no rule measures whether a module is too coarse. When a claim names a module other claims
+  already name, the phase-1 reviewer asks whether it needs the same code or a different part; a different part
+  is a new module. `kit refs` shows the claims a module keeps.
+- **Why:** every static measure tried on Kit failed without a size threshold. Claim cohesion can't see inside a
+  single entry. Requiring claims to reach distinguishable parts of a module flagged 43 of the 46 modules named by
+  more than one claim. Flagging a claim that reaches only part of a module flagged 40 small modules, a three-line
+  one included, and missed the 982-line snapshot reader, which has one export. Which code a claim relies on can
+  be measured, by mutation testing grouped by claim, but the machinery outweighs what it buys today.
