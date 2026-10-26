@@ -481,3 +481,19 @@ without naming the app.
   build a snapshot of just those facts (`project-snapshot`), and call the one check the claim keeps. Helpers take
   data and return data, because a test may hand placed code no behaviour.
 
+## 2026-10-26 · Every function is governed, and claims keep their excerpts apart
+
+- **Decision:** `kit runs` records, per test, which named functions of each placed module it ran, from the app's
+  own LCOV reports plus raw V8 coverage for processes the test starts. Two ratcheted rules read the record:
+  every named function is run by a claim that names its module, and a module holding code only one claim runs,
+  for two or more claims, is split along those claims. Code every claim runs is the shared core; a function held
+  by shared code is part of it; adapters are exempt. Named functions are the grain: an anonymous function belongs
+  to the one holding it, and both runners report named functions in source lines.
+- **Why:** static reach can't see inside a function a test calls, so a god module behind one entry looked
+  cohesive. What a claim's tests actually run can. Measured on Tuck, the rule flagged its operation table, its
+  per-source page readers and its per-claim rules, and none of its widely shared modules; on Kit it flagged the
+  config reader, now one reading per section. Completeness found 22 functions of `test-reach` that only Kit's
+  end-to-end self-check ran, and five that nothing could reach, which were deleted.
+- **Cost:** recording runs each test file in its own process: about 2 minutes for Tuck and 5 for Kit. The check
+  itself stays static and fast.
+

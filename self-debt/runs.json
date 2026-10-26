@@ -1,9 +1,5 @@
 {
   "digests": {
-    "fixture/oracle/tally/average-of-amounts.test.ts": "69a255f1271984f949420f955114258fa2d615973cd64cad78ba49b02b471a89",
-    "fixture/oracle/tally/one-step-is-capped.test.ts": "4c8a68ba3597d0e991dcad060aa71b04f942c1a2eb3194702cd303dfe0505161",
-    "fixture/oracle/tally/screen-shows-the-total.test.ts": "b47961d0a5ab745e08f3aaac008d8aa904fffca8238b279ab244af98d7d860a6",
-    "fixture/oracle/tally/total-holds.test.ts": "80dab57003264a60791edaddc01d5dbde16b83ca98093317481633e3c21bc152",
     "oracle/code-structure/adapters-create-authority.test.ts": "cb4ad620dbe2bda968b31279c7dfe433e8e70ff71644504aa720bee02a5c9130",
     "oracle/code-structure/adapters-create-authority.window.test.ts": "d9bc15609490c35c1f28c9575565526625c32219609dcf5c3fec9f859a3a2b27",
     "oracle/code-structure/adapters-follow-the-same-rules.test.ts": "a7c49a6aa312269602b0fb57b06b3e919876442c745a823f7dd876009f04ae79",
@@ -42,6 +38,7 @@
     "oracle/convergence/legacy-locations-stay-under-the-ratchet.test.ts": "4887aa4959c177e2f1dcfe83bef2d812999b6cdc9c777175b54fd866fee2da41",
     "oracle/convergence/legacy-zone-rows-only-shrink.test.ts": "e05fa82ec6618061ccf3d999db69e49509161b44432d8984140a9ab1c56fb68d",
     "oracle/convergence/outside-code-hands-placed-code-data.test.ts": "ab2cf5a87151c2cf024c5d6bec646065081ec4fbf4dbf1694966cb486fc9739e",
+    "oracle/convergence/ratchet-keeps-architecture-obligations.gate.test.ts": "ccf5512375cd855bc4b277d215b524de5da5fb562214682c7d86415652467ae9",
     "oracle/convergence/ratchet-keeps-architecture-obligations.startup.test.ts": "388119281850525af6207d4f46df512a5b4c63f3f37259d5899732798729ef95",
     "oracle/convergence/ratchet-keeps-architecture-obligations.test.ts": "1885fd58102fa3a09a5956ff25ee946e6463dd7c1eafa3b12c5350ef21e02f0f",
     "oracle/core/primitives/cache-app.ts": "c8b949dd4d576b56d848245ac3a23ac4e3391670565686cc2d6cfb45884f0fe3",
@@ -51,6 +48,7 @@
     "oracle/core/readings/fixture-files.ts": "f68f4e3de4f6654af6334805ccfa23a7bade8b2ef15bb82012fd251f29bd92f2",
     "oracle/core/readings/fixture-snapshot.ts": "acced9cc98154be5a5f7ac91e7cfd96b59b4608633e6b609cc3bb9daed3a7d69",
     "oracle/core/readings/project-snapshot.ts": "4d8a25154a1eebd1422762df0f84b5340230ff36aaba8bc610c20010e3a77a6d",
+    "oracle/kit/cache-keys-on-what-was-read.failed-reads.test.ts": "7a9b0e639d41a2887b3d0dcb3da838d97d28a02369a7200720c9539e82a5bbb1",
     "oracle/kit/cache-keys-on-what-was-read.random-edits.test.ts": "0dfd9a1750a09dad32545bdeeeaeb61e599a67b0d25e734b559c4e0455c1bde6",
     "oracle/kit/cache-keys-on-what-was-read.test.ts": "28a27f4fbaeffc26183ebb663e34faf90c80416b1d867ed7f6f65b74f300c1f2",
     "oracle/kit/cache-keys-on-what-was-read.worktrees.test.ts": "a9135ac8fdacd81566470e6b75c9b11a18077cec6f0d3e97c78e850c0c634c1b",
@@ -69,8 +67,8 @@
     "oracle/kit/proof-discovery-is-configured.test.ts": "b67f80c0641af63d6d8d77faff664a1e3e7018a915386b92926d8cf5aafa9e2e",
     "oracle/kit/read-snapshot-fixture.test.ts": "4d0aeabb3abc68f7c2e422be3b93011986d12580b6fa0d916137b6392e657d0e",
     "oracle/kit/readings-use-data.test.ts": "d83547232c65c3411c2aaa95b28d21f262572dbe667c6f11753ef8bec62f7f4a",
-    "oracle/kit/refs-list-a-modules-claims.roots.test.ts": "33101a54d0f575aca5616230f620c5daef5b498d99fcbcdb4d17365c4a33bd57",
-    "oracle/kit/refs-list-a-modules-claims.test.ts": "ae759a4eca6c10483f87019e3d2a643c60699afdaac4f16b91c10384b9b639bd",
+    "oracle/kit/refs-list-a-modules-claims.roots.test.ts": "d3136f41a3744a0ff6e76bfb95bc33703151b414f279a9c0b89e5ef355c5b732",
+    "oracle/kit/refs-list-a-modules-claims.test.ts": "9633057aeed7aa58baf11419b0cee49fff9a215be19dd7a02de3fee9f40bfc22",
     "oracle/kit/source-fixtures-own-their-files.test.ts": "e1f36c9bf01d7d507f52bd68b67a6f11033d04b52bf32dc28e236d6978130431",
     "oracle/language/comments-carry-no-debt.test.ts": "41f0e58aa5464e4444e78b68c0ab3e3911d953254bff3b1cf18958fdacbe2e9f",
     "oracle/language/comments-cite-nothing.test.ts": "c3d21dfdfad28975ebbf8519fdedbbd894a9eeab9afdd7ec7fa853b58d78ac82",
@@ -92,10 +90,11 @@
     "oracle/proof/legacy-claims-keep-their-grammar.test.ts": "220ce9aa971a15748c385168e10ffbd9efe8305f7f6a36cb30dc5421715c8221",
     "oracle/proof/modules-are-named-by-claims.test.ts": "ac4288aa021784664182e7ae4ae3df600ee8723257aececcca9b3135a7d191f0",
     "oracle/proof/proofs-reach-named-modules.paths.test.ts": "278a9cf975e055b200aed10d6bb3a3e986e59c0671a258094c17618e3fee1b31",
+    "oracle/proof/proofs-reach-named-modules.reach.test.ts": "0947656e927baf595bf039a5959e4c23fedfc5d33bac3e6869767186dce439e5",
     "oracle/proof/proofs-reach-named-modules.test.ts": "1ccee5eb1f4384d5e99270aad80d87536e88fba31107aaf6bc75ba7fe1994da8",
     "oracle/proof/proofs-reach-named-modules.use.test.ts": "be29dad0ddf5184e46a3a25cc393537494e821529de9d2679df279cc8e49c5a1",
     "oracle/proof/proofs-reach-only-named-modules.test.ts": "1c4929a278adea2c0eb3d3d715d06e0cc089f8c55b0083bf00e460eda9be90bc",
-    "oracle/proof/runs-are-recorded-per-test.test.ts": "21eb2d3bfa608371c438b99bb3b50e6aa75697693748cbdf2bd9d52f4c3e9dd1",
+    "oracle/proof/runs-are-recorded-per-test.test.ts": "60562ad7cbc9a872e40658c18db1f0f6a4ab8f633593ef35ad85662b6cd94e89",
     "oracle/proof/table-annotations-keep-claim-relationships.test.ts": "e981b058dcf23f8cf6fcd46f6274772472ccef9f5c0e820c939e87ecd8422a80",
     "oracle/proof/table-rows-present-claims.test.ts": "837e52751c52dd3cb3e13b628397fbbeed1c87084af8e3278031ec8a2b2dbe58",
     "oracle/proof/topics-have-one-shape.test.ts": "7e5b64b7ac145badf71b907439cee293b69643104fd1648c9b84965d6cbd6d80",
@@ -107,6 +106,7 @@
     "oracle/substrate/compositions/recorded-escapes.ts": "e6e7380b157db7b3cc87014e25ef0ea9927ccedfa92b1aede959184d02922890",
     "oracle/substrate/compositions/recorded-functions.ts": "88d5f3382c62bd955b78b8857f77434282a9db0bedd389ebd32ce4de70160670",
     "oracle/substrate/compositions/recorded-imports.ts": "d4d2e5dee3eab2d25c772ee116115fc4bf952183b2f3f56e52c862c0cd0d761f",
+    "oracle/substrate/compositions/recorded-reach.ts": "8f359926046d863427b44405965ff57b9a9fdbf09ecff4528b982db22ce18bb6",
     "oracle/substrate/compositions/recorded-terms.ts": "0e9a40b66cb419b0779f559d4471dcbd1f7a28918c6a7d151f2190c2fab20646",
     "oracle/substrate/compositions/source-fixture.ts": "3e2d666c2871bbefe1ac9c4ec6a6ea0a149782cb9418939246bb6c8fc99f6bff",
     "oracle/verification/declared-inputs-determine-the-key.test.ts": "39906e445887370649e1562fe5df2807d99b4c80120de9e473959362ea5d8ac8",
@@ -171,7 +171,7 @@
     "src/core/readings/ratchet.ts": "3a44ca4cdbb847625fb610f0ce773697a1836f2175f4971a5dec28609cd478e0",
     "src/core/readings/refs-description.ts": "7fd76ccfc31cbcfa7de17bef2f1b2a2d67f0ab069637e2e240589edf8ffdf096",
     "src/core/readings/registration-check.ts": "c4c83d245b02131812e435415e3366863cfe1e5d3c9988bd2ae7193b637e667a",
-    "src/core/readings/runs-record.ts": "1ec212c47e2181796dd6947cc0fdb41f60ac0c2b04e5b4eb0c748b69dcee2f44",
+    "src/core/readings/runs-record.ts": "7dbb59cbba406b8f68d2dd4928b4194bfb853b0d5737c13c8b44cf94c5f69e64",
     "src/core/readings/semantic-references.ts": "f8ea87d4a83ae904a6534e67e07b9e71d3009bc7a73666ba0f11dd1a1c2736b8",
     "src/core/readings/snapshot-cache-key.ts": "8055ad0010b7928f271b3d7dfdf0d4a93e0a21b723d2d2dd62ac529b082e19eb",
     "src/core/readings/snapshot-comparison.ts": "cedae8292ee598e60f9f482c8b40550abe99ea73f9c48da8b9047f970bd7986a",
@@ -180,7 +180,7 @@
     "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
     "src/core/readings/term-order.ts": "d7ef4373e8e7f9737e06243c9598b7fd7568d7f4b0797b8a39a61deebd667942",
     "src/core/readings/test-roots.ts": "021ee43b6a7d89538fdbcf9c03e8e9cc5da502f1a11b21439df37b96216e8c4e",
-    "src/core/readings/test-runs.ts": "134bdc29479f5f6396a4d9460a72bf42a8f75174cca8c6b7a00c0e1964045902",
+    "src/core/readings/test-runs.ts": "79f38d1afbd06a4ad3884ffc824f83f85ed21b860a7b01b007d85a66192d2c78",
     "src/core/readings/topic-shape.ts": "35b8ff90033eeffac50b1e4073be62cab9d4ecbf1cd3c039d981542881204b10",
     "src/core/readings/verification-partition.ts": "9f1b1b46c21690dcc9c689155a5b53be377046ad9f4132ed2584efdcb293b0df",
     "src/core/readings/verification-plan.ts": "7e0e59e18f58bf81cc695683a25173effecf0b034f78966d6f04b903275b7e1f",
@@ -189,7 +189,7 @@
     "src/substrate/adapters/compiler.ts": "2ef6eed3842686db6ce4fa272c79314a4f49249c37e8796eb41d65af83cb783a",
     "src/substrate/adapters/declared-input-files.ts": "64ecb4a2c4420bb6f56ddc03332a8107a7a32b99f1cb84e71614838417895b09",
     "src/substrate/adapters/filesystem.ts": "380efb89d061284215f5ef705d0458cf502cafb6656aff1dbbb3ae989392593d",
-    "src/substrate/adapters/processes.ts": "87727012ad1521112145e130ac9aed880e5e61536efd719cb5326d24f71cddb9",
+    "src/substrate/adapters/processes.ts": "3c7b282c3e0fd09813c791e645efd6329b53bb3d583b14b2f278e9a5c1f2eaad",
     "src/substrate/adapters/snapshot-store.ts": "0a804d6a81064931835d5b48d0047e1ea30d1b2e98759e6fc4a25d572523d9a9",
     "src/substrate/adapters/source-loader.mjs": "726579fd17000c0a64a8be5e6780e2acc86c0c33879b2fd8b6383bb0d6745067",
     "src/substrate/adapters/stopwatch.ts": "d5e22526fc9c865a262d5df46e174a0f73c52128f8bf24cee018e0ae7dc243a2",
@@ -209,19 +209,15 @@
     "src/substrate/compositions/native-reading.ts": "4807754ca71be2f0503f5750bf42dbb40f910f71e648380923f098647e401d60",
     "src/substrate/compositions/read-snapshot.ts": "ee287dd6edfe8c5588e36f234fc73bd826a3a6c7102a595a5436cc2211a61e91",
     "src/substrate/compositions/refs-run.ts": "2513047c7c345baaa46254b49604f2e4a3c1baf19bdc47633a3e7fca6b0f3faf",
-    "src/substrate/compositions/runs-run.ts": "dcbd21238e65d3bc339b8ee9e1ccc926df08abd620839611bc50903469487440",
+    "src/substrate/compositions/runs-run.ts": "092468e9aff731f8dcee74bb742d60c6e803c77ec80c859018677e73a1078fcd",
     "src/substrate/compositions/source-size.ts": "afcd726644f23a970c31eed1b13c1f716d70b6a72d2cc1816f2f923ff3e69299",
     "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb",
     "src/substrate/compositions/term-recorder.ts": "d7b13d65d6ffd7aa08856768199b7ff086d8263107a413c3793d103986ed543c",
-    "src/substrate/compositions/test-reach.ts": "687f731f8498225c38d619a0037ac64e0afcd744c784d7369a900fb961f0e6a1",
+    "src/substrate/compositions/test-reach.ts": "67624428fcec83cb748bbd5c580bdbcabb01578654991fbd5e88c6030f93b47d",
     "src/substrate/compositions/verification-runner.mjs": "5a090ebc293fc278428b07fcae1565b1644d2aeaccbd5d93897eb28c5d85cbdc",
     "src/substrate/primitives/program-scope.ts": "58bb04ca5efe734416da2456f9e9dcbb87283eacd996873de3cfdefdb6469fad"
   },
   "tests": {
-    "fixture/oracle/tally/average-of-amounts.test.ts": {},
-    "fixture/oracle/tally/one-step-is-capped.test.ts": {},
-    "fixture/oracle/tally/screen-shows-the-total.test.ts": {},
-    "fixture/oracle/tally/total-holds.test.ts": {},
     "oracle/code-structure/adapters-create-authority.test.ts": {
       "oracle/core/readings/fixture-files.ts": [
         "fixtureFiles@6"
@@ -4181,29 +4177,28 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "bindingSymbols@291",
-        "bit@671",
-        "changeable@439",
-        "changes@463",
-        "code@600",
+        "bindingSymbols@282",
+        "bit@548",
+        "changeable@430",
+        "changes@454",
+        "code@477",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
-        "inert@422",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
         "names@16",
-        "namesOf@782",
-        "own@680",
-        "pieceOf@660",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "reach@200",
-        "summarize@692",
+        "reach@191",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
-        "visit@607",
+        "visit@484",
         "within@76"
       ]
     },
@@ -5450,6 +5445,135 @@
         "typeOnlyOf@14"
       ]
     },
+    "oracle/convergence/ratchet-keeps-architecture-obligations.gate.test.ts": {
+      "oracle/core/readings/fixture-snapshot.ts": [
+        "snapshotOf@9"
+      ],
+      "src/core/compositions/capability-check.ts": [
+        "capabilityCheck@28"
+      ],
+      "src/core/compositions/gate.ts": [
+        "gate@51",
+        "limit@40",
+        "violation@33"
+      ],
+      "src/core/readings/access-authority.ts": [
+        "accessAuthority@13"
+      ],
+      "src/core/readings/authority-graph.ts": [
+        "authorityGraph@20"
+      ],
+      "src/core/readings/behaviour-check.ts": [
+        "behaviourCheck@14"
+      ],
+      "src/core/readings/capability-context.ts": [
+        "capabilityContext@146",
+        "capabilityLimit@96",
+        "checkedFiles@135",
+        "layerConfigLimit@113",
+        "placed@54"
+      ],
+      "src/core/readings/claim-cohesion.ts": [
+        "claimCohesion@9"
+      ],
+      "src/core/readings/claim-proof-binder.ts": [
+        "claimProofBinder@15"
+      ],
+      "src/core/readings/comment-check.ts": [
+        "commentCheck@11"
+      ],
+      "src/core/readings/compiler-check.ts": [
+        "compilerCheck@6"
+      ],
+      "src/core/readings/construction-check.ts": [
+        "constructionCheck@15"
+      ],
+      "src/core/readings/dependency-check.ts": [
+        "cycles@56"
+      ],
+      "src/core/readings/dependency-exclusions.ts": [
+        "dependencyExclusions@7",
+        "selects@42",
+        "unique@124"
+      ],
+      "src/core/readings/edge-check.ts": [
+        "edgeCheck@9"
+      ],
+      "src/core/readings/finding.ts": [
+        "byDebtKey@25",
+        "finding@14"
+      ],
+      "src/core/readings/global-authority.ts": [
+        "globalAuthority@15"
+      ],
+      "src/core/readings/handover-check.ts": [
+        "handoverCheck@15"
+      ],
+      "src/core/readings/import-authority.ts": [
+        "importAuthority@13"
+      ],
+      "src/core/readings/layout-check.ts": [
+        "layoutCheck@12"
+      ],
+      "src/core/readings/legacy-size.ts": [
+        "legacySize@18"
+      ],
+      "src/core/readings/module-references.ts": [
+        "claimsKeptBy@7",
+        "moduleReferences@16",
+        "named@24"
+      ],
+      "src/core/readings/name-check.ts": [
+        "entryOf@34",
+        "nameCheck@13",
+        "scan@43",
+        "wordsOf@80"
+      ],
+      "src/core/readings/placement-of.ts": [
+        "isZone@22",
+        "placementOf@78",
+        "rootOf@50"
+      ],
+      "src/core/readings/proof-reach.ts": [
+        "claimReach@18",
+        "moduleHomes@71",
+        "proofReach@88"
+      ],
+      "src/core/readings/proof-scope.ts": [
+        "proofScope@17"
+      ],
+      "src/core/readings/ratchet.ts": [
+        "isKeyList@19",
+        "ratchetFindings@71",
+        "recorded@20"
+      ],
+      "src/core/readings/registration-check.ts": [
+        "registrationCheck@6"
+      ],
+      "src/core/readings/runs-record.ts": [
+        "runsRecord@34"
+      ],
+      "src/core/readings/semantic-references.ts": [
+        "referenceCheck@157",
+        "semanticReferences@66"
+      ],
+      "src/core/readings/startup-check.ts": [
+        "startupCheck@8"
+      ],
+      "src/core/readings/term-model.ts": [
+        "termModel@6",
+        "unique@284"
+      ],
+      "src/core/readings/term-order.ts": [
+        "termOrder@5"
+      ],
+      "src/core/readings/topic-shape.ts": [
+        "topicShape@21"
+      ],
+      "src/core/readings/zone-authority-check.ts": [
+        "zoneAuthorityCheck@19"
+      ]
+    },
     "oracle/convergence/ratchet-keeps-architecture-obligations.startup.test.ts": {
       "oracle/core/readings/fixture-files.ts": [
         "fixtureFiles@6"
@@ -5630,22 +5754,21 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "bit@671",
-        "code@600",
+        "bit@548",
+        "code@477",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
-        "own@680",
-        "pieceOf@660",
+        "isResults@646",
+        "isSymbol@650",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "summarize@692",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
-        "visit@607",
+        "visit@484",
         "within@76"
       ]
     },
@@ -5654,6 +5777,20 @@
         "isKeyList@19",
         "ratchetFindings@71",
         "recorded@20"
+      ]
+    },
+    "oracle/kit/cache-keys-on-what-was-read.failed-reads.test.ts": {
+      "oracle/substrate/adapters/temporary-project.ts": [
+        "dispose@48",
+        "inside@21",
+        "open@19",
+        "write@29"
+      ],
+      "src/substrate/adapters/filesystem.ts": [
+        "codeOf@65",
+        "entries@41",
+        "readText@25",
+        "reread@72"
       ]
     },
     "oracle/kit/cache-keys-on-what-was-read.random-edits.test.ts": {
@@ -6659,23 +6796,22 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "bit@671",
-        "code@600",
+        "bit@548",
+        "code@477",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
-        "own@680",
-        "pieceOf@660",
+        "isResults@646",
+        "isSymbol@650",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "reach@200",
-        "summarize@692",
+        "reach@191",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
-        "visit@607",
+        "visit@484",
         "within@76"
       ]
     },
@@ -7106,6 +7242,13 @@
       ]
     },
     "oracle/kit/consumers-show-each-apps-work.test.ts": {
+      "src/core/readings/check-paths.ts": [
+        "at@9",
+        "option@10"
+      ],
+      "src/core/readings/claim-inventory.ts": [
+        "claimModules@62"
+      ],
       "src/core/readings/config-values.ts": [
         "normalizedPath@20"
       ],
@@ -7114,9 +7257,34 @@
         "pinnedKit@15",
         "readCheck@25"
       ],
+      "src/core/readings/module-references.ts": [
+        "claimsKeptBy@7",
+        "identity@8"
+      ],
+      "src/core/readings/name-check.ts": [
+        "entryOf@34"
+      ],
+      "src/core/readings/term-model.ts": [
+        "identity@32",
+        "unique@284"
+      ],
+      "src/core/readings/topic-shape.ts": [
+        "topicShape@21"
+      ],
       "src/substrate/adapters/processes.ts": [
-        "node@52",
-        "run@32"
+        "node@57",
+        "run@37"
+      ],
+      "src/substrate/adapters/source-loader.mjs": [
+        "fetchModule@33",
+        "isMain@45",
+        "resolveId@34",
+        "run@60",
+        "withKit@16"
+      ],
+      "src/substrate/adapters/stopwatch.ts": [
+        "date@7",
+        "now@7"
       ],
       "src/substrate/adapters/text-files.ts": [
         "exists@19",
@@ -7569,20 +7737,19 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "bit@671",
-        "code@600",
+        "bit@548",
+        "code@477",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
-        "own@680",
-        "pieceOf@660",
-        "summarize@692",
+        "isResults@646",
+        "isSymbol@650",
+        "own@557",
+        "pieceOf@537",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
-        "visit@607"
+        "visit@484"
       ]
     },
     "oracle/kit/ignored-paths-are-unread.test.ts": {
@@ -8068,49 +8235,84 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "assignment@287",
-        "bindingSymbols@291",
-        "bit@671",
-        "chainTop@253",
-        "changeable@439",
-        "changes@463",
-        "code@600",
-        "collectNames@786",
+        "assignment@278",
+        "bindingSymbols@282",
+        "bit@548",
+        "chainTop@244",
+        "changeable@430",
+        "changes@454",
+        "code@477",
+        "collectNames@658",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
-        "flow@297",
+        "flow@288",
         "functionOf@98",
-        "holderOf@271",
-        "homeReferences@417",
+        "holderOf@262",
+        "homeReferences@408",
         "immutable@136",
-        "inert@422",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
         "nameSymbolOf@116",
         "names@16",
-        "namesOf@782",
-        "own@680",
-        "pieceOf@660",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "reach@200",
+        "reach@191",
         "readonlyProperty@131",
         "referenceType@127",
         "referencesOf@47",
-        "results@585",
-        "resultsOf@191",
+        "results@462",
+        "resultsOf@182",
         "statementOf@81",
-        "summarize@692",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
+        "visit@484",
         "visit@53",
-        "visit@607",
         "within@76"
       ]
     },
-    "oracle/kit/paths-from-the-caller.symlinks.test.ts": {},
+    "oracle/kit/paths-from-the-caller.symlinks.test.ts": {
+      "src/core/readings/check-paths.ts": [
+        "at@9",
+        "option@10"
+      ],
+      "src/core/readings/claim-inventory.ts": [
+        "claimModules@62"
+      ],
+      "src/core/readings/module-references.ts": [
+        "claimsKeptBy@7",
+        "identity@8"
+      ],
+      "src/core/readings/name-check.ts": [
+        "entryOf@34"
+      ],
+      "src/core/readings/term-model.ts": [
+        "identity@32",
+        "unique@284"
+      ],
+      "src/core/readings/topic-shape.ts": [
+        "topicShape@21"
+      ],
+      "src/substrate/adapters/source-loader.mjs": [
+        "fetchModule@33",
+        "isMain@45",
+        "resolveId@34",
+        "run@60",
+        "withKit@16"
+      ],
+      "src/substrate/adapters/stopwatch.ts": [
+        "date@7",
+        "now@7"
+      ],
+      "src/substrate/compositions/consumers-run.ts": [
+        "runConsumers@10"
+      ]
+    },
     "oracle/kit/paths-from-the-caller.test.ts": {
       "src/core/readings/check-paths.ts": [
         "at@9",
@@ -8471,6 +8673,7 @@
         "isRecord@8",
         "isText@10",
         "isTexts@11",
+        "normalizedPath@20",
         "texts@13"
       ],
       "src/core/readings/legacy-zone-configuration.ts": [
@@ -8487,6 +8690,7 @@
       ],
       "src/core/readings/refs-description.ts": [
         "claimText@16",
+        "describeRefs@72",
         "moduleRefs@30"
       ],
       "src/substrate/adapters/text-files.ts": [
@@ -8495,8 +8699,11 @@
         "read@15"
       ],
       "src/substrate/compositions/refs-run.ts": [
+        "at@48",
         "markdown@9",
-        "moduleClaims@22"
+        "moduleClaims@22",
+        "option@38",
+        "runRefs@36"
       ]
     },
     "oracle/kit/refs-list-a-modules-claims.test.ts": {
@@ -8543,6 +8750,14 @@
         "claimText@16",
         "describeRefs@72",
         "moduleRefs@30"
+      ],
+      "src/substrate/adapters/source-loader.mjs": [
+        "fetchModule@33",
+        "input@69",
+        "isMain@45",
+        "resolveId@34",
+        "run@60",
+        "withKit@16"
       ],
       "src/substrate/adapters/text-files.ts": [
         "entries@20",
@@ -8768,7 +8983,48 @@
         "unique@284"
       ]
     },
-    "oracle/language/modules-bind-to-terms.routing.test.ts": {},
+    "oracle/language/modules-bind-to-terms.routing.test.ts": {
+      "src/core/readings/check-paths.ts": [
+        "at@9",
+        "option@10"
+      ],
+      "src/core/readings/config-values.ts": [
+        "isTexts@11"
+      ],
+      "src/core/readings/module-references.ts": [
+        "claimsKeptBy@7"
+      ],
+      "src/core/readings/name-check.ts": [
+        "entryOf@34"
+      ],
+      "src/core/readings/term-model.ts": [
+        "identity@32",
+        "unique@284"
+      ],
+      "src/core/readings/topic-shape.ts": [
+        "add@30",
+        "topicShape@21"
+      ],
+      "src/substrate/adapters/source-loader.mjs": [
+        "fetchModule@33",
+        "isMain@45",
+        "resolveId@34",
+        "run@60",
+        "withKit@16"
+      ],
+      "src/substrate/adapters/stopwatch.ts": [
+        "date@7",
+        "now@7"
+      ],
+      "src/substrate/compositions/contract-reading.ts": [
+        "contractReading@6"
+      ],
+      "src/substrate/compositions/syntax-reading.ts": [
+        "syntaxReading@7",
+        "targetOf@8",
+        "typeOnlyOf@14"
+      ]
+    },
     "oracle/language/modules-bind-to-terms.test.ts": {
       "oracle/core/readings/fixture-files.ts": [
         "fixtureFiles@6"
@@ -9220,45 +9476,44 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "assignment@287",
-        "bindingSymbols@291",
-        "bit@671",
-        "chainTop@253",
-        "changeable@439",
-        "changes@463",
-        "code@600",
-        "collectNames@786",
+        "assignment@278",
+        "bindingSymbols@282",
+        "bit@548",
+        "chainTop@244",
+        "changeable@430",
+        "changes@454",
+        "code@477",
+        "collectNames@658",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
-        "flow@297",
+        "flow@288",
         "functionOf@98",
-        "holderOf@271",
-        "homeReferences@417",
+        "holderOf@262",
+        "homeReferences@408",
         "immutable@136",
-        "inert@422",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
         "nameSymbolOf@116",
         "names@16",
-        "namesOf@782",
-        "own@680",
-        "pieceOf@660",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "reach@200",
+        "reach@191",
         "readonlyProperty@131",
         "referenceType@127",
         "referencesOf@47",
-        "results@585",
-        "resultsOf@191",
+        "results@462",
+        "resultsOf@182",
         "statementOf@81",
-        "summarize@692",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
+        "visit@484",
         "visit@53",
-        "visit@607",
         "within@76"
       ]
     },
@@ -9727,31 +9982,30 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "bindingSymbols@291",
-        "bit@671",
-        "changeable@439",
-        "changes@463",
-        "code@600",
+        "bindingSymbols@282",
+        "bit@548",
+        "changeable@430",
+        "changes@454",
+        "code@477",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
         "immutable@136",
-        "inert@422",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
         "names@16",
-        "namesOf@782",
-        "own@680",
-        "pieceOf@660",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "reach@200",
+        "reach@191",
         "readonlyProperty@131",
-        "summarize@692",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
-        "visit@607",
+        "visit@484",
         "within@76"
       ]
     },
@@ -9832,6 +10086,47 @@
         "inside@21",
         "open@19",
         "write@29"
+      ],
+      "src/core/readings/check-paths.ts": [
+        "at@9",
+        "option@10"
+      ],
+      "src/core/readings/claim-inventory.ts": [
+        "claimModules@62"
+      ],
+      "src/core/readings/config-values.ts": [
+        "isTexts@11"
+      ],
+      "src/core/readings/module-references.ts": [
+        "claimsKeptBy@7",
+        "identity@8"
+      ],
+      "src/core/readings/name-check.ts": [
+        "entryOf@34"
+      ],
+      "src/core/readings/term-model.ts": [
+        "identity@32",
+        "unique@284"
+      ],
+      "src/core/readings/topic-shape.ts": [
+        "topicShape@21"
+      ],
+      "src/substrate/adapters/source-loader.mjs": [
+        "fetchModule@33",
+        "isMain@45",
+        "resolveId@34",
+        "run@60",
+        "withKit@16"
+      ],
+      "src/substrate/adapters/stopwatch.ts": [
+        "date@7",
+        "now@7"
+      ],
+      "src/substrate/compositions/contract-reading.ts": [
+        "contractReading@6"
+      ],
+      "src/substrate/compositions/syntax-reading.ts": [
+        "syntaxReading@7"
       ]
     },
     "oracle/proof/legacy-claims-keep-their-grammar.test.ts": {
@@ -10042,30 +10337,106 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "bindingSymbols@291",
-        "bit@671",
-        "changeable@439",
-        "changes@463",
-        "code@600",
+        "bindingSymbols@282",
+        "bit@548",
+        "changeable@430",
+        "changes@454",
+        "code@477",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
         "immutable@136",
-        "inert@422",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
         "names@16",
-        "namesOf@782",
-        "own@680",
-        "pieceOf@660",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "reach@200",
-        "summarize@692",
+        "reach@191",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
-        "visit@607",
+        "visit@484",
+        "within@76"
+      ]
+    },
+    "oracle/proof/proofs-reach-named-modules.reach.test.ts": {
+      "oracle/core/readings/fixture-files.ts": [
+        "fixtureFiles@6"
+      ],
+      "oracle/substrate/adapters/temporary-project.ts": [
+        "dispose@48",
+        "inside@21",
+        "open@19",
+        "write@29"
+      ],
+      "oracle/substrate/compositions/program-fixture.ts": [
+        "importTarget@73",
+        "local@41",
+        "openProgram@25",
+        "visit@54"
+      ],
+      "oracle/substrate/compositions/recorded-reach.ts": [
+        "recordedReach@7"
+      ],
+      "src/substrate/adapters/compiler.ts": [
+        "digest@67",
+        "environmentReader@109",
+        "getSourceFile@191",
+        "load@177",
+        "names@70",
+        "recorded@47",
+        "resolve@215",
+        "same@69",
+        "sourceOf@141",
+        "systemOf@118",
+        "tracedSystem@74",
+        "useSourceOfProjectReferenceRedirect@205",
+        "workerHost@156"
+      ],
+      "src/substrate/compositions/test-reach.ts": [
+        "assignment@278",
+        "bindingSymbols@282",
+        "bit@548",
+        "chainTop@244",
+        "changeable@430",
+        "changes@454",
+        "code@477",
+        "collectNames@658",
+        "empty@176",
+        "enter@578",
+        "erased@70",
+        "flow@288",
+        "functionOf@98",
+        "holderOf@262",
+        "homeReferences@408",
+        "immutable@136",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
+        "nameSymbolOf@116",
+        "names@16",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
+        "rawSymbolOf@42",
+        "reach@191",
+        "readonlyProperty@131",
+        "referenceType@127",
+        "referencesOf@47",
+        "results@462",
+        "resultsOf@182",
+        "statementOf@81",
+        "summarize@569",
+        "testReach@30",
+        "thisContainerOf@103",
+        "topLevelNames@12",
+        "unaliased@37",
+        "visit@484",
+        "visit@53",
         "within@76"
       ]
     },
@@ -10253,30 +10624,29 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "bindingSymbols@291",
-        "bit@671",
-        "changeable@439",
-        "changes@463",
-        "code@600",
+        "bindingSymbols@282",
+        "bit@548",
+        "changeable@430",
+        "changes@454",
+        "code@477",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
         "immutable@136",
-        "inert@422",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
         "names@16",
-        "namesOf@782",
-        "own@680",
-        "pieceOf@660",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "reach@200",
-        "summarize@692",
+        "reach@191",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
-        "visit@607",
+        "visit@484",
         "within@76"
       ]
     },
@@ -10372,8 +10742,11 @@
         "visit@39"
       ],
       "src/core/readings/test-runs.ts": [
-        "local@20",
-        "testRuns@9"
+        "add@73",
+        "isRecord@10",
+        "local@69",
+        "rawRuns@16",
+        "testRuns@54"
       ],
       "src/substrate/adapters/compiler.ts": [
         "digest@67",
@@ -10396,13 +10769,14 @@
         "readText@25"
       ],
       "src/substrate/adapters/processes.ts": [
-        "shell@19",
-        "shells@40",
-        "worker@43"
+        "shell@20",
+        "shells@45",
+        "worker@48"
       ],
       "src/substrate/adapters/text-files.ts": [
         "directory@26",
         "entries@20",
+        "exists@19",
         "read@15",
         "remove@29",
         "write@16"
@@ -10479,6 +10853,7 @@
       "src/substrate/compositions/runs-run.ts": [
         "at@19",
         "option@14",
+        "read@42",
         "runRuns@13"
       ],
       "src/substrate/compositions/source-size.ts": [
@@ -10500,23 +10875,22 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "bit@671",
-        "code@600",
+        "bit@548",
+        "code@477",
         "empty@176",
-        "enter@701",
+        "enter@578",
         "erased@70",
-        "isResults@774",
-        "isSelected@770",
-        "isSymbol@778",
-        "own@680",
-        "pieceOf@660",
+        "isResults@646",
+        "isSymbol@650",
+        "own@557",
+        "pieceOf@537",
         "rawSymbolOf@42",
-        "reach@200",
-        "summarize@692",
+        "reach@191",
+        "summarize@569",
         "testReach@30",
         "topLevelNames@12",
         "unaliased@37",
-        "visit@607",
+        "visit@484",
         "within@76"
       ]
     },
