@@ -1,13 +1,20 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
-import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext, layerConfigLimit } from "../../src/core/readings/capability-context.js";
+import { edgeCheck } from "../../src/core/readings/edge-check.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
+import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
+import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 
+// What each file of the fixture requires and what the authority, edge and zone checks find, once the layer
+// names can place anything; a fixture that doesn't compile throws.
 function inspect(layerNames?: KitConfig["layerNames"]) {
-  const root = mkdtempSync(join(tmpdir(), "kit-layer-input-"));
   const { primitives, readings, compositions } = layerNames ?? {
     primitives: "primitives",
     readings: "readings",
@@ -27,21 +34,9 @@ function inspect(layerNames?: KitConfig["layerNames"]) {
       },
     ],
   };
+  const limit = layerConfigLimit(projectSnapshot({}, config));
+  if (limit !== undefined) return { requirements: [], findings: [limit] };
   const inputs: Readonly<Record<string, string>> = {
-    "tsconfig.json": JSON.stringify({
-      compilerOptions: {
-        target: "ES2022",
-        module: "NodeNext",
-        moduleResolution: "NodeNext",
-        lib: ["ES2022"],
-        types: [],
-        strict: true,
-        noEmit: true,
-        declaration: true,
-        isolatedDeclarations: true,
-      },
-      include: ["src/**/*.ts"],
-    }),
     [`src/substrate/${primitives}/store.ts`]:
       "export interface Writer { readonly put: (value: string) => void; }\n" +
       "export function put(writer: Writer, value: string): void { writer.put(value); }\n",
@@ -56,17 +51,26 @@ function inspect(layerNames?: KitConfig["layerNames"]) {
     [`src/core/${compositions}/pure.ts`]:
       "export function result(value: number): { readonly value: number } { return { value }; }\n",
   };
-  try {
-    for (const [path, source] of Object.entries(inputs)) {
-      const file = join(root, path);
-      mkdirSync(dirname(file), { recursive: true });
-      writeFileSync(file, source);
-    }
-    const snapshot = readSnapshot(root, config);
-    return capabilityCheck(snapshot);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  const snapshot = projectSnapshot(
+    { ...recordedImports(inputs, config), ...recordedContracts(inputs, config), ...recordedAuthority(inputs, config) },
+    config,
+  );
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const edges = edgeCheck(snapshot, context);
+  const graph = authorityGraph(snapshot, context, parts, edges.crossZoneFailures);
+  return {
+    requirements: [...graph.inherited].map(([path, capabilities]) => ({
+      path,
+      direct: [...(graph.direct.get(path) ?? [])].sort(),
+      inherited: [...capabilities].sort(),
+    })),
+    findings: [
+      ...parts.flatMap((part) => part.findings),
+      ...edges.findings,
+      ...zoneAuthorityCheck(snapshot, context, graph),
+    ],
+  };
 }
 
 test.each([

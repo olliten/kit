@@ -14,21 +14,25 @@ compositions wire the others into behaviour.
   accepts an explicit set of roots: those identities include the root, and the roots must be nonempty,
   distinct, non-overlapping relative directory paths without patterns or dot segments. An invalid set
   is an error; the existing single-root form keeps its identities unchanged. · {#placement-is-read-from-the-path}
-  - Proof: {{source-fixture}}
+  - Implementation: {{access-authority}}, {{capability-context}}, {{authority-recorder}}, {{fact-walk}}, {{compiler}}, {{finding}}
+  - Proof: {{recorded-authority}}, {{project-snapshot}}
 - Without a directory mapping in the config, the four layers keep their own names as folders
   ({{default-config}}, {{layer}}). · {#layers-default-to-their-names}
+  - Implementation: {{placement-of}}, {{capability-context}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{edge-check}}, {{dependency-check}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{import-recorder}}, {{contract-recorder}}, {{authority-recorder}}, {{fact-walk}}, {{compiler}}, {{finding}}
+  - Proof: {{recorded-imports}}, {{recorded-contracts}}, {{recorded-authority}}, {{project-snapshot}}
 
 ## Dependencies
 
 - Within a zone, primitives import primitives, readings import primitives or readings, and compositions may
   import any layer. Adapters import only primitive data contracts. Across zones, imports point inward to the
-  core; an import with a legacy end is not held, and a repeated import is one finding. · {#imports-point-inward}
+  core; an import with a legacy end is not held, and a repeated import is one finding ({{placement-of}},
+  {{finding}}). · {#imports-point-inward}
   - Implementation: {{dependency-check}}, {{import}}
   - Proof: {{fixture-snapshot}}
 
 - Imports have no cycles; a cycle, a self-import included, is one finding at its first module that names
   every member. · {#imports-have-no-cycles}
-  - Implementation: {{dependency-check}}
+  - Implementation: {{dependency-check}}, {{placement-of}}, {{finding}}
   - Proof: {{fixture-snapshot}}
 
 - An explicit dependency exclusion selects existing origin and target code by relative file or directory
@@ -37,9 +41,10 @@ compositions wire the others into behaviour.
   use classified package contracts; transitive separation requires checked import evidence throughout,
   including through helpers. Missing evidence remains a blocking limit, and a baseline cannot waive an
   explicit exclusion or its limits ({{dependency-exclusions}}, {{default-config}}). · {#dependency-exclusions-are-checked}
-  - Proof: {{source-fixture}}
+  - Implementation: {{import-recorder}}, {{fact-walk}}, {{compiler}}, {{finding}}
+  - Proof: {{recorded-imports}}, {{project-snapshot}}, {{fixture-files}}
 - An adapter is a module like any other: its path is its identity and its imports may not form a cycle. · {#adapters-follow-the-same-rules}
-  - Implementation: {{dependency-check}}
+  - Implementation: {{dependency-check}}, {{placement-of}}, {{finding}}
   - Proof: {{fixture-snapshot}}
 
 ## Authority
@@ -104,8 +109,12 @@ compositions wire the others into behaviour.
   - Proof: {{source-fixture}}
 - An import between legacy and placed code obeys zone boundaries and carries capabilities transitively,
   and a legacy module is not given a layer ({{authority-graph}}, {{edge-check}}, {{zone-authority-check}}, {{dependency-check}}). · {#legacy-edges-keep-zones}
+  - Implementation: {{capability-context}}, {{import-authority}}, {{zone-permission}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}, {{finding}}
+  - Proof: {{recorded-imports}}, {{project-snapshot}}
 - Imports through project references and path aliases carry the authority of the file they reach, and a
   non-null assertion is allowed only directly on an indexed access ({{compiler-facts}}). · {#project-imports-carry-authority}
+  - Implementation: {{read-snapshot}}, {{capability-context}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{edge-check}}, {{dependency-check}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{compiler-check}}
+  - Proof: {{recorded-escapes}}, {{project-snapshot}}
 
 ## Startup
 
@@ -114,6 +123,7 @@ compositions wire the others into behaviour.
   does not pass to what it imports or exempt it from the capability, write, compiler and cycle checks.
   A proof keeps its topic binding; a test suffix grants no permission. A directory, a pattern, a missing file
   or a zoned module declared as an entrypoint grants nothing ({{startup-check}}, {{authority-graph}}, {{edge-check}}, {{zone-permission}}, {{default-config}}). · {#startup-assembles-outer-zones}
+  - Implementation: {{read-snapshot}}, {{capability-check}}, {{capability-context}}, {{registration-check}}, {{compiler-check}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{dependency-check}}, {{zone-authority-check}}, {{behaviour-check}}, {{construction-check}}, {{claim-proof-binder}}, {{kit-configuration}}, {{finding}}
   - Proof: {{source-fixture}}
 
 ## Writes

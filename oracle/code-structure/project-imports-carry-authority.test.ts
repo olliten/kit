@@ -3,40 +3,65 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/readings/capability-check.js";
+import type { Snapshot } from "../../src/core/primitives/snapshot.js";
+import { accessAuthority } from "../../src/core/readings/access-authority.js";
+import { authorityGraph } from "../../src/core/readings/authority-graph.js";
+import { capabilityContext } from "../../src/core/readings/capability-context.js";
+import { compilerCheck } from "../../src/core/readings/compiler-check.js";
+import { edgeCheck } from "../../src/core/readings/edge-check.js";
+import { globalAuthority } from "../../src/core/readings/global-authority.js";
+import { importAuthority } from "../../src/core/readings/import-authority.js";
+import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedEscapes } from "../substrate/compositions/recorded-escapes.js";
 
 test("a parenthesized index is outside the directly indexed assertion permission", () => {
-  const root = mkdtempSync(join(tmpdir(), "kit-parenthesized-index-"));
   const path = "src/core/readings/parenthesized-index.ts";
-  try {
-    mkdirSync(dirname(join(root, path)), { recursive: true });
-    writeFileSync(
-      join(root, "tsconfig.json"),
-      JSON.stringify({
+  const snapshot = projectSnapshot(
+    recordedEscapes({
+      "tsconfig.json": JSON.stringify({
         compilerOptions: { target: "ES2022", strict: true, types: [], noEmit: true },
         include: ["src/**/*.ts"],
       }),
-    );
-    writeFileSync(
-      join(root, path),
-      "export function first(values: readonly string[]): string { return (values[0])!; }\n",
-    );
-    const actual = capabilityCheck(readSnapshot(root, DEFAULT_CONFIG));
-    expect(actual.findings.filter((row) => row.path === path)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          debtKey: expect.stringMatching(/^R1:type-escape:/),
-          status: "violation",
-          blocking: true,
-        }),
-      ]),
-    );
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+      [path]: "export function first(values: readonly string[]): string { return (values[0])!; }\n",
+    }),
+  );
+  const findings = compilerCheck(snapshot, capabilityContext(snapshot, []));
+  expect(findings.filter((row) => row.path === path)).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        debtKey: expect.stringMatching(/^R1:type-escape:/),
+        status: "violation",
+        blocking: true,
+      }),
+    ]),
+  );
 });
 
+// What each file requires through its inputs and imports, and what the compiler, edge and zone checks find in
+// it. An app without adapters or entrypoints has no registration, startup, behaviour or construction to check.
+function authority(snapshot: Snapshot) {
+  const context = capabilityContext(snapshot, []);
+  const parts = [accessAuthority(snapshot, context), globalAuthority(snapshot, context), importAuthority(snapshot, context)];
+  const edges = edgeCheck(snapshot, context);
+  const graph = authorityGraph(snapshot, context, parts, edges.crossZoneFailures);
+  return {
+    requirements: [...graph.inherited].map(([path, capabilities]) => ({
+      path,
+      direct: [...(graph.direct.get(path) ?? [])].sort(),
+      inherited: [...capabilities].sort(),
+    })),
+    findings: [
+      ...compilerCheck(snapshot, context),
+      ...parts.flatMap((part) => part.findings),
+      ...edges.findings,
+      ...zoneAuthorityCheck(snapshot, context, graph),
+    ],
+  };
+}
+
+// Project references need the whole multi-project read, so this case reads the snapshot end to end.
 test("project references and path aliases preserve actual local legacy authority", () => {
   const root = mkdtempSync(join(tmpdir(), "kit-project-authority-"));
   const common = {
@@ -82,7 +107,7 @@ test("project references and path aliases preserve actual local legacy authority
       ...DEFAULT_CONFIG,
       legacyZones: [{ root: "src/shared/", zone: "core" }],
     });
-    const actual = capabilityCheck(snapshot);
+    const actual = authority(snapshot);
     expect(actual.requirements.find((row) => row.path === "src/shared/clock.ts")?.direct).toEqual([
       "clock",
     ]);
