@@ -173,3 +173,32 @@ test("a Window-only options dictionary is still plain supplied data in Core", ()
     ),
   ).toEqual([]);
 });
+
+test("recognizing a private local contract does not grant a native handle to Core", () => {
+  const files = {
+    "src/substrate/adapters/local-journal.ts":
+      "interface LocalJournal { note(text: string): void; open(): ReadPort; }\n" +
+      "interface ReadPort { read(): string; }\n" +
+      "export function journal(): LocalJournal { return { note: () => {}, open: () => ({ read: () => '' }) }; }\n",
+    "src/substrate/compositions/local-record.ts":
+      "import { journal } from '../adapters/local-journal.js';\n" +
+      "export function record(value: ReturnType<typeof journal>): void { value.note('a'); }\n" +
+      "export function readPort(value: ReturnType<ReturnType<typeof journal>['open']>): string { return value.read(); }\n",
+    "src/core/readings/native-window.ts":
+      "export function document(window: Window): Document { return window.document; }\n",
+  };
+  const adapters: NonNullable<KitConfig["adapters"]> = [{
+    module: "substrate/adapters/local-journal",
+    export: "journal",
+    capability: "journal",
+    kind: "external",
+    zones: ["substrate"],
+    contract: { type: "LocalJournal" },
+  }];
+  // Each existing recorder rejects compiler errors before returning the narrow authority facts.
+  let actual: ReturnType<typeof findings> = [];
+  expect(() => { actual = findings(files, adapters); }).not.toThrow();
+  expect(actual.map((item) => item.debtKey)).toContain(
+    "R1:window-authority:src/core/readings/native-window.ts",
+  );
+});
