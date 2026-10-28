@@ -202,8 +202,14 @@ export function behaviourReading(
         );
         const module = file === undefined ? undefined : checker.getSymbolAtLocation(file);
         const symbol = module === undefined ? undefined : checker.getExportsOfModule(module).find((each) => each.name === name);
-        if (symbol === undefined) continue;
-        const declared = checker.getDeclaredTypeOfSymbol(symbol);
+        const localContract = file?.statements.find(
+          (node): node is ts.InterfaceDeclaration | ts.TypeAliasDeclaration =>
+            (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) && node.name.text === name,
+        );
+        const declared = symbol !== undefined
+          ? checker.getDeclaredTypeOfSymbol(symbol)
+          : localContract === undefined ? undefined : checker.getTypeAtLocation(localContract);
+        if (declared === undefined) continue;
         for (const identity of [contractIdentity(declared), ...(portsOf(declared).ports ?? [])])
           if (identity !== null) registered.add(`${identity.file}:${identity.name}`);
       }
