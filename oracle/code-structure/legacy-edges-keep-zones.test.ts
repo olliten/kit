@@ -84,3 +84,43 @@ describe("migration edges use actual zones and transitive capabilities", () => {
     );
   });
 });
+
+test("recognizing a private local contract preserves the original migration limits", () => {
+  const localConsumer = "src/substrate/compositions/local-record.ts";
+  const run = "src/substrate/compositions/run.ts";
+  const files = {
+    "src/substrate/adapters/local-journal.ts":
+      "interface LocalJournal { note(text: string): void; open(): ReadPort; }\n" +
+      "interface ReadPort { read(): string; }\n" +
+      "export function journal(): LocalJournal { return { note: () => {}, open: () => ({ read: () => '' }) }; }\n",
+    [localConsumer]:
+      "import { journal } from '../adapters/local-journal.js';\n" +
+      "export function record(value: ReturnType<typeof journal>): void { value.note('a'); }\n" +
+      "export function readPort(value: ReturnType<ReturnType<typeof journal>['open']>): string { return value.read(); }\n",
+    [run]:
+      "export function run(read: () => string, write: (value: string) => void): void { write(read()); }\n",
+    "legacy/index.ts":
+      "import { record, readPort } from '../src/substrate/compositions/local-record.js';\nvoid record; void readPort;\n" +
+      "import { run } from '../src/substrate/compositions/run.js'; void run;\n",
+  };
+  const config: KitConfig = {
+    ...DEFAULT_CONFIG,
+    layout: { legacy: ["legacy"] },
+    adapters: [{
+      module: "substrate/adapters/local-journal",
+      export: "journal",
+      capability: "journal",
+      kind: "external",
+      zones: ["substrate"],
+      contract: { type: "LocalJournal" },
+    }],
+  };
+  // The existing compiler fixture refuses invalid programs before recording their import edges.
+  let actual: ReturnType<typeof inspect> = { requirements: [], findings: [] };
+  expect(() => { actual = inspect(files, config); }).not.toThrow();
+  const migration = actual.findings.filter((item) => item.debtKey.includes("migration-zone"));
+  expect(migration.map((item) => item.debtKey)).toEqual([
+    `R1:migration-zone:legacy/index.ts:${localConsumer}`,
+    `R1:migration-zone:legacy/index.ts:${run}`,
+  ]);
+});
