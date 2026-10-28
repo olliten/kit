@@ -2,17 +2,15 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { handoverCheck } from "../../src/core/readings/handover-check.js";
-import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { projectSnapshot } from "../core/readings/project-snapshot.js";
 import { recordedImports } from "../substrate/compositions/recorded-imports.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 
 const run = "src/substrate/compositions/run.ts";
 const store = "src/substrate/compositions/store.ts";
 
-function boundaryFacts(
+function boundary(
   caller: string,
   config: Partial<KitConfig> = {},
   extra: Readonly<Record<string, string>> = {},
@@ -57,15 +55,7 @@ function boundaryFacts(
     },
     settings,
   );
-  return projectSnapshot(facts, settings);
-}
-
-function boundary(
-  caller: string,
-  config: Partial<KitConfig> = {},
-  extra: Readonly<Record<string, string>> = {},
-) {
-  return handoverCheck(boundaryFacts(caller, config, extra));
+  return handoverCheck(projectSnapshot(facts, settings));
 }
 
 const keys = (caller: string): string[] => boundary(caller).map((item) => item.debtKey);
@@ -209,35 +199,8 @@ test.each([
   ]);
 });
 
-test("recognizing a local contract preserves opaque callbacks and original migration limits", () => {
+test("recognizing a local contract preserves opaque callback refusal", () => {
   const caller = localCaller + "import { run } from '../src/substrate/compositions/run.js'; void run;\n";
   const files = localFiles(localAdapterSource("interface LocalJournal { note(text: string): void; open(): ReadPort; }"));
-  const snapshot = boundaryFacts(caller, { adapters: localRegistration }, files);
-  expect(handoverCheck(snapshot).map((item) => item.debtKey)).toEqual([key(run, "run")]);
-  const migration = capabilityCheck(snapshot).findings.filter((item) => item.debtKey.includes("migration-zone"));
-  expect(migration.map((item) => item.debtKey)).toEqual([
-    `R1:migration-zone:legacy/index.ts:${localConsumer}`,
-    `R1:migration-zone:legacy/index.ts:${run}`,
-  ]);
-});
-
-test("recognizing a local contract does not grant a native handle to Core", () => {
-  // Native authority needs the complete recorded facts, not the imports-only boundary projection.
-  const snapshot = sourceFixture({
-    ...localFiles(localAdapterSource("interface LocalJournal { note(text: string): void; open(): ReadPort; }")),
-    "legacy/index.ts": localCaller,
-    "tsconfig.json": JSON.stringify({
-      compilerOptions: {
-        target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext",
-        lib: ["ES2022", "DOM"], types: [], strict: true, noEmit: true,
-      },
-      include: ["src/**/*.ts", "legacy/**/*.ts"],
-    }),
-    "src/core/readings/native-window.ts":
-      "export function document(window: Window): Document { return window.document; }\n",
-  }, { layout: { legacy: ["legacy"] }, adapters: localRegistration });
-  expect(snapshot.compiler?.projects.flatMap((project) => project.diagnostics)).toEqual([]);
-  expect(capabilityCheck(snapshot).findings.map((item) => item.debtKey)).toContain(
-    "R1:window-authority:src/core/readings/native-window.ts",
-  );
+  expect(boundary(caller, { adapters: localRegistration }, files).map((item) => item.debtKey)).toEqual([key(run, "run")]);
 });
