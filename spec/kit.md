@@ -82,3 +82,8 @@ its config, and its debt in its own baseline.
   debt. These checks use one snapshot of the actual configured repository. · {#kit-checks-itself}
   - Implementation: {{claim-cohesion}}, {{comment-check}}, {{dependency-check}}, {{gate}}, {{kit-configuration}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
   - Proof: {{binding-findings}}
+- Each app under `fixture/` is an example Kit governs like any other app: it declares its own `kit/config.md`
+  and an empty `kit/debt/legacy.json`, and `kit check` passes on it, so an example can't drift from the rules
+  it shows. A deliberate violation lives in the proof that needs it, never in an example. · {#examples-pass-their-check}
+  - Implementation: {{check-run}}
+  - Proof: {{text-files}}

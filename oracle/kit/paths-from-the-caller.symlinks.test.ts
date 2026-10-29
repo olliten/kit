@@ -10,7 +10,7 @@ const engine = resolve(import.meta.dirname, "../..");
 const scratch = temporaryProjects.open("kit-symlink-cli-");
 afterAll(() => scratch.dispose());
 
-// The fixture's text files under one folder, keyed by their path inside the app.
+// The example's text files under one folder, keyed by their path inside the app.
 function copied(from: string, to: string): Record<string, string> {
   const files: Record<string, string> = {};
   for (const entry of textFiles.entries(from)) {
@@ -19,10 +19,10 @@ function copied(from: string, to: string): Record<string, string> {
   }
   return files;
 }
-for (const folder of ["src", "spec", "oracle"]) scratch.write(copied(join(engine, "fixture", folder), `tally/${folder}`));
+scratch.write(copied(join(engine, "fixture/tally"), "tally"));
+// The known violation: a module no claim names, planted in the copy of the clean example.
 scratch.write({
-  "tally/kit/config.md": "```yaml\napp: tally\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\n```\n",
-  "tally/kit/debt/legacy.json": "{}",
+  "tally/src/substrate/compositions/save.ts": "export function save(text: string): string {\n  return text;\n}\n",
 });
 scratch.directory("tally/node_modules");
 const app = join(scratch.root, "tally");
@@ -48,7 +48,7 @@ test("a node_modules symlink runs the real check and fails on the fixture's know
 test("a symlinked refs entrypoint emits the named module's actual claim and oracle", () => {
   const result = run("kit-refs", ["--root", app, "--config", config, "src/core/readings/total.ts"]);
   expect(result.status).toBe(0);
-  expect(result.stdout).toContain("core/readings/total keeps 1 claim:");
+  expect(result.stdout).toContain("core/readings/total keeps 3 claims:");
   expect(result.stdout).toContain("spec/tally.md#total-holds:");
   expect(result.stdout).toContain("oracle/tally/total-holds.test.ts");
   expect(result.stderr).toBe("");
