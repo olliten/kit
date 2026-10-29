@@ -233,10 +233,6 @@
   - Role: derived
   - Zone: core
   - From: {{compiler-facts}}, {{default-config}}, {{snapshot}}
-- **proof-debt** — the findings of claim proofs, and the limits reachable only through them, recast as debt keyed by the proof.
-  - Role: derived
-  - Zone: core
-  - From: {{capability-context}}, {{finding}}, {{placement-of}}, {{snapshot}}
 - **proof-reach** — the check that a claim's tests together reach, through the code they use, every placed module the claim names.
   - Role: derived
   - Zone: core
@@ -245,7 +241,7 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}
-- **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, and the baseline left after a change lands.
+- **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, with a proof's findings as its debt, and the baseline left after a change lands.
   - Role: derived
   - Zone: core
   - From: {{default-config}}, {{finding}}

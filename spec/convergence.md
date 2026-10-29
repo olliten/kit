@@ -35,7 +35,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
   proof: the baseline holds them, they may only shrink, and a new proof starts exact. A limit also reachable
   from placed code or a declared entrypoint stays an obligation no baseline waives, so a proof's debt never
   covers the code it proves. · {#proofs-converge-under-the-ratchet}
-  - Implementation: {{proof-debt}}, {{ratchet}}, {{capability-context}}, {{placement-of}}, {{finding}}
+  - Implementation: {{ratchet}}, {{capability-context}}, {{placement-of}}, {{finding}}
   - Proof: {{source-fixture}}
 - A legacy module's size is debt that may only shrink. A change may add to a legacy module only statements
   that call into placed modules; new code is placed first ({{legacy-size}}, {{source-size}},
