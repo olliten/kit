@@ -168,6 +168,11 @@ processes, threads and child processes. A pass is kept beside the repository wit
 paths, under the command, the Node version and the lockfile; the next `kit verify` reuses it while every path
 is in the same state. A failure is never kept. Worktrees of one repository share what is kept.
 
+A path a run only probed is kept by whether it is absent, a file or a directory. A file a test only loaded, and
+whose functions its coverage lists, is kept as the test ran it: its text with the bodies of the outermost
+functions the test never ran left out, so an edit inside one of those reruns nothing. A file the test also reads
+as text, as a test of a checker reads its sources, is kept whole.
+
 ## Runs
 
 When the test command writes the test's LCOV report into `{dir}`, `kit verify` replaces `{dir}` with a directory

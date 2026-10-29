@@ -38,3 +38,34 @@ export function coverageReport(text: string): CoveredFile[] {
   }
   return files;
 }
+
+// The start line of every function an LCOV report shows ran, anonymous ones too, for each file it lists: a file
+// it lists ran its top level even when no function of it ran.
+export function ranLines(text: string): { readonly file: string; readonly lines: readonly number[] }[] {
+  const files: { file: string; lines: number[] }[] = [];
+  let file: string | null = null;
+  let listed: { name: string; line: number; count: number }[] = [];
+  let counted = new Set<number>();
+  for (const line of text.split(/\r?\n/)) {
+    if (line.startsWith("SF:")) {
+      file = line.slice(3).trim();
+      listed = [];
+      counted = new Set();
+    } else if (line.startsWith("FN:") && file !== null) {
+      const match = /^FN:(\d+)(?:,\d+)?,(.+)$/.exec(line);
+      if (match?.[1] !== undefined && match[2] !== undefined) listed.push({ name: match[2], line: Number(match[1]), count: 0 });
+    } else if (line.startsWith("FNDA:") && file !== null) {
+      const match = /^FNDA:(\d+),(.+)$/.exec(line);
+      const index = listed.findIndex((each, at) => each.name === match?.[2] && !counted.has(at));
+      const entry = listed[index];
+      if (entry !== undefined && match?.[1] !== undefined) {
+        entry.count = Number(match[1]);
+        counted.add(index);
+      }
+    } else if (line === "end_of_record" && file !== null) {
+      files.push({ file, lines: listed.filter((each) => each.count > 0).map((each) => each.line) });
+      file = null;
+    }
+  }
+  return files;
+}

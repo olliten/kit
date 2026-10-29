@@ -42,6 +42,10 @@
   - Role: fact
   - Zone: core
   - Of: {{compiler-facts}}, {{file}}
+- **function-span** — one function no other function holds: the range of its body in the file's text and the lines it spans.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **ignored-import** — the error for an import into a path the config ignores.
   - Role: derived
   - Zone: core
@@ -161,7 +165,7 @@
   - Role: derived
   - Zone: core
   - From: []
-- **coverage-report** — the named functions an LCOV report lists for each file, by start line, and how often each ran.
+- **coverage-report** — the named functions an LCOV report lists for each file, by start line, and how often each ran, and the start line of every function it shows ran.
   - Role: derived
   - Zone: core
   - From: []
@@ -257,6 +261,10 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}
+- **ran-code** — the outermost functions a run ran, by where the functions its coverage shows ran start, and a loaded file's text with the bodies of the rest left out, as the state a pass keeps.
+  - Role: derived
+  - Zone: core
+  - From: {{fact-keys}}, {{function-span}}
 - **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, with a proof's findings as its debt, and the baseline left after a change lands.
   - Role: derived
   - Zone: core
@@ -313,7 +321,7 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
-- **verdict-reuse** — the paths a check's processes recorded, a stored verdict read back, where a check's passes are kept, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
+- **verdict-reuse** — how a check's processes used each path, the key each path is kept under and what it holds, a stored verdict read back, where a check's passes are kept, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
   - Role: derived
   - Zone: core
   - From: {{fact-keys}}, {{runs}}, {{verdict}}
@@ -333,15 +341,15 @@
 
 ## Adapter contracts
 
-- **compiler** — access to project loading and import resolution through a language compiler.
+- **compiler** — access to project loading, import resolution and a file's outermost functions through a language compiler.
   - Role: adapter
   - Zone: substrate
-  - Of: []
+  - Of: {{function-span}}
 - **evidence-store** — ownership of what a machine learns about an app between runs: one file per key beside the repository, read and written whole, and evicted least recently used past a limit.
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **filesystem** — access to file text, directory entries, and the state a path is in.
+- **filesystem** — access to file text, directory entries, the state a path is in, and its kind.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -349,7 +357,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **read-recorder** — a preload that records every path inside the app a check's processes read, list or probe.
+- **read-recorder** — a preload that records every path inside the app a check's processes read, list, probe or load, with how each was used.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -519,7 +527,7 @@
 - **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{processes}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{stopwatch}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
+  - Of: {{command}}, {{compiler}}, {{config-values}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{stopwatch}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
 
 ## Supporting vocabulary and roles
 

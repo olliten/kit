@@ -21,6 +21,8 @@ export interface Filesystem {
   // What a path holds now: nothing, a file's content as its digest, or a directory's listing as its digest, so
   // a check that read, listed or only probed the path depends on exactly that.
   state(path: string): string;
+  // Only whether a path is absent, a file or a directory, for a check that only probed it.
+  kind(path: string): string;
 }
 
 function readText(path: string, trace: FilesystemRead[]): string {
@@ -67,8 +69,17 @@ function state(path: string): string {
   return `file:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
 }
 
+function kind(path: string): string {
+  try {
+    return statSync(path).isDirectory() ? "directory" : "file";
+  } catch {
+    return "absent";
+  }
+}
+
 export const filesystem: Filesystem = {
   readText,
   entries,
   state,
+  kind,
 };

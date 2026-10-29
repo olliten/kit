@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { readPaths } from "../../src/core/readings/verdict-reuse.js";
+import { heldKeys, heldPath, pathUses } from "../../src/core/readings/verdict-reuse.js";
 import { processes } from "../../src/substrate/adapters/processes.js";
 import { readRecorder } from "../../src/substrate/adapters/read-recorder.mjs";
 import { type TemporaryProject, temporaryProjects } from "../substrate/adapters/temporary-project.js";
@@ -11,7 +11,7 @@ afterEach(() => {
   for (const project of projects.splice(0)) project.dispose();
 });
 
-test("a check's reads, listings and probes are recorded in its process, its threads and the processes it starts, but not a package's listings", async () => {
+test("a check's reads, listings, probes and loads are recorded in its process, its threads and the processes it starts, but not a package's listings", async () => {
   const project = temporaryProjects.open("kit-reads-");
   projects.push(project);
   const app = join(project.root, "app");
@@ -52,10 +52,21 @@ test("a check's reads, listings and probes are recorded in its process, its thre
   );
   expect(result?.status).toBe(0);
   const recordings = readdirSync(reads).filter((name) => name.endsWith(".txt")).map((name) => readFileSync(join(reads, name), "utf8"));
-  const recorded = readPaths(recordings);
-  for (const path of ["read-by-package.txt", "a.txt", "missing.txt", "listed", "promised.txt", "worker.mjs", "from-worker.txt", "child.mjs", "from-child.txt", "main.mjs"])
-    expect(recorded).toContain(path);
-  expect(recorded.filter((path) => path.includes("node_modules") || path.includes("outside") || path === "runner-listed")).toEqual([]);
+  const uses = pathUses(recordings);
+  const kinds = Object.fromEntries([...uses].map(([path, used]) => [path, [...used].sort()]));
+  expect(kinds).toMatchObject({
+    "a.txt": ["read"],
+    "promised.txt": ["read"],
+    "read-by-package.txt": ["read"],
+    "from-worker.txt": ["read"],
+    "from-child.txt": ["read"],
+    "missing.txt": ["probe"],
+    listed: ["list"],
+    "main.mjs": expect.arrayContaining(["load"]),
+    "worker.mjs": expect.arrayContaining(["load"]),
+    "child.mjs": expect.arrayContaining(["load"]),
+  });
+  expect([...uses.keys()].filter((path) => path.includes("node_modules") || path.includes("outside") || path === "runner-listed")).toEqual([]);
 });
 
 test("loaded without being asked to record, the recorder changes nothing", async () => {
@@ -71,6 +82,12 @@ test("loaded without being asked to record, the recorder changes nothing", async
   expect(result?.stdout.trim()).toBe("native");
 });
 
-test("recordings are read as each path once", () => {
-  expect(readPaths(["b.txt\na.txt\n", "a.txt\n\n"])).toEqual(["a.txt", "b.txt"]);
+test("recordings are read as each path's uses, and each path is kept by what it was used for", () => {
+  const uses = pathUses(["read b.txt\nprobe a.txt\n", "probe a.txt\nload m.mjs\nload n.mjs\nread n.mjs\nlist d\n\n"]);
+  expect(heldKeys(uses, new Map([["m.mjs", [0, 2]], ["n.mjs", [1]]]))).toEqual(["a.txt#kind", "b.txt", "d", "m.mjs#ran:0,2", "n.mjs"]);
+  expect(heldKeys(new Map([["m.mjs", new Set(["load"])]]), new Map())).toEqual(["m.mjs"]);
+  expect(heldPath("m.mjs#ran:0,2")).toEqual({ path: "m.mjs", kind: false, ran: [0, 2] });
+  expect(heldPath("m.mjs#ran:")).toEqual({ path: "m.mjs", kind: false, ran: [] });
+  expect(heldPath("a.txt#kind")).toEqual({ path: "a.txt", kind: true });
+  expect(heldPath("odd#name.txt")).toEqual({ path: "odd#name.txt", kind: false });
 });

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import ts from "typescript";
+import type { FunctionSpan } from "../../core/primitives/function-span.js";
 
 // One host read as a cache replays it: the operation, its arguments and what came back, file text as its
 // digest. A failed probe is a read too, so a file that appears where resolution looked is a change.
@@ -39,6 +40,9 @@ export interface CompilerWorkspace {
     trace: CompilerRead[],
     mode?: ts.ResolutionMode,
   ): ts.ResolvedModuleFull | undefined;
+  // The functions of one file no other function holds, in source order: any function, method, accessor or
+  // constructor with a body.
+  outermostFunctions(path: string, text: string): FunctionSpan[];
 }
 
 type Argument = string | number | readonly string[] | undefined;
@@ -143,6 +147,30 @@ function sourceOf(
 }
 
 export const compilerWorkspace: CompilerWorkspace = {
+  outermostFunctions(path, text) {
+    const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+    const spans: FunctionSpan[] = [];
+    const line = (offset: number): number => sf.getLineAndCharacterOfPosition(offset).line + 1;
+    const visit = (node: ts.Node): void => {
+      const body =
+        ts.isFunctionDeclaration(node) ||
+        ts.isFunctionExpression(node) ||
+        ts.isArrowFunction(node) ||
+        ts.isMethodDeclaration(node) ||
+        ts.isConstructorDeclaration(node) ||
+        ts.isGetAccessorDeclaration(node) ||
+        ts.isSetAccessorDeclaration(node)
+          ? node.body
+          : undefined;
+      if (body !== undefined) {
+        spans.push({ body: [body.getStart(sf), body.getEnd()], lines: [line(node.getStart(sf)), line(node.getEnd())] });
+        return;
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sf);
+    return spans;
+  },
   workerHost(trace) {
     const path = join(dirname(ts.getDefaultLibFilePath({})), "lib.webworker.d.ts");
     const text = systemOf(trace).readFile(path);

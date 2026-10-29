@@ -3,7 +3,10 @@ import type { Verdict } from "../../core/primitives/verdict.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { digest } from "../../core/readings/fact-keys.js";
 import { testRuns } from "../../core/readings/test-runs.js";
-import { heldKey, holding, readPaths, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { ranLines } from "../../core/readings/coverage-report.js";
+import { functionsRun, ranState } from "../../core/readings/ran-code.js";
+import { heldKey, heldPath, heldKeys, holding, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { compilerWorkspace } from "../adapters/compiler.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { filesystem } from "../adapters/filesystem.js";
 import { processes } from "../adapters/processes.js";
@@ -68,6 +71,26 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const store = evidenceStore.directory(root);
   const runtime = toolchain.runtime(root);
   const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime);
+  // What a kept key's path holds now: its content, its kind, or its text as the functions a run ran see it.
+  const stateOf = (key: string): string => {
+    const { path, kind, ran } = heldPath(key);
+    const at = `${root}/${path}`;
+    if (kind) return filesystem.kind(at);
+    if (ran === undefined) return filesystem.state(at);
+    if (!textFiles.exists(at)) return "absent";
+    const text = textFiles.read(at);
+    return ranState(text, compilerWorkspace.outermostFunctions(path, text), ran);
+  };
+  // The outermost functions a test ran in each file its coverage lists.
+  const ranIn = (lcov: readonly string[]): Map<string, number[]> => {
+    const ran = new Map<string, number[]>();
+    for (const { file, lines } of lcov.flatMap(ranLines)) {
+      const path = file.startsWith(`${root}/`) ? file.slice(root.length + 1) : file;
+      if (!textFiles.exists(`${root}/${path}`)) continue;
+      ran.set(path, functionsRun(compilerWorkspace.outermostFunctions(path, textFiles.read(`${root}/${path}`)), lines));
+    }
+    return ran;
+  };
   const plan = (checks: readonly Check[]) => {
     const states = new Map<string, string>();
     return {
@@ -80,7 +103,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
           .flatMap((verdict) => (verdict === null ? [] : [verdict]));
         for (const verdict of verdicts)
           for (const path of Object.keys(verdict.states))
-            if (!states.has(path)) states.set(path, filesystem.state(`${root}/${path}`));
+            if (!states.has(path)) states.set(path, stateOf(path));
         return { check, reused: holding(verdicts, states) };
       }),
     };
@@ -155,7 +178,8 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
           return;
         }
         lines.push(`passed ${check.id}`);
-        const after = new Map(readPaths(filesIn(directory)).map((path) => [path, filesystem.state(`${root}/${path}`)]));
+        const lcov = check.test !== undefined && records ? filesIn(`${directory}/runs`) : [];
+        const after = new Map(heldKeys(pathUses(filesIn(directory)), ranIn(lcov)).map((key) => [key, stateOf(key)]));
         // A path that changed while the check ran was read in one state and is kept in another, so the pass
         // describes neither: it is reported and not kept.
         if (!keep || [...after].some(([path, state]) => states.has(path) && states.get(path) !== state)) {
@@ -165,7 +189,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         const verdict: Verdict = { check: check.id, seconds, states: Object.fromEntries(after) };
         const report =
           check.test !== undefined && code !== undefined
-            ? testRuns([{ test: check.test, lcov: filesIn(`${directory}/runs`), v8: filesIn(`${directory}/runs/v8`) }], code.files, root, loaded.config, code.functions, code.texts)[0]
+            ? testRuns([{ test: check.test, lcov, v8: filesIn(`${directory}/runs/v8`) }], code.files, root, loaded.config, code.functions, code.texts)[0]
             : undefined;
         const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran };
         evidenceStore.write(store, kindOf(check), heldKey(kept), JSON.stringify(kept));

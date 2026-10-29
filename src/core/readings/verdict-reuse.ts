@@ -5,9 +5,43 @@ import { digest } from "./fact-keys.js";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-// The paths a check's processes recorded, one per line in each process's file, each once.
-export function readPaths(recordings: readonly string[]): string[] {
-  return [...new Set(recordings.flatMap((text) => text.split("\n")).filter((line) => line !== ""))].sort();
+// How a check's processes used each path, from their recordings: each line is a use (read, list, probe or load)
+// and a path.
+export function pathUses(recordings: readonly string[]): Map<string, Set<string>> {
+  const uses = new Map<string, Set<string>>();
+  for (const line of recordings.flatMap((text) => text.split("\n"))) {
+    const space = line.indexOf(" ");
+    if (space < 0) continue;
+    const path = line.slice(space + 1);
+    uses.set(path, new Set([...(uses.get(path) ?? []), line.slice(0, space)]));
+  }
+  return uses;
+}
+
+// What a pass depends on in each path, as the key its state is kept under: the path alone for its content (read
+// or listed), `#kind` for whether it is absent, a file or a directory (only probed), and `#ran:` with the
+// outermost functions the run ran for a file only the module loader read, when the run's coverage covers it.
+export function heldKeys(uses: ReadonlyMap<string, ReadonlySet<string>>, ran: ReadonlyMap<string, readonly number[]>): string[] {
+  return [...uses]
+    .map(([path, kinds]) => {
+      if (kinds.has("read") || kinds.has("list")) return path;
+      const functions = ran.get(path);
+      if (kinds.has("load")) return functions === undefined ? path : `${path}#ran:${functions.join(",")}`;
+      return `${path}#kind`;
+    })
+    .sort();
+}
+
+// A kept key's path, and how the path is held: its content, its kind, or the functions a run ran in it.
+export function heldPath(key: string): { readonly path: string; readonly kind: boolean; readonly ran?: readonly number[] } {
+  const mark = key.lastIndexOf("#");
+  const mode = mark < 0 ? "" : key.slice(mark + 1);
+  if (mode === "kind") return { path: key.slice(0, mark), kind: true };
+  if (mode.startsWith("ran:")) {
+    const listed = mode.slice(4);
+    return { path: key.slice(0, mark), kind: false, ran: listed === "" ? [] : listed.split(",").map(Number) };
+  }
+  return { path: key, kind: false };
 }
 
 // A stored verdict, or null when its text isn't one, as a torn or foreign entry wouldn't be.
