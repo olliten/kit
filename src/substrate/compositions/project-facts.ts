@@ -7,7 +7,7 @@ import type { SourceSize } from "../../core/primitives/file.js";
 import { digest, factsKey, importClosures, projectKey } from "../../core/readings/fact-keys.js";
 import { ignoredImport } from "../../core/readings/ignored-import.js";
 import { withRoot, withoutRoot } from "../../core/readings/root-token.js";
-import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
+import { compilerWorkspace } from "../adapters/compiler.js";
 import { authorityRecorder } from "./authority-recorder.js";
 import { behaviourReading } from "./behaviour-reading.js";
 import { contractReading } from "./contract-reading.js";
@@ -193,10 +193,10 @@ function compareDiagnostics(a: Diagnostic, b: Diagnostic): number {
 // One compiler project's facts. Each file's facts and each test's reach are stored under the key of what they
 // depend on, so a later read reuses every file and test whose key still matches and walks only the rest; with
 // nothing to reuse, every file is walked.
-export function projectFacts(context: AppContext, file: string, trace: CompilerRead[], reuse?: FactReuse): ProjectRead {
+export function projectFacts(context: AppContext, file: string, reuse?: FactReuse): ProjectRead {
   const { appRoot, config, source, tests, local, ignored } = context;
   const absolute = join(appRoot, file);
-  const { parsed, readError, program } = compilerWorkspace.load(absolute, trace);
+  const { parsed, readError, program } = compilerWorkspace.load(absolute);
   const checker = program.getTypeChecker();
   const programFiles = program.getSourceFiles();
   const own = programFiles.filter((sf) => !sf.isDeclarationFile);
@@ -290,7 +290,7 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
     }),
   );
   const importTarget = (specifier: string, containingFile: string): string | null => {
-    const resolved = compilerWorkspace.resolve(specifier, containingFile, parsed.options, trace);
+    const resolved = compilerWorkspace.resolve(specifier, containingFile, parsed.options);
     if (resolved === undefined) return null;
     const target = local(resolved.resolvedFileName);
     if (ignored(target)) throw ignoredImport(local(containingFile), target);
