@@ -45,6 +45,22 @@ test("a body behind a declared return type is the file's own: its importers' fac
   expect(computed(app)).toEqual({ files: 2, proofs: 0 });
 });
 
+test("a test's reach holds while the files whose code it followed hold, whatever happens in bodies it never entered", () => {
+  const app = open();
+  app.stored();
+  const double = (body: string) =>
+    `import type { Shape } from "a";\nimport { value } from "../primitives/value.js";\nimport { half } from "./half.js";\nexport const double = (shape: Shape): number => ${body};\n`;
+  app.put("src/core/readings/double.ts", double("shape.n * value * 2"));
+  expect(computed(app)).toEqual({ files: 2, proofs: 1 });
+  app.put("src/core/readings/half.ts", "export const half = (n: number): number => n * 0.5;\n");
+  expect(computed(app)).toEqual({ files: 1, proofs: 0 });
+  app.put("src/core/readings/double.ts", double("half(shape.n) * value * 4"));
+  expect(computed(app)).toEqual({ files: 1, proofs: 1 });
+  app.put("src/core/readings/half.ts", "export const half = (n: number): number => n / 4 + n / 4;\n");
+  expect(computed(app)).toEqual({ files: 1, proofs: 1 });
+  expect(app.stored().snapshot).toEqual(app.fresh());
+});
+
 test("an edit to what the whole project depends on recomputes every file", () => {
   const app = open();
   const all = app.stored().receipt.files.computed;

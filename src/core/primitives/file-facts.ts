@@ -24,3 +24,10 @@ export interface FileFacts {
 
 // One test's reach, as stored under the key of what its code imports.
 export type StoredProof = NonNullable<Project["proofs"]>[number];
+
+// A test's reach as stored: its key holds the test and the outlines of what it imports, so the reach also names
+// each file whose code it followed, with that file's digest, and holds only while each still has it.
+export interface StoredReach {
+  readonly proof: StoredProof;
+  readonly read: readonly { readonly file: string; readonly digest: string }[];
+}

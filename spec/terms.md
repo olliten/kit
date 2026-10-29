@@ -42,7 +42,7 @@
   - Role: fact
   - Zone: core
   - Of: []
-- **file-facts** — one file's share of its project's compiler facts, and one test's reach, as stored under the key of what they depend on.
+- **file-facts** — one file's share of its project's compiler facts, and one test's reach with the files it was read from, as stored under the key of what they depend on.
   - Role: fact
   - Zone: core
   - Of: {{compiler-facts}}, {{file}}

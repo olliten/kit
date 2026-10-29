@@ -575,3 +575,13 @@ without naming the app.
   syntax alone, so it is deterministic and cheap, unlike emitted declarations, which depend on options and on
   the order the compiler checked in.
 - **Next:** test reach is now most of an edit's cost (1,524 of 1,857 reaches recomputed for that edit).
+
+## 2026-10-29 · A test's reach holds while the files it followed hold
+
+- **Decision:** a test's reach keys on the test and the outlines of what it imports, as facts do, and names
+  each file whose code it followed, with that file's digest; it is reused only while each still has it.
+- **Why:** keying on the content of the whole import closure recomputed a reach for an edit to a file the test
+  imports but never follows. On Leeloo a body edit to a file of median use now recomputes 3 reaches instead of
+  21, and an edit to the widely used `civil-date.ts` 1,246 instead of 1,524 (30 s instead of 42 s). Naming
+  each body followed instead of each file was measured too: for a random body, the tests that follow it are
+  nearly all the tests that follow its file, while the reach took three times as long.

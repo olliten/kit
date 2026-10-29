@@ -2,9 +2,9 @@ import { basename, dirname, join, posix, resolve } from "node:path";
 import ts from "typescript";
 import type { CompilerFacts } from "../../core/primitives/compiler-facts.js";
 import type { KitConfig } from "../../core/primitives/default-config.js";
-import type { FileFacts, StoredProof } from "../../core/primitives/file-facts.js";
+import type { FileFacts, StoredProof, StoredReach } from "../../core/primitives/file-facts.js";
 import type { SourceSize } from "../../core/primitives/file.js";
-import { closureKey, digest, factsKey, importClosures, projectKey } from "../../core/readings/fact-keys.js";
+import { digest, factsKey, importClosures, projectKey } from "../../core/readings/fact-keys.js";
 import { ignoredImport } from "../../core/readings/ignored-import.js";
 import { withRoot, withoutRoot } from "../../core/readings/root-token.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
@@ -238,8 +238,7 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
   const outlines = new Map<string, string>();
   for (const sf of own) outlines.set(local(sf.fileName), outlineOf(sf));
   const keyOf = (path: string): string => factsKey(project, path, closures.get(path) ?? [path], digests, outlines, roles);
-  const proofKeyOf = (path: string): string =>
-    digest(`proof\u0000${closureKey(project, closures.get(path) ?? [path], digests, roles)}`);
+  const proofKeyOf = (path: string): string => digest(`reach\u0000${keyOf(path)}`);
 
   const stored = <T>(kind: string, key: string): T | undefined => {
     const text = reuse?.read(kind, key);
@@ -259,8 +258,9 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
   }
   const proofs = new Map<string, StoredProof>();
   for (const sf of proofFiles) {
-    const found = stored<StoredProof>("proofs", proofKeyOf(local(sf.fileName)));
-    if (found !== undefined) proofs.set(local(sf.fileName), found);
+    const found = stored<StoredReach>("proofs", proofKeyOf(local(sf.fileName)));
+    if (found?.read.every((each) => digests.get(each.file) === each.digest) === true)
+      proofs.set(local(sf.fileName), found.proof);
   }
   const projectWide = stored<{ readonly diagnostics: Diagnostic[] }>("project", project);
 
@@ -340,7 +340,7 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
     const proofOf = testReach(checker, new Set([...source, ...tests]), local, importTarget);
     for (const sf of dirtyProofs) {
       const path = local(sf.fileName);
-      const { reached, whole, declarations } = proofOf(sf);
+      const { reached, whole, declarations, read } = proofOf(sf);
       // An import for its effect alone runs the module it names.
       const run = sf.statements.flatMap((statement) =>
         ts.isImportDeclaration(statement) && statement.importClause === undefined && ts.isStringLiteral(statement.moduleSpecifier)
@@ -354,7 +354,8 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
         declarations: declarations.filter((declaration) => declaration.file !== path),
       };
       proofs.set(path, proof);
-      reuse?.write("proofs", proofKeyOf(path), withoutRoot(JSON.stringify(proof), appRoot));
+      const kept: StoredReach = { proof, read: read.map((each) => ({ file: each, digest: digests.get(each) ?? "" })) };
+      reuse?.write("proofs", proofKeyOf(path), withoutRoot(JSON.stringify(kept), appRoot));
     }
   }
 

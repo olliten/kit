@@ -54,15 +54,9 @@ export function importClosures(files: readonly string[], edges: ReadonlyMap<stri
   return closures;
 }
 
-// The key of one file's facts: its project's key and, for every file of its closure, the file's digest and what
-// Kit takes it for, since whether a file is code or a test changes what is recorded about it.
-export function closureKey(project: string, closure: readonly string[], digests: ReadonlyMap<string, string>, roles: ReadonlyMap<string, string>): string {
-  return digest(JSON.stringify([project, closure.map((file) => [file, digests.get(file) ?? null, roles.get(file) ?? null])]));
-}
-
 // The key of one file's facts: its project's key, its own content, and the outline of every other file its
 // imports reach, since what another file lends a fact is its declarations, not the bodies of functions whose
-// return type it declares. A test's reach follows bodies, so it keys on content (`closureKey`).
+// return type it declares. A test's reach keys on its test the same way, and names the files whose code it followed besides.
 export function factsKey(
   project: string,
   file: string,
