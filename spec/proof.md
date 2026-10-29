@@ -54,9 +54,10 @@ a claim depends on are named in it, so each module's claims are found from its n
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}
   - Implementation: {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}, {{test-reach}}
   - Proof: {{fixture-snapshot}}, {{recorded-reach}}
-- A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. The
-  modules of only types and the oracle's own helpers need no name, though what a helper reaches counts as the
-  test's, and naming a composition names what it composes. A module a claim's tests reach without its name is
+- A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. Only
+  the modules of only types need no name: a placed oracle module, such as a generator, fixture, driver or
+  runner, is named in the claim's Proof like any other, what it reaches counts as the test's, and naming a
+  composition names what it composes. A module a claim's tests reach without its name is
   debt: the baseline holds it, it may only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
   - Implementation: {{proof-scope}}, {{proof-reach}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}

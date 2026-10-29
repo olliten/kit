@@ -15,8 +15,8 @@ and its size are debt that may only shrink, and placed code is held to every rul
 - A finding carries its rule, path and fix, and a debt key made of rule, check, path and detail
   ({{finding}}). · {#finding-debt-key}
 - The check rejects new legacy debt, every violation in placed code or a declared executable entrypoint,
-  and every checker limit reachable through imports from either; a baseline can't waive the last two
-  ({{finding}}, {{ratchet}}). · {#ratchet-keeps-architecture-obligations}
+  and every checker limit reachable through imports from either; a baseline can't waive the last two,
+  except as a proof's debt ({{finding}}, {{ratchet}}). · {#ratchet-keeps-architecture-obligations}
   - Implementation: {{startup-check}}, {{capability-context}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{edge-check}}, {{dependency-check}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{placement-of}}, {{read-snapshot}}, {{gate}}
   - Proof: {{source-fixture}}
 - A legacy zone row may list exact legacy files instead of a prefix: only those files take its zone, a new file
@@ -31,6 +31,12 @@ and its size are debt that may only shrink, and placed code is held to every rul
   is none. · {#outside-code-hands-placed-code-data}
   - Implementation: {{handover-check}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}, {{finding}}, {{ratchet}}
   - Proof: {{recorded-imports}}, {{project-snapshot}}
+- A claim proof's own violations, and the checker limits reachable only through proofs, are debt keyed by the
+  proof: the baseline holds them, they may only shrink, and a new proof starts exact. A limit also reachable
+  from placed code or a declared entrypoint stays an obligation no baseline waives, so a proof's debt never
+  covers the code it proves. · {#proofs-converge-under-the-ratchet}
+  - Implementation: {{proof-debt}}, {{ratchet}}, {{capability-context}}, {{placement-of}}, {{finding}}
+  - Proof: {{source-fixture}}
 - A legacy module's size is debt that may only shrink. A change may add to a legacy module only statements
   that call into placed modules; new code is placed first ({{legacy-size}}, {{source-size}},
   {{finding}}, {{ratchet}}, {{check-run}}, {{command}}). · {#legacy-does-not-grow}

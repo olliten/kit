@@ -68,7 +68,7 @@ its config, and its debt in its own baseline.
 - Source fixtures own separate temporary directories, write supplied relative paths only inside their
   directory with the declared compiler settings and roots, and dispose the directory on return or
   failure. A recorded fixture compiles its files and records only what one recorder reads, so a proof need not
-  read a whole snapshot: its checked sources are the code files and the test files declared as entrypoints, its
+  read a whole snapshot: its checked sources are the code files and the entrypoints, claim proofs among them, its
   directory is gone before it returns, and recorders of the same files share one compilation. A fixture that
   doesn't compile is an error. · {#source-fixtures-own-their-files}
   - Implementation: {{source-fixture}}, {{program-fixture}}, {{fixture-files}}, {{temporary-project}}, {{fact-walk}}, {{read-snapshot}}, {{compiler}}

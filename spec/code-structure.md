@@ -133,10 +133,12 @@ compositions wire the others into behaviour.
 
 ## Startup
 
-- An app may declare exact, existing executable entrypoints outside every zone, including claim proofs:
-  each may connect Shell and Substrate contracts and use the core's, no module imports it, and its permission
-  does not pass to what it imports or exempt it from the capability, write, compiler and cycle checks.
-  A proof keeps its topic binding; a test suffix grants no permission. A directory, a pattern, a missing file
+- Every claim proof is an executable entrypoint without being declared, and an app may declare other exact,
+  existing executable entrypoints outside every zone: each may connect Shell and Substrate contracts and use
+  the core's, no module imports it, and its permission does not pass to what it imports or exempt it from the
+  capability, write, compiler and cycle checks. A proof is the outermost code of its claim and keeps its topic
+  binding; a test suffix grants no permission, so a test outside the oracle is an entrypoint only when declared,
+  and a proof's effects reach it through registered adapters as any composition's do. A directory, a pattern, a missing file
   or a zoned module declared as an entrypoint grants nothing ({{startup-check}}, {{authority-graph}}, {{edge-check}}, {{zone-permission}}, {{default-config}}). · {#startup-assembles-outer-zones}
   - Implementation: {{read-snapshot}}, {{capability-check}}, {{claim-proof-binder}}, {{kit-configuration}}
   - Proof: {{source-fixture}}
