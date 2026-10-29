@@ -15,6 +15,7 @@ import { readConfig } from "./read-config.js";
 import { readStoredSnapshot } from "./read-snapshot.js";
 
 const TEST = /\.test\.[mc]?[jt]sx?$/;
+const CHUNK = 64;
 const SKIP = /^(?:node_modules|\..*)$/;
 
 // `kit verify`: run every check the config's `verify` declares, and every test under its tests directories,
@@ -98,29 +99,6 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     reused += planned.filter((item) => item.reused !== undefined).length;
     const due = planned.filter((item) => item.reused === undefined).map((item) => item.check);
     ran += due.length;
-    const scratch = `${store}/scratch/${digest(`${root}\u0000${stopwatch.now()}`)}`;
-    const directories = due.map((_, index) => `${scratch}/${index}`);
-    for (const directory of directories) textFiles.directory(`${directory}/runs`);
-    // Raw V8 coverage also covers the processes a test starts, such as a launcher it runs.
-    const results = await processes.shells(
-      due.map((check, index) => {
-        const directory = directories[index] ?? scratch;
-        const coverage = `${directory}/runs`;
-        return {
-          line: check.test === undefined ? check.line : check.line.replaceAll("{dir}", coverage),
-          env: {
-            NODE_OPTIONS: `--import ${readRecorder.location}`,
-            KIT_READS: directory,
-            KIT_ROOT: root,
-            ...(check.test !== undefined && records ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
-          },
-        };
-      }),
-      root,
-    );
-    const seconds = (stopwatch.now() - started) / 1000;
-    const passes: { readonly check: Check; readonly verdict: Verdict }[] = [];
-    const reports: { readonly test: string; readonly lcov: string[]; readonly v8: string[] }[] = [];
     const filesIn = (directory: string): string[] =>
       textFiles.exists(directory)
         ? textFiles
@@ -128,45 +106,73 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
             .filter((entry) => entry.file)
             .map((entry) => textFiles.read(`${directory}/${entry.name}`))
         : [];
-    due.forEach((check, index) => {
-      const result = results[index];
-      const directory = directories[index] ?? scratch;
-      if (result?.status !== 0) {
-        lines.push(`failed ${check.id}`);
-        const output = `${result?.stdout ?? ""}${result?.stderr ?? ""}`.trimEnd().split("\n").slice(-40).join("\n");
-        failures.set(check.id, `${check.id} failed:\n${output}\n`);
-        return;
-      }
-      lines.push(`passed ${check.id}`);
-      const after = new Map(readPaths(filesIn(directory)).map((path) => [path, filesystem.state(`${root}/${path}`)]));
-      // A path that changed while the check ran was read in one state and is kept in another, so the pass
-      // describes neither: it is reported and not kept.
-      if (!keep || [...after].some(([path, state]) => states.has(path) && states.get(path) !== state)) {
-        unrecorded++;
-        return;
-      }
-      passes.push({ check, verdict: { check: check.id, seconds, states: Object.fromEntries(after) } });
-      if (check.test !== undefined && records)
-        reports.push({ test: check.test, lcov: filesIn(`${directory}/runs`), v8: filesIn(`${directory}/runs/v8`) });
-    });
-    // What each test ran is read against the code it ran, by the named functions extraction finds in it.
-    const ranBy = new Map<string, Readonly<Record<string, readonly string[]>>>();
-    if (reports.length > 0) {
-      const { snapshot } = readStoredSnapshot(root, loaded.config, {
-        reuse: evidenceStore.at(store),
-        engine: toolchain.engine(engineRoot),
+    // What each test ran is read against the code it ran, by the named functions extraction finds in it: read
+    // once, before the tests, and kept as only what that needs.
+    const code =
+      records && due.some((check) => check.test !== undefined)
+        ? (() => {
+            const { snapshot } = readStoredSnapshot(root, loaded.config, {
+              reuse: evidenceStore.at(store),
+              engine: toolchain.engine(engineRoot),
+            });
+            const functions = (snapshot.compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
+            const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
+            return { files: snapshot.files, functions, texts };
+          })()
+        : undefined;
+    // The checks run a chunk at a time, and each chunk's passes are kept and its scratch removed before the next,
+    // so a long gate holds one chunk's output and loses at most one chunk if it stops.
+    for (let from = 0; from < due.length; from += CHUNK) {
+      const chunk = due.slice(from, from + CHUNK);
+      const scratch = `${store}/scratch/${digest(`${root}\u0000${stopwatch.now()}\u0000${from}`)}`;
+      const directories = chunk.map((_, index) => `${scratch}/${index}`);
+      for (const directory of directories) textFiles.directory(`${directory}/runs`);
+      // Raw V8 coverage also covers the processes a test starts, such as a launcher it runs.
+      const results = await processes.shells(
+        chunk.map((check, index) => {
+          const directory = directories[index] ?? scratch;
+          const coverage = `${directory}/runs`;
+          return {
+            line: check.test === undefined ? check.line : check.line.replaceAll("{dir}", coverage),
+            env: {
+              NODE_OPTIONS: `--import ${readRecorder.location}`,
+              KIT_READS: directory,
+              KIT_ROOT: root,
+              ...(check.test !== undefined && records ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
+            },
+          };
+        }),
+        root,
+      );
+      const seconds = (stopwatch.now() - started) / 1000;
+      chunk.forEach((check, index) => {
+        const result = results[index];
+        const directory = directories[index] ?? scratch;
+        if (result?.status !== 0) {
+          lines.push(`failed ${check.id}`);
+          const output = `${result?.stdout ?? ""}${result?.stderr ?? ""}`.trimEnd().split("\n").slice(-40).join("\n");
+          failures.set(check.id, `${check.id} failed:\n${output}\n`);
+          return;
+        }
+        lines.push(`passed ${check.id}`);
+        const after = new Map(readPaths(filesIn(directory)).map((path) => [path, filesystem.state(`${root}/${path}`)]));
+        // A path that changed while the check ran was read in one state and is kept in another, so the pass
+        // describes neither: it is reported and not kept.
+        if (!keep || [...after].some(([path, state]) => states.has(path) && states.get(path) !== state)) {
+          unrecorded++;
+          return;
+        }
+        const verdict: Verdict = { check: check.id, seconds, states: Object.fromEntries(after) };
+        const report =
+          check.test !== undefined && code !== undefined
+            ? testRuns([{ test: check.test, lcov: filesIn(`${directory}/runs`), v8: filesIn(`${directory}/runs/v8`) }], code.files, root, loaded.config, code.functions, code.texts)[0]
+            : undefined;
+        const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran };
+        evidenceStore.write(store, kindOf(check), heldKey(kept), JSON.stringify(kept));
+        recorded++;
       });
-      const functions = (snapshot.compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
-      const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
-      for (const { test, ran: modules } of testRuns(reports, snapshot.files, root, loaded.config, functions, texts)) ranBy.set(test, modules);
+      textFiles.remove(scratch);
     }
-    for (const { check, verdict } of passes) {
-      const modules = check.test === undefined ? undefined : ranBy.get(check.test);
-      const kept: Verdict = modules === undefined ? verdict : { ...verdict, ran: modules };
-      evidenceStore.write(store, kindOf(check), heldKey(kept), JSON.stringify(kept));
-      recorded++;
-    }
-    textFiles.remove(scratch);
   };
 
   if (args.includes("--plan")) {
