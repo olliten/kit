@@ -19,7 +19,7 @@ function copied(from: string, to: string): Record<string, string> {
   }
   return files;
 }
-scratch.write(copied(join(engine, "fixture/tally"), "tally"));
+scratch.write(copied(join(engine, "examples/tally"), "tally"));
 // The known violation: a module no claim names, planted in the copy of the clean example.
 scratch.write({
   "tally/src/substrate/compositions/save.ts": "export function save(text: string): string {\n  return text;\n}\n",

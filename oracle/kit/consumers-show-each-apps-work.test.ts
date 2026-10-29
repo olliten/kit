@@ -48,7 +48,7 @@ test("an app that passes says so; one that fails lists its work under its pin", 
 
 test("the real run checks an app checkout against this Kit and does not fail on the app's findings", async () => {
   const app = join(scratch, "tally");
-  cpSync(join(engine, "fixture/tally"), app, { recursive: true });
+  cpSync(join(engine, "examples/tally"), app, { recursive: true });
   // The known violation: a module no claim names, planted in the copy of the clean example.
   mkdirSync(join(app, "src/substrate/compositions"), { recursive: true });
   writeFileSync(join(app, "src/substrate/compositions/save.ts"), "export function save(text: string): string {\n  return text;\n}\n");

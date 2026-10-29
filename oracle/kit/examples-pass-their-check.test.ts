@@ -5,7 +5,7 @@ import { runCheck } from "../../src/substrate/compositions/check-run.js";
 
 const engine = join(import.meta.dirname, "../..");
 const apps = textFiles
-  .entries(join(engine, "fixture"))
+  .entries(join(engine, "examples"))
   .filter((entry) => entry.directory)
   .map((entry) => entry.name);
 
@@ -14,7 +14,7 @@ test("Kit ships at least one example app", () => {
 });
 
 test.each(apps)("the %s example declares an empty baseline and passes its check", async (app) => {
-  const root = join(engine, "fixture", app);
+  const root = join(engine, "examples", app);
   const baseline = join(root, "kit/debt/legacy.json");
   expect(JSON.parse(textFiles.read(baseline))).toEqual({});
   const result = await runCheck({

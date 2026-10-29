@@ -29,10 +29,11 @@ its config, and its debt in its own baseline.
   - Implementation: {{layout-check}}, {{kit-configuration}}, {{layout-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 
-- {{read-snapshot}} reads the fixture as its files, imports, claims, terms and references through {{filesystem}} and
-  {{compiler}}, and the check finds exactly the fixture's seeded findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
+- {{read-snapshot}} reads an app on disk, the tally example with violations planted in a copy, as its files,
+  imports, claims, terms and references through {{filesystem}} and {{compiler}}, and the check finds exactly the
+  planted findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
   - Implementation: {{dependency-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{claim-proof-binder}}
-  - Proof: {{binding-findings}}
+  - Proof: {{binding-findings}}, {{temporary-project}}, {{text-files}}
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
   - Proof: {{case-inventory}}, {{source-loader}}, {{capability-app}}, {{temporary-project}}
@@ -82,7 +83,7 @@ its config, and its debt in its own baseline.
   debt. These checks use one snapshot of the actual configured repository. · {#kit-checks-itself}
   - Implementation: {{claim-cohesion}}, {{comment-check}}, {{dependency-check}}, {{gate}}, {{kit-configuration}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{read-snapshot}}, {{term-model}}
   - Proof: {{binding-findings}}
-- Each app under `fixture/` is an example Kit governs like any other app: it declares its own `kit/config.md`
+- Each app under `examples/` is an example Kit governs like any other app: it declares its own `kit/config.md`
   and an empty `kit/debt/legacy.json`, and `kit check` passes on it, so an example can't drift from the rules
   it shows. A deliberate violation lives in the proof that needs it, never in an example. · {#examples-pass-their-check}
   - Implementation: {{check-run}}

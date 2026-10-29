@@ -7,7 +7,7 @@ import { sourceLoader } from "../../src/substrate/adapters/source-loader.mjs";
 
 const engine = resolve(import.meta.dirname, "../..");
 // The tally example app, with its own config.
-const fixture = join(engine, "fixture/tally");
+const fixture = join(engine, "examples/tally");
 const config = join(fixture, "kit/config.md");
 
 const refs = (args: string[], input?: string): string => {
