@@ -48,6 +48,16 @@ test("a pass is reused while every path it read holds, and an edit reruns only w
   expect(summary((await verify("--fresh")).stdout)).toMatchObject({ reused: 0, ran: 3 });
 });
 
+test("a path a check only probed holds while it is the same kind, whatever it holds", async () => {
+  const { project, verify } = app();
+  project.write({ "tests/c.test.mjs": 'import { existsSync } from "node:fs";\nif (!existsSync("flag.txt")) process.exit(1);\n', "flag.txt": "on" });
+  expect(summary((await verify()).stdout)).toMatchObject({ failed: 0 });
+  project.write({ "flag.txt": "still on" });
+  expect((await verify("--plan")).stdout).toContain("reuse test:tests/c.test.mjs");
+  project.remove("flag.txt");
+  expect((await verify("--plan")).stdout).toContain("run test:tests/c.test.mjs");
+});
+
 test("a failure is never kept, and exits 1", async () => {
   const { project, verify } = app();
   project.write({ "tests/c.test.mjs": "process.exit(3);\n" });
