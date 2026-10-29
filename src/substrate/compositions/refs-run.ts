@@ -1,9 +1,8 @@
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
-import { DEFAULT_CONFIG } from "../../core/primitives/default-config.js";
-import { configuredKit, kitConfig } from "../../core/compositions/kit-configuration.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { describeRefs, moduleRefs } from "../../core/readings/refs-description.js";
 import { textFiles } from "../adapters/text-files.js";
+import { readConfig } from "./read-config.js";
 import type { TerminalInput } from "../adapters/terminal-input.js";
 
 // The spec files under a folder, by their path from the root.
@@ -21,7 +20,9 @@ function markdown(root: string, folder: string): string[] {
 // The claims a module keeps, for a governed root. As a read hook it takes the opened path from its input and
 // answers in the hook's format, so an agent sees a module's promises when it opens the file.
 export async function moduleClaims(root: string, configPath: string, target: string) {
-  const config = configuredKit(DEFAULT_CONFIG, kitConfig(textFiles.read(configPath)));
+  const loaded = readConfig(configPath);
+  if ("failure" in loaded) throw new Error(loaded.failure.stderr.trim());
+  const { config } = loaded;
   const relative = target.startsWith(`${root}/`) ? target.slice(root.length + 1) : target;
   const topics = markdown(root, config.specRoot).map((file) => ({ file, text: textFiles.read(`${root}/${file}`) }));
   const tests = Object.fromEntries(
@@ -55,6 +56,8 @@ export async function runRefs(
   const event: unknown = hook ? JSON.parse(input.read()) : undefined;
   const toolInput: unknown = typeof event === "object" && event !== null ? Reflect.get(event, "tool_input") : undefined;
   const opened: unknown = typeof toolInput === "object" && toolInput !== null ? Reflect.get(toolInput, "file_path") : undefined;
+  const loaded = readConfig(configPath);
+  if ("failure" in loaded) return loaded.failure;
   const target = hook ? opened : args[0];
   if (typeof target !== "string" || !target)
     throw new Error("Name a module, or a source path, to list the claims it keeps.");

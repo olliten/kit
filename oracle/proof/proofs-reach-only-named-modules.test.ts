@@ -68,12 +68,49 @@ test("unplaced code needs no name", () => {
   ).toEqual([]);
 });
 
-test("naming an oracle helper covers only the helper, not what it composes", () => {
+// Placed oracle modules need the oracle root among the code roots, as an app that places its harness declares.
+const rooted = (parts: Parameters<typeof snapshotOf>[0], srcRoot: string[], oracleRoot = "oracle") => {
+  const snapshot = snapshotOf(parts);
+  return proofScope({ ...snapshot, config: { ...snapshot.config, srcRoot, oracleRoot } }).map((finding) => finding.debtKey);
+};
+
+test("naming a placed module under the proof root names what it reaches, whatever its layer", () => {
+  for (const helper of [
+    "oracle/substrate/compositions/fixture.ts",
+    "oracle/substrate/adapters/fixture.ts",
+    "oracle/core/readings/fixture.ts",
+  ])
+    expect(
+      rooted(
+        {
+          files: [helper, "src/core/readings/total.ts", "src/core/readings/round.ts", test_],
+          imports: [`${test_} > ${helper}`, `${helper} > src/core/readings/total.ts`, "src/core/readings/total.ts > src/core/readings/round.ts"],
+          claims: [claim(["fixture"])],
+        },
+        ["oracle", "src"],
+      ),
+    ).toEqual([]);
+});
+
+test("a named reading under another code root still names only itself", () => {
   expect(
-    keys({
-      files: ["oracle/substrate/compositions/fixture.ts", "src/core/readings/total.ts", test_],
-      imports: [`${test_} > oracle/substrate/compositions/fixture.ts`, "oracle/substrate/compositions/fixture.ts > src/core/readings/total.ts"],
-      claims: [claim(["fixture"])],
-    }),
+    rooted(
+      {
+        files: ["lib/core/readings/fixture.ts", "src/core/readings/total.ts", test_],
+        imports: [`${test_} > lib/core/readings/fixture.ts`, "lib/core/readings/fixture.ts > src/core/readings/total.ts"],
+        claims: [claim(["fixture"])],
+      },
+      ["lib", "src"],
+    ),
   ).toEqual(["R4:proof-scope:spec/topic.md:total-sums:src/core/readings/total.ts"]);
+});
+
+test("the proof root is the configured one, not whichever code root holds the module", () => {
+  const test = "proofs/topic/total-sums.test.ts";
+  const parts = {
+    files: ["proofs/core/readings/fixture.ts", "src/core/readings/total.ts", test],
+    imports: [`${test} > proofs/core/readings/fixture.ts`, "proofs/core/readings/fixture.ts > src/core/readings/total.ts"],
+    claims: [claim(["fixture"])],
+  };
+  expect(rooted(parts, ["proofs", "src"], "proofs")).toEqual([]);
 });

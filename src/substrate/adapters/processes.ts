@@ -18,6 +18,8 @@ export interface Processes {
   node(): string;
 }
 
+const KEPT = 64 * 1024;
+
 function shell(
   line: string,
   cwd: string,
@@ -25,10 +27,11 @@ function shell(
 ): Promise<{ stdout: string; stderr: string; status: number | null }> {
   return new Promise((resolve) => {
     const child = spawn(line, { cwd, shell: true, env: { ...process.env, ...env } });
+    // Only the end of what a command prints is kept, so thousands of commands that print much hold little.
     let stdout = "";
     let stderr = "";
-    child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString("utf8")));
-    child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString("utf8")));
+    child.stdout.on("data", (chunk: Buffer) => (stdout = (stdout + chunk.toString("utf8")).slice(-KEPT)));
+    child.stderr.on("data", (chunk: Buffer) => (stderr = (stderr + chunk.toString("utf8")).slice(-KEPT)));
     child.on("close", (status) => resolve({ stdout, stderr, status }));
     child.on("error", (error) => resolve({ stdout, stderr: stderr + error.message, status: null }));
   });

@@ -26,6 +26,6 @@ export function kitCheckPaths(
   return {
     root,
     configPath: config === undefined ? at(engineRoot, "self-config.md") : at(cwd, config),
-    baselinePath: baseline === undefined ? at(engineRoot, "self-debt/legacy.json") : at(cwd, baseline),
+    baselinePath: baseline === undefined ? at(engineRoot, "self-debt/legacy") : at(cwd, baseline),
   };
 }

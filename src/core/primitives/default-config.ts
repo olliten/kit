@@ -1,5 +1,7 @@
 // The config an app declares; every root is relative to the app root the snapshot was read from.
 export interface KitConfig {
+  // The app's name, as Kit's output names it.
+  readonly app?: string;
   readonly srcRoot: string | readonly string[];
   readonly oracleRoot: string;
   readonly specRoot: string;
@@ -36,9 +38,16 @@ export interface KitConfig {
   readonly ignore?: readonly string[];
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
-  // Where `kit runs` records which named functions each test ran, and the app's command that runs one test file
-  // `{test}` and writes an LCOV report into the directory `{dir}`. Declaring it turns on the rules that read it.
-  readonly runs?: { readonly record: string; readonly each: string };
+  // What `kit verify` requires: whole-tree checks, each one command, run with the tests or after them, and the
+  // groups of tests, in declared order. A test command that writes the test's LCOV report into the directory
+  // `{dir}` keeps what each test ran, and when every group's does, turns on the rules that read it.
+  readonly verify?: {
+    readonly checks: readonly { readonly id: string; readonly command: string; readonly after?: "tests" }[];
+    readonly tests?: readonly TestGroup[];
+    // The ref prefix on `origin` under which kept passes are shared with every other clone, one ref per runtime
+    // and day.
+    readonly share?: string;
+  };
   readonly layerNames?: {
     readonly primitives: string;
     readonly readings: string;
@@ -76,3 +85,12 @@ export const DEFAULT_CONFIG: KitConfig = {
   anchor: "\\{#[\\w-]+\\}",
   debtMarkers: ["TODO", "FIXME", "XXX", "HACK"],
 };
+
+// One group of an app's tests: the command that runs one test file `{test}`, for each test under the directories
+// `under` lists that the group takes. A group naming modules in `reaching` takes the tests whose imports reach
+// one of them; one naming none takes the tests no earlier group took.
+export interface TestGroup {
+  readonly command: string;
+  readonly under: readonly string[];
+  readonly reaching?: readonly string[];
+}

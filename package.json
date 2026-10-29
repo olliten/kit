@@ -8,9 +8,9 @@
     "check": "node scripts/kit-check.mjs",
     "refs": "node scripts/kit-refs.mjs",
     "consumers": "node scripts/kit-consumers.mjs",
-    "runs": "node scripts/kit-runs.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify": "node scripts/kit-verify.mjs"
   },
   "dependencies": {
     "js-yaml": "^4.3.0",

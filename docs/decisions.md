@@ -497,3 +497,163 @@ without naming the app.
 - **Cost:** recording runs each test file in its own process: about 2 minutes for Tuck and 5 for Kit. The check
   itself stays static and fast.
 
+
+## 2026-10-29 · A config declares only the keys Kit reads
+
+- **Decision:** an unknown key at any level of a config is an error naming its full path, and every config error
+  answers the command on stderr with exit code 1. `app` names the app. Apps' plain-Node scripts load the config
+  readers through `configuration-runner.mjs`.
+- **Why:** Kit ignored keys it didn't read, so an app could believe it had declared something Kit never
+  enforced. Leeloo's config carried five such keys (`zones`, `tests`, `state`, `probe-port`, `trusted-base`)
+  from an older Kit. A config error is not a finding because a baseline must never be able to hold it.
+- **For apps:** delete keys Kit doesn't read; `kit consumers` names them. Scripts that imported the loaders
+  removed in #59 import `configuration-runner.mjs`.
+
+## 2026-10-29 · One runs record per test
+
+- **Decision:** `kit runs` writes one record per test into the `runs.record` directory. A record holds what the
+  test ran and the digest of every file it depends on: the test, the placed files its code reaches and the
+  modules it ran. A check reads it while each digest holds and the test reaches nothing new; `--stale` records
+  exactly the tests whose records don't, and named tests record alone.
+- **Why:** the single record named every placed module and test, so any edit staled it whole, every agent
+  rewrote one 325 KB file, and parallel work conflicted on it. Holding only the modules a test ran would miss
+  an edit to a module it imports but never ran, such as a constant that turns on a branch, so the record holds
+  its reach too.
+- **Cost:** about 100 small committed files for Kit. Re-recording one test takes about 30 seconds, against about
+  5 minutes for all of them.
+- **For apps:** `runs.record` names a directory; delete the old file and run `kit runs`.
+
+## 2026-10-29 · Facts are kept per file, keyed on what they depend on
+
+- **Decision:** extraction stores each file's compiler facts and each test's reach in a store beside the
+  repository, one file per key, and reuses an entry while its key matches. A file's key is its project's key and
+  the content of every file its imports reach; a project's key is the Kit, the compiler, the config, the
+  project's options, its declaration files, its files declaring globals and its registered adapters. `kit check
+  --fresh` reads without the store. The whole-snapshot cache, its trace replay and `--fresh-compare` are gone,
+  and each project's program is released once its facts are read.
+- **Why:** the cache reused a snapshot only when nothing it read had changed, so any edit re-extracted the whole
+  app, and on Leeloo the cache's single JSON string of the snapshot exceeded the default heap. Leeloo's four
+  programs were all held to the end: 3.1 GB of heap after extraction, 1.1 GB once released. Keying on content
+  rather than replaying reads makes a key a value, which worktrees share and a store can hold without an index.
+- **The order rule:** the compiler orders a union's parts and a type's members by when it created them, which
+  depends on what it checked first, so a file walked alone could record them differently from a full walk. Such
+  lists are stored sorted, and an export's printed type, which no check read, is no longer recorded.
+- **Measured on Kit:** `kit check` with nothing changed takes 1.6 s against 8 s; one edited leaf re-extracts 7
+  files and 5 tests.
+
+## 2026-10-29 · A pass is kept with what its run read
+
+- **Decision:** `kit verify` runs the checks and tests an app declares under `verify`, each test file in its own
+  process, with a preloaded recorder that notes every path inside the app the run reads, lists or probes,
+  including in its threads and child processes. A pass is kept with the state of those paths, and reused while
+  they all still hold.
+- **Why:** a static key misses what a test reads that isn't a module, such as a config or a fixture, and on
+  Leeloo the static closure of a test is a third of the app. Observing reads covers modules and data alike with
+  no declarations, and is the rule the runs records already follow. Keeping one entry per distinct set of states
+  lets two worktrees, or an edit and its revert, each keep theirs.
+- **Measured on Kit (4 cores):** cold 172 s; nothing changed 1 s; one leaf edited, 14 of 103 checks rerun in
+  33 s; the edit reverted, all reused in 0.08 s.
+- **Not covered:** inputs no file holds (network, clock, environment variables). Each test runs in its own
+  process, so a cold run costs more than one vitest run; folding `kit runs` into it is next.
+
+## 2026-10-29 · A baseline is one file per finding path
+
+- **Decision:** `kit check --baseline` may name a directory holding one file per finding path; a `.json` file is
+  read as before. Kit's own baseline is `self-debt/legacy/`, empty.
+- **Why:** Leeloo's single baseline held 3,244 keys in 1.2 MB, so every agent paying down debt edited one shared
+  file, the conflict the runs record had. The baseline is a ledger of accepted debt, so only its storage changes:
+  the ratchet reads the files as one record.
+
+## 2026-10-29 · Facts key on what an import lends: its outline
+
+- **Decision:** a file's facts key on its own content and on the outline of every file its imports reach: the
+  text without the bodies of functions whose return type is declared. A test's reach still keys on content,
+  since it follows bodies.
+- **Why:** no recorder reads past another file's declarations except test reach, and a declared return type
+  hides the body from every importer. Keying on full content made one edit to Leeloo's widely used
+  `civil-date.ts` recompute 2,614 of 3,777 files' facts; a body-only edit now recomputes 4. The outline is
+  syntax alone, so it is deterministic and cheap, unlike emitted declarations, which depend on options and on
+  the order the compiler checked in.
+- **Next:** test reach is now most of an edit's cost (1,524 of 1,857 reaches recomputed for that edit).
+
+## 2026-10-29 · A test's reach holds while the files it followed hold
+
+- **Decision:** a test's reach keys on the test and the outlines of what it imports, as facts do, and names
+  each file whose code it followed, with that file's digest; it is reused only while each still has it.
+- **Why:** keying on the content of the whole import closure recomputed a reach for an edit to a file the test
+  imports but never follows. On Leeloo a body edit to a file of median use now recomputes 3 reaches instead of
+  21, and an edit to the widely used `civil-date.ts` 1,246 instead of 1,524 (30 s instead of 42 s). Naming
+  each body followed instead of each file was measured too: for a random body, the tests that follow it are
+  nearly all the tests that follow its file, while the reach took three times as long.
+
+## 2026-10-29 · One rule for what Kit keeps, and nothing kept in Git
+
+- **Decision:** a gate result and a test's reach are each kept with the state of every path they were read
+  from, one entry per set of states, and hold while each path still has its state. What a test ran is kept
+  with its pass by `kit verify`, under the one test command, which writes coverage into `{dir}`; `kit check`
+  reads it from the passes that still hold. The committed runs records, `kit runs`, the `runs` section and the
+  earlier verification planner, partitioner, runner and declared-input keying are deleted.
+- **Why:** committed runs records were most of every commit (102 of 113 files, 36 of 46, 35 of 42), so
+  parallel agents would conflict on them, and they kept a second freshness rule. A reach kept under one key
+  per test made two worktrees overwrite each other. Nothing launched the earlier planner once `kit verify`
+  observed what each check reads.
+- **Cost:** `kit check` alone on a fresh clone waits on the two rules that read what tests ran until `kit verify`
+  has run once, and says so.
+
+## 2026-10-29 · A pass holds while the code its test ran holds
+
+- **Decision:** a file a test only loaded, whose functions its coverage lists, is kept as its text with the
+  bodies of the outermost functions the test never ran left out; a path a check only probed is kept by its kind.
+  A file also read as text is kept whole. `kit verify` runs a gate's checks 64 at a time and keeps each chunk's
+  passes as it ends.
+- **Why:** on Leeloo, file grain reruns every test that loaded an edited file. A preview over 950 of its 1,865
+  test files, for one-line edits inside a function of a placed module: `civil-date.ts` 369 tests rerun at file
+  grain, 90 by the functions run; `retrieval.ts` 139 to 2; `attachment-migration.ts` 113 to 7;
+  `google-claims.ts` 110 to 6. Legacy files keep their own numbers until they are placed, which is the goal.
+  The first cold run on Leeloo held every test's coverage until the end and ran out of memory after 69 minutes,
+  keeping nothing; hence the chunks.
+- **Limits:** a test that reads an unrun function's text through running code, such as
+  `Function.prototype.toString`, is not seen. Leeloo's test workspace reads every test root's files when vitest
+  starts, so under `kit verify` every test would depend on every file until it computes its tiers once.
+
+## 2026-10-29 · Kit picks each test's group by what its imports reach
+
+- **Decision:** `verify.tests` may list groups, each a command, its directories and optionally `reaching`, the
+  modules whose reach selects it. A test runs in the first group whose modules its import closure reaches, else in
+  the first that names none; a test no group takes is named and counted, not run. `kit check` makes the same
+  choice to find each test's pass, through one core reading over the snapshot's import edges.
+- **Why:** Leeloo chose a unit or browser tier in its test runner's workspace config, which read every file
+  under every test root at each start, so under `kit verify` each test's pass would have depended on the whole
+  tree. Kit already holds the import edges, and the group's command is part of what a pass is kept under, so a test
+  that comes to reach a browser harness reruns under the browser command without anything reading more.
+- **Evidence:** on Leeloo, with the two boot harnesses as `reaching`, Kit's unit group holds 1083 tests where the
+  app's own rule holds 1073. Eleven are browser there only by an `e2e` name and reach neither boot harness; they
+  drive a shared browser module instead, and naming it too takes all eleven but also six gate meta-tests that
+  import the legacy workspace file, which imports it. One test goes the other way, through an import Kit's
+  snapshot reads from a fixture string. No name-based selection was added: the app can name the module its e2e
+  tests use once the workspace file is gone.
+
+## 2026-10-29 · Compiler reads are no longer recorded
+
+- **Decision:** the compiler adapter reads through the compiler's own system and records nothing. Extraction keeps
+  only the filesystem reads it takes file digests from.
+- **Why:** the record served the snapshot cache's trace replay, which is gone, yet every resolution probe was
+  still kept to the end of the run. On Leeloo with its packages installed that was 646,000 entries, 120 MB of
+  heap at the peak. A cold `kit check` now peaks at 2,387 MB of live heap, from at least 2,512 MB (which ran out
+  of memory under a 2,560 MB heap), and takes 225 s instead of 238 s.
+- **Limits:** a cold check of Leeloo still needs about 2.5 GB of heap; with nothing changed it needs under 2 GB.
+  Its main project checked by `tsc` alone holds 1.9 GB, and Kit's walk, diagnostics and test reaches use the
+  same checker on top of what earlier projects left, so fitting 2 GB means reading a project in more than one
+  program.
+
+## 2026-10-29 · Passes are shared through refs on origin
+
+- **Decision:** with `verify.share` declared, `kit verify` reads the passes on `origin`'s refs
+  `<share>/<day>-<runtime>` for today and yesterday into the local store before planning, and afterwards adds
+  every pass it kept or reused to today's ref as one commit pushed without force; a lost race reads again and
+  adds on top. Failing to share is reported and never fails the gate. Kit's own config does not declare it yet.
+- **Why:** each agent's cloud session starts with an empty store beside its clone and paid a full cold run. A
+  ref on `origin` reaches every lane with nothing but git, and Leeloo's `test-cache` refs already run this
+  protocol: anyone with push access may publish, and a nightly `kit verify --fresh` is the honesty check. A
+  pass's path names its command, runtime and the states it holds, so racing writers converge. Republishing the
+  passes a run reused keeps a day's ref whole, so reading two days is enough.

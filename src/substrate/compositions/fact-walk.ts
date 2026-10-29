@@ -8,12 +8,17 @@ export interface FactRecorder {
   readonly end?: (file: FileScope) => void;
 }
 
-// One walk over every checked source file of a program visits each node once for every recorder; a node is
-// runtime code unless it sits in a type, a type declaration or an import or export declaration.
-export function factWalk({ program, local, source }: ProgramScope, recorders: readonly FactRecorder[]): void {
+// One walk over the checked source files of a program, or only those given, visits each node once for every
+// recorder; a node is runtime code unless it sits in a type, a type declaration or an import or export
+// declaration.
+export function factWalk(
+  { program, local, source }: ProgramScope,
+  recorders: readonly FactRecorder[],
+  only?: ReadonlySet<string>,
+): void {
   for (const sf of program.getSourceFiles()) {
     const path = local(sf.fileName);
-    if (!source.has(path)) continue;
+    if (!source.has(path) || (only !== undefined && !only.has(path))) continue;
     const file = fileScope(sf, path);
     const visit = (node: ts.Node): void => {
       let runtime = true;

@@ -3,6 +3,33 @@
 What `kit/config.md` can declare beyond the basics in the README, and the portable tools Kit ships. The spec in
 `spec/` says what holds; this page says how to ask for it.
 
+## Keys
+
+A config's YAML fence declares only these keys. Any other key, at any level, is an error that names it, such as
+`adapters[3].globalz`. Every config error answers the command on stderr with exit code 1, naming the file.
+
+| Key | What it declares |
+| --- | --- |
+| `app` | The app's name, as Kit's output names it. |
+| `roots.src`, `roots.spec`, `roots.oracle` | The code roots (one path or a list), the specification root and the proof root. |
+| `terms` | The terms file; `spec/terms.md` when absent. |
+| `claim-separator` | The text that separates a claim's promise from its anchor, such as `·`. |
+| `ignore` | Relative paths the walk never lists or reads; an import into one is an error. |
+| `exceptions` | Exact executable entrypoints outside every zone. |
+| `packages` | Package contracts: `name`, `capabilities`, and optionally `entrypointExports`. |
+| `adapters` | Adapter registrations: `module`, `export`, `capability`, `kind`, `zones`, and optionally `contract.type`, `primitives`, `globals`, `packages`. |
+| `dependency-exclusions` | Separations of local code: `from`, `to`, `imports`, `reach`. |
+| `layout.legacy` | Existing code outside the code roots, kept as location debt. |
+| `legacy-zones` | Rows of `zone` with either a `root` or a list of `files`, never both. |
+| `legacy-areas` | Spec files in an older claim grammar. |
+| `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
+| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the tests: one group, or a list of groups each taking the tests whose imports reach a module it lists in `reaching`, or with no `reaching` the tests no earlier group took; a group is the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
+| `verify.share` | A ref prefix on `origin`, such as `refs/heads/kit-passes`, under which `kit verify` shares kept passes with every other clone. |
+
+An app's plain-Node scripts read the config the way the commands do through
+`src/substrate/compositions/configuration-runner.mjs`: `await configuration()` answers `kitConfig`,
+`configuredKit` and `testRoots`.
+
 ## Claims as table rows
 
 A claim may be a table row. Each data row is one claim, with its anchor closing the final cell:
@@ -105,42 +132,112 @@ home, such as Node built-in declarations; several homes retain uncertainty.
   accounting as location debt. Declaring a layout also checks that source, tests and specs sit in their roots.
 - `legacy-zones`: the zone a legacy prefix, or an exact list of legacy files, actually belongs to, so imports
   across placement keep zone boundaries.
+- A baseline is `kit check --baseline <path>`: a file ending `.json` holding every debt key, or a directory such as
+  `kit/debt/legacy/` holding one file per finding path, named by the path with `/` replaced by `+`. A directory
+  lets agents paying down debt on different modules edit different files; `--tighten` rewrites only the files
+  whose keys changed and removes emptied ones. To move a single file into a directory, write each finding path's
+  keys to its own file and delete the old one.
 - `legacy-areas`: spec files in an older format, outside the topic shape until they gain Implementation rows.
-- `legacy-test-roots`: test directories the runner should still discover; read by `testRoots()` in
-  `src/core/readings/test-roots.ts`.
+- `legacy-test-roots`: test directories the runner should still discover; read by `testRoots()`, which apps
+  load through the configuration runner.
+- A `legacy-zones` row:
 
-## Portable verification
+  ```yaml
+  legacy-zones:
+    - { root: src/client/, zone: shell }
+    - { files: [src/boot.ts], zone: substrate }
+  ```
 
-`src/substrate/compositions/verification-runner.mjs` exports `verification()`, which loads the pure evidence planner and
-duration-aware partitioner, and `runVerification(checks, io)`, which runs a dependency graph with supplied effects
-and resource capacity. Checks declare stable identities, input fingerprints, execution contracts and required
-strength; the caller supplies discovery, input tracking, evidence storage and policy.
+## Verify
 
-For checks with declared filesystem inputs, `declaredInputFiles` in
-`src/substrate/adapters/declared-input-files.ts` resolves files, suffix-filtered trees and path-kind probes into an
-input key. It keys only declared inputs: it does not discover a check's reads or choose its cache policy.
+```yaml
+verify:
+  checks:
+    - id: typecheck
+      command: npx tsc --noEmit -p tsconfig.json
+    - id: check
+      command: node scripts/kit-check.mjs
+      after: tests
+  tests:
+    command: npx vitest run {test} --coverage.enabled --coverage.all=false --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
+    under: oracle/
+```
+
+`kit verify` runs each check, and each test file under `under` alone, in parallel, with a recorder preloaded
+through `NODE_OPTIONS` that notes every path inside the app the run reads, lists or probes, in the run's
+processes, threads and child processes. A pass is kept beside the repository with the state of each of those
+paths, under the command, the Node version and the lockfile; the next `kit verify` reuses it while every path
+is in the same state. A failure is never kept. Worktrees of one repository share what is kept.
+
+The tests may instead be a list of groups, each with its own command, such as a browser tier and a unit tier:
+
+```yaml
+  tests:
+    - command: npx vitest run --config browser.config.ts {test}
+      under: [oracle/, spec/]
+      reaching: [spec/harness/full-stack.ts]
+    - command: npx vitest run {test}
+      under: [oracle/, spec/]
+```
+
+A test runs in the first group whose `under` holds it and whose `reaching` lists a module its imports reach,
+directly or through the files they import, and otherwise in the first group whose `under` holds it that lists
+none. A module is named by its path inside the app, with or without its extension. The imports are those `kit
+check` reads, type-only ones included, so the choice is Kit's own and reads no test runner's configuration.
+Since the command is part of what a pass is kept under, a test that comes to reach another group's module runs
+again, and `kit check` looks for each test's pass under the command the same choice gives it. A test no group
+takes is not run: `kit verify` prints `unassigned test:<path>` and counts it in its summary, and `--plan` names
+each test's group as `in tests[<index>]`. The rules that read what tests ran apply when every group's command
+writes coverage.
+
+A path a run only probed is kept by whether it is absent, a file or a directory. A file a test only loaded, and
+whose functions its coverage lists, is kept as the test ran it: its text with the bodies of the outermost
+functions the test never ran left out, so an edit inside one of those reruns nothing. A file the test also reads
+as text, as a test of a checker reads its sources, is kept whole.
 
 ## Runs
 
-```yaml
-runs:
-  record: kit/runs.json
-  each: node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}
-```
+When the test command writes the test's LCOV report into `{dir}`, `kit verify` replaces `{dir}` with a directory
+of the test's own and sets `NODE_V8_COVERAGE`, so processes the test starts count too, and keeps with each
+test's pass the named functions of each placed module it ran. With vitest, that is the command above, with
+`@vitest/coverage-v8` installed; `--coverage.all=false` keeps coverage from reading every source file, which
+would make each test's pass depend on the whole tree. With `node --test`, it is `node --test
+--experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}`.
 
-`kit runs` runs each test file under the proof root alone with `each`, with `{test}` replaced by the file and
-`{dir}` by a directory of its own, where the command writes an LCOV report. It also sets `NODE_V8_COVERAGE`, so
-processes a test starts count too. The record holds every placed module's and test's digest and, per test, the
-named functions of each placed module it ran. Commit it; `kit check` reads it while every digest still matches,
-and reports `runs-stale` until `kit runs` is run again.
-
-With vitest, `each` is `npx vitest run {test} --coverage.enabled --coverage.provider=v8
---coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}`, with
-`@vitest/coverage-v8` installed.
-
-Two rules read the record, and their findings are debt that may only shrink:
+`kit check` reads what each test under the proof root ran from its pass while it still holds. Nothing is
+committed. While any such test has no pass that holds, the two rules that read what tests ran wait, and the
+check says how many tests they wait for; `kit verify` runs `kit check` after the tests, so the gate always has
+them. Their findings are debt that may only shrink:
 
 - `ungoverned-function`: a named function no test of a claim naming its module runs.
 - `excerpt-cohesion`: a module holding, for two or more claims, code that only that claim runs and that no
   code other claims run holds. Adapters are exempt.
 
+A check with `after: tests`, such as `kit check`, runs once the tests' passes are kept, and is not kept itself
+when a test's pass was not.
+
+## Sharing passes
+
+```yaml
+verify:
+  share: refs/heads/kit-passes
+```
+
+With `share`, clones that start with an empty store, such as agents' cloud sessions, reuse each other's passes
+through `origin`. Each runtime and UTC day has one ref, `<share>/<YYYY-MM-DD>-<runtime digest, 16 characters>`,
+whose tree holds each pass at `verdicts/<kind>/<key>.json`, the text the local store holds. Before planning,
+`kit verify` fetches today's and yesterday's ref and keeps every pass the local store lacks; a file that is not
+a pass kept under its own key is ignored. After the run it adds every pass it kept or reused that today's ref
+lacks, as one commit on the tip pushed without force, so a day's ref holds the passes still in use. A push the
+remote refuses because the tip moved reads the ref again and adds on top, up to four times; a path already
+there stays. No `origin`, no network or a push refused for another reason is said on its own line, `Shared no
+passes:` or `Published no passes:`, and the gate goes on with the local store. The summary counts `shared:
+{read, published}`. `--plan` reads and never publishes; `--fresh` and `--no-share` neither read nor publish.
+
+Anyone who can push to `origin` can publish a pass, so a shared pass is as trustworthy as the people with push
+access; a scheduled `kit verify --fresh` checks that every kept pass still passes. The refs only grow within a
+day, and old days' refs are never read again: delete them on `origin` as you like.
+
+`kit verify --plan` lists what would run, `--fresh` runs everything and keeps nothing, and the exit code is 1
+when a check fails. A check that depends on something no file holds, such as the network, the clock or an
+environment variable, should not be a reused check.

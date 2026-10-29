@@ -58,7 +58,8 @@ a claim depends on are named in it, so each module's claims are found from its n
 - A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. Only
   the modules of only types need no name: a placed oracle module, such as a generator, fixture, driver or
   runner, is named in the claim's Proof like any other, what it reaches counts as the test's, and naming a
-  composition names what it composes. A module a claim's tests reach without its name is
+  composition names what it composes. Naming a placed module under the proof root, whatever its layer, names
+  what it reaches, since a Proof name is about the harness, not the design. A module a claim's tests reach without its name is
   debt: the baseline holds it, it may only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
   - Implementation: {{proof-scope}}, {{proof-reach}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}
@@ -71,14 +72,14 @@ a claim depends on are named in it, so each module's claims are found from its n
 
 ## Runs
 
-- `kit runs` runs each test file alone with the app's own test command, which writes an LCOV report of the
-  named functions it ran; raw V8 coverage adds the processes a test starts, where a function's reported name and
-  line match the source. It records for every placed module which of its named functions each test ran,
-  with the digest of every placed module and test it ran over. A check reads the record only while each of
-  those files still has its recorded digest; a missing or stale record is a finding until `kit runs` is run
-  again. · {#runs-are-recorded-per-test}
-  - Implementation: {{runs-run}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{runs-record}}, {{processes}}, {{text-files}}
-  - Proof: {{fixture-snapshot}}, {{temporary-project}}
+- `kit verify`, given a test command that writes the test's LCOV report into `{dir}`, keeps with each test's pass
+  the named functions of each placed module the test ran; raw V8 coverage adds the processes a test starts, where
+  a function's reported name and line match the source. `kit check` reads them from each test's pass while it
+  still holds. While a test under the proof root has none, the rules that read what tests ran wait, and the check
+  says how many tests they wait for. A placed module no test ran is not missing: its functions are simply
+  unrun. · {#runs-are-kept-with-each-pass}
+  - Implementation: {{verify-run}}, {{check-run}}, {{held-state}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{verdict}}, {{verdict-reuse}}, {{evidence-store}}, {{filesystem}}, {{processes}}, {{text-files}}
+  - Proof: {{temporary-project}}
 - Every named function of a placed module is run by a test of a claim that names the module, so each piece of
   code is governed by a claim that promises something about it. A named function none of those claims runs is
   debt: proved only incidentally by another claim, or by none. A module of only types has no functions, and an

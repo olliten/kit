@@ -10,6 +10,6 @@ Kit is built in its own structure; its config is `self-config.md`. Work in the t
 
 Reading a module shows the claims it keeps; `npm run refs -- <module>` lists them too.
 
-Before every push, `npm run typecheck` and `npm test` pass, `npm run runs` records which functions each test runs,
-and `npm run check` passes. The check carries no legacy
-baseline, so any finding is yours to fix.
+Before every push, `npm run verify` passes. It runs the typecheck, every test, recording which functions each
+runs, and then `npm run check`, reusing each pass whose run read nothing that has changed since. The check
+carries no legacy baseline, so any finding is yours to fix.

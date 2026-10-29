@@ -16,7 +16,7 @@ test.each([
   { ...roots, src: "" },
 ])("unsupported root declaration %j cannot produce a partially governed config", (declared) => {
   expect(() => configuredKit(DEFAULT_CONFIG, { roots: declared, terms: "spec/terms.md" })).toThrow(
-    /root.*single paths|single paths.*root/,
+    /root.*single paths|single paths.*root|roots\.(code|extra) is not a key Kit reads/,
   );
 });
 

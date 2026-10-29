@@ -14,11 +14,12 @@ export interface ClaimReach {
   readonly whole: ReadonlySet<string>;
 }
 
-export function claimReach(snapshot: Snapshot): Map<string, ClaimReach> {
-  const { oracleRoot, specRoot } = snapshot.config;
+type Uses = { reached: Set<string>; whole: Set<string>; declarations: Set<string> };
+
+function testUses(snapshot: Snapshot): { uses: Map<string, Uses>; reach: (test: string) => Set<string> } {
   const edges = new Map<string, string[]>();
   for (const { from, to } of snapshot.imports) edges.set(from, [...(edges.get(from) ?? []), to]);
-  const uses = new Map<string, { reached: Set<string>; whole: Set<string>; declarations: Set<string> }>();
+  const uses = new Map<string, Uses>();
   for (const project of snapshot.compiler?.projects ?? [])
     for (const { file, reached, whole, declarations = [] } of project.proofs ?? []) {
       const known = uses.get(file) ?? { reached: new Set<string>(), whole: new Set<string>(), declarations: new Set<string>() };
@@ -48,6 +49,12 @@ export function claimReach(snapshot: Snapshot): Map<string, ClaimReach> {
     follow([...seen], facts);
     return seen;
   };
+  return { uses, reach };
+}
+
+export function claimReach(snapshot: Snapshot): Map<string, ClaimReach> {
+  const { oracleRoot, specRoot } = snapshot.config;
+  const { uses, reach } = testUses(snapshot);
   const claims = new Map<string, { files: Set<string>; declarations: Set<string>; whole: Set<string> }>();
   for (const file of snapshot.files) {
     if (file.type !== "test") continue;

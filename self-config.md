@@ -11,9 +11,16 @@ roots:
 terms: spec/terms.md
 claim-separator: "·"
 legacy-areas: []
-runs:
-  record: self-debt/runs.json
-  each: npx vitest run {test} --coverage.enabled --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
+verify:
+  checks:
+    - id: typecheck
+      command: npx tsc --noEmit -p tsconfig.json
+    - id: check
+      command: node scripts/kit-check.mjs
+      after: tests
+  tests:
+    command: npx vitest run {test} --coverage.enabled --coverage.all=false --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
+    under: oracle/
 exceptions:
   - oracle/code-structure/imports-point-inward.test.ts
   - oracle/code-structure/imports-have-no-cycles.test.ts
@@ -21,7 +28,7 @@ exceptions:
   - oracle/code-structure/window-authority-stays-in-shell.test.ts
   - scripts/kit-check.mjs
   - scripts/kit-consumers.mjs
-  - scripts/kit-runs.mjs
+  - scripts/kit-verify.mjs
   - scripts/kit-refs.mjs
 dependency-exclusions:
   - from: src
@@ -55,18 +62,6 @@ packages:
   - name: node:v8
     capabilities: []
 adapters:
-  - module: src/substrate/adapters/declared-input-files
-    export: declaredInputFiles
-    capability: filesystem
-    kind: external
-    zones: [substrate]
-    contract: {type: DeclaredInputFiles}
-  - module: src/substrate/adapters/declared-input-files
-    export: declaredInputFiles
-    capability: process-environment
-    kind: external
-    zones: [substrate]
-    contract: {type: DeclaredInputFiles}
   - module: oracle/substrate/adapters/temporary-project
     export: temporaryProjects
     capability: filesystem
@@ -109,7 +104,7 @@ adapters:
     kind: external
     zones: [substrate]
     globals: [process]
-    packages: [vite, vite-node]
+    packages: [vite, vite-node, node:child_process, node:v8]
   - module: src/substrate/adapters/text-files
     export: textFiles
     capability: filesystem
@@ -124,20 +119,49 @@ adapters:
     contract: {type: Processes}
     globals: [process]
     packages: [node:child_process]
-  - module: src/substrate/adapters/snapshot-store
-    export: snapshotStore
+  - module: src/substrate/adapters/git-refs
+    export: gitRefs
+    capability: processes
+    kind: external
+    zones: [substrate]
+    contract: {type: GitRefs}
+    globals: [process, Buffer]
+    packages: [node:child_process]
+  - module: src/substrate/adapters/calendar
+    export: calendar
+    capability: calendar
+    kind: external
+    zones: [substrate]
+    contract: {type: Calendar}
+    primitives: [clock]
+  - module: src/substrate/adapters/evidence-store
+    export: evidenceStore
     capability: filesystem
     kind: external
     zones: [substrate]
-    contract: {type: SnapshotStore}
-    globals: [Buffer, process]
-    primitives: [clock, randomness]
-  - module: src/substrate/adapters/snapshot-store
-    export: snapshotStore
+    contract: {type: EvidenceStore}
+    globals: [process]
+    primitives: [clock]
+  - module: src/substrate/adapters/evidence-store
+    export: evidenceStore
     capability: process-environment
     kind: external
     zones: [substrate]
-    contract: {type: SnapshotStore}
+    contract: {type: EvidenceStore}
+  - module: src/substrate/adapters/toolchain
+    export: toolchain
+    capability: filesystem
+    kind: external
+    zones: [substrate]
+    contract: {type: Toolchain}
+    globals: [process]
+  - module: src/substrate/adapters/read-recorder.mjs
+    export: readRecorder
+    capability: read-recording
+    kind: external
+    zones: [substrate]
+    globals: [process]
+    packages: [node:module, node:worker_threads]
   - module: src/substrate/adapters/terminal-input
     export: terminalInput
     capability: filesystem
@@ -165,3 +189,6 @@ on what they are given, so they are declared pure.
 
 The temporary-project adapter owns temporary directories and writes. Locating the operating system's
 temporary directory uses process-environment authority; `node:os` is not declared pure.
+
+The git-refs adapter runs `git` against `origin` alone, so it holds the processes capability as the processes
+adapter does; the calendar reads the wall clock only to name the day a shared pass is published under.

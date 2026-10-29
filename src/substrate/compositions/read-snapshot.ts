@@ -14,21 +14,10 @@ import { entrypointOf, legacyCodeOf, rootOf } from "../../core/readings/placemen
 import { relativeImport } from "../../core/readings/relative-import.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
-import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
+import { compilerWorkspace } from "../adapters/compiler.js";
 import { type FilesystemRead, filesystem } from "../adapters/filesystem.js";
-import { authorityRecorder } from "./authority-recorder.js";
-import { behaviourReading } from "./behaviour-reading.js";
-import { contractReading } from "./contract-reading.js";
-import { contractRecorder } from "./contract-recorder.js";
-import { escapeRecorder } from "./escape-recorder.js";
-import { factWalk } from "./fact-walk.js";
-import { functionRecorder } from "./function-recorder.js";
-import { importRecorder } from "./import-recorder.js";
-import { nativeReading } from "./native-reading.js";
+import { type FactReuse, type Scope, projectFacts } from "./project-facts.js";
 import { sourceSize } from "./source-size.js";
-import { syntaxReading } from "./syntax-reading.js";
-import { termRecorder } from "./term-recorder.js";
-import { testReach } from "./test-reach.js";
 
 // The kit's only effect: read one snapshot of the codebase at `appRoot`. Only imports that resolve to a file
 // of the snapshot are recorded. Terms come only from the config's terms file, as lines
@@ -40,16 +29,36 @@ const EXPORT =
   /^export\s+(?:async\s+)?(?:function\*?|const|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm;
 const SOURCE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 
-// Every read lands in `trace`, so a cached snapshot can be reused exactly while each read would still return
-// the same. An ignored path is neither listed nor read, so an import into it is an error, never a lost edge.
+// Where facts read before are kept, and the Kit that read them.
+export interface StoredFacts {
+  readonly reuse: FactReuse;
+  readonly engine: string;
+}
+
+// How many files' facts and tests' reaches one read reused from the store, and how many it computed.
+export interface ExtractionReceipt {
+  readonly files: { readonly reused: number; readonly computed: number };
+  readonly proofs: { readonly reused: number; readonly computed: number };
+}
+
+// A snapshot read with no store: every fact computed.
 export function readSnapshot(
   appRoot: string,
   config: KitConfig = DEFAULT_CONFIG,
-  trace: { readonly filesystem: FilesystemRead[]; readonly compiler: CompilerRead[] } = {
-    filesystem: [],
-    compiler: [],
-  },
+  trace: { readonly filesystem: FilesystemRead[] } = { filesystem: [] },
 ): Snapshot {
+  return readStoredSnapshot(appRoot, config, undefined, trace).snapshot;
+}
+
+// Every file read and listing lands in `trace`. An ignored path is neither listed nor read, so an import into
+// it is an error, never a lost edge. With a store, each file's facts and each test's reach are reused while the
+// key of what they depend on still matches, and the rest is computed and stored.
+export function readStoredSnapshot(
+  appRoot: string,
+  config: KitConfig,
+  store: StoredFacts | undefined,
+  trace: { readonly filesystem: FilesystemRead[] } = { filesystem: [] },
+): { readonly snapshot: Snapshot; readonly receipt: ExtractionReceipt } {
   rootOf("", config.srcRoot);
   const ignored = (path: string): boolean =>
     (config.ignore ?? []).some((root) => path === root || path.startsWith(`${root}/`));
@@ -118,7 +127,19 @@ export function readSnapshot(
       })),
     });
   }
-  const { facts: compiler, scopes } = readCompiler(appRoot, paths, files, config, ignored, trace.compiler);
+  const { facts: compiler, scopes, receipt } = readCompiler(
+    appRoot,
+    paths,
+    files.map((file) => {
+      const digest = digests.get(file.path);
+      return digest === undefined ? file : { ...file, digest };
+    }),
+    config,
+    ignored,
+    sources,
+    known,
+    store,
+  );
   for (const { path, found } of specifiers) {
     const seen = new Set<string>();
     const scope = scopeOf(path, scopes, appRoot);
@@ -129,30 +150,21 @@ export function readSnapshot(
       }
       const to = scope === undefined && specifier.startsWith(".")
         ? relativeImport(path, specifier, known)
-        : aliasTarget(appRoot, path, specifier, dynamic, scope, ignored, known, trace.compiler);
+        : aliasTarget(appRoot, path, specifier, dynamic, scope, ignored, known);
       if (to !== undefined && !seen.has(to)) {
         seen.add(to);
         imports.push({ from: path, to });
       }
     }
   }
-  const sizes = [...sources].map(([path, text]) =>
-    sourceSize(path, text, scopeOf(path, scopes, appRoot)?.program, appRoot, known),
+  const sizes = [...sources].map(
+    ([path, text]) => scopeOf(path, scopes, appRoot)?.sizes.get(path) ?? sourceSize(path, text, undefined, appRoot, known),
   );
-  // The runs record is read like any other input, so a cached snapshot is reused only while it is unchanged.
-  let runsText: string | null | undefined;
-  if (config.runs !== undefined)
-    try {
-      runsText = filesystem.readText(join(appRoot, config.runs.record), trace.filesystem);
-    } catch {
-      runsText = null;
-    }
-  return {
+  const snapshot: Snapshot = {
     files: files.map((file) => {
       const digest = digests.get(file.path);
       return digest === undefined ? file : { ...file, digest };
     }),
-    ...(runsText === undefined ? {} : { runsText }),
     sizes,
     imports,
     terms,
@@ -167,16 +179,7 @@ export function readSnapshot(
     claimReferences,
     semanticReferences,
   };
-}
-
-type Project = CompilerFacts["projects"][number];
-
-// A project's compiler options and program, which decide how its files' non-relative imports resolve.
-interface Scope {
-  readonly directory: string;
-  readonly file: string;
-  readonly options: ts.CompilerOptions;
-  readonly program: ts.Program;
+  return { snapshot, receipt };
 }
 
 // A file's imports resolve as the compiler resolves them in the project that compiles it: the one whose
@@ -186,14 +189,7 @@ function scopeOf(path: string, scopes: readonly Scope[], appRoot: string): Scope
   const absolute = join(appRoot, path);
   const depth = (scope: Scope): number => scope.directory.split("/").length;
   return scopes
-    .filter((scope) => {
-      const source = scope.program.getSourceFile(absolute);
-      return (
-        source !== undefined &&
-        !source.isDeclarationFile &&
-        (scope.directory === "." || path.startsWith(`${scope.directory}/`))
-      );
-    })
+    .filter((scope) => scope.compiled.has(absolute) && (scope.directory === "." || path.startsWith(`${scope.directory}/`)))
     .sort(
       (a, b) =>
         depth(b) - depth(a) ||
@@ -213,14 +209,11 @@ function aliasTarget(
   scope: Scope | undefined,
   ignored: (path: string) => boolean,
   known: ReadonlySet<string>,
-  trace: CompilerRead[],
 ): string | undefined {
   if (scope === undefined) return undefined;
   const containing = join(appRoot, path);
-  const mode = dynamic
-    ? ts.ModuleKind.ESNext
-    : scope.program.getSourceFile(containing)?.impliedNodeFormat;
-  const resolved = compilerWorkspace.resolve(specifier, containing, scope.options, trace, mode);
+  const mode = dynamic ? ts.ModuleKind.ESNext : scope.compiled.get(containing);
+  const resolved = compilerWorkspace.resolve(specifier, containing, scope.options, mode);
   if (resolved === undefined) return undefined;
   const target = relative(appRoot, resolved.resolvedFileName).split(sep).join("/");
   if (target.startsWith("../")) return undefined;
@@ -234,12 +227,11 @@ function readCompiler(
   files: readonly SnapshotFile[],
   config: KitConfig,
   ignored: (path: string) => boolean,
-  trace: CompilerRead[],
-): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[] } {
-  const scopes: Scope[] = [];
-  const workerHost = compilerWorkspace.workerHost(trace);
-  const workerTypes = new Set(workerHost.types);
-  const workerGlobals = new Set(workerHost.globals);
+  sources: ReadonlyMap<string, string>,
+  known: ReadonlySet<string>,
+  store: StoredFacts | undefined,
+): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[]; readonly receipt: ExtractionReceipt } {
+  const workerHost = compilerWorkspace.workerHost();
   const source = new Set(
     files
       .filter(
@@ -248,7 +240,6 @@ function readCompiler(
       )
       .map((file) => file.path),
   );
-  const tests = new Set(files.filter((file) => file.type === "test").map((file) => file.path));
   // The visitor asks for a file's local path at every declaration it reads; computing it each time with
   // path.relative cost about a seventh of a cold extraction.
   const localPaths = new Map<string, string>();
@@ -260,128 +251,34 @@ function readCompiler(
     }
     return path;
   };
-  const projects = paths
+  const digests = new Map<string, string>();
+  for (const file of files) if (file.digest !== undefined) digests.set(file.path, file.digest);
+  const context = {
+    appRoot,
+    config,
+    engine: store?.engine ?? "",
+    source,
+    tests: new Set(files.filter((file) => file.type === "test").map((file) => file.path)),
+    sources,
+    known,
+    digests,
+    ignored,
+    local,
+    workerTypes: new Set(workerHost.types),
+    workerGlobals: new Set(workerHost.globals),
+  };
+  const reads = paths
     .filter((path) => /^tsconfig(?:\.[\w-]+)*\.json$/.test(basename(path)))
-    .map((file): Project => {
-      const absolute = join(appRoot, file);
-      const { parsed, readError, program } = compilerWorkspace.load(absolute, trace);
-      scopes.push({ directory: posix.dirname(file), file, options: parsed.options, program });
-      const checker = program.getTypeChecker();
-      const ambientTargets = new Map<string, { readonly declarationTarget: string }>(
-        checker.getAmbientModules().flatMap((symbol) => {
-          const homes = [...new Set((symbol.declarations ?? []).map((node) => local(node.getSourceFile().fileName)))];
-          return homes.length === 1 && homes[0] !== undefined
-            ? [[symbol.name, { declarationTarget: homes[0] }] as const]
-            : [];
-        }),
-      );
-      const importTarget = (specifier: string, containingFile: string): string | null => {
-        const resolved = compilerWorkspace.resolve(specifier, containingFile, parsed.options, trace);
-        if (resolved === undefined) return null;
-        const target = local(resolved.resolvedFileName);
-        if (ignored(target)) throw ignoredImport(local(containingFile), target);
-        return target;
-      };
-      const diagnostics = ts
-        .sortAndDeduplicateDiagnostics([
-          ...(readError === undefined ? [] : [readError]),
-          ...parsed.errors,
-          ...ts.getPreEmitDiagnostics(program),
-          ...program.getDeclarationDiagnostics(),
-        ])
-        .map((diagnostic): Project["diagnostics"][number] => ({
-          file: diagnostic.file === undefined ? null : local(diagnostic.file.fileName),
-          code: diagnostic.code,
-          message: ts.flattenDiagnosticMessageText(diagnostic.messageText, " "),
-          start: diagnostic.start ?? null,
-          length: diagnostic.length ?? null,
-          category:
-            diagnostic.category === ts.DiagnosticCategory.Error
-              ? "error"
-              : diagnostic.category === ts.DiagnosticCategory.Warning
-                ? "warning"
-                : diagnostic.category === ts.DiagnosticCategory.Suggestion
-                  ? "suggestion"
-                  : "message",
-        }));
-      const scope = { appRoot, config, program, checker, local, source, workerTypes };
-      const syntax = syntaxReading(scope);
-      const natives = nativeReading(scope);
-      const contractTypes = contractReading(scope);
-      const behaviour = behaviourReading(scope, natives, contractTypes);
-      const importFacts = importRecorder(scope, importTarget, ambientTargets, syntax, contractTypes, behaviour);
-      const authorityFacts = authorityRecorder(scope, workerGlobals, syntax, natives, behaviour);
-      const contractFacts = contractRecorder(scope, natives, contractTypes, behaviour);
-      const escapeFacts = escapeRecorder();
-      const termFacts = termRecorder(scope, syntax);
-      const functionFacts = functionRecorder();
-      factWalk(scope, [escapeFacts, importFacts, contractFacts, authorityFacts, termFacts, functionFacts]);
-      // A test reaches what its code uses, followed into helpers and modules as a capture is, so a helper that
-      // imports many modules lends a test only the ones the code it calls uses.
-      const proofOf = testReach(
-        program,
-        checker,
-        new Set([...source, ...tests]),
-        local,
-        importTarget,
-      );
-      const proofs = program
-        .getSourceFiles()
-        .filter((sf) => !sf.isDeclarationFile && tests.has(local(sf.fileName)))
-        .map((sf) => {
-          const { reached, whole, declarations } = proofOf(sf);
-          // An import for its effect alone runs the module it names.
-          const run = sf.statements.flatMap((statement) =>
-            ts.isImportDeclaration(statement) &&
-            statement.importClause === undefined &&
-            ts.isStringLiteral(statement.moduleSpecifier)
-              ? [importTarget(statement.moduleSpecifier.text, sf.fileName) ?? []].flat()
-              : [],
-          );
-          return {
-            file: local(sf.fileName),
-            reached,
-            whole: [...new Set([...whole, ...run])].sort(),
-            declarations: declarations.filter((declaration) => declaration.file !== local(sf.fileName)),
-          };
-        });
-      const zone = /^tsconfig\.(core|shell|substrate)\.json$/.exec(basename(file))?.[1];
-      return {
-        file,
-        zone: zone === "core" || zone === "shell" || zone === "substrate" ? zone : null,
-        settings: {
-          lib:
-            parsed.options.lib ??
-            (parsed.options.noLib ? [] : [ts.getDefaultLibFileName(parsed.options)]),
-          types: parsed.options.types ?? null,
-          strict: parsed.options.strict ?? false,
-          noImplicitAny: parsed.options.noImplicitAny ?? parsed.options.strict ?? false,
-          strictNullChecks: parsed.options.strictNullChecks ?? parsed.options.strict ?? false,
-          isolatedDeclarations: parsed.options.isolatedDeclarations ?? false,
-        },
-        files: program
-          .getSourceFiles()
-          .filter((sf) => !sf.isDeclarationFile)
-          .map((sf) => local(sf.fileName)),
-        ambientFiles: program
-          .getSourceFiles()
-          .filter((sf) => sf.isDeclarationFile)
-          .map((sf) => local(sf.fileName)),
-        diagnostics,
-        imports: importFacts.imports,
-        exports: importFacts.exports,
-        globals: authorityFacts.globals,
-        escapes: escapeFacts.escapes,
-        parameters: [...authorityFacts.parameters.values()],
-        contracts: contractFacts.contracts,
-        accesses: authorityFacts.accesses,
-        constructions: contractFacts.constructions,
-        proofs,
-        termFacts: { sources: termFacts.sources, types: termFacts.types },
-        functions: functionFacts.functions,
-      };
-    });
-  return { facts: { version: ts.version, projects }, scopes };
+    .map((file) => projectFacts(context, file, store?.reuse));
+  const sum = (pick: (read: (typeof reads)[number]) => { readonly reused: number; readonly computed: number }) => ({
+    reused: reads.reduce((total, read) => total + pick(read).reused, 0),
+    computed: reads.reduce((total, read) => total + pick(read).computed, 0),
+  });
+  return {
+    facts: { version: ts.version, projects: reads.map((read) => read.project) },
+    scopes: reads.map((read) => read.scope),
+    receipt: { files: sum((read) => read.files), proofs: sum((read) => read.proofs) },
+  };
 }
 
 // Every comment the parser attaches before or after a node, each once, in file order.

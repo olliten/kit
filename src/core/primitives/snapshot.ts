@@ -6,6 +6,7 @@ import type { ExportedSymbol } from "./exported-symbol.js";
 import type { SnapshotFile, SourceSize, SpecProse } from "./file.js";
 import type { ImportEdge } from "./import.js";
 import type { Reference } from "./reference.js";
+import type { Runs } from "./runs.js";
 import type { SpecTerm, TermSyntaxIssue } from "./term.js";
 
 export interface Snapshot {
@@ -24,6 +25,7 @@ export interface Snapshot {
   readonly comments: readonly SnapshotComment[];
   readonly config: KitConfig;
   readonly compiler?: CompilerFacts;
-  // The text of the runs record the config declares, or null when it declares one that doesn't exist.
-  readonly runsText?: string | null;
+  // What each test under the proof root ran, when the app's test command keeps it and every such test has a
+  // pass that still holds; the rules that read it wait otherwise.
+  readonly runs?: Runs;
 }

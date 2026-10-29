@@ -26,14 +26,13 @@ function topLevelNames(node: ts.Node): readonly string[] {
 // A test reaches what its code can run or hold: the code its free names reach, followed through the
 // declarations they name, and every statement that can change a mutable value it holds, since a value stored
 // there later is held too. What cannot be followed to a declaration is charged as its whole file. Each piece of
-// code is read once; a test's reach is the union over the pieces it leads to.
+// code is read once; a test's reach is the union over the pieces it leads to, and so are the files it read.
 export function testReach(
-  program: ts.Program,
   checker: ts.TypeChecker,
   source: ReadonlySet<string>,
   local: (file: string) => string,
   importTarget: (specifier: string, containingFile: string) => string | null,
-): (argument: ts.Node) => TestReach {
+): (argument: ts.Node) => TestReach & { readonly read: readonly string[] } {
   const unaliased = (symbol: ts.Symbol): ts.Symbol => {
     if ((symbol.flags & ts.SymbolFlags.Alias) === 0) return symbol;
     const target = checker.getAliasedSymbol(symbol);
@@ -43,29 +42,29 @@ export function testReach(
     ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node
       ? checker.getShorthandAssignmentValueSymbol(node.parent)
       : checker.getSymbolAtLocation(node);
-  let index: Map<ts.Symbol, ts.Identifier[]> | undefined;
-  const referencesOf = (symbol: ts.Symbol): readonly ts.Identifier[] => {
-    if (index === undefined) {
-      const built = new Map<ts.Symbol, ts.Identifier[]>();
-      index = built;
-      for (const sf of program.getSourceFiles()) {
-        if (sf.isDeclarationFile || !source.has(local(sf.fileName))) continue;
-        const visit = (node: ts.Node): void => {
-          if (ts.isIdentifier(node)) {
-            const raw = rawSymbolOf(node);
-            if (raw !== undefined) {
-              const found = unaliased(raw);
-              const list = built.get(found);
-              if (list === undefined) built.set(found, [node]);
-              else list.push(node);
-            }
-          }
-          ts.forEachChild(node, visit);
-        };
-        visit(sf);
+  // Each file's references by the symbol they name, indexed only when a reach first looks into that file, so a
+  // run holds the files its tests reach rather than every file of the program.
+  const indexes = new Map<ts.SourceFile, Map<ts.Symbol, ts.Identifier[]>>();
+  const referencesIn = (sf: ts.SourceFile): Map<ts.Symbol, ts.Identifier[]> => {
+    const known = indexes.get(sf);
+    if (known !== undefined) return known;
+    const built = new Map<ts.Symbol, ts.Identifier[]>();
+    indexes.set(sf, built);
+    if (sf.isDeclarationFile || !source.has(local(sf.fileName))) return built;
+    const visit = (node: ts.Node): void => {
+      if (ts.isIdentifier(node)) {
+        const raw = rawSymbolOf(node);
+        if (raw !== undefined) {
+          const found = unaliased(raw);
+          const list = built.get(found);
+          if (list === undefined) built.set(found, [node]);
+          else list.push(node);
+        }
       }
-    }
-    return index.get(symbol) ?? [];
+      ts.forEachChild(node, visit);
+    };
+    visit(sf);
+    return built;
   };
   const erased = (node: ts.Node): boolean =>
     ts.isTypeNode(node) ||
@@ -172,10 +171,12 @@ export function testReach(
   type Piece = {
     readonly edges: Key[];
     readonly whole: Set<string>;
+    readonly read: Set<string>;
   };
   const empty = (): Piece => ({
     edges: [],
     whole: new Set(),
+    read: new Set(),
   });
   const pieces = new Map<Key, Piece>();
   const resultKeys = new Map<ts.Symbol, Results>();
@@ -405,10 +406,11 @@ export function testReach(
   // Only references in the binding's own module are followed back: those are the writes that module's
   // importers reach too. Another module that writes into it is checked where it passes a handle or a
   // callable, and what a binding holds from elsewhere is charged by its declared type.
-  const homeReferences = (symbol: ts.Symbol): readonly ts.Identifier[] => {
-    const homes = new Set((symbol.declarations ?? []).map((node) => node.getSourceFile()));
-    return referencesOf(symbol).filter((reference) => homes.has(reference.getSourceFile()));
-  };
+  const homeReferences = (symbol: ts.Symbol, piece: Piece): readonly ts.Identifier[] =>
+    [...new Set((symbol.declarations ?? []).map((node) => node.getSourceFile()))].flatMap((home) => {
+      if (!home.isDeclarationFile && source.has(local(home.fileName))) piece.read.add(local(home.fileName));
+      return referencesIn(home).get(symbol) ?? [];
+    });
   // A binding that only ever holds primitives can't hold authority, however it is reassigned.
   const inert = (type: ts.Type): boolean =>
     type.isUnionOrIntersection()
@@ -455,7 +457,7 @@ export function testReach(
     const piece = empty();
     if (!changeable(symbol)) return piece;
     const seen = new Set<ts.Node>();
-    for (const reference of homeReferences(symbol)) flow(reference, piece, seen);
+    for (const reference of homeReferences(symbol, piece)) flow(reference, piece, seen);
     return piece;
   };
   // Where a function's result goes: each call is a holder of what it returns.
@@ -464,7 +466,7 @@ export function testReach(
     if (!(symbol.declarations ?? []).some((node) => !node.getSourceFile().isDeclarationFile))
       return piece;
     const seen = new Set<ts.Node>();
-    for (const reference of homeReferences(symbol)) {
+    for (const reference of homeReferences(symbol, piece)) {
       const top = chainTop(reference);
       if (ts.isCallExpression(top.parent) && top.parent.expression === top)
         flow(top.parent, piece, seen);
@@ -481,6 +483,7 @@ export function testReach(
       piece.whole.add(local(sf.fileName));
       return piece;
     }
+    piece.read.add(local(sf.fileName));
     const visit = (node: ts.Node): void => {
       if (erased(node)) return;
       if (node.kind === ts.SyntaxKind.ThisKeyword || node.kind === ts.SyntaxKind.SuperKeyword) {
@@ -544,7 +547,7 @@ export function testReach(
   };
   // Everything a piece leads to, as one set of item ids. A cycle of pieces shares one set.
   const items = new Map<string, number>();
-  const values: { readonly kind: "reached" | "whole" | "declaration"; readonly name: string }[] = [];
+  const values: { readonly kind: "reached" | "whole" | "declaration" | "read"; readonly name: string }[] = [];
   const bit = (key: string, value: (typeof values)[number]): bigint => {
     let id = items.get(key);
     if (id === undefined) {
@@ -563,6 +566,7 @@ export function testReach(
         bits |= bit(`d:${file}:${name}`, { kind: "declaration", name: `${file}\u0000${name}` });
     }
     for (const file of piece.whole) bits |= bit(`w:${file}`, { kind: "whole", name: file });
+    for (const file of piece.read) bits |= bit(`t:${file}`, { kind: "read", name: file });
     return bits;
   };
   const summaries = new Map<Key, bigint>();
@@ -621,12 +625,14 @@ export function testReach(
     const reached = new Set<string>();
     const whole = new Set<string>();
     const declarations = new Set<string>();
+    const read = new Set<string>();
     for (let index = 0; index < bits.length; index++) {
       if (bits[bits.length - 1 - index] !== "1") continue;
       const value = values[index];
       if (value?.kind === "reached") reached.add(value.name);
       else if (value?.kind === "whole") whole.add(value.name);
       else if (value?.kind === "declaration") declarations.add(value.name);
+      else if (value?.kind === "read") read.add(value.name);
     }
     return {
       reached: [...reached].sort(),
@@ -635,6 +641,7 @@ export function testReach(
         const [file = "", name = ""] = key.split("\u0000");
         return { file, name };
       }),
+      read: [...read].sort(),
     };
   };
 }

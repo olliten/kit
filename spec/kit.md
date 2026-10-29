@@ -12,6 +12,17 @@ its config, and its debt in its own baseline.
   - Implementation: {{kit-configuration}}, {{config-values}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{placement-of}}, {{term-model}}, {{legacy-size}}, {{ratchet}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
+- A configuration declares only the keys Kit reads. An unknown key at any level is an error naming its full
+  path, such as `adapters[3].globalz`, and every configuration error, in the YAML, a section or a row, answers
+  the command on stderr with exit code 1: never a finding a baseline could hold, never a stack trace. `app`
+  names the app in Kit's output. · {#config-keys-are-known}
+  - Implementation: {{config-schema}}, {{kit-configuration}}, {{config-values}}, {{legacy-zone-configuration}}, {{read-config}}, {{check-run}}, {{command}}
+  - Proof: {{temporary-project}}
+
+- An app's plain-Node script loads the Kit configuration and its test roots through the configuration runner,
+  without a build, and reads the values the commands read. · {#apps-load-the-config-from-plain-node}
+  - Implementation: {{configuration-runner}}, {{kit-configuration}}, {{test-roots}}, {{source-loader}}
+
 - Test discovery includes the configured proof root and only explicitly configured
   `legacy-test-roots`, with no application directory names built in. Each is a relative directory
   without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy
@@ -37,33 +48,41 @@ its config, and its debt in its own baseline.
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
   - Proof: {{case-inventory}}, {{source-loader}}, {{capability-app}}, {{temporary-project}}
-- A cache hit reuses extraction and reruns the check; a corrupt cache is rebuilt, and a source change during
-  extraction or checking rejects the result. `kit check --fresh-compare` also extracts afresh and fails when
-  the cached snapshot or its findings differ. Snapshots too large for JSON remain reusable in their original
-  checkout. A storage failure is reported and leaves the fresh check authoritative. · {#cached-check-keeps-evidence}
-  - Implementation: {{cached-check}}, {{check-run}}, {{snapshot-cache}}, {{snapshot-cache-key}}, {{snapshot-comparison}}, {{snapshot-store}}, {{stopwatch}}
-  - Proof: {{cache-app}}, {{cache-proof}}
-- A cached snapshot is reused only while every read its extraction made through {{filesystem}} and
-  {{compiler}} returns the same: each file's bytes, each directory listing and each probe that found nothing.
-  A change nothing read misses no entry, and worktrees of one repository share one cache. · {#cache-keys-on-what-was-read}
-  - Implementation: {{cached-check}}, {{read-snapshot}}, {{snapshot-cache-key}}, {{snapshot-store}}
-  - Proof: {{cache-app}}, {{cache-proof}}, {{processes}}
+- A file's compiler facts and a test's reach are stored under a key of what they depend on. A file's facts
+  depend on its own content and on the outline of every file its imports reach: its text without the bodies of
+  functions whose return type it declares, which no importer can see. A test's reach is keyed the same way on the
+  test, and is kept with the digest of each file whose code it followed, one entry per set of digests, and
+  reused only while each still has its digest. Each key also holds what Kit takes each file for, and
+  the project, which is the Kit that read it, the
+  compiler, the config, the project's options, every declaration file the program loads, every file declaring
+  globals or ambient modules, and the registered adapter modules. A read reuses every file and test whose key
+  still matches and computes the rest, so a change recomputes exactly the files and tests whose key it
+  changes, and worktrees of one repository share the store. · {#facts-are-keyed-on-their-inputs}
+  - Implementation: {{fact-keys}}, {{file-facts}}, {{project-facts}}, {{read-snapshot}}, {{evidence-store}}, {{root-token}}, {{fact-walk}}, {{compiler}}, {{verdict-reuse}}
+  - Proof: {{extraction-proof}}, {{small-app}}, {{temporary-project}}
+- A read through the store equals a read without it, as a snapshot and in its findings, after any sequence of
+  edits: the compiler's member and union order, which depends on what it checked first, is never kept. `kit
+  check --fresh` reads without the store, and an entry the store can't read is computed again. · {#stored-equals-fresh}
+  - Implementation: {{project-facts}}, {{read-snapshot}}, {{check-run}}, {{evidence-store}}, {{toolchain}}, {{stopwatch}}
+  - Proof: {{extraction-proof}}, {{small-app}}, {{snapshot-comparison}}
 - A path the config ignores is never listed or read by {{read-snapshot}}, and an import into it is an error,
   never a missing edge. · {#ignored-paths-are-unread}
   - Implementation: {{kit-configuration}}, {{read-snapshot}}, {{ignored-import}}
-  - Proof: {{cache-app}}, {{cache-proof}}
+  - Proof: {{small-app}}, {{temporary-project}}
 - `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
   list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}
   - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}, {{source-loader}}, {{terminal-input}}
   - Proof: {{temporary-project}}, {{processes}}
 - `kit consumers <app>…` checks each app checkout against this Kit, with the app's own config and baseline, and
-  lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins; an app
-  that fails does not fail the run. · {#consumers-show-each-apps-work}
+  lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins, or the
+  config error when this Kit does not accept the app's config; an app that fails does not fail the run. · {#consumers-show-each-apps-work}
   - Implementation: {{consumer-report}}, {{consumers-run}}, {{processes}}
 - Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. A
   launcher in `scripts/` hands its command the arguments, working directory and input, and answers the terminal
-  with the command's output and exit status. · {#paths-from-the-caller}
-  - Implementation: {{check-paths}}, {{config-values}}
+  with the command's output and exit status. Unless the caller set a heap size, a command runs with a heap of at
+  least 4 GB, since a first read of a large app holds the compiler's checked program, near 2 GB for some apps on
+  its own. · {#paths-from-the-caller}
+  - Implementation: {{check-paths}}, {{config-values}}, {{source-loader}}
   - Proof: {{temporary-project}}, {{processes}}, {{text-files}}
 
 ## Checking itself
