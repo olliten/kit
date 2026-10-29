@@ -79,8 +79,10 @@ its config, and its debt in its own baseline.
   - Implementation: {{consumer-report}}, {{consumers-run}}, {{processes}}
 - Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. A
   launcher in `scripts/` hands its command the arguments, working directory and input, and answers the terminal
-  with the command's output and exit status. · {#paths-from-the-caller}
-  - Implementation: {{check-paths}}, {{config-values}}
+  with the command's output and exit status. Unless the caller set a heap size, a command runs with a heap of at
+  least 4 GB, since a first read of a large app holds the compiler's checked program, near 2 GB for some apps on
+  its own. · {#paths-from-the-caller}
+  - Implementation: {{check-paths}}, {{config-values}}, {{source-loader}}
   - Proof: {{temporary-project}}, {{processes}}, {{text-files}}
 
 ## Checking itself

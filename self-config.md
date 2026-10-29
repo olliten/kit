@@ -104,7 +104,7 @@ adapters:
     kind: external
     zones: [substrate]
     globals: [process]
-    packages: [vite, vite-node]
+    packages: [vite, vite-node, node:child_process, node:v8]
   - module: src/substrate/adapters/text-files
     export: textFiles
     capability: filesystem

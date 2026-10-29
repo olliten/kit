@@ -17,7 +17,7 @@ so a later gate runs only what an edit can have changed.
   modules its imports reach, directly or through the files they import, and otherwise of the first such group
   that names no modules. `kit check` reads each test's pass under the command the same choice gives it, so a
   test that comes to reach another group's module runs again under that group's command. A test no group takes
-  is not run, and `kit verify` names it and counts it. · {#tests-run-in-the-group-their-reach-selects}
+  is not run, and `kit verify` names it, counts it and fails. · {#tests-run-in-the-group-their-reach-selects}
   - Implementation: {{test-groups}}, {{verify-run}}, {{check-run}}, {{verification-configuration}}, {{read-snapshot}}
   - Proof: {{temporary-project}}
 - A recorder preloaded into a check's processes records every path inside the app the check reads, lists,
