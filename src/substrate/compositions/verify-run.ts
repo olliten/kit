@@ -6,7 +6,9 @@ import { testGroups } from "../../core/readings/test-groups.js";
 import { testRuns } from "../../core/readings/test-runs.js";
 import { ranLines } from "../../core/readings/coverage-report.js";
 import { functionsRun } from "../../core/readings/ran-code.js";
+import { sharedPath, sharedRefs } from "../../core/readings/shared-passes.js";
 import { heldKey, heldKeys, holding, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { calendar } from "../adapters/calendar.js";
 import { compilerWorkspace } from "../adapters/compiler.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { filesystem } from "../adapters/filesystem.js";
@@ -16,6 +18,7 @@ import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
 import { toolchain } from "../adapters/toolchain.js";
 import { heldState } from "./held-state.js";
+import { publishPasses, readSharedPasses } from "./pass-sharing.js";
 import { readConfig } from "./read-config.js";
 import { readStoredSnapshot } from "./read-snapshot.js";
 
@@ -26,8 +29,11 @@ const SKIP = /^(?:node_modules|\..*)$/;
 // `kit verify`: run every check the config's `verify` declares, and every test under its tests directories under
 // the command of the group its reach selects, except those whose last passing run read only paths that are still
 // in the state that run saw. Each run is watched for what it reads, in its processes and theirs, and a pass is
-// kept with those states; a failure is never kept. A test command that writes the test's coverage into `{dir}` keeps what the test ran with its pass.
-// `--fresh` reuses and keeps nothing, and `--plan` says what would run without running it.
+// kept with those states; a failure is never kept. A test command that writes the test's coverage into `{dir}`
+// keeps what the test ran with its pass. A test no group takes fails the gate, since it would never run.
+// `--fresh` reuses and keeps nothing, and `--plan` says what would run without running it. With `share` declared,
+// passes on `origin`'s refs for this runtime join the store before planning, and the run's own are added after;
+// sharing that can't happen is said and never fails the gate.
 export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Promise<CommandResponse> {
   const option = (name: string): string | undefined => {
     const index = args.indexOf(`--${name}`);
@@ -88,6 +94,11 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const runtime = toolchain.runtime(root);
   const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime);
   const stateOf = (key: string): string => heldState(root, key);
+  const share = fresh || args.includes("--no-share") ? undefined : policy.share;
+  const refs = share === undefined ? undefined : sharedRefs(share, runtime, calendar.now());
+  const shared = refs === undefined ? undefined : readSharedPasses(root, store, refs);
+  // The passes this run kept or reused, as today's shared ref would hold them.
+  const passes: { readonly path: string; readonly text: string }[] = [];
   // The outermost functions a test ran in each file its coverage lists.
   const ranIn = (lcov: readonly string[]): Map<string, number[]> => {
     const ran = new Map<string, number[]>();
@@ -125,7 +136,12 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   // tests weren't all kept.
   const run = async (checks: readonly Check[], keep: boolean) => {
     const { planned, states } = plan(checks);
-    for (const { check, reused: kept } of planned) if (kept !== undefined) lines.push(`reused ${check.id}`);
+    for (const { check, reused: kept } of planned) {
+      if (kept === undefined) continue;
+      lines.push(`reused ${check.id}`);
+      const text = evidenceStore.read(store, kindOf(check), heldKey(kept));
+      if (text !== undefined) passes.push({ path: sharedPath(kindOf(check), heldKey(kept)), text });
+    }
     reused += planned.filter((item) => item.reused !== undefined).length;
     const due = planned.filter((item) => item.reused === undefined).map((item) => item.check);
     ran += due.length;
@@ -197,6 +213,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
             : undefined;
         const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran };
         evidenceStore.write(store, kindOf(check), heldKey(kept), JSON.stringify(kept));
+        passes.push({ path: sharedPath(kindOf(check), heldKey(kept)), text: JSON.stringify(kept) });
         recorded++;
       });
       textFiles.remove(scratch);
@@ -217,12 +234,27 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   await run(first, true);
   // A check declared after the tests, such as one reading what each test ran, runs once their passes are kept.
   await run(last, failures.size === 0 && unrecorded === 0);
+  const published =
+    refs === undefined || shared === undefined || "failure" in shared ? undefined : publishPasses(root, refs[0], passes, shared);
   evidenceStore.prune(store);
   const failed = lines.filter((line) => line.startsWith("failed ")).length;
-  const summary = { reused, ran, failed, recorded, unrecorded, unassigned: unassigned.length, seconds: (stopwatch.now() - started) / 1000 };
+  const notes = [
+    ...(shared !== undefined && "failure" in shared ? [`Shared no passes: ${shared.failure}\n`] : []),
+    ...(published !== undefined && "failure" in published ? [`Published no passes: ${published.failure}\n`] : []),
+  ];
+  const summary = {
+    reused,
+    ran,
+    failed,
+    recorded,
+    unrecorded,
+    unassigned: unassigned.length,
+    shared: { read: shared?.read ?? 0, published: published?.published ?? 0 },
+    seconds: (stopwatch.now() - started) / 1000,
+  };
   return {
-    stdout: `${[...lines, ...left].sort().join("\n")}\nKit verify ${JSON.stringify(summary)}\n`,
-    stderr: [...failures.values()].join(""),
-    exitCode: failed > 0 ? 1 : 0,
+    stdout: `${[...lines, ...left].sort().join("\n")}\n${notes.join("")}Kit verify ${JSON.stringify(summary)}\n`,
+    stderr: [...failures.values(), ...unassigned.map((test) => `${test}: no test group takes it, so it never runs.\n`)].join(""),
+    exitCode: failed > 0 || unassigned.length > 0 ? 1 : 0,
   };
 }

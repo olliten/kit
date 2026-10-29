@@ -289,6 +289,10 @@
   - Role: derived
   - Zone: core
   - From: {{reference}}, {{topic}}, {{finding}}, {{snapshot}}
+- **shared-passes** — where passes are shared on `origin`: the refs a run reads and the one it adds to, the path of a pass in their trees, which shared entries are passes, and what a ref lacks.
+  - Role: derived
+  - Zone: core
+  - From: {{verdict-reuse}}
 - **snapshot-comparison** — whether two snapshots are the same graph.
   - Role: derived
   - Zone: core
@@ -345,6 +349,10 @@
 
 ## Adapter contracts
 
+- **calendar** — access to the wall-clock time, which names the day a shared pass is published under.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 - **compiler** — access to project loading, import resolution and a file's outermost functions through a language compiler.
   - Role: adapter
   - Zone: substrate
@@ -354,6 +362,10 @@
   - Zone: substrate
   - Of: []
 - **filesystem** — access to file text, directory entries, the state a path is in, and its kind.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **git-refs** — access to refs on a repository's `origin`: a ref's tip and the files of its tree, and a commit added on a tip pushed without force.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -464,6 +476,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{program-scope}}
+- **pass-sharing** — the workflow that keeps the passes on `origin`'s shared refs in the local store, and adds a run's passes to today's ref, again on a moved tip.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{evidence-store}}, {{git-refs}}, {{shared-passes}}
 - **program-fixture** — the workflow that compiles a fixture and hands a test its program scope, so a proof uses only the recorders it names.
   - Role: composition
   - Zone: substrate
@@ -535,7 +551,7 @@
 - **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{compiler}}, {{config-values}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{stopwatch}}, {{test-groups}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
+  - Of: {{calendar}}, {{command}}, {{compiler}}, {{config-values}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{pass-sharing}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{shared-passes}}, {{stopwatch}}, {{test-groups}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
 
 ## Supporting vocabulary and roles
 

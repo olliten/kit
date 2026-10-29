@@ -645,3 +645,15 @@ without naming the app.
   Its main project checked by `tsc` alone holds 1.9 GB, and Kit's walk, diagnostics and test reaches use the
   same checker on top of what earlier projects left, so fitting 2 GB means reading a project in more than one
   program.
+
+## 2026-10-29 · Passes are shared through refs on origin
+
+- **Decision:** with `verify.share` declared, `kit verify` reads the passes on `origin`'s refs
+  `<share>/<day>-<runtime>` for today and yesterday into the local store before planning, and afterwards adds
+  every pass it kept or reused to today's ref as one commit pushed without force; a lost race reads again and
+  adds on top. Failing to share is reported and never fails the gate. Kit's own config does not declare it yet.
+- **Why:** each agent's cloud session starts with an empty store beside its clone and paid a full cold run. A
+  ref on `origin` reaches every lane with nothing but git, and Leeloo's `test-cache` refs already run this
+  protocol: anyone with push access may publish, and a nightly `kit verify --fresh` is the honesty check. A
+  pass's path names its command, runtime and the states it holds, so racing writers converge. Republishing the
+  passes a run reused keeps a day's ref whole, so reading two days is enough.

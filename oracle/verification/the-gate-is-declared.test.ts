@@ -19,6 +19,7 @@ test("a gate is whole-tree checks, each an id and a command, and the command tha
   });
   expect(read({ checks: [], tests: { command: "vitest run {test}", under: ["spec/", "oracle/", "spec"] } }).verify?.tests?.[0]?.under).toEqual(["oracle", "spec"]);
   expect(read({ checks: [] }).verify).toEqual({ checks: [] });
+  expect(read({ checks: [], share: "refs/heads/kit-passes/" }).verify).toEqual({ checks: [], share: "refs/heads/kit-passes" });
 });
 
 test("the tests may be a list of groups, each a command, its directories and the modules whose reach selects it", () => {
@@ -48,6 +49,10 @@ test.each([
   [{ checks: [], tests: [{ command: "b {test}", under: "oracle", reaching: [] }] }, /verify\.tests\[0\]\.reaching/],
   [{ checks: [], tests: [{ command: "b {test}", under: "oracle", reaching: ["/abs/x.ts"] }] }, /verify\.tests\[0\]\.reaching/],
   [{ checks: [], tests: [{ command: "b {test}", under: "oracle", extra: 1 }] }, /verify\.tests\[0\]\.extra is not a key Kit reads/],
+  [{ checks: [], share: "kit-passes" }, /verify\.share/],
+  [{ checks: [], share: "refs/heads/kit..passes" }, /verify\.share/],
+  [{ checks: [], share: "refs/heads/kit.lock" }, /verify\.share/],
+  [{ checks: [], share: 7 }, /verify\.share/],
 ])("a malformed gate %j fails configuration", (verify, message) => {
   expect(() => read(verify)).toThrow(message);
 });

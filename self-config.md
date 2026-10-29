@@ -119,6 +119,21 @@ adapters:
     contract: {type: Processes}
     globals: [process]
     packages: [node:child_process]
+  - module: src/substrate/adapters/git-refs
+    export: gitRefs
+    capability: processes
+    kind: external
+    zones: [substrate]
+    contract: {type: GitRefs}
+    globals: [process, Buffer]
+    packages: [node:child_process]
+  - module: src/substrate/adapters/calendar
+    export: calendar
+    capability: calendar
+    kind: external
+    zones: [substrate]
+    contract: {type: Calendar}
+    primitives: [clock]
   - module: src/substrate/adapters/evidence-store
     export: evidenceStore
     capability: filesystem
@@ -174,3 +189,6 @@ on what they are given, so they are declared pure.
 
 The temporary-project adapter owns temporary directories and writes. Locating the operating system's
 temporary directory uses process-environment authority; `node:os` is not declared pure.
+
+The git-refs adapter runs `git` against `origin` alone, so it holds the processes capability as the processes
+adapter does; the calendar reads the wall clock only to name the day a shared pass is published under.

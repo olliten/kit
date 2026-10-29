@@ -28,6 +28,7 @@ const CONFIG_KEYS: Keys = {
     keys: {
       checks: { rows: { id: null, command: null, after: null } },
       tests: { keys: GROUP, rows: GROUP },
+      share: null,
     },
   },
   adapters: {

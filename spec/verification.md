@@ -8,8 +8,9 @@ so a later gate runs only what an edit can have changed.
 - An app declares its gate under `verify`: whole-tree checks, each an id and one command, optionally run after
   the tests, and its tests as one group or a list of groups, each the command that runs one test file `{test}`,
   which may also write the test's coverage into `{dir}`, for every test under one or more relative
-  directories, and optionally the modules inside the app whose reach selects it. A malformed declaration, or
-  group, fails configuration naming where, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
+  directories, and optionally the modules inside the app whose reach selects it, and optionally `share`, the ref
+  prefix on `origin` its passes are shared under. A malformed declaration, or group, fails configuration naming
+  where, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
   - Implementation: {{verification-configuration}}, {{kit-configuration}}, {{config-schema}}, {{verify-run}}
   - Proof: {{temporary-project}}
 - A test runs under the command of the first group, in declared order, whose directories hold it and whose
@@ -43,4 +44,15 @@ so a later gate runs only what an edit can have changed.
   which functions the file has reruns it. A file the test also reads as text is kept whole. A test that reads an
   unrun function's text through the running code, such as `Function.prototype.toString`, is not seen. · {#a-pass-holds-while-the-code-it-ran-holds}
   - Implementation: {{verify-run}}, {{held-state}}, {{ran-code}}, {{function-span}}, {{coverage-report}}, {{compiler}}, {{read-recorder}}, {{verdict-reuse}}, {{text-files}}, {{filesystem}}
+  - Proof: {{temporary-project}}
+- With `share` declared, a pass is shared through `origin`: one ref per runtime and UTC day,
+  `<share>/<day>-<runtime>` with the runtime's digest cut to 16 characters, whose tree holds each kept pass at
+  `verdicts/<kind>/<key>.json` as the store holds it. Before planning, `kit verify` reads today's and yesterday's
+  ref and keeps each pass there the store lacks, so a pass another clone kept is reused like its own; after the
+  run it adds to today's ref every pass it kept or reused that the ref lacks, as one commit on the tip pushed
+  without force. A push refused because the tip moved reads the ref again and adds on top, a few times; a
+  pass already at a path stays. No origin, no network, a refused push or a lost race is said in the output and
+  the run goes on with its own store, so sharing never fails the gate; the summary counts what was read and
+  published. `--plan` reads and does not publish, and `--fresh` and `--no-share` neither read nor publish. · {#passes-are-shared-through-refs}
+  - Implementation: {{pass-sharing}}, {{shared-passes}}, {{git-refs}}, {{calendar}}, {{verify-run}}, {{evidence-store}}, {{toolchain}}, {{verification-configuration}}
   - Proof: {{temporary-project}}
