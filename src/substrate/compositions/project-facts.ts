@@ -201,7 +201,7 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
     options: withoutRoot(JSON.stringify(parsed.options), appRoot),
     declarations: programFiles.filter((sf) => sf.isDeclarationFile).map((sf) => [local(sf.fileName), textDigest(sf)]),
     globals: own.filter(declaresGlobals).map((sf) => [local(sf.fileName), digests.get(local(sf.fileName)) ?? ""]),
-    adapters: [...new Set(adapterFiles.flatMap((path) => closures.get(path) ?? []))].map((path) => [path, digests.get(path) ?? ""]),
+    adapters: [...new Set(adapterFiles)].map((path) => [path, digests.get(path) ?? ""]),
   });
   const roles = new Map<string, string>();
   for (const path of closures.keys()) roles.set(path, source.has(path) ? "source" : tests.has(path) ? "test" : "other");

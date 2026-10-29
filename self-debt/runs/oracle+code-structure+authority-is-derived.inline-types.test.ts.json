@@ -27,7 +27,7 @@
     "src/core/readings/construction-check.ts": "f6c84df74248c11f99735438b877da77a0245565685d1aa2c262890b225cf4d4",
     "src/core/readings/dependency-check.ts": "07ec9a1bd0252d3421c1f76824d7fd9af5d155dd59e6c8408910b3fb2e69650a",
     "src/core/readings/edge-check.ts": "d4161d1b588adead114282d92bd2280fce5aaf103ba914e7cde0d035723e90e0",
-    "src/core/readings/fact-keys.ts": "21ab71521784cf719c3ee33e0adfd0cd937c9e0fc7285efad5098fb76428a1c9",
+    "src/core/readings/fact-keys.ts": "ad245e04c00a248ffd2ed335fbd3239ff67f85cb3f9609ffdae8dad3ea052af2",
     "src/core/readings/finding.ts": "9ee2a05d191688605465cb692dc5e85eb9b6c66e5254bd5856e16c1bda411f33",
     "src/core/readings/global-authority.ts": "089fff033c0ddf2dd4d0af66999d2f30448e5b49f25d1c8ddcc630452ae0d1f2",
     "src/core/readings/ignored-import.ts": "270818021acfe8ab3655cf8e802d6c5b2ff6d6812cc5c5042091739ef2d15007",
@@ -53,7 +53,7 @@
     "src/substrate/compositions/function-recorder.ts": "2493170de3b01a2aa449a76526735542db635824f741f191b2128fe9add0d8ff",
     "src/substrate/compositions/import-recorder.ts": "03bf9df1467808b5140cb3a2fe06c8522e7b8f1ece5b267e2ca511e5b6163f55",
     "src/substrate/compositions/native-reading.ts": "4807754ca71be2f0503f5750bf42dbb40f910f71e648380923f098647e401d60",
-    "src/substrate/compositions/project-facts.ts": "f68fb0b2dedc5bcd7e6546b56adb6d582ca8287b75ebcf3f01a01659b573f31b",
+    "src/substrate/compositions/project-facts.ts": "8cd827b930abf2088ffe56859d597c96ef9f759830acbf881faad7e6b18b824f",
     "src/substrate/compositions/read-snapshot.ts": "bbcdf8423092d07a51e0e783ae07528d0ab1a106ec1930616856933e0283a529",
     "src/substrate/compositions/source-size.ts": "afcd726644f23a970c31eed1b13c1f716d70b6a72d2cc1816f2f923ff3e69299",
     "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb",
@@ -98,11 +98,11 @@
       "edgeCheck@9"
     ],
     "src/core/readings/fact-keys.ts": [
-      "closureKey@57",
+      "closureKey@59",
       "digest@3",
-      "importClosures@39",
-      "projectKey@20",
-      "sorted@21"
+      "importClosures@41",
+      "projectKey@22",
+      "sorted@23"
     ],
     "src/core/readings/global-authority.ts": [
       "globalAuthority@15"

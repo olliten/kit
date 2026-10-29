@@ -4,7 +4,9 @@ export const digest = (value: string | Uint8Array): string => createHash("sha256
 
 // What every fact of one compiler project depends on besides the files a fact's own file imports: the Kit that
 // reads it, the compiler, the config, the project's options, every declaration file the program loads, every
-// file that declares globals or ambient modules, and the adapter modules whose contracts the readers resolve.
+// file that declares globals or ambient modules, and the adapter modules whose exports name the registered
+// contracts. A file that uses a contract imports it, so what the contract's own module imports is in that file's
+// closure already; holding the adapters' closures here would make most edits re-read the whole project.
 export interface ProjectInputs {
   readonly engine: string;
   readonly typescript: string;
