@@ -42,22 +42,6 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
     );
   const terms = declaration["terms"];
   if (terms !== undefined && !isText(terms)) throw new Error("Declare the terms file as a path.");
-  const runs = declaration["runs"];
-  if (
-    runs !== undefined &&
-    !(
-      isRecord(runs) &&
-      isText(runs["record"]) &&
-      relativeLocation(runs["record"]) &&
-      !normalizedPath(runs["record"]).split("/").includes("..") &&
-      isText(runs["each"]) &&
-      runs["each"].includes("{test}") &&
-      runs["each"].includes("{dir}")
-    )
-  )
-    throw new Error(
-      "Declare runs as a record path inside the app and the command that runs one test file {test} with its LCOV report in {dir}.",
-    );
   const separator = declaration["claim-separator"];
   if (separator !== undefined && !isText(separator)) throw new Error("Declare the claim separator as text.");
   return {
@@ -69,9 +53,6 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
     ...(declaration["layout"] === undefined ? {} : { layout: configuredLayout(declaration["layout"]) }),
     termsFile: terms ?? defaults.termsFile,
     ...(separator === undefined ? {} : { claimSeparator: separator }),
-    ...(isRecord(runs) && isText(runs["record"]) && isText(runs["each"])
-      ? { runs: { record: normalizedPath(runs["record"]), each: runs["each"] } }
-      : {}),
     ...(declaration["verify"] === undefined ? {} : { verify: verification(declaration["verify"]) }),
     legacyAreas: texts(declaration["legacy-areas"], "legacy-areas"),
     legacyZones: legacyZones(declaration["legacy-zones"]),

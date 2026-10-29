@@ -161,20 +161,11 @@ export function readStoredSnapshot(
   const sizes = [...sources].map(
     ([path, text]) => scopeOf(path, scopes, appRoot)?.sizes.get(path) ?? sourceSize(path, text, undefined, appRoot, known),
   );
-  // The runs records are read like any other input, so a cached snapshot is reused only while they are unchanged.
-  const record = config.runs?.record;
-  const runsRecords =
-    record === undefined
-      ? undefined
-      : paths
-          .filter((path) => path.startsWith(`${record}/`) && path.endsWith(".json"))
-          .map((path) => ({ path, text: filesystem.readText(join(appRoot, path), trace.filesystem) }));
   const snapshot: Snapshot = {
     files: files.map((file) => {
       const digest = digests.get(file.path);
       return digest === undefined ? file : { ...file, digest };
     }),
-    ...(runsRecords === undefined ? {} : { runsRecords }),
     sizes,
     imports,
     terms,

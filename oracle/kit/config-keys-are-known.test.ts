@@ -20,7 +20,7 @@ test("Kit's own config declares only keys Kit reads", () => {
 test("an unknown key at any level is named by its full path", () => {
   expect(keys({ roots, zones: { core: "src/core/" } })).toEqual(["zones"]);
   expect(keys({ roots: { ...roots, code: "lib/" } })).toEqual(["roots.code"]);
-  expect(keys({ roots, runs: { record: "kit/runs.json", each: "x {test} {dir}", extra: 1 } })).toEqual(["runs.extra"]);
+  expect(keys({ roots, verify: { checks: [], tests: { command: "x {test}", under: "t/", extra: 1 } } })).toEqual(["verify.tests.extra"]);
   expect(keys({ roots, adapters: [adapter, adapter, adapter, { ...adapter, globalz: ["process"] }] })).toEqual([
     "adapters[3].globalz",
   ]);
@@ -48,7 +48,7 @@ test("a section's error names its row, and a legacy zone row is a root or files,
   expect(() => configuredKit(DEFAULT_CONFIG, { roots, "legacy-zones": [{ zone: "core", root: "old/", files: ["old/a.ts"] }] })).toThrow(
     /^legacy-zones\[0\]: /,
   );
-  expect(() => configuredKit(DEFAULT_CONFIG, { roots, runs: { record: "../runs.json", each: "x {test} {dir}" } })).toThrow(/inside the app/);
+  expect(() => configuredKit(DEFAULT_CONFIG, { roots, verify: { checks: [{ id: "lint" }] } })).toThrow(/^verify\.checks\[0\]: /);
 });
 
 const project = temporaryProjects.open("kit-config-");

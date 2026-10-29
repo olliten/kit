@@ -1,3 +1,4 @@
+import type { Runs } from "../primitives/runs.js";
 import type { Verdict } from "../primitives/verdict.js";
 import { digest } from "./fact-keys.js";
 
@@ -20,7 +21,27 @@ export function verdictOf(text: string): Verdict | null {
   if (!isRecord(parsed) || typeof parsed["check"] !== "string" || typeof parsed["seconds"] !== "number") return null;
   const states = parsed["states"];
   if (!isRecord(states) || !Object.values(states).every((state) => typeof state === "string")) return null;
-  return { check: parsed["check"], seconds: parsed["seconds"], states: Object.fromEntries(Object.entries(states).map(([path, state]) => [path, String(state)])) };
+  const ran = parsed["ran"];
+  const listed = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string");
+  if (ran !== undefined && !(isRecord(ran) && Object.values(ran).every(listed))) return null;
+  return {
+    check: parsed["check"],
+    seconds: parsed["seconds"],
+    states: Object.fromEntries(Object.entries(states).map(([path, state]) => [path, String(state)])),
+    ...(isRecord(ran) ? { ran: Object.fromEntries(Object.entries(ran).flatMap(([module, keys]) => (listed(keys) ? [[module, keys]] : []))) } : {}),
+  };
+}
+
+// Where one check's passes are kept: by its id, its command and the runtime it ran on, so a pass under another
+// command, Node or set of installed packages is never taken for this one.
+export const verdictKind = (id: string, line: string, runtime: string): string => `verdicts/${digest(JSON.stringify([id, line, runtime]))}`;
+
+// What each test ran, from its pass that still holds, or the tests that have none, while the rules that read
+// what tests ran wait for them.
+export function keptRuns(passes: ReadonlyMap<string, Verdict | undefined>): { readonly runs: Runs | null; readonly waiting: readonly string[] } {
+  const waiting = [...passes].filter(([, pass]) => pass?.ran === undefined).map(([test]) => test).sort();
+  if (waiting.length > 0) return { runs: null, waiting };
+  return { runs: { tests: Object.fromEntries([...passes].map(([test, pass]) => [test, pass?.ran ?? {}])) }, waiting };
 }
 
 // What Kit keeps is kept with the state of every path it was read from: a check's pass, or a test's reach.

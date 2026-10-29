@@ -11,9 +11,6 @@ roots:
 terms: spec/terms.md
 claim-separator: "·"
 legacy-areas: []
-runs:
-  record: self-debt/runs
-  each: npx vitest run {test} --coverage.enabled --coverage.all=false --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
 verify:
   checks:
     - id: typecheck
@@ -22,7 +19,7 @@ verify:
       command: node scripts/kit-check.mjs
       after: tests
   tests:
-    command: npx vitest run {test}
+    command: npx vitest run {test} --coverage.enabled --coverage.all=false --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
     under: oracle/
 exceptions:
   - oracle/code-structure/imports-point-inward.test.ts
@@ -31,7 +28,6 @@ exceptions:
   - oracle/code-structure/window-authority-stays-in-shell.test.ts
   - scripts/kit-check.mjs
   - scripts/kit-consumers.mjs
-  - scripts/kit-runs.mjs
   - scripts/kit-verify.mjs
   - scripts/kit-refs.mjs
 dependency-exclusions:

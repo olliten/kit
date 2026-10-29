@@ -23,8 +23,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `legacy-zones` | Rows of `zone` with either a `root` or a list of `files`, never both. |
 | `legacy-areas` | Spec files in an older claim grammar. |
 | `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
-| `runs.record`, `runs.each` | Where `kit runs` records, inside the app, and the command that runs one test. |
-| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the `command` that runs one test file `{test}` for every test `under` a directory. |
+| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory. |
 
 An app's plain-Node scripts read the config the way the commands do through
 `src/substrate/compositions/configuration-runner.mjs`: `await configuration()` answers `kitConfig`,
@@ -159,36 +158,6 @@ For checks with declared filesystem inputs, `declaredInputFiles` in
 `src/substrate/adapters/declared-input-files.ts` resolves files, suffix-filtered trees and path-kind probes into an
 input key. It keys only declared inputs: it does not discover a check's reads or choose its cache policy.
 
-## Runs
-
-```yaml
-runs:
-  record: kit/runs
-  each: node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}
-```
-
-`kit runs` runs each test file under the proof root alone with `each`, with `{test}` replaced by the file and
-`{dir}` by a directory of its own, where the command writes an LCOV report. It also sets `NODE_V8_COVERAGE`, so
-processes a test starts count too. It writes one record per test into the `record` directory, named by the
-test's path with `/` replaced by `+`: the named functions of each placed module the test ran, and the digest of
-every file the record depends on, which is the test, the placed files its code reaches and the modules it ran.
-Commit the directory, and don't `ignore` it.
-
-`kit check` reads the records while each is fresh, and reports `runs-missing`, `runs-unreadable`, `runs-stale` or
-`runs-orphan` on a record's file otherwise. `kit runs --stale` records exactly those tests and removes the records
-of tests that are gone; `kit runs <test>…` records the tests named; `kit runs` alone records every test.
-
-With vitest, `each` is `npx vitest run {test} --coverage.enabled --coverage.all=false
---coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}`,
-with `@vitest/coverage-v8` installed. `--coverage.all=false` keeps coverage from reading every source file, which
-would make each test's verdict depend on the whole tree under `kit verify`.
-
-Two rules read the record, and their findings are debt that may only shrink:
-
-- `ungoverned-function`: a named function no test of a claim naming its module runs.
-- `excerpt-cohesion`: a module holding, for two or more claims, code that only that claim runs and that no
-  code other claims run holds. Adapters are exempt.
-
 ## Verify
 
 ```yaml
@@ -200,7 +169,7 @@ verify:
       command: node scripts/kit-check.mjs
       after: tests
   tests:
-    command: npx vitest run {test}
+    command: npx vitest run {test} --coverage.enabled --coverage.all=false --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
     under: oracle/
 ```
 
@@ -210,10 +179,26 @@ processes, threads and child processes. A pass is kept beside the repository wit
 paths, under the command, the Node version and the lockfile; the next `kit verify` reuses it while every path
 is in the same state. A failure is never kept. Worktrees of one repository share what is kept.
 
-With `runs` declared, `kit verify` runs each due test once, under `runs.each`, and writes its runs record from
-that run, so `kit runs` is needed only to record every test from scratch. A check with `after: tests`, such as
-`kit check`, which reads the runs records, runs once they are written, and a test that read something the pass
-wrote afterwards runs again.
+## Runs
+
+When the test command writes the test's LCOV report into `{dir}`, `kit verify` replaces `{dir}` with a directory
+of the test's own and sets `NODE_V8_COVERAGE`, so processes the test starts count too, and keeps with each
+test's pass the named functions of each placed module it ran. With vitest, that is the command above, with
+`@vitest/coverage-v8` installed; `--coverage.all=false` keeps coverage from reading every source file, which
+would make each test's pass depend on the whole tree. With `node --test`, it is `node --test
+--experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}`.
+
+`kit check` reads what each test under the proof root ran from its pass while it still holds. Nothing is
+committed. While any such test has no pass that holds, the two rules that read what tests ran wait, and the
+check says how many tests they wait for; `kit verify` runs `kit check` after the tests, so the gate always has
+them. Their findings are debt that may only shrink:
+
+- `ungoverned-function`: a named function no test of a claim naming its module runs.
+- `excerpt-cohesion`: a module holding, for two or more claims, code that only that claim runs and that no
+  code other claims run holds. Adapters are exempt.
+
+A check with `after: tests`, such as `kit check`, runs once the tests' passes are kept, and is not kept itself
+when a test's pass was not.
 
 `kit verify --plan` lists what would run, `--fresh` runs everything and keeps nothing, and the exit code is 1
 when a check fails. A check that depends on something no file holds, such as the network, the clock or an

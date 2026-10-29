@@ -3,7 +3,9 @@ import type { CommandRequest, CommandResponse } from "../../core/primitives/comm
 import { baselineFiles, mergedBaseline } from "../../core/readings/baseline-files.js";
 import { kitCheckPaths } from "../../core/readings/check-paths.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
+import { holding, keptRuns, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
+import { filesystem } from "../adapters/filesystem.js";
 import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
 import { toolchain } from "../adapters/toolchain.js";
@@ -12,6 +14,7 @@ import { readStoredSnapshot } from "./read-snapshot.js";
 
 // `kit check`: read the governed root, run every rule, and fail on what the baseline doesn't hold. Facts read
 // before are reused while what they depend on is unchanged; `--fresh` reads everything again and stores nothing.
+// What each test ran comes from the passes `kit verify` kept, while each still holds.
 // `--tighten` shrinks the baseline to what is left, and `--report` prints the findings.
 export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promise<CommandResponse> {
   let stdout = "";
@@ -37,8 +40,27 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
         },
   );
   if (!args.includes("--fresh")) evidenceStore.prune(store);
+  const command = config.verify?.tests?.command;
+  const runtime = toolchain.runtime(root);
+  const states = new Map<string, string>();
+  const passes = new Map(
+    command?.includes("{dir}") === true
+      ? snapshot.files
+          .filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`))
+          .map((file) => {
+            const verdicts = evidenceStore
+              .entries(store, verdictKind(`test:${file.path}`, command.replaceAll("{test}", file.path), runtime))
+              .flatMap((text) => verdictOf(text) ?? []);
+            for (const verdict of verdicts)
+              for (const path of Object.keys(verdict.states))
+                if (!states.has(path)) states.set(path, filesystem.state(`${root}/${path}`));
+            return [file.path, holding(verdicts, states)] as const;
+          })
+      : [],
+  );
+  const { runs, waiting } = keptRuns(passes);
   const read = stopwatch.now();
-  const result = gate(snapshot, config);
+  const result = gate(runs === null ? snapshot : { ...snapshot, runs }, config);
   const receipt = { ...extraction, seconds: (read - started) / 1000, checkSeconds: (stopwatch.now() - read) / 1000 };
   const checked = { result, receipt };
   const { findings, placedPaths, imports, requiredLimits } = checked.result;
@@ -75,6 +97,8 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
     counts[key] = (counts[key] ?? 0) + 1;
   }
   stdout += "Kit check " + JSON.stringify({ ...(config.app === undefined ? {} : { app: config.app }), counts, receipt: checked.receipt }) + "\n";
+  if (waiting.length > 0)
+    stdout += `Kit runs: the rules that read what tests ran wait for ${waiting.length} tests with no kept pass; run \`kit verify\`.\n`;
   for (const item of findings.filter((item) => item.category === "checker-limit"))
     stdout += "Kit limit " + item.debtKey + ": " + item.limit + "\n";
   for (const item of failures) stderr += item.debtKey + ": " + item.fix + "\n";

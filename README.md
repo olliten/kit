@@ -138,7 +138,7 @@ So a module's imports and the contract types it takes say every effect it can ca
 - Every claim has a test, and the code its tests use reaches the modules it names.
 - Every test names a claim, and every placed module is named by a claim.
 - Two claims that share no code share no module: if the claims naming a module use disjoint parts of it, split it.
-- With a runs record (`kit runs`), every named function is run by a claim that names its module, and a module
+- With what each test ran (kept by `kit verify`), every named function is run by a claim that names its module, and a module
   holding code that only one claim runs, for two or more claims, is split along those claims.
 
 **Legacy.** Existing code is legacy until it's moved into place. Its findings are debt that may only shrink, and

@@ -16,7 +16,6 @@ import { proofReach } from "../readings/proof-reach.js";
 import { proofScope } from "../readings/proof-scope.js";
 import { excerptCohesion } from "../readings/excerpt-cohesion.js";
 import { functionGovernance } from "../readings/function-governance.js";
-import { runsRecord } from "../readings/runs-record.js";
 import { type GateFinding, startupCheckRoots, withProofDebt } from "../readings/ratchet.js";
 import { referenceCheck } from "../readings/semantic-references.js";
 import { termModel } from "../readings/term-model.js";
@@ -74,9 +73,8 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
     ...concepts.findings,
   ].map(violation);
   const requiredLimits = exclusions.limits.map(limit);
-  // Which named functions each test ran, while the record describes this code.
-  const record = runsRecord(snapshot);
-  const runs = record.runs === null ? [] : [...functionGovernance(topicSnapshot, record.runs), ...excerptCohesion(topicSnapshot, record.runs)];
+  // Which named functions each test ran, from the passes that still hold.
+  const runs = snapshot.runs === undefined ? [] : [...functionGovernance(topicSnapshot, snapshot.runs), ...excerptCohesion(topicSnapshot, snapshot.runs)];
   const placedPaths = snapshot.files
     .filter((file) => file.type === "source" && placementOf(file.path, config.srcRoot).placed)
     .map((file) => file.path);
@@ -95,7 +93,6 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
       ...handoverCheck(snapshot),
       ...proofScope(topicSnapshot),
       ...runs,
-      ...record.findings.map(violation),
       ...structural,
       ...concepts.limits.map(limit),
       ...requiredLimits,

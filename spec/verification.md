@@ -29,8 +29,9 @@ prerequisites and resource needs, so evidence reuse and execution can be planned
 ## The gate
 
 - An app declares its gate under `verify`: whole-tree checks, each an id and one command, optionally run after
-  the tests, and the command that runs one test file `{test}`, for every test under a relative directory. A malformed declaration fails
-  configuration, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
+  the tests, and the command that runs one test file `{test}`, for every test under a relative directory, which
+  may also write the test's coverage into `{dir}`. A malformed declaration fails configuration, and `kit verify`
+  without one says what to declare. · {#the-gate-is-declared}
   - Implementation: {{verification-configuration}}, {{kit-configuration}}, {{config-schema}}, {{verify-run}}
   - Proof: {{temporary-project}}
 - A recorder preloaded into a check's processes records every path inside the app the check reads, lists or
@@ -43,10 +44,8 @@ prerequisites and resource needs, so evidence reuse and execution can be planned
 - `kit verify` keeps a passing check with the state of every path its run read: nothing, a file's content or a
   directory's listing. It reuses the check while each path is still in that state, under the same command,
   runtime and installed packages, and runs the rest together; a failure is never kept, a pass during which a
-  path it read changed is reported and not kept, and runs on different trees each keep theirs. With runs
-  declared, a test runs once, under the command that writes its coverage, and its runs record is written from
-  that run; a check declared `after: tests` runs once the records are written, and a run that read something
-  the pass wrote afterwards runs again. `--fresh` reuses and keeps nothing, `--plan` says what would run, and it
-  exits 1 when a check fails. · {#verdicts-hold-while-their-reads-hold}
-  - Implementation: {{verify-run}}, {{verdict-reuse}}, {{verdict}}, {{evidence-store}}, {{filesystem}}, {{toolchain}}, {{processes}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}, {{runs-run}}, {{read-snapshot}}
+  path it read changed is reported and not kept, and runs on different trees each keep theirs. A check declared
+  `after: tests` runs once the tests' passes are kept, and is not kept itself when a test's pass was not.
+  `--fresh` reuses and keeps nothing, `--plan` says what would run, and it exits 1 when a check fails. · {#verdicts-hold-while-their-reads-hold}
+  - Implementation: {{verify-run}}, {{verdict-reuse}}, {{verdict}}, {{evidence-store}}, {{filesystem}}, {{toolchain}}, {{processes}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}
   - Proof: {{temporary-project}}

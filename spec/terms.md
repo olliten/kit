@@ -66,7 +66,7 @@
   - Role: fact
   - Zone: core
   - Of: []
-- **runs** — what `kit runs` recorded about each test: the named functions of each placed module it ran and the digests of the files the record depends on, and the fresh records read together.
+- **runs** — what each test ran, from the passes `kit verify` kept that still hold: the named functions of each placed module it ran.
   - Role: fact
   - Zone: core
   - Of: []
@@ -77,7 +77,7 @@
 - **snapshot** — the supplied files, declarations, configuration and compiler facts of one codebase.
   - Role: fact
   - Zone: core
-  - Of: {{claim}}, {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{term}}
+  - Of: {{claim}}, {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{runs}}, {{term}}
 - **term** — a concept defined once in the global terms file, with its meaning and any declared contract metadata.
   - Role: fact
   - Zone: core
@@ -86,7 +86,7 @@
   - Role: fact
   - Zone: core
   - Of: []
-- **verdict** — a check that passed, with the state of every path inside the app its run read, and how long it took.
+- **verdict** — a check that passed, with the state of every path inside the app its run read, how long it took, and for a test, what it ran.
   - Role: fact
   - Zone: core
   - Of: []
@@ -285,14 +285,6 @@
   - Role: derived
   - Zone: core
   - From: []
-- **runs-freshness** — each test's record file and whether it still describes the code, with the files that changed, and the records whose tests are gone.
-  - Role: derived
-  - Zone: core
-  - From: {{placement-of}}, {{proof-reach}}, {{runs}}, {{snapshot}}
-- **runs-record** — the runs records while each still describes the code, or the findings on the records that are missing, unreadable, stale or of gone tests.
-  - Role: derived
-  - Zone: core
-  - From: {{finding}}, {{runs}}, {{runs-freshness}}, {{snapshot}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
@@ -321,18 +313,18 @@
   - Role: derived
   - Zone: core
   - From: {{config-values}}
-- **test-runs** — each test's record built from its coverage reports and the digests of the files it reaches and ran.
+- **test-runs** — what each test ran, from its coverage reports: the named functions of each placed module.
   - Role: derived
   - Zone: core
-  - From: {{compiler-facts}}, {{coverage-report}}, {{default-config}}, {{file}}, {{placement-of}}, {{runs}}
+  - From: {{compiler-facts}}, {{coverage-report}}, {{default-config}}, {{file}}, {{placement-of}}
 - **topic-shape** — the check that a topic is a title, a short intro, then only section headings and claims with optional module relationships.
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
-- **verdict-reuse** — the paths a check's processes recorded, a stored verdict read back, the kept entry whose paths all still hold, and where an entry is kept among its subject's.
+- **verdict-reuse** — the paths a check's processes recorded, a stored verdict read back, where a check's passes are kept, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
   - Role: derived
   - Zone: core
-  - From: {{fact-keys}}, {{verdict}}
+  - From: {{fact-keys}}, {{runs}}, {{verdict}}
 - **verification-configuration** — the gate an app declares under `verify`, checked as it is read.
   - Role: derived
   - Zone: core
@@ -423,7 +415,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate
-  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{text-files}}, {{toolchain}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{filesystem}}, {{gate}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate
@@ -463,7 +455,7 @@
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
-  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{runs-record}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
 - **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
   - Role: composition
   - Zone: substrate
@@ -524,10 +516,6 @@
   - Role: composition
   - Zone: substrate
   - Of: {{command}}, {{config-values}}, {{read-config}}, {{refs-description}}, {{terminal-input}}, {{text-files}}
-- **runs-run** — the `kit runs` workflow: run every test, the given tests or the stale ones, each alone with the app's command, and record which named functions each ran.
-  - Role: composition
-  - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{default-config}}, {{evidence-store}}, {{processes}}, {{read-config}}, {{read-snapshot}}, {{runs-freshness}}, {{snapshot}}, {{test-runs}}, {{text-files}}, {{toolchain}}
 - **scripted-verification** — the workflow that runs verification checks whose effects are scripted as data, reporting what ran together.
   - Role: composition
   - Zone: substrate
@@ -559,7 +547,7 @@
 - **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{processes}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{runs-run}}, {{stopwatch}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
+  - Of: {{command}}, {{config-values}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{processes}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{stopwatch}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
 
 ## Supporting vocabulary and roles
 

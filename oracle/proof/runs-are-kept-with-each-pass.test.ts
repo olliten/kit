@@ -1,9 +1,9 @@
-import { readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { coverageReport } from "../../src/core/readings/coverage-report.js";
 import { testRuns } from "../../src/core/readings/test-runs.js";
-import { runRuns } from "../../src/substrate/compositions/runs-run.js";
+import { runCheck } from "../../src/substrate/compositions/check-run.js";
+import { runVerify } from "../../src/substrate/compositions/verify-run.js";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
 const report = [
@@ -38,7 +38,7 @@ test("an LCOV report lists each file's named functions by line, pairing alike na
   ]);
 });
 
-test("a test's record holds the named functions it ran and the digests of the files it reaches and ran", () => {
+test("what a test ran is the named functions of each placed module its report shows it ran", () => {
   const files = [
     { path: "src/core/readings/total.ts", type: "source" as const, digest: "a" },
     { path: "src/core/readings/round.ts", type: "source" as const, digest: "d" },
@@ -46,13 +46,8 @@ test("a test's record holds the named functions it ran and the digests of the fi
     { path: "lib/old.ts", type: "source" as const, digest: "b" },
     { path: "oracle/sums/total-sums.test.ts", type: "test" as const, digest: "c" },
   ];
-  const inputs = new Map([["oracle/sums/total-sums.test.ts", ["oracle/sums/total-sums.test.ts", "src/core/readings/round.ts"]]]);
-  expect(testRuns([{ test: "oracle/sums/total-sums.test.ts", lcov: [report], v8: [] }], files, "/app", { srcRoot: "src" }, inputs)).toEqual([
-    {
-      test: "oracle/sums/total-sums.test.ts",
-      digests: { "oracle/sums/total-sums.test.ts": "c", "src/core/readings/round.ts": "d", "src/core/readings/total.ts": "a" },
-      ran: { "src/core/readings/total.ts": ["total@1", "visit@9"] },
-    },
+  expect(testRuns([{ test: "oracle/sums/total-sums.test.ts", lcov: [report], v8: [] }], files, "/app", { srcRoot: "src" })).toEqual([
+    { test: "oracle/sums/total-sums.test.ts", ran: { "src/core/readings/total.ts": ["total@1", "visit@9"] } },
   ]);
 });
 
@@ -63,14 +58,17 @@ const roundsTest =
   "import { test } from 'node:test';\nimport assert from 'node:assert';\nimport { round } from '../../src/core/readings/round.ts';\n" +
   "test('rounds', () => { assert.equal(round(1.4), 1); });\n";
 
-test("kit runs records each test alone, and reruns only what changed, what it is given, or everything", async () => {
+test("kit verify keeps what each test ran with its pass, and kit check reads it while every test has a pass that holds", async () => {
   const project = temporaryProjects.open("kit-runs-");
   const config = join(project.root, "kit/config.md");
-  const runs = (...args: string[]) => runRuns({ engineRoot: project.root, args: ["--root", project.root, "--config", config, ...args], cwd: project.root });
-  const records = () => readdirSync(join(project.root, "kit/runs")).sort();
-  const written = (name: string) => statSync(join(project.root, "kit/runs", name)).mtimeMs;
+  const request = (...args: string[]) => ({ engineRoot: project.root, args: ["--root", project.root, "--config", config, ...args], cwd: project.root });
+  const ungoverned = async () => {
+    const report: { readonly findings: readonly { readonly debtKey: string }[] } = JSON.parse((await runCheck(request("--report"))).stdout);
+    return report.findings.map((item) => item.debtKey).filter((key) => key.includes("ungoverned-function"));
+  };
   try {
     project.write({
+      ".git/HEAD": "ref: refs/heads/main\n",
       "package.json": JSON.stringify({ type: "module" }),
       "tsconfig.json": JSON.stringify({
         compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true, noEmit: true, allowImportingTsExtensions: true, types: ["node"] },
@@ -83,44 +81,33 @@ test("kit runs records each test alone, and reruns only what changed, what it is
       "spec/terms.md": "# Terms\n\n- **total** — the sum.\n  - Role: derived\n  - Zone: core\n  - From: []\n",
       "spec/sums.md": "# Sums\n\nSums.\n\n## Totals\n\n- A total sums its values ({{total}}). · {#total-sums}\n",
       "kit/config.md":
-        "```yaml\napp: sums\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\nruns:\n  record: kit/runs\n" +
-        "  each: node --experimental-strip-types --no-warnings --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}\n```\n",
+        "```yaml\napp: sums\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\nverify:\n  checks: []\n  tests:\n    under: oracle/\n" +
+        "    command: node --experimental-strip-types --no-warnings --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}\n```\n",
     });
-    expect(await runs()).toMatchObject({ exitCode: 0, stderr: "", stdout: expect.stringContaining("recorded 1 tests in kit/runs/") });
-    const sums = "oracle+sums+total-sums.test.ts.json";
-    expect(records()).toEqual([sums]);
-    const record = JSON.parse(readFileSync(join(project.root, "kit/runs", sums), "utf8"));
-    expect(record).toMatchObject({ test: "oracle/sums/total-sums.test.ts", ran: { "src/core/readings/total.ts": ["total@1"] } });
-    expect(Object.keys(record.digests).sort()).toEqual(["oracle/sums/total-sums.test.ts", "src/core/readings/total.ts"]);
+    // Before any pass is kept, the rules that read what tests ran wait, and the check says so.
+    expect((await runCheck(request())).stdout).toContain("wait for 1 tests");
+    expect(await ungoverned()).toEqual([]);
 
-    // A new test is the only record missing, so only it runs.
+    expect((await runVerify(request())).exitCode).toBe(0);
+    expect(await ungoverned()).toEqual([expect.stringContaining("src/core/readings/total.ts")]);
+    expect((await runCheck(request())).stdout).not.toContain("wait for");
+
+    // A new test has no kept pass, so the rules wait again until it runs.
     project.write({
       "src/core/readings/round.ts": "export function round(value: number): number { return Math.round(value); }\n",
       "oracle/sums/rounds-down.test.ts": roundsTest,
     });
-    const before = written(sums);
-    expect((await runs("--stale")).stdout).toContain("recorded 1 tests");
-    expect(records()).toEqual(["oracle+sums+rounds-down.test.ts.json", sums]);
-    expect(written(sums)).toBe(before);
+    expect((await runCheck(request())).stdout).toContain("wait for 1 tests");
+    expect(JSON.parse((await runVerify(request())).stdout.split("Kit verify ")[1] ?? "{}")).toMatchObject({ reused: 1, ran: 1, failed: 0 });
+    expect((await runCheck(request())).stdout).not.toContain("wait for");
 
-    // An edit reruns only the tests whose records depend on the edited file.
-    project.write({ "src/core/readings/round.ts": "export function round(value: number): number { return Math.floor(value + 0.5); }\n" });
-    expect((await runs("--stale")).stdout).toContain("recorded 1 tests");
-    expect(written(sums)).toBe(before);
-
-    // A named test is recorded again, fresh or not; an unknown one is refused.
-    expect((await runs("oracle/sums/total-sums.test.ts")).stdout).toContain("recorded 1 tests");
-    expect(written(sums)).not.toBe(before);
-    expect(await runs("oracle/sums/missing.test.ts")).toMatchObject({ exitCode: 1, stderr: expect.stringContaining("oracle/sums/missing.test.ts") });
-
-    // A gone test's record is removed when the stale tests are recorded.
-    rmSync(join(project.root, "oracle/sums/rounds-down.test.ts"));
-    expect((await runs("--stale")).stdout).toContain("removed 1 records of gone tests");
-    expect(records()).toEqual([sums]);
+    // An edit to what a test ran makes its pass stop holding.
+    project.write({ "src/core/readings/total.ts": "export function total(values: readonly number[]): number { return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value); }\n" });
+    expect((await runCheck(request())).stdout).toContain("wait for 1 tests");
   } finally {
     project.dispose();
   }
-}, 120_000);
+}, 180_000);
 
 test("raw V8 coverage, which covers the processes a test starts, counts only where it matches the source", () => {
   const text = "export function total(values: number[]): number {\n  return values.length;\n}\nexport const half = (n: number): number => n / 2;\n";
@@ -147,6 +134,6 @@ test("raw V8 coverage, which covers the processes a test starts, counts only whe
     { file: "src/core/readings/total.ts", name: "half", line: 4, id: "half", holder: null },
   ];
   expect(
-    testRuns([{ test: "oracle/sums/total-sums.test.ts", lcov: [], v8: [v8, "not json"] }], files, "/app", { srcRoot: "src" }, new Map(), functions, new Map([["src/core/readings/total.ts", text]]))[0]?.ran,
+    testRuns([{ test: "oracle/sums/total-sums.test.ts", lcov: [], v8: [v8, "not json"] }], files, "/app", { srcRoot: "src" }, functions, new Map([["src/core/readings/total.ts", text]]))[0]?.ran,
   ).toEqual({ "src/core/readings/total.ts": ["total@1"] });
 });

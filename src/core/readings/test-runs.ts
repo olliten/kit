@@ -1,7 +1,6 @@
 import type { CompilerFacts } from "../primitives/compiler-facts.js";
 import type { KitConfig } from "../primitives/default-config.js";
 import type { SnapshotFile } from "../primitives/file.js";
-import type { TestRecord } from "../primitives/runs.js";
 import { coverageReport } from "./coverage-report.js";
 import { placementOf } from "./placement-of.js";
 
@@ -48,21 +47,17 @@ function rawRuns(
   return ran;
 }
 
-// Each test's record from its LCOV reports and raw V8 coverage, which also covers processes the test starts: the
-// named functions of each placed module it ran, as `name@line`, and the digest of every file the record depends
-// on, which is the files its code reaches (`inputs`) and the modules it ran. A report names a file absolutely or
-// relative to the app root.
+// What each test ran, from its LCOV reports and raw V8 coverage, which also covers processes the test starts: the
+// named functions of each placed module it ran, as `name@line`. A report names a file absolutely or relative to
+// the app root.
 export function testRuns(
   reports: readonly { readonly test: string; readonly lcov: readonly string[]; readonly v8: readonly string[] }[],
   files: readonly SnapshotFile[],
   root: string,
   { srcRoot, layerNames }: Pick<KitConfig, "srcRoot" | "layerNames">,
-  inputs: ReadonlyMap<string, readonly string[]>,
   functions: readonly NamedFunction[] = [],
   texts: ReadonlyMap<string, string> = new Map(),
-): TestRecord[] {
-  const digests = new Map<string, string>();
-  for (const file of files) if (file.digest !== undefined) digests.set(file.path, file.digest);
+): { readonly test: string; readonly ran: Readonly<Record<string, readonly string[]>> }[] {
   const placed = new Set(
     files.filter((file) => file.type === "source" && placementOf(file.path, srcRoot, layerNames).placed).map((file) => file.path),
   );
@@ -79,14 +74,6 @@ export function testRuns(
         for (const fn of report.functions) if (fn.count > 0) add(local(report.file), `${fn.name}@${fn.line}`);
       for (const text of v8) for (const [module, keys] of rawRuns(text, local, texts, named)) for (const key of keys) add(module, key);
       const ran = [...modules].filter(([, keys]) => keys.size > 0).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-      const depends = [...new Set([test, ...(inputs.get(test) ?? []), ...ran.map(([module]) => module)])].sort();
-      return {
-        test,
-        digests: Object.fromEntries(depends.flatMap((path) => {
-          const digest = digests.get(path);
-          return digest === undefined ? [] : [[path, digest]];
-        })),
-        ran: Object.fromEntries(ran.map(([module, keys]) => [module, [...keys].sort()])),
-      };
+      return { test, ran: Object.fromEntries(ran.map(([module, keys]) => [module, [...keys].sort()])) };
     });
 }
