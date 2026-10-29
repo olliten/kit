@@ -96,7 +96,7 @@
     "oracle/proof/proofs-reach-named-modules.reach.test.ts": "0947656e927baf595bf039a5959e4c23fedfc5d33bac3e6869767186dce439e5",
     "oracle/proof/proofs-reach-named-modules.test.ts": "1ccee5eb1f4384d5e99270aad80d87536e88fba31107aaf6bc75ba7fe1994da8",
     "oracle/proof/proofs-reach-named-modules.use.test.ts": "be29dad0ddf5184e46a3a25cc393537494e821529de9d2679df279cc8e49c5a1",
-    "oracle/proof/proofs-reach-only-named-modules.test.ts": "1c4929a278adea2c0eb3d3d715d06e0cc089f8c55b0083bf00e460eda9be90bc",
+    "oracle/proof/proofs-reach-only-named-modules.test.ts": "45cb78e248b97685bd3866e150c7c7fa24cf36cc2dee01c4f29110a6bbee0faf",
     "oracle/proof/runs-are-recorded-per-test.test.ts": "8e0f1bd8cfb1c639648cb518ecdc092a2bc28c70b9afb784e94ec73b610f26f3",
     "oracle/proof/table-annotations-keep-claim-relationships.test.ts": "97ba50afac2773b6955e5147c6d7248945f738c0deb49a247c4cb9e348b0c312",
     "oracle/proof/table-rows-present-claims.test.ts": "837e52751c52dd3cb3e13b628397fbbeed1c87084af8e3278031ec8a2b2dbe58",
@@ -172,7 +172,7 @@
     "src/core/readings/name-check.ts": "8aa2a94f88453ab26187f07f2e3cbf1ced612af97d2e4ac5c0b95fb89ed25658",
     "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
     "src/core/readings/proof-reach.ts": "57df3ea9860e6b1237b1c83847fd5b711226f3d7e1f1f227e5b45dcec9143973",
-    "src/core/readings/proof-scope.ts": "6afebdc5f0ac8e8dbeb9535041232bfe5e7e4bdff4805b214e7e514f289f3243",
+    "src/core/readings/proof-scope.ts": "84ff989e2ad00d88d665df852fb7999853f448d73fd7be3bf5452cbd5db7cad5",
     "src/core/readings/ratchet.ts": "d699f5026b5dff947de95c7fead8853ac011040172974cac4bde10c11b4eb866",
     "src/core/readings/refs-description.ts": "7fd76ccfc31cbcfa7de17bef2f1b2a2d67f0ab069637e2e240589edf8ffdf096",
     "src/core/readings/registration-check.ts": "c4c83d245b02131812e435415e3366863cfe1e5d3c9988bd2ae7193b637e667a",
@@ -4769,7 +4769,7 @@
         "proofReach@87"
       ],
       "src/core/readings/proof-scope.ts": [
-        "proofScope@17"
+        "proofScope@18"
       ],
       "src/core/readings/ratchet.ts": [
         "isKeyList@19",
@@ -5775,7 +5775,7 @@
         "proofReach@87"
       ],
       "src/core/readings/proof-scope.ts": [
-        "proofScope@17"
+        "proofScope@18"
       ],
       "src/core/readings/ratchet.ts": [
         "isKeyList@19",
@@ -6806,7 +6806,7 @@
         "reach@35"
       ],
       "src/core/readings/proof-scope.ts": [
-        "proofScope@17"
+        "proofScope@18"
       ],
       "src/core/readings/ratchet.ts": [
         "isKeyList@19",
@@ -8066,14 +8066,7 @@
         "root@33"
       ],
       "src/core/readings/claim-inventory.ts": [
-        "claimInventory@93",
-        "claimMarkdown@12",
-        "claimModules@62",
-        "close@122",
-        "marker@111",
-        "matches@109",
-        "named@116",
-        "visit@149"
+        "claimMarkdown@12"
       ],
       "src/core/readings/claim-proof-binder.ts": [
         "claimProofBinder@5"
@@ -8152,8 +8145,8 @@
         "reach@35"
       ],
       "src/core/readings/proof-scope.ts": [
-        "composed@28",
-        "proofScope@17"
+        "composed@29",
+        "proofScope@18"
       ],
       "src/core/readings/ratchet.ts": [
         "isKeyList@19",
@@ -8182,20 +8175,11 @@
         "applies@77",
         "cacheHeader@21",
         "digest@10",
-        "externalDirectories@84",
-        "rootPattern@38",
-        "settle@63",
-        "visit@86",
-        "withoutRoot@44"
+        "relativePath@13",
+        "withRoot@46"
       ],
       "src/core/readings/startup-check.ts": [
         "startupCheck@9"
-      ],
-      "src/core/readings/term-inventory.ts": [
-        "plain@15",
-        "sorted@22",
-        "termInventory@5",
-        "visit@39"
       ],
       "src/core/readings/term-model.ts": [
         "identity@32",
@@ -8216,22 +8200,14 @@
       "src/substrate/adapters/compiler.ts": [
         "count@132",
         "digest@67",
-        "environmentReader@109",
-        "getSourceFile@191",
         "list@130",
-        "load@177",
         "names@70",
         "optionalText@128",
         "recorded@47",
         "reread@218",
-        "resolve@215",
         "same@69",
-        "sourceOf@141",
-        "systemOf@118",
         "text@126",
-        "tracedSystem@74",
-        "useSourceOfProjectReferenceRedirect@205",
-        "workerHost@156"
+        "tracedSystem@74"
       ],
       "src/substrate/adapters/filesystem.ts": [
         "entries@41",
@@ -8245,11 +8221,10 @@
         "directory@119",
         "engineHash@52",
         "environment@137",
-        "mentions@196",
         "objectPath@38",
-        "put@179",
+        "read@109",
         "readIndex@82",
-        "realpath@195",
+        "text@188",
         "update@151",
         "visit@56",
         "writeAtomically@98"
@@ -8262,153 +8237,21 @@
         "entries@20",
         "read@15"
       ],
-      "src/substrate/compositions/authority-recorder.ts": [
-        "authorityRecorder@14",
-        "recordParameter@24",
-        "visit@44"
-      ],
-      "src/substrate/compositions/behaviour-reading.ts": [
-        "acceptsBehaviour@228",
-        "behaviourReading@57",
-        "contractType@195",
-        "executable@231",
-        "handleOf@221",
-        "libCollection@70",
-        "parameterFacts@179",
-        "typeFacts@76"
-      ],
       "src/substrate/compositions/cached-check.ts": [
         "cachedKitCheck@263",
         "cachedSnapshot@209",
         "isCompilerRead@56",
         "isFilesystemRead@54",
+        "isSnapshot@150",
         "lookup@113",
-        "portability@76",
-        "remember@153",
-        "removeUnreferenced@100",
         "reread@48",
+        "tracedReads@61",
         "unchanged@58",
         "validate@236"
       ],
       "src/substrate/compositions/check-run.ts": [
         "check@22",
         "runCheck@17"
-      ],
-      "src/substrate/compositions/contract-reading.ts": [
-        "contractIdentity@38",
-        "contractReading@6",
-        "operationsOf@7",
-        "portsOf@19",
-        "typeNames@47"
-      ],
-      "src/substrate/compositions/contract-recorder.ts": [
-        "contractRecorder@14",
-        "visit@25"
-      ],
-      "src/substrate/compositions/escape-recorder.ts": [
-        "end@35",
-        "escapeRecorder@9",
-        "visit@14"
-      ],
-      "src/substrate/compositions/fact-walk.ts": [
-        "factWalk@13",
-        "visit@18"
-      ],
-      "src/substrate/compositions/file-scope.ts": [
-        "fileScope@13",
-        "site@26",
-        "syntaxOf@15",
-        "visitToken@17"
-      ],
-      "src/substrate/compositions/function-recorder.ts": [
-        "end@55",
-        "functionRecorder@31",
-        "nameOf@9",
-        "own@12",
-        "visit@37"
-      ],
-      "src/substrate/compositions/import-recorder.ts": [
-        "end@62",
-        "importRecorder@14",
-        "visit@27"
-      ],
-      "src/substrate/compositions/native-reading.ts": [
-        "hostValue@32",
-        "nativeAuthorityOf@102",
-        "nativeContract@189",
-        "nativeLibrary@24",
-        "nativeMember@60",
-        "nativeMemberAuthority@175",
-        "nativeReading@22",
-        "nativeType@70",
-        "referenceType@15"
-      ],
-      "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@208",
-        "commentsOf@388",
-        "ignored@54",
-        "importTarget@278",
-        "local@255",
-        "readCompiler@231",
-        "readSnapshot@45",
-        "scopeOf@185",
-        "typeOf@424",
-        "visit@391",
-        "walk@410"
-      ],
-      "src/substrate/compositions/source-size.ts": [
-        "called@33",
-        "fileOf@20",
-        "sourceSize@9",
-        "targetOf@42",
-        "visit@61"
-      ],
-      "src/substrate/compositions/syntax-reading.ts": [
-        "annotation@147",
-        "globalName@80",
-        "literal@103",
-        "primitiveOf@35",
-        "rawAccess@43",
-        "syntaxReading@7",
-        "targetOf@8",
-        "typeOnlyOf@14"
-      ],
-      "src/substrate/compositions/term-recorder.ts": [
-        "end@17",
-        "termRecorder@11"
-      ],
-      "src/substrate/compositions/test-reach.ts": [
-        "assignment@278",
-        "bindingSymbols@282",
-        "bit@548",
-        "chainTop@244",
-        "changeable@430",
-        "changes@454",
-        "code@477",
-        "empty@176",
-        "enter@578",
-        "erased@70",
-        "flow@288",
-        "homeReferences@408",
-        "immutable@136",
-        "inert@413",
-        "isResults@646",
-        "isSymbol@650",
-        "names@16",
-        "namesOf@654",
-        "own@557",
-        "pieceOf@537",
-        "rawSymbolOf@42",
-        "reach@191",
-        "readonlyProperty@131",
-        "referencesOf@47",
-        "summarize@569",
-        "testReach@30",
-        "topLevelNames@12",
-        "unaliased@37",
-        "visit@484",
-        "visit@53",
-        "within@76"
       ]
     },
     "oracle/kit/ignored-paths-are-unread.test.ts": {
@@ -8590,8 +8433,7 @@
         "capabilityCheck@28"
       ],
       "src/core/compositions/gate.ts": [
-        "gate@51",
-        "violation@33"
+        "gate@51"
       ],
       "src/core/compositions/kit-configuration.ts": [
         "adapters@84",
@@ -8638,6 +8480,9 @@
       "src/core/readings/claim-proof-binder.ts": [
         "claimProofBinder@5"
       ],
+      "src/core/readings/claim-runs.ts": [
+        "claimRuns@19"
+      ],
       "src/core/readings/comment-check.ts": [
         "commentCheck@10"
       ],
@@ -8671,8 +8516,12 @@
       "src/core/readings/edge-check.ts": [
         "edgeCheck@9"
       ],
-      "src/core/readings/finding.ts": [
-        "finding@14"
+      "src/core/readings/excerpt-cohesion.ts": [
+        "excerptCohesion@17",
+        "sharedAbove@26"
+      ],
+      "src/core/readings/function-governance.ts": [
+        "functionGovernance@15"
       ],
       "src/core/readings/global-authority.ts": [
         "globalAuthority@15"
@@ -8723,8 +8572,8 @@
         "reach@35"
       ],
       "src/core/readings/proof-scope.ts": [
-        "composed@28",
-        "proofScope@17"
+        "composed@29",
+        "proofScope@18"
       ],
       "src/core/readings/ratchet.ts": [
         "reachableFrom@72",
@@ -11455,8 +11304,8 @@
         "reach@35"
       ],
       "src/core/readings/proof-scope.ts": [
-        "composed@28",
-        "proofScope@17"
+        "composed@29",
+        "proofScope@18"
       ]
     },
     "oracle/proof/runs-are-recorded-per-test.test.ts": {

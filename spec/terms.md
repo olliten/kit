@@ -245,7 +245,7 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
-- **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them.
+- **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them; a named composition, or a named module under the proof root, names what it reaches.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}

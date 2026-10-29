@@ -58,7 +58,8 @@ a claim depends on are named in it, so each module's claims are found from its n
 - A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. Only
   the modules of only types need no name: a placed oracle module, such as a generator, fixture, driver or
   runner, is named in the claim's Proof like any other, what it reaches counts as the test's, and naming a
-  composition names what it composes. A module a claim's tests reach without its name is
+  composition names what it composes. Naming a placed module under the proof root, whatever its layer, names
+  what it reaches, since a Proof name is about the harness, not the design. A module a claim's tests reach without its name is
   debt: the baseline holds it, it may only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
   - Implementation: {{proof-scope}}, {{proof-reach}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}

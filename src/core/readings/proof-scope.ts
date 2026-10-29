@@ -11,11 +11,12 @@ export interface ProofScopeFinding extends Finding {
 }
 
 // A claim's names should be exactly what its proof uses, so a placed module its tests reach without the claim
-// naming it is debt. Only modules of only types need no name: a placed oracle module is named like any other,
-// and a named composition covers what it imports. The debt is ratcheted rather than a violation: a too-wide proof
+// naming it is debt. Only modules of only types need no name: a placed oracle module is named like any other.
+// A named composition covers what it imports, and so does any named module under the proof root, since a Proof
+// name is about the harness, not the design. The debt is ratcheted rather than a violation: a too-wide proof
 // is imprecise evidence, not broken architecture, and it may only shrink.
 export function proofScope(snapshot: Snapshot): ProofScopeFinding[] {
-  const { srcRoot, layerNames } = snapshot.config;
+  const { srcRoot, layerNames, oracleRoot } = snapshot.config;
   const homes = moduleHomes(snapshot);
   const reached = claimReach(snapshot);
   const facts = new Set(
@@ -43,7 +44,7 @@ export function proofScope(snapshot: Snapshot): ProofScopeFinding[] {
     const named = new Set<string>();
     for (const module of (claim.terms ?? []).flatMap((term) => homes.get(term.toLowerCase().trim()) ?? [])) {
       const at = placementOf(module, srcRoot, layerNames);
-      const composes = at.placed && at.layer === "compositions";
+      const composes = at.placed && (at.layer === "compositions" || module.startsWith(`${oracleRoot}/`));
       for (const covered of composes ? composed(module) : [module]) named.add(covered);
     }
     for (const path of files) {
