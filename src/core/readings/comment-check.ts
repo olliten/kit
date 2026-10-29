@@ -1,7 +1,6 @@
 import { ZONES } from "../primitives/zones.js";
-import { proofOf } from "./claim-proof-binder.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { placementOf } from "./placement-of.js";
+import { placementOf, proofOf } from "./placement-of.js";
 
 // R3, comments: a comment in a placed source or test file cites nothing and carries no debt. A citation
 // is a claim anchor in the config's form, a Markdown file, or a module's identity: the path and the

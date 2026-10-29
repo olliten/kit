@@ -150,21 +150,18 @@ test("a second-root startup's transitive boundary cannot be waived by baseline d
   expect(result.failures).toContainEqual(limit);
 });
 
-test.each(["src/start.ts", "oracle/count/increments.test.ts"])(
-  "an exact entrypoint's raw clock violation cannot be waived: %s",
-  (entry) => {
-    const result = inspect({ [entry]: "void Date.now();\n" }, [entry], {
-      srcRoot: ["src", "oracle"],
-    });
-    const violation = result.findings.find(
-      (finding) => finding.debtKey === `R1:raw-primitive:${entry}:clock`,
-    );
-    expect(violation).toEqual(
-      expect.objectContaining({ category: "placed-violation", blocking: true }),
-    );
-    expect(result.failures).toContainEqual(violation);
-  },
-);
+test("an exact entrypoint's raw clock violation cannot be waived", () => {
+  const result = inspect({ [startup]: "void Date.now();\n" }, [startup], {
+    srcRoot: ["src", "oracle"],
+  });
+  const violation = result.findings.find(
+    (finding) => finding.debtKey === `R1:raw-primitive:${startup}:clock`,
+  );
+  expect(violation).toEqual(
+    expect.objectContaining({ category: "placed-violation", blocking: true }),
+  );
+  expect(result.failures).toContainEqual(violation);
+});
 
 test("an unreachable legacy external boundary stays reported without failing startup", () => {
   const legacy = "src/unreachable.ts";

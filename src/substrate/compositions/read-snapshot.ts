@@ -9,7 +9,7 @@ import type { ImportEdge } from "../../core/primitives/import.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
-import { legacyCodeOf, rootOf } from "../../core/readings/placement-of.js";
+import { entrypointOf, legacyCodeOf, rootOf } from "../../core/readings/placement-of.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
@@ -242,7 +242,7 @@ function readCompiler(
     files
       .filter(
         (file) => file.type === "source" ||
-          (file.type === "test" && config.exceptions?.includes(file.path)),
+          (file.type === "test" && entrypointOf(file.path, config.exceptions ?? [], config.oracleRoot)),
       )
       .map((file) => file.path),
   );

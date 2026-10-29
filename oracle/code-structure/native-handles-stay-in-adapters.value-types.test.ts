@@ -18,6 +18,7 @@ const hosts = {
   node: { lib: ["ES2022"], types: ["node"] },
   both: { lib: ["ES2022", "DOM"], types: ["node"] },
 } as const;
+const hostNames: readonly (keyof typeof hosts)[] = ["dom", "node", "both"];
 
 function findings(
   host: keyof typeof hosts,
@@ -54,7 +55,7 @@ function findings(
   ].map((finding) => finding.debtKey);
 }
 
-describe.each(Object.keys(hosts) as (keyof typeof hosts)[])("with the %s host types", (host) => {
+describe.each(hostNames)("with the %s host types", (host) => {
   test("a reading taking a URL, its parameters or a text codec has no finding", () => {
     expect(
       findings(host, {

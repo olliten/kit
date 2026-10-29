@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { type LegacySizeFinding, legacySize } from "../../src/core/readings/legacy-size.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
-import { ratchetFindings, tightenedBaseline } from "../../src/core/readings/ratchet.js";
+import { type Baseline, ratchetFindings, tightenedBaseline } from "../../src/core/readings/ratchet.js";
 
 const legacy = "src/legacy/report.ts";
 const placed = {
@@ -27,13 +27,11 @@ const report = (extra = ""): string =>
   "  return String(helper(sum));\n" +
   "}\n";
 
-type Baseline = Record<string, unknown>;
-
 function measure(files: Readonly<Record<string, string>>): LegacySizeFinding[] {
   return legacySize(sourceFixture({ ...placed, ...helper, ...files }));
 }
 
-const recorded = (findings: readonly LegacySizeFinding[]): Baseline =>
+const recorded = (findings: readonly LegacySizeFinding[]): Record<string, unknown> =>
   Object.fromEntries(
     findings.map((item) => [item.debtKey, { statements: item.statements, calls: item.calls }]),
   );
@@ -165,7 +163,7 @@ test("a new legacy module, or one without a recorded size, is new debt", () => {
     "src/legacy/new.ts",
   ]);
   const keysOnly = Object.keys(baseline);
-  expect(failures(before, keysOnly as unknown as Baseline)).toEqual([
+  expect(failures(before, keysOnly)).toEqual([
     "src/legacy/helper.ts",
     legacy,
   ]);

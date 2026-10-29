@@ -1,12 +1,13 @@
 import { spawn, spawnSync } from "node:child_process";
 import { availableParallelism } from "node:os";
 
-// Another program run to completion: its output, errors and exit status.
+// Another program run to completion, optionally given text on its input: its output, errors and exit status.
 export interface Processes {
   run(
     command: string,
     args: readonly string[],
     cwd?: string,
+    input?: string,
   ): { readonly stdout: string; readonly stderr: string; readonly status: number | null };
   // Shell command lines, as many at once as the machine runs in parallel, in one directory, each with its own
   // added environment variables.
@@ -34,11 +35,12 @@ function shell(
 }
 
 export const processes: Processes = {
-  run(command, args, cwd) {
+  run(command, args, cwd, input) {
     const result = spawnSync(command, [...args], {
       encoding: "utf8",
       maxBuffer: 256 * 1024 * 1024,
       ...(cwd === undefined ? {} : { cwd }),
+      ...(input === undefined ? {} : { input }),
     });
     return { stdout: result.stdout, stderr: result.stderr, status: result.status };
   },

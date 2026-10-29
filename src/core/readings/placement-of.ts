@@ -21,6 +21,23 @@ const LEGACY: Legacy = { placed: false };
 
 const isZone = (s: string): s is Zone => ZONES.some((zone) => zone === s);
 
+// A claim proof: a test at `<oracle>/<topic>/<anchor>.test.ts`, optionally with variants before `.test.ts`.
+export function proofOf(
+  path: string,
+  root: string,
+): { readonly topic: string; readonly anchor: string } | null {
+  if (!path.startsWith(`${root}/`)) return null;
+  const match = /^([\w-]+)\/([\w-]+)(?:\.[\w-]+)*\.test\.ts$/.exec(path.slice(root.length + 1));
+  return match?.[1] === undefined || match[2] === undefined
+    ? null
+    : { topic: match[1], anchor: match[2] };
+}
+
+// An executable entrypoint: every claim proof, and each file the app declares as one.
+export function entrypointOf(path: string, declared: readonly string[], oracleRoot: string): boolean {
+  return declared.includes(path) || proofOf(path, oracleRoot) !== null;
+}
+
 export function legacyCodeOf(path: string, locations: readonly string[] = []): boolean {
   for (const location of locations) rootOf("", [location]);
   return locations.some((location) => path === location || path.startsWith(`${location}/`));

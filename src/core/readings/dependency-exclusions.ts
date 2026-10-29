@@ -1,6 +1,6 @@
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { rootOf } from "./placement-of.js";
+import { entrypointOf, rootOf } from "./placement-of.js";
 
 // Explicit separations an app declares between selected code: which imports may not cross, directly or
 // through helpers, and where the compiler gives too little evidence to tell.
@@ -22,7 +22,8 @@ export function dependencyExclusions(snapshot: Snapshot): {
       .filter(
         (file) =>
           file.type === "source" ||
-          (file.type === "test" && snapshot.config.exceptions?.includes(file.path)),
+          (file.type === "test" &&
+            entrypointOf(file.path, snapshot.config.exceptions ?? [], snapshot.config.oracleRoot)),
       )
       .map((file) => file.path),
   );

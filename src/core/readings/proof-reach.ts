@@ -1,7 +1,6 @@
 import type { Snapshot } from "../primitives/snapshot.js";
-import { proofOf } from "./claim-proof-binder.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { placementOf } from "./placement-of.js";
+import { placementOf, proofOf } from "./placement-of.js";
 
 // What the tests of each claim reach, keyed by the claim's topic file and anchor: the files, the top-level
 // declarations of other files whose code they use, and the files they can't follow precisely, which count as

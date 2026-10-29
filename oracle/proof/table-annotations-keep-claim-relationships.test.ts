@@ -15,9 +15,10 @@ test.each([false, true])("annotations keep list relationships and proof binding,
   const row = claimInventory(text).declarations[0];
   const old = claimInventory(list).declarations[0];
   expect(row).toMatchObject({ anchor: "exact", implementation: ["total", "surface"], proof: ["cases"] });
-  expect([...(row?.terms ?? [])].sort()).toEqual([...(old?.terms ?? [])].sort());
+  if (row === undefined) throw new Error("the table declares no claim");
+  expect([...(row.terms ?? [])].sort()).toEqual([...(old?.terms ?? [])].sort());
   const snapshot = snapshotOf({ files: ["oracle/tally/exact.test.ts"] });
-  expect(bindingFindings({ ...snapshot, claims: [{ ...row!, file: "spec/tally.md" }] })).toEqual([]);
+  expect(bindingFindings({ ...snapshot, claims: [{ ...row, file: "spec/tally.md" }] })).toEqual([]);
 });
 
 test("empty annotation cells omit relationships, including an anchor-only final cell", () => {

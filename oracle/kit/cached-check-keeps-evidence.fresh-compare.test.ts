@@ -48,7 +48,6 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
       engineRoot: engine,
       args: ["--root=.", "--config=kit/config.md", "--baseline=kit/debt/legacy.json", "--fresh-compare", ...flags],
       cwd: app,
-      input: () => "",
     });
     return { status: response.exitCode, stdout: response.stdout, stderr: response.stderr };
   };
@@ -89,9 +88,7 @@ test("--fresh-compare keeps evidence for code roots and proof entrypoints withou
   writeApp(app, {
     "src/core/readings/actual.ts": "export function actual(n: number): number { return n + 1; }\n",
     "proof/count/increments.test.ts": proofSource + "void Date.now();\n",
-    "kit/debt/legacy.json": JSON.stringify({
-      "R1:raw-primitive:proof/count/increments.test.ts:clock": null,
-    }),
+    "kit/debt/legacy.json": JSON.stringify({}),
   });
   const proofRed = await run();
   expect(proofRed.status, proofRed.stdout + proofRed.stderr).toBe(1);

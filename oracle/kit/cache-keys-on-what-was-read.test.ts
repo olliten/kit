@@ -1,16 +1,14 @@
-import { rmSync } from "node:fs";
-import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { cacheApp, removeCacheApps, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
+import { type CacheApp, cacheApp, removeCacheApps, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
 
 
 afterEach(removeCacheApps);
 
 // Each change alters something extraction read: a file's bytes, a directory listing, a probe or the config.
-const MISSES: Readonly<Record<string, (app: ReturnType<typeof cacheApp>) => void>> = {
+const MISSES: Readonly<Record<string, (app: CacheApp) => void>> = {
   "an edited source file": (app) => app.put("src/core/primitives/value.ts", "export const value = 8;\n"),
-  "a deleted source file": (app) => rmSync(join(app.root, "src/core/primitives/value.ts")),
+  "a deleted source file": (app) => app.remove("src/core/primitives/value.ts"),
   "an edited declaration in a package": (app) =>
     app.put("node_modules/a/index.d.ts", "export interface Shape { readonly n: string; }\n"),
   "an edited package manifest": (app) =>
@@ -44,7 +42,7 @@ test.each(Object.keys(MISSES))(
 test("a changed config misses", async () => {
   const app = cacheApp();
   await app.run();
-  const changed = await app.run({ ...CACHE_CONFIG, ignore: ["evidence", "other"] });
+  const changed = await app.run({ config: { ...CACHE_CONFIG, ignore: ["evidence", "other"] } });
   expect(changed.receipt.reused).toBe(false);
 }, 120_000);
 
@@ -54,21 +52,21 @@ test("legacy coverage and a new legacy helper invalidate cached size accounting"
   const initial = await app.run();
   expect(initial.result.sizes?.some(({ file }) => file === "historical/helper.ts")).toBe(false);
   const config = { ...CACHE_CONFIG, layout: { legacy: ["historical"] } };
-  const covered = await app.run(config);
+  const covered = await app.run({ config });
   expect(covered.receipt.reused).toBe(false);
   expect(covered.result.sizes).toContainEqual(expect.objectContaining({ file: "historical/helper.ts" }));
   app.put("historical/new.ts", "export const value = 2;\n");
-  const changed = await app.run(config);
+  const changed = await app.run({ config });
   expect(changed.receipt.reused).toBe(false);
   expect(changed.result.sizes).toContainEqual(expect.objectContaining({ file: "historical/new.ts" }));
-  const unchanged = await app.run(config);
+  const unchanged = await app.run({ config });
   expect(unchanged.receipt.reused).toBe(true);
   expect(unchanged.result).toEqual(readSnapshot(app.root, config));
   expect(app.counts()).toEqual({ extractions: 3, checks: 4 });
 }, 120_000);
 
 // None of these is a read extraction made, so none can change the snapshot.
-const HITS: Readonly<Record<string, (app: ReturnType<typeof cacheApp>) => void>> = {
+const HITS: Readonly<Record<string, (app: CacheApp) => void>> = {
   "a new file in an ignored path": (app) => app.put("evidence/read-cost/2.json", "{}\n"),
   "an edited file in an ignored path": (app) => app.put("evidence/read-cost/1.json", '{"n":1}\n'),
   "an edited package file the compiler never opens": (app) => app.put("node_modules/a/README.md", "# b\n"),

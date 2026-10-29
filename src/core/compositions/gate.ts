@@ -11,13 +11,13 @@ import { layoutCheck } from "../readings/layout-check.js";
 import { legacySize } from "../readings/legacy-size.js";
 import { moduleReferences } from "../readings/module-references.js";
 import { nameCheck } from "../readings/name-check.js";
-import { placementOf } from "../readings/placement-of.js";
+import { placementOf, proofOf } from "../readings/placement-of.js";
 import { proofReach } from "../readings/proof-reach.js";
 import { proofScope } from "../readings/proof-scope.js";
 import { excerptCohesion } from "../readings/excerpt-cohesion.js";
 import { functionGovernance } from "../readings/function-governance.js";
 import { runsRecord } from "../readings/runs-record.js";
-import type { GateFinding } from "../readings/ratchet.js";
+import { type GateFinding, startupCheckRoots, withProofDebt } from "../readings/ratchet.js";
 import { referenceCheck } from "../readings/semantic-references.js";
 import { termModel } from "../readings/term-model.js";
 import { termOrder } from "../readings/term-order.js";
@@ -46,7 +46,7 @@ const limit = (item: Finding): GateFinding => ({
 });
 
 // Every rule's findings on one snapshot, with what the ratchet needs to judge them: the placed modules and the
-// runtime imports their limits are reached through. A legacy claim without module rows stays outside the
+// runtime imports their limits are reached through. A limit only claim proofs reach is already their debt. A legacy claim without module rows stays outside the
 // claim checks.
 export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
   const exclusions = dependencyExclusions(snapshot);
@@ -77,8 +77,18 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
   // Which named functions each test ran, while the record describes this code.
   const record = runsRecord(snapshot);
   const runs = record.runs === null ? [] : [...functionGovernance(topicSnapshot, record.runs), ...excerptCohesion(topicSnapshot, record.runs)];
-  return {
-    findings: [
+  const placedPaths = snapshot.files
+    .filter((file) => file.type === "source" && placementOf(file.path, config.srcRoot).placed)
+    .map((file) => file.path);
+  const imports = (snapshot.compiler?.projects ?? []).flatMap((project) =>
+    project.imports.flatMap((edge) =>
+      edge.typeOnly || edge.target === null ? [] : [{ from: edge.file, to: edge.target }],
+    ),
+  );
+  const proofs = snapshot.files
+    .filter((file) => file.type === "test" && proofOf(file.path, config.oracleRoot) !== null)
+    .map((file) => file.path);
+  const findings: GateFinding[] = [
       ...capabilityCheck(snapshot).findings,
       ...legacySize(snapshot),
       ...layoutCheck(snapshot),
@@ -89,15 +99,11 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
       ...structural,
       ...concepts.limits.map(limit),
       ...requiredLimits,
-    ],
-    placedPaths: snapshot.files
-      .filter((file) => file.type === "source" && placementOf(file.path, config.srcRoot).placed)
-      .map((file) => file.path),
-    imports: (snapshot.compiler?.projects ?? []).flatMap((project) =>
-      project.imports.flatMap((edge) =>
-        edge.typeOnly || edge.target === null ? [] : [{ from: edge.file, to: edge.target }],
-      ),
-    ),
+  ];
+  return {
+    findings: withProofDebt(findings, placedPaths, imports, startupCheckRoots(config), proofs),
+    placedPaths,
+    imports,
     requiredLimits,
   };
 }

@@ -154,7 +154,7 @@ test.each(["test", "beforeEach"])(
       expect.objectContaining({
         path: proof,
         debtKey: `R1:raw-primitive:${proof}:clock`,
-        category: "placed-violation",
+        category: "proof-debt",
         blocking: true,
       }),
     );

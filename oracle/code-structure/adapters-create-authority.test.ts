@@ -1,5 +1,6 @@
+import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
-import { fakeClock } from "../../fixture/adapter-contracts/fake-clock.js";
+import type { Clock } from "../../fixture/adapter-contracts/clock.js";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { accessAuthority } from "../../src/core/readings/access-authority.js";
 import { authorityGraph } from "../../src/core/readings/authority-graph.js";
@@ -14,6 +15,7 @@ import { projectSnapshot } from "../core/readings/project-snapshot.js";
 import { recordedAuthority } from "../substrate/compositions/recorded-authority.js";
 import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
 import { recordedImports } from "../substrate/compositions/recorded-imports.js";
+import { sourceLoader } from "../../src/substrate/adapters/source-loader.mjs";
 
 // What the authority rules decide over a compiled fixture: each file's derived capabilities, and what the
 // registration, authority, zone and construction checks find. A fixture that doesn't compile throws.
@@ -75,9 +77,17 @@ function inspect(extra: Readonly<Record<string, string>>, configChange?: Partial
   return { snapshot, result };
 }
 
-test("executing the fake does not load the real implementation beside its interface", () => {
+test("executing the fake does not load the real implementation beside its interface", async () => {
+  const loaded = await sourceLoader.load(fileURLToPath(new URL("../../fixture/adapter-contracts/", import.meta.url)), [
+    "fake-clock.ts",
+  ]);
+  const fakeClock = loaded["fakeClock"];
+  const isClock = (value: unknown): value is Clock =>
+    typeof value === "object" && value !== null && typeof Reflect.get(value, "now") === "function";
+  if (!isClock(fakeClock)) throw new Error("The fake clock did not load.");
   expect(fakeClock.now()).toBe(7);
   expect(fakeClock.sample()).toBe(7);
+  expect(Object.keys(loaded)).toEqual(["fakeClock"]);
 });
 
 test("a registered DOM adapter may use its configured raw primitive", () => {

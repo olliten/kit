@@ -1,10 +1,9 @@
-import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { sameSnapshot } from "../../src/core/readings/snapshot-comparison.js";
-import { cacheApp, removeCacheApps, rereaders as adapters, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
-
-import { cachedKitCheck } from "../../src/substrate/compositions/cached-check.js";
+import { cacheApp, removeCacheApps } from "../substrate/compositions/cache-proof.js";
+import { snapshotStore } from "../../src/substrate/adapters/snapshot-store.js";
+import { CACHE_VERSION } from "../../src/core/readings/snapshot-cache-key.js";
 
 afterEach(removeCacheApps);
 
@@ -24,11 +23,7 @@ test("fresh comparison handles exponentially shared graphs without requiring ide
 
 test("a graph JSON cannot encode is cached, checked again, invalidated and rebuilt after corruption", async () => {
   const app = cacheApp();
-  const read = (...args: Parameters<typeof app.read>) => {
-    const snapshot = app.read(...args);
-    return Object.assign(snapshot, { self: snapshot, fixtureRoot: args[0] });
-  };
-  const run = () => cachedKitCheck(app.root, CACHE_CONFIG, read, app.check, adapters, { cacheDir: app.cacheDir });
+  const run = () => app.run({ graph: true });
   const first = await run();
   const hit = await run();
   expect(first.receipt.storageError).toBeUndefined();
@@ -38,36 +33,30 @@ test("a graph JSON cannot encode is cached, checked again, invalidated and rebui
 
   app.put("src/core/primitives/value.ts", "export const value = 8;\n");
   expect((await run()).receipt.reused).toBe(false);
-  const index = JSON.parse(readFileSync(join(app.cacheDir, "index.json"), "utf8"));
-  const entry = index.entries.at(-1);
-  writeFileSync(join(app.cacheDir, "objects", entry.payload + ".json"), "corrupt");
+  const entry = snapshotStore.index(app.cacheDir, CACHE_VERSION).entries.at(-1);
+  if (entry === undefined) throw new Error("The rebuilt extraction left no cache entry.");
+  app.putCache(`objects/${entry.payload}.json`, "corrupt");
   expect((await run()).receipt.reused).toBe(false);
   expect((await run()).receipt.reused).toBe(true);
 
   const other = cacheApp();
-  const relocated = await cachedKitCheck(other.root, CACHE_CONFIG, read, app.check, adapters, { cacheDir: app.cacheDir });
+  const relocated = await app.run({ graph: true, root: other.root });
   expect(relocated.receipt.reused).toBe(false);
   expect(Reflect.get(relocated.snapshot, "fixtureRoot")).toBe(other.root);
 }, 120_000);
 
 test("a reused binary graph still rejects an input mutation during checking", async () => {
   const app = cacheApp();
-  const read = (...args: Parameters<typeof app.read>) => {
-    const snapshot = app.read(...args);
-    return Object.assign(snapshot, { self: snapshot });
-  };
-  await cachedKitCheck(app.root, CACHE_CONFIG, read, app.check, adapters, { cacheDir: app.cacheDir });
-  await expect(cachedKitCheck(app.root, CACHE_CONFIG, read, () => {
-    app.put("src/core/primitives/value.ts", "export const value = 9;\n");
-  }, adapters, { cacheDir: app.cacheDir })).rejects.toThrow(/inputs changed/);
+  await app.run({ graph: true });
+  await expect(
+    app.run({ graph: true, editDuringCheck: { path: "src/core/primitives/value.ts", text: "export const value = 9;\n" } }),
+  ).rejects.toThrow(/inputs changed/);
   expect(app.counts().extractions).toBe(1);
 }, 120_000);
 
 test("a storage failure is visible without changing the fresh verdict", async () => {
   const app = cacheApp();
-  const result = await cachedKitCheck(app.root, CACHE_CONFIG, app.read, app.check, adapters, {
-    cacheDir: join(app.root, "tsconfig.json"),
-  });
+  const result = await app.run({ cacheDir: join(app.root, "tsconfig.json") });
   expect(result.receipt.storageError).toMatch(/ENOTDIR|EEXIST/);
   expect(result.receipt.reused).toBe(false);
   expect(result.result).toEqual(result.snapshot);

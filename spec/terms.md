@@ -121,10 +121,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim}}
-- **claim-proof-binder** — findings from matching claim declarations and topic-first test names, with the proof-path interpretation they share.
+- **claim-proof-binder** — findings from matching claim declarations and topic-first test names.
   - Role: derived
   - Zone: core
-  - From: {{snapshot}}, {{finding}}
+  - From: {{snapshot}}, {{finding}}, {{placement-of}}
 - **claim-runs** — what each claim's tests ran of each placed module, beside the claims that name it.
   - Role: derived
   - Zone: core
@@ -225,7 +225,7 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
-- **placement-of** — the interpretation of a supplied source path and root as declared placement or legacy code.
+- **placement-of** — the interpretation of a supplied path and root as declared placement, legacy code, a claim proof or an entrypoint.
   - Role: derived
   - Zone: core
   - From: {{layer}}, {{zone}}
@@ -241,7 +241,7 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}
-- **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, and the baseline left after a change lands.
+- **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, with a proof's findings as its debt, and the baseline left after a change lands.
   - Role: derived
   - Zone: core
   - From: {{default-config}}, {{finding}}
@@ -346,6 +346,10 @@
   - Zone: substrate
   - Of: []
 - **temporary-project** — ownership of an isolated temporary directory, its fixture file writes and its disposal.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **terminal-input** — access to what a command was given on its standard input.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -463,11 +467,15 @@
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{text-files}}
+  - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{terminal-input}}, {{text-files}}
 - **runs-run** — the `kit runs` workflow: run each test file alone with the app's command and record which named functions it ran.
   - Role: composition
   - Zone: substrate
   - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{processes}}, {{read-snapshot}}, {{test-runs}}, {{text-files}}
+- **scripted-verification** — the workflow that runs verification checks whose effects are scripted as data, reporting what ran together.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{verification}}, {{verification-runner}}
 - **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
   - Role: composition
   - Zone: substrate

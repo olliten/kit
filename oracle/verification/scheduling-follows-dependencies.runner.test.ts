@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { runVerification } from "../../src/substrate/compositions/verification-runner.mjs";
 import type { VerificationCheck } from "../../src/core/primitives/verification.js";
+import { scriptedVerification } from "../substrate/compositions/scripted-verification.js";
 
 const check = (
   id: string,
@@ -22,52 +22,32 @@ test("independent work overlaps, capacity holds, and dependencies wait for recor
     check("b"),
     check("browser", "browser", ["build"]),
   ];
-  const active = new Set<string>();
-  const finished = new Set<string>();
-  const releases = new Map<string, () => void>();
-  let notify = () => {};
-  const started = () =>
-    new Promise<void>((resolve) => {
-      notify = resolve;
-    });
-  const waitFor = async (id: string) => {
-    while (!releases.has(id)) await started();
-  };
-  const execution = runVerification(jobs, {
+  const run = await scriptedVerification(jobs, {
     capacity: { unit: 1, build: 1, browser: 1 },
-    run: async (job: VerificationCheck) => {
-      expect(job.needs.every((id) => finished.has(id))).toBe(true);
-      if (job.resource === "unit") expect(active.has("a") || active.has("b")).toBe(false);
-      active.add(job.id);
-      await new Promise<void>((resolve) => {
-        releases.set(job.id, resolve);
-        notify();
-      });
-      active.delete(job.id);
-      return { passed: true };
-    },
-    record: async (job: VerificationCheck) => {
-      finished.add(job.id);
-    },
+    steps: [
+      { when: ["build", "a"], release: "build" },
+      { when: ["browser"], release: "a" },
+      { when: ["b"], release: "b" },
+      { when: [], release: "browser" },
+    ],
   });
-  await waitFor("build");
-  await waitFor("a");
-  expect(active).toEqual(new Set(["build", "a"]));
-  expect(releases.has("b")).toBe(false);
-  expect(releases.has("browser")).toBe(false);
-  releases.get("build")?.();
-  await waitFor("browser");
-  expect(active).toEqual(new Set(["a", "browser"]));
-  releases.get("a")?.();
-  await waitFor("b");
-  releases.get("b")?.();
-  releases.get("browser")?.();
-  const results = await execution;
-  expect([...results.values()].every((result) => result.passed)).toBe(true);
-  expect(finished.size).toBe(jobs.length);
+  for (const start of run.starts) {
+    const job = jobs.find((each) => each.id === start.id);
+    expect(job?.needs.every((id) => start.recorded.includes(id))).toBe(true);
+    if (job?.resource === "unit") expect(start.running.includes("a") || start.running.includes("b")).toBe(false);
+  }
+  expect(run.snapshots.slice(0, 2)).toEqual([
+    { release: "build", running: ["a", "build"], started: ["a", "build"] },
+    { release: "a", running: ["a", "browser"], started: ["a", "browser", "build"] },
+  ]);
+  expect(run.snapshots.map((snapshot) => snapshot.release)).toEqual(["build", "a", "b", "browser"]);
+  expect([...run.results.values()].every((result) => result.passed)).toBe(true);
+  expect(run.recorded.length).toBe(jobs.length);
 });
 
-test.each(["verdict", "execution", "record"])(
+const failures: readonly ("verdict" | "execution" | "record")[] = ["verdict", "execution", "record"];
+
+test.each(failures)(
   "a %s failure blocks descendants while unrelated work settles",
   async (failure) => {
     const jobs = [
@@ -76,57 +56,33 @@ test.each(["verdict", "execution", "record"])(
       check("grandchild", "browser", ["child"]),
       check("good", "static"),
     ];
-    const ran: string[] = [];
-    const results = await runVerification(jobs, {
-      run: async (job: VerificationCheck) => {
-        ran.push(job.id);
-        if (job.id === "bad" && failure === "execution") throw new Error("execution failed");
-        return { passed: job.id !== "bad" || failure !== "verdict" };
-      },
-      record: async (job: VerificationCheck) => {
-        if (job.id === "bad" && failure === "record") throw new Error("record failed");
+    const run = await scriptedVerification(jobs, {
+      scripts: {
+        bad:
+          failure === "verdict" ? { verdict: "fail" } : failure === "execution" ? { verdict: "throw" } : { record: "throw" },
       },
     });
-    expect(ran.sort()).toEqual(["bad", "good"]);
-    expect(results.get("bad")?.passed).toBe(false);
-    expect(results.get("good")?.passed).toBe(true);
-    expect(results.get("child")).toEqual({ passed: false, blocked: true });
-    expect(results.get("grandchild")).toEqual({ passed: false, blocked: true });
+    expect(run.starts.map((start) => start.id).sort()).toEqual(["bad", "good"]);
+    expect(run.results.get("bad")?.passed).toBe(false);
+    expect(run.results.get("good")?.passed).toBe(true);
+    expect(run.results.get("child")).toEqual({ passed: false, blocked: true });
+    expect(run.results.get("grandchild")).toEqual({ passed: false, blocked: true });
   },
 );
 
 test("an invalid graph starts no execution", async () => {
-  let calls = 0;
-  await expect(
-    runVerification([check("a", "unit", ["missing"])], {
-      run: async () => {
-        calls++;
-        return { passed: true };
-      },
-    }),
-  ).rejects.toThrow();
-  expect(calls).toBe(0);
+  const run = await scriptedVerification([check("a", "unit", ["missing"])]);
+  expect(run.error).toBeDefined();
+  expect(run.starts).toEqual([]);
 });
 
 test("matching evidence skips execution and recording unless the policy requests a fresh run", async () => {
   const job = check("a");
   const evidence = [{ ...job, inputs: "tree:a", passed: true }];
   for (const reuse of [true, false]) {
-    let executions = 0;
-    let recordings = 0;
-    const results = await runVerification([job], {
-      evidence,
-      reuse,
-      run: async () => {
-        executions++;
-        return { passed: true };
-      },
-      record: async () => {
-        recordings++;
-      },
-    });
-    expect(results.get("a")?.passed).toBe(true);
-    expect(executions).toBe(reuse ? 0 : 1);
-    expect(recordings).toBe(reuse ? 0 : 1);
+    const run = await scriptedVerification([job], { evidence, reuse });
+    expect(run.results.get("a")?.passed).toBe(true);
+    expect(run.starts.length).toBe(reuse ? 0 : 1);
+    expect(run.recorded.length).toBe(reuse ? 0 : 1);
   }
 });

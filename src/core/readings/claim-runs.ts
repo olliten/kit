@@ -1,8 +1,7 @@
 import type { CompilerFacts } from "../primitives/compiler-facts.js";
 import type { Runs } from "../primitives/runs.js";
 import type { Snapshot } from "../primitives/snapshot.js";
-import { proofOf } from "./claim-proof-binder.js";
-import { placementOf } from "./placement-of.js";
+import { placementOf, proofOf } from "./placement-of.js";
 import { moduleHomes } from "./proof-reach.js";
 
 type NamedFunction = NonNullable<CompilerFacts["projects"][number]["functions"]>[number];

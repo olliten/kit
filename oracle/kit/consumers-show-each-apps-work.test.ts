@@ -56,7 +56,7 @@ test("the real run checks an app checkout against this Kit and does not fail on 
   );
   writeFileSync(join(app, "kit/debt/legacy.json"), "{}");
   writeFileSync(join(app, "package-lock.json"), lock("git+https://github.com/olliten/kit.git#552affb"));
-  const { stdout: output, exitCode } = await runConsumers({ engineRoot: engine, args: [app], cwd: engine, input: () => "" });
+  const { stdout: output, exitCode } = await runConsumers({ engineRoot: engine, args: [app], cwd: engine });
   expect(exitCode).toBe(0);
   expect(output).toMatch(/^tally: \d+ failing \(pins 552affb\): /);
   expect(output).toContain("  R4:unreferenced-module:substrate/compositions/save:");

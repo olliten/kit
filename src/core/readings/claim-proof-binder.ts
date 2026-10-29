@@ -1,16 +1,6 @@
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-
-export function proofOf(
-  path: string,
-  root: string,
-): { readonly topic: string; readonly anchor: string } | null {
-  if (!path.startsWith(`${root}/`)) return null;
-  const match = /^([\w-]+)\/([\w-]+)(?:\.[\w-]+)*\.test\.ts$/.exec(path.slice(root.length + 1));
-  return match?.[1] === undefined || match[2] === undefined
-    ? null
-    : { topic: match[1], anchor: match[2] };
-}
+import { proofOf } from "./placement-of.js";
 
 export function claimProofBinder(snapshot: Snapshot): Finding[] {
   const { oracleRoot } = snapshot.config;

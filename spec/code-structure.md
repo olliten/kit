@@ -69,7 +69,7 @@ compositions wire the others into behaviour.
   through a global needs a declared global, whatever types the contract names
   ({{registration-check}}, {{authority-graph}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{zone-authority-check}}, {{compiler-facts}}, {{default-config}}, {{authority-recorder}}, {{contract-recorder}}, {{contract-reading}}). · {#adapters-create-authority}
   - Implementation: {{construction-check}}, {{dependency-check}}, {{zone-permission}}, {{capability-context}}, {{finding}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}
-  - Proof: {{recorded-imports}}, {{recorded-authority}}, {{recorded-contracts}}, {{project-snapshot}}
+  - Proof: {{recorded-imports}}, {{recorded-authority}}, {{recorded-contracts}}, {{project-snapshot}}, {{source-loader}}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
   holding only the adapter's plain contract holds no native authority ({{authority-graph}}, {{global-authority}}, {{zone-authority-check}}). · {#declared-globals-cover-their-handles}
   - Implementation: {{access-authority}}, {{import-authority}}, {{capability-context}}, {{behaviour-check}}, {{zone-permission}}, {{finding}}, {{authority-recorder}}, {{import-recorder}}, {{contract-recorder}}, {{fact-walk}}, {{compiler}}
@@ -133,10 +133,12 @@ compositions wire the others into behaviour.
 
 ## Startup
 
-- An app may declare exact, existing executable entrypoints outside every zone, including claim proofs:
-  each may connect Shell and Substrate contracts and use the core's, no module imports it, and its permission
-  does not pass to what it imports or exempt it from the capability, write, compiler and cycle checks.
-  A proof keeps its topic binding; a test suffix grants no permission. A directory, a pattern, a missing file
+- Every claim proof is an executable entrypoint without being declared, and an app may declare other exact,
+  existing executable entrypoints outside every zone: each may connect Shell and Substrate contracts and use
+  the core's, no module imports it, and its permission does not pass to what it imports or exempt it from the
+  capability, write, compiler and cycle checks. A proof is the outermost code of its claim and keeps its topic
+  binding; a test suffix grants no permission, so a test outside the oracle is an entrypoint only when declared,
+  and a proof's effects reach it through registered adapters as any composition's do. A directory, a pattern, a missing file
   or a zoned module declared as an entrypoint grants nothing ({{startup-check}}, {{authority-graph}}, {{edge-check}}, {{zone-permission}}, {{default-config}}). · {#startup-assembles-outer-zones}
   - Implementation: {{read-snapshot}}, {{capability-check}}, {{claim-proof-binder}}, {{kit-configuration}}
   - Proof: {{source-fixture}}

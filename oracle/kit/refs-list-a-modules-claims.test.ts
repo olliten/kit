@@ -1,28 +1,30 @@
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, expect, test } from "vitest";
 import { describeRefs } from "../../src/core/readings/refs-description.js";
 import { moduleClaims } from "../../src/substrate/compositions/refs-run.js";
+import { processes } from "../../src/substrate/adapters/processes.js";
 import { sourceLoader } from "../../src/substrate/adapters/source-loader.mjs";
+import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
 const engine = resolve(import.meta.dirname, "../..");
 const fixture = join(engine, "fixture");
-const scratch = mkdtempSync(join(tmpdir(), "kit-refs-"));
-const config = join(scratch, "config.md");
-writeFileSync(
-  config,
-  "```yaml\napp: tally\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\n```\n",
-);
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+const scratch = temporaryProjects.open("kit-refs-");
+scratch.write({
+  "config.md": "```yaml\napp: tally\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\n```\n",
+});
+const config = join(scratch.root, "config.md");
+afterAll(() => scratch.dispose());
 
-const refs = (args: string[], input?: string): string =>
-  execFileSync(
-    process.execPath,
+const refs = (args: string[], input?: string): string => {
+  const result = processes.run(
+    processes.node(),
     [join(engine, "scripts/kit-refs.mjs"), "--root", fixture, "--config", config, ...args],
-    { encoding: "utf8", ...(input === undefined ? {} : { input }) },
+    undefined,
+    input,
   );
+  if (result.status !== 0) throw new Error(`kit-refs exited ${String(result.status)}: ${result.stderr}`);
+  return result.stdout;
+};
 
 test("Kit's oracle module view distinguishes implementation and proof relationships", async () => {
   const result = await moduleClaims(engine, join(engine, "self-config.md"), "oracle/core/readings/fixture-snapshot.ts");
@@ -34,7 +36,9 @@ test("Kit's oracle module view distinguishes implementation and proof relationsh
     proof: ["fixture-snapshot"],
     tests: ["oracle/code-structure/imports-point-inward.test.ts"],
   });
-  const output = describeRefs({ module: result!.module, claims: [claim!] });
+  if (result === null || result === undefined) throw new Error("Kit's self-config names no module claims.");
+  if (claim === undefined) throw new Error("imports-point-inward is not among the module's claims.");
+  const output = describeRefs({ module: result.module, claims: [claim] });
   expect(output).toContain("Implementation (2): {{dependency-check}}, {{import}}");
   expect(output).toContain("Proof (1): {{fixture-snapshot}}");
 });
@@ -59,6 +63,16 @@ test("a module no claim names says so", () => {
   expect(refs(["src/substrate/compositions/save.ts"])).toBe(
     "substrate/compositions/save is named by no claim.\n",
   );
+});
+
+test("a command's input is read whole from the terminal input adapter", () => {
+  const event = JSON.stringify({ tool_input: { file_path: "src/core/readings/total.ts" } });
+  const reader =
+    'const { terminalInput } = await import("./src/substrate/adapters/terminal-input.ts"); ' +
+    "console.log(terminalInput.read());";
+  const result = processes.run(processes.node(), ["--input-type=module", "-e", reader], engine, event);
+  expect(result.status, result.stderr).toBe(0);
+  expect(result.stdout).toBe(`${event}\n`);
 });
 
 test("as a read hook, opening a module adds its claims and opening any other file adds nothing", () => {
