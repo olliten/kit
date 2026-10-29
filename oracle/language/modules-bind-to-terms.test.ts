@@ -525,6 +525,7 @@ test("the same checker binds the actual Kit Snapshot.config declaration", () => 
     "file",
     "import",
     "reference",
+    "runs",
     "term",
   ];
   const snapshotSource = readFileSync(join(root, "src/core/primitives/snapshot.ts"), "utf8");
@@ -538,7 +539,7 @@ test("the same checker binds the actual Kit Snapshot.config declaration", () => 
     moduleTerm(
       "snapshot",
       "fact",
-      "{{config}}, {{claim}}, {{comment}}, {{compiler-facts}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{term}}",
+      "{{config}}, {{claim}}, {{comment}}, {{compiler-facts}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{runs}}, {{term}}",
     ) +
     "- **config** — The chosen configuration.\n  - Field: snapshot::Snapshot.config\n  - Type: default-config::KitConfig\n";
   const good = inspect(files, terms).result;

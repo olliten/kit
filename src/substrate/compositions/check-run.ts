@@ -40,16 +40,18 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
         },
   );
   if (!args.includes("--fresh")) evidenceStore.prune(store);
+  // Only a test command that writes coverage keeps what tests ran; without one, the rules that read it don't apply.
   const command = config.verify?.tests?.command;
+  const records = command?.includes("{dir}") === true;
   const runtime = toolchain.runtime(root);
   const states = new Map<string, string>();
   const passes = new Map(
-    command?.includes("{dir}") === true
+    records
       ? snapshot.files
           .filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`))
           .map((file) => {
             const verdicts = evidenceStore
-              .entries(store, verdictKind(`test:${file.path}`, command.replaceAll("{test}", file.path), runtime))
+              .entries(store, verdictKind(`test:${file.path}`, (command ?? "").replaceAll("{test}", file.path), runtime))
               .flatMap((text) => verdictOf(text) ?? []);
             for (const verdict of verdicts)
               for (const path of Object.keys(verdict.states))
@@ -58,7 +60,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
           })
       : [],
   );
-  const { runs, waiting } = keptRuns(passes);
+  const { runs, waiting } = records ? keptRuns(passes) : { runs: null, waiting: [] };
   const read = stopwatch.now();
   const result = gate(runs === null ? snapshot : { ...snapshot, runs }, config);
   const receipt = { ...extraction, seconds: (read - started) / 1000, checkSeconds: (stopwatch.now() - read) / 1000 };
