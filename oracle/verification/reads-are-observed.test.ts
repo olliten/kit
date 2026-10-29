@@ -11,7 +11,7 @@ afterEach(() => {
   for (const project of projects.splice(0)) project.dispose();
 });
 
-test("a check's reads, listings and probes are recorded in its process, its threads and the processes it starts", async () => {
+test("a check's reads, listings and probes are recorded in its process, its threads and the processes it starts, but not a package's listings", async () => {
   const project = temporaryProjects.open("kit-reads-");
   projects.push(project);
   const app = join(project.root, "app");
@@ -27,6 +27,8 @@ test("a check's reads, listings and probes are recorded in its process, its thre
       'readdirSync("listed");',
       'await readFile("promised.txt");',
       'readFileSync("node_modules/pkg/index.js");',
+      'const { list } = await import("./node_modules/pkg/index.js");',
+      'list("runner-listed");',
       'readFileSync("../outside.txt");',
       'await new Promise((done) => new Worker("./worker.mjs").on("exit", done));',
       'execSync("node child.mjs");',
@@ -38,7 +40,9 @@ test("a check's reads, listings and probes are recorded in its process, its thre
     "app/from-worker.txt": "w",
     "app/from-child.txt": "c",
     "app/listed/one.txt": "1",
-    "app/node_modules/pkg/index.js": "",
+    "app/node_modules/pkg/index.js": 'import { readdirSync, readFileSync } from "node:fs";\nexport const list = (dir) => { readdirSync(dir); readFileSync("read-by-package.txt"); };\n',
+    "app/runner-listed/x.txt": "x",
+    "app/read-by-package.txt": "r",
     "outside.txt": "o",
     "reads/.keep": "",
   });
@@ -49,9 +53,9 @@ test("a check's reads, listings and probes are recorded in its process, its thre
   expect(result?.status).toBe(0);
   const recordings = readdirSync(reads).filter((name) => name.endsWith(".txt")).map((name) => readFileSync(join(reads, name), "utf8"));
   const recorded = readPaths(recordings);
-  for (const path of ["a.txt", "missing.txt", "listed", "promised.txt", "worker.mjs", "from-worker.txt", "child.mjs", "from-child.txt", "main.mjs"])
+  for (const path of ["read-by-package.txt", "a.txt", "missing.txt", "listed", "promised.txt", "worker.mjs", "from-worker.txt", "child.mjs", "from-child.txt", "main.mjs"])
     expect(recorded).toContain(path);
-  expect(recorded.filter((path) => path.includes("node_modules") || path.includes("outside"))).toEqual([]);
+  expect(recorded.filter((path) => path.includes("node_modules") || path.includes("outside") || path === "runner-listed")).toEqual([]);
 });
 
 test("loaded without being asked to record, the recorder changes nothing", async () => {

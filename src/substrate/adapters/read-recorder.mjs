@@ -20,8 +20,18 @@ if (directory && root) {
   const append = fs.appendFileSync;
   /** @type {Set<string>} */
   const seen = new Set();
-  /** @param {unknown} path */
-  const note = (path) => {
+  // A listing an installed package makes, such as a test runner finding its test files, is the runner's and not
+  // the check's: recording it would make adding any file under a listed directory rerun every check. A listing
+  // the app's own code makes is recorded, and so is every read and probe, whoever makes it.
+  const runnersListing = () =>
+    (new Error().stack ?? "")
+      .split("\n")
+      .slice(1)
+      .find((frame) => !frame.includes("read-recorder.mjs") && !frame.includes("node:internal"))
+      ?.includes("/node_modules/") ?? false;
+  /** @param {unknown} path @param {string} operation */
+  const note = (path, operation) => {
+    if (operation.startsWith("readdir") && runnersListing()) return;
     const given =
       typeof path === "string"
         ? path
@@ -51,7 +61,7 @@ if (directory && root) {
       if (typeof original !== "function") continue;
       /** @this {unknown} @param {unknown} path @param {unknown[]} rest */
       const wrapped = function (path, ...rest) {
-        note(path);
+        note(path, name);
         return Reflect.apply(original, this, [path, ...rest]);
       };
       // A wrapped operation keeps the original's name and own properties, such as `realpathSync.native`.
@@ -60,7 +70,7 @@ if (directory && root) {
     }
   };
   wrap(fs, [
-    "readFileSync", "readdirSync", "statSync", "lstatSync", "existsSync", "accessSync", "openSync", "realpathSync",
+    "readFileSync", "readdirSync", "opendirSync", "opendir", "statSync", "lstatSync", "existsSync", "accessSync", "openSync", "realpathSync",
     "readFile", "readdir", "stat", "lstat", "access", "open", "createReadStream",
   ]);
   wrap(fs.promises, ["readFile", "readdir", "stat", "lstat", "access", "open"]);

@@ -35,7 +35,9 @@ prerequisites and resource needs, so evidence reuse and execution can be planned
   - Proof: {{temporary-project}}
 - A recorder preloaded into a check's processes records every path inside the app the check reads, lists or
   probes, in its own process, its worker threads and the processes it starts, and nothing under installed
-  packages or the repository's own bookkeeping. Loaded without being asked to record, it changes nothing. · {#reads-are-observed}
+  packages or the repository's own bookkeeping. A directory listing an installed package makes, such as a test
+  runner finding its tests, is the runner's and is not recorded. Loaded without being asked to record, it
+  changes nothing. · {#reads-are-observed}
   - Implementation: {{read-recorder}}, {{verdict-reuse}}
   - Proof: {{temporary-project}}, {{processes}}
 - `kit verify` keeps a passing check with the state of every path its run read: nothing, a file's content or a
