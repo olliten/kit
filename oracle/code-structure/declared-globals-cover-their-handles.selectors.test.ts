@@ -54,6 +54,12 @@ function inspect(body: string, path = owner, adapters: NonNullable<KitConfig["ad
 test.each([
   "return process.cwd();",
   "const cwd = process.cwd; return cwd;",
+  "return process.cwd.call(undefined);",
+  "const cwd = process.cwd; return cwd.call(undefined);",
+  "return process.env.VITEST_POOL_ID?.length;",
+  "const value = process.env.VITEST_POOL_ID; return value?.length;",
+  "return process.env.VITEST_POOL_ID?.trim();",
+  "const value = process.env.VITEST_POOL_ID; return value?.trim();",
   ...selectors.slice(1).map((selector) => `return ${selector};`),
   'process.env.PLAYWRIGHT_BROWSERS_PATH ||= "/opt/pw-browsers";',
   'process.env.LEELOO_PW_WS_ENDPOINTS = "ws://worker";',
