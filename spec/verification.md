@@ -6,9 +6,9 @@ so a later gate runs only what an edit can have changed.
 ## The gate
 
 - An app declares its gate under `verify`: whole-tree checks, each an id and one command, optionally run after
-  the tests, and the command that runs one test file `{test}`, for every test under a relative directory, which
-  may also write the test's coverage into `{dir}`. A malformed declaration fails configuration, and `kit verify`
-  without one says what to declare. · {#the-gate-is-declared}
+  the tests, and the command that runs one test file `{test}`, for every test under one or more relative
+  directories, which may also write the test's coverage into `{dir}`. A malformed declaration fails
+  configuration, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
   - Implementation: {{verification-configuration}}, {{kit-configuration}}, {{config-schema}}, {{verify-run}}
   - Proof: {{temporary-project}}
 - A recorder preloaded into a check's processes records every path inside the app the check reads, lists or

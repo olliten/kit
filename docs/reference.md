@@ -23,7 +23,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `legacy-zones` | Rows of `zone` with either a `root` or a list of `files`, never both. |
 | `legacy-areas` | Spec files in an older claim grammar. |
 | `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
-| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory. |
+| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
 
 An app's plain-Node scripts read the config the way the commands do through
 `src/substrate/compositions/configuration-runner.mjs`: `await configuration()` answers `kitConfig`,

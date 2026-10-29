@@ -15,8 +15,9 @@ afterEach(() => {
 test("a gate is whole-tree checks, each an id and a command, and the command that runs one test", () => {
   expect(read({ checks: [{ id: "typecheck", command: "tsc --noEmit" }], tests: { command: "vitest run {test}", under: "oracle/" } }).verify).toEqual({
     checks: [{ id: "typecheck", command: "tsc --noEmit" }],
-    tests: { command: "vitest run {test}", under: "oracle" },
+    tests: { command: "vitest run {test}", under: ["oracle"] },
   });
+  expect(read({ checks: [], tests: { command: "vitest run {test}", under: ["spec/", "oracle/", "spec"] } }).verify?.tests?.under).toEqual(["oracle", "spec"]);
   expect(read({ checks: [] }).verify).toEqual({ checks: [] });
 });
 
@@ -26,6 +27,8 @@ test.each([
   [{ checks: [{ id: "test:a", command: "x" }] }, /test:/],
   [{ checks: [], tests: { command: "vitest run", under: "oracle" } }, /\{test\}/],
   [{ checks: [], tests: { command: "vitest run {test}", under: "../outside" } }, /verify\.tests/],
+  [{ checks: [], tests: { command: "vitest run {test}", under: ["oracle", "../outside"] } }, /verify\.tests/],
+  [{ checks: [], tests: { command: "vitest run {test}", under: [] } }, /verify\.tests/],
   [{ checks: [], extra: true }, /verify\.extra is not a key Kit reads/],
 ])("a malformed gate %j fails configuration", (verify, message) => {
   expect(() => read(verify)).toThrow(message);

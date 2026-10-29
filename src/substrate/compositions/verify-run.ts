@@ -17,7 +17,7 @@ import { readStoredSnapshot } from "./read-snapshot.js";
 const TEST = /\.test\.[mc]?[jt]sx?$/;
 const SKIP = /^(?:node_modules|\..*)$/;
 
-// `kit verify`: run every check the config's `verify` declares, and every test under its tests directory,
+// `kit verify`: run every check the config's `verify` declares, and every test under its tests directories,
 // except those whose last passing run read only paths that are still in the state that run saw. Each run is
 // watched for what it reads, in its processes and theirs, and a pass is kept with those states; a failure is
 // never kept. A test command that writes the test's coverage into `{dir}` keeps what the test ran with its pass.
@@ -54,7 +54,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
       else if (entry.file && TEST.test(entry.name)) tests.push(path);
     }
   };
-  if (policy.tests !== undefined) walk(policy.tests.under);
+  for (const directory of policy.tests?.under ?? []) walk(directory);
   const testCommand = policy.tests?.command ?? "";
   const records = testCommand.includes("{dir}");
   type Check = { readonly id: string; readonly line: string; readonly test?: string };

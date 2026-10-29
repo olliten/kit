@@ -3,7 +3,7 @@ import { isRecord, isText, normalizedPath, relativeLocation } from "./config-val
 
 // The gate an app declares under `verify`: each whole-tree check is an id and one command, run with the tests or,
 // when it reads what they record, after them; the tests are one command that runs the test file `{test}`, for
-// every test under a relative directory.
+// every test under one or more relative directories.
 export function verification(declared: unknown): NonNullable<KitConfig["verify"]> {
   if (!isRecord(declared)) throw new Error("verify: declare the gate's checks and, optionally, its tests.");
   const checks = declared["checks"] ?? [];
@@ -22,14 +22,15 @@ export function verification(declared: unknown): NonNullable<KitConfig["verify"]
   const tests = declared["tests"];
   if (tests === undefined) return { checks: rows };
   const command = isRecord(tests) ? tests["command"] : undefined;
-  const under = isRecord(tests) ? tests["under"] : undefined;
+  const declaredUnder = isRecord(tests) ? tests["under"] : undefined;
+  const under = isText(declaredUnder) ? [declaredUnder] : declaredUnder;
   if (
     !isText(command) ||
     !command.includes("{test}") ||
-    !isText(under) ||
-    !relativeLocation(under) ||
-    normalizedPath(under).split("/").includes("..")
+    !Array.isArray(under) ||
+    under.length === 0 ||
+    !under.every((path: unknown) => isText(path) && relativeLocation(path) && !normalizedPath(path).split("/").includes(".."))
   )
-    throw new Error("verify.tests: declare the command that runs one test file {test}, and the directory under which tests are found.");
-  return { checks: rows, tests: { command, under: normalizedPath(under) } };
+    throw new Error("verify.tests: declare the command that runs one test file {test}, and the directories under which tests are found.");
+  return { checks: rows, tests: { command, under: [...new Set(under.filter(isText).map((path) => normalizedPath(path)))].sort() } };
 }
