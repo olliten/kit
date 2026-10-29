@@ -8,6 +8,8 @@ export interface TemporaryProject {
   directory(relative: string): void;
   remove(relative: string): void;
   symlink(targetRelative: string, pathRelative: string): void;
+  // A link inside the project to a directory outside it, such as installed packages it runs.
+  link(targetAbsolute: string, pathRelative: string): void;
   dispose(): void;
 }
 
@@ -44,6 +46,12 @@ export const temporaryProjects: TemporaryProjects = {
         const destination = inside(pathRelative);
         mkdirSync(dirname(destination), { recursive: true });
         symlinkSync(target, destination);
+      },
+      link(targetAbsolute, pathRelative) {
+        if (!isAbsolute(targetAbsolute)) throw new Error("Link to an absolute path outside the temporary project.");
+        const destination = inside(pathRelative);
+        mkdirSync(dirname(destination), { recursive: true });
+        symlinkSync(targetAbsolute, destination);
       },
       dispose() {
         rmSync(root, { recursive: true, force: true });

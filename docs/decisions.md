@@ -703,3 +703,32 @@ without naming the app.
 - **Limits:** on a run with no earlier pass, an entry added to a listed directory while the check ran is not
   caught. Reads by programs that aren't Node, by processes started with an environment that drops the
   recorder, and Node's own loader reads below the app root and failed resolutions are still unseen.
+
+## 2026-10-29 · A group may run its tests in one runner
+
+- **Decision:** a test group whose command takes `{tests}` instead of `{test}` runs each chunk of up to 64 due
+  tests in one vitest 1.x invocation, `--pool=forks --poolOptions.forks.isolate=true`, with Kit's coverage
+  provider `{provider}` writing into `{dir}` each test file's result, LCOV report and the scripts it executed.
+  The recorder in each process vitest starts reads the file it runs from vitest's message to it, under `files`,
+  and names it in its recording (`test <path>`) and in those of the processes it starts (`under <path>`), whose
+  raw V8 coverage goes to a directory of the test's own. A test keeps its own processes' uses, the runner
+  process's reads, listings and probes except those of another test of the invocation, the files its coverage
+  shows it executed as loads, and the runner's other loads. What a process the test started loaded or ran is
+  kept whole. A failing test fails alone; a test whose attribution is unclear runs again alone, which is a
+  `{test}` run. A pass is kept under the command as it reads for one file, so either mode reuses the other's.
+  Kit's own gate now runs this way.
+- **Why:** each vitest start costs about 4 s, so Leeloo's 1,865 test files took over an hour cold on 4 cores.
+  The runner's main process transforms every module for every fork and caches it, so its loads can't be told
+  apart by process; the coverage of each fork names every module it executed, which is the same set.
+- **Measured on Leeloo (104 unit tests under `src/core/`, `oracle/command-bindings/`, `oracle/fields/`, 4
+  cores, other agents' runs holding the load average at 9 to 13):** cold `kit verify` 548 s per file, 177 s
+  batched, none run again alone. Every pass holds the same paths by content and the same states, and the same
+  `ran`, in both modes; a batched pass also holds the kind of about 340 more paths (median 2,032 kind keys)
+  that the runner probed resolving other tests' imports. Body edits to `retrieve`, `matchExcerpt` and
+  `structuralSprigs` in `src/core/readings/retrieval.ts` plan the same reruns in both modes (1, 0 and 0), as
+  does a top-level edit (3). Kit's own cold gate, batched, took 420 s under the same load.
+- **Limits:** creating or deleting a file at a path the runner probed for a batch-mate reruns a batched pass,
+  since resolution is cached across a run and can't be given to one test; edits to content never do. A test that
+  imports another test file runs alone. The provider extends `@vitest/coverage-v8` through its 1.x provider
+  interface and the recorder reads vitest 1.x's worker message, so `{tests}` is tied to vitest 1.x; `{test}`
+  works with any runner.

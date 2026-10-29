@@ -227,6 +227,35 @@ as text, as a test of a checker reads its sources, is kept whole, and so is a fi
 that loaded the test loaded or ran, such as a script the test starts: an in-process runner's coverage, such as
 vitest's, doesn't show what such a process ran.
 
+### Several tests in one runner
+
+Starting a test runner costs seconds per test file. With vitest 1.x, a group whose command takes `{tests}`
+instead of `{test}` runs each chunk of its due tests, up to 64, in one invocation, with a fresh process per file
+and Kit's coverage provider writing each file's result and coverage apart:
+
+```yaml
+  tests:
+    command: npx vitest run --pool=forks --poolOptions.forks.isolate=true {tests} --coverage.enabled --coverage.all=false --coverage.provider=custom --coverage.customProviderModule={provider} --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
+    under: oracle/
+```
+
+Kit replaces `{provider}` with its provider's path, which extends `@vitest/coverage-v8` as installed beside Kit, so
+the app installs it. A test's pass is kept under the command as it reads for that file alone, so a pass kept in a batch
+is reused by a run of the file alone and the other way round.
+
+Each pass stays as precise as a run of its file alone. The recorder in each process vitest starts for a file
+learns which file from vitest's message to it and names it in its recording, and in those of the processes it
+starts, so the test's own reads are its alone. What the runner's main process reads, lists or probes is kept by
+every test of the invocation, except a use of another test file it was given; a file it loads, such as a module
+it transforms, is kept by each test whose coverage shows it executed that file, and by every test when none did.
+A file a process the test started loaded or ran is kept whole, since the test's coverage doesn't describe that
+process. A failing test fails alone and the others are kept. A test whose coverage also holds another test file,
+as when it imports one, or whose process ran several files, runs again alone, as every test of an invocation
+does when it failed without a test failing or with unhandled errors; the summary counts them as `alone`.
+
+The provider uses vitest 1.x's coverage provider interface and its worker message, so it is tied to that
+version; `{test}` works with any runner.
+
 ## Runs
 
 When the test command writes the test's LCOV report into `{dir}`, `kit verify` replaces `{dir}` with a directory

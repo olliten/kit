@@ -1,5 +1,6 @@
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
 import type { Verdict } from "../../core/primitives/verdict.js";
+import { batchAttribution } from "../../core/readings/batch-attribution.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { digest } from "../../core/readings/fact-keys.js";
 import { capabilityModules, testGroups } from "../../core/readings/test-groups.js";
@@ -8,8 +9,10 @@ import { ranLines } from "../../core/readings/coverage-report.js";
 import { functionsRun } from "../../core/readings/ran-code.js";
 import { sharedPath, sharedRefs } from "../../core/readings/shared-passes.js";
 import { heldKey, heldKeys, heldPath, holding, loadedBeside, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { testLine } from "../../core/readings/verification-configuration.js";
 import { calendar } from "../adapters/calendar.js";
 import { compilerWorkspace } from "../adapters/compiler.js";
+import { coverageProvider } from "../adapters/coverage-provider.mjs";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { filesystem } from "../adapters/filesystem.js";
 import { processes } from "../adapters/processes.js";
@@ -30,7 +33,8 @@ const SKIP = /^(?:node_modules|\..*)$/;
 // the command of the group its reach selects, except those whose last passing run read only paths that are still
 // in the state that run saw. Each run is watched for what it reads, in its processes and theirs, and a pass is
 // kept with those states; a failure is never kept. A test command that writes the test's coverage into `{dir}`
-// keeps what the test ran with its pass. A test no group takes fails the gate, since it would never run.
+// keeps what the test ran with its pass; one whose command takes several tests `{tests}` runs a chunk's tests of
+// that group in one invocation. A test no group takes fails the gate, since it would never run.
 // `--fresh` reuses and keeps nothing, and `--plan` says what would run without running it. With `share` declared,
 // passes on `origin`'s refs for this runtime join the store before planning, and the run's own are added after;
 // sharing that can't happen is said and never fails the gate.
@@ -77,7 +81,14 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const found = [...new Set(tests)].sort();
   const chosen = testGroups(found, groups, groups.some((group) => group.reaching !== undefined || group.capabilities !== undefined) ? snapshot().imports : [], capabilityModules(loaded.config));
   const unassigned = found.filter((test) => !chosen.has(test));
-  type Check = { readonly id: string; readonly line: string; readonly test?: string; readonly records?: boolean; readonly group?: number };
+  type Check = {
+    readonly id: string;
+    readonly line: string;
+    readonly test?: string;
+    readonly records?: boolean;
+    readonly group?: number;
+    readonly batch?: boolean;
+  };
   const first: Check[] = [
     ...policy.checks.filter((check) => check.after === undefined).map((check) => ({ id: check.id, line: check.command })),
     ...found.flatMap((test) => {
@@ -85,7 +96,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
       const command = group === undefined ? undefined : groups[group]?.command;
       return group === undefined || command === undefined
         ? []
-        : [{ id: `test:${test}`, line: command.replaceAll("{test}", test), test, records: command.includes("{dir}"), group }];
+        : [{ id: `test:${test}`, line: testLine(command, test), test, records: command.includes("{dir}"), group, batch: command.includes("{tests}") }];
     }),
   ];
   const last: Check[] = policy.checks.filter((check) => check.after === "tests").map((check) => ({ id: check.id, line: check.command }));
@@ -133,6 +144,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   let reused = 0;
   let recorded = 0;
   let unrecorded = 0;
+  let alone = 0;
   // A pass is kept only when `keep` holds; a check that reads what the tests kept is not kept on a pass whose
   // tests weren't all kept.
   const run = async (checks: readonly Check[], keep: boolean) => {
@@ -165,79 +177,162 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
           return { files, functions, texts };
         })()
       : undefined;
+    const fail = (check: Check, result: { readonly stdout: string; readonly stderr: string } | undefined): void => {
+      lines.push(`failed ${check.id}`);
+      const output = `${result?.stdout ?? ""}${result?.stderr ?? ""}`.trimEnd().split("\n").slice(-40).join("\n");
+      failures.set(check.id, `${check.id} failed:\n${output}\n`);
+    };
+    // A group whose command takes several tests `{tests}` runs a chunk's tests in one invocation; every other
+    // check runs alone.
+    type Job = { readonly checks: Check[]; readonly batch: boolean };
+    const jobsOf = (checks: readonly Check[]): Job[] => {
+      const jobs: Job[] = [];
+      const batches = new Map<number, Check[]>();
+      for (const check of checks) {
+        const known = check.batch === true && check.group !== undefined ? batches.get(check.group) : undefined;
+        if (known !== undefined) known.push(check);
+        else {
+          const job = { checks: [check], batch: check.batch === true };
+          jobs.push(job);
+          if (job.batch && check.group !== undefined) batches.set(check.group, job.checks);
+        }
+      }
+      return jobs;
+    };
     // The checks run a chunk at a time, and each chunk's passes are kept and its scratch removed before the next,
-    // so a long gate holds one chunk's output and loses at most one chunk if it stops.
+    // so a long gate holds one chunk's output and loses at most one chunk if it stops. A test of a batch whose
+    // reads can't be told apart runs again alone, once the batch has ended.
     for (let from = 0; from < due.length; from += CHUNK) {
-      const chunk = due.slice(from, from + CHUNK);
-      const scratch = `${store}/scratch/${digest(`${root}\u0000${stopwatch.now()}\u0000${from}`)}`;
-      const directories = chunk.map((_, index) => `${scratch}/${index}`);
-      for (const directory of directories) textFiles.directory(`${directory}/runs`);
-      // The chunk's start in the file system's own clock: a file changed after it changed while a check ran. A
-      // directory's time also moves for an entry made and removed again, as a test runner's bundled config is,
-      // so a directory is judged by its listing alone.
-      textFiles.write(`${scratch}/started`, "");
-      const start = filesystem.modified(`${scratch}/started`) ?? 0;
-      const changedSince = (key: string): boolean => {
-        const { path, kind } = heldPath(key);
-        const at = path === "." ? root : `${root}/${path}`;
-        const modified = filesystem.modified(at);
-        return !kind && modified !== undefined && modified > start && filesystem.kind(at) === "file";
-      };
-      // Raw V8 coverage also covers the processes a test starts, such as a launcher it runs.
-      const results = await processes.shells(
-        chunk.map((check, index) => {
+      for (let jobs = jobsOf(due.slice(from, from + CHUNK)), round = 0; jobs.length > 0; round++) {
+        const scratch = `${store}/scratch/${digest(`${root}\u0000${stopwatch.now()}\u0000${from}\u0000${round}`)}`;
+        const directories = jobs.map((_, index) => `${scratch}/${index}`);
+        for (const directory of directories) textFiles.directory(`${directory}/runs`);
+        // The round's start in the file system's own clock: a file changed after it changed while a check ran. A
+        // directory's time also moves for an entry made and removed again, as a test runner's bundled config is,
+        // so a directory is judged by its listing alone.
+        textFiles.write(`${scratch}/started`, "");
+        const start = filesystem.modified(`${scratch}/started`) ?? 0;
+        const changedSince = (key: string): boolean => {
+          const { path, kind } = heldPath(key);
+          const at = path === "." ? root : `${root}/${path}`;
+          const modified = filesystem.modified(at);
+          return !kind && modified !== undefined && modified > start && filesystem.kind(at) === "file";
+        };
+        // A passing check is kept with the state of every path it used, and a test with what it ran. A file
+        // another process than the test's loaded or ran, such as a child the test starts, ran code the test's
+        // coverage doesn't show, so it is kept whole.
+        const settle = (
+          check: Check,
+          seconds: number,
+          uses: ReadonlyMap<string, ReadonlySet<string>>,
+          beside: ReadonlySet<string>,
+          lcov: readonly string[],
+          v8: readonly string[],
+        ): void => {
+          lines.push(`passed ${check.id}`);
+          const ran = ranIn(lcov);
+          for (const path of beside) ran.delete(path);
+          const after = new Map(heldKeys(uses, ran).map((key) => [key, stateOf(key)]));
+          // A path that changed while the check ran was read in one state and is kept in another, so the pass
+          // describes neither: it is reported and not kept. That is a state other than the one a pass known before
+          // the run kept, or, whether or not one was, a change since the round started.
+          if (!keep || [...after].some(([path, state]) => (states.has(path) && states.get(path) !== state) || changedSince(path))) {
+            unrecorded++;
+            return;
+          }
+          const verdict: Verdict = { check: check.id, seconds, states: Object.fromEntries(after) };
+          const report =
+            check.test !== undefined && check.records === true && code !== undefined
+              ? testRuns([{ test: check.test, lcov, v8 }], code.files, root, loaded.config, code.functions, code.texts)[0]
+              : undefined;
+          const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran };
+          evidenceStore.write(store, kindOf(check), heldKey(kept), JSON.stringify(kept));
+          passes.push({ path: sharedPath(kindOf(check), heldKey(kept)), text: JSON.stringify(kept) });
+          recorded++;
+        };
+        // Raw V8 coverage also covers the processes a test starts, such as a launcher it runs.
+        const results = await processes.shells(
+          jobs.map(({ checks, batch }, index) => {
+            const directory = directories[index] ?? scratch;
+            const coverage = `${directory}/runs`;
+            const [check] = checks;
+            const tests = checks.flatMap((each) => (each.test === undefined ? [] : [each.test]));
+            const command = check?.group === undefined ? undefined : groups[check.group]?.command;
+            if (batch) textFiles.write(`${scratch}/${index}.tests`, tests.map((test) => `${test}\n`).join(""));
+            return {
+              line:
+                batch && command !== undefined
+                  ? command.replaceAll("{tests}", tests.join(" ")).replaceAll("{dir}", coverage).replaceAll("{provider}", coverageProvider.location)
+                  : check === undefined || check.test === undefined
+                    ? (check?.line ?? "")
+                    : check.line.replaceAll("{dir}", coverage),
+              env: {
+                // Added to the options the caller gives Node, such as its certificates, rather than put in their place.
+                NODE_OPTIONS: [processes.environment("NODE_OPTIONS"), `--import ${readRecorder.location}`].filter((option) => option !== undefined && option !== "").join(" "),
+                KIT_READS: directory,
+                KIT_ROOT: root,
+                KIT_TESTS: batch ? `${scratch}/${index}.tests` : "",
+                KIT_TEST: "",
+                ...(check?.records === true ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
+              },
+            };
+          }),
+          root,
+        );
+        const seconds = (stopwatch.now() - started) / 1000;
+        const again: Check[] = [];
+        jobs.forEach(({ checks, batch }, index) => {
+          const result = results[index];
           const directory = directories[index] ?? scratch;
           const coverage = `${directory}/runs`;
-          return {
-            line: check.test === undefined ? check.line : check.line.replaceAll("{dir}", coverage),
-            env: {
-              // Added to the options the caller gives Node, such as its certificates, rather than put in their place.
-              NODE_OPTIONS: [processes.environment("NODE_OPTIONS"), `--import ${readRecorder.location}`].filter((option) => option !== undefined && option !== "").join(" "),
-              KIT_READS: directory,
-              KIT_ROOT: root,
-              ...(check.records === true ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
-            },
+          const [check] = checks;
+          if (!batch) {
+            if (check === undefined) return;
+            if (result?.status !== 0) return fail(check, result);
+            const lcov = check.records === true ? filesIn(coverage) : [];
+            const recordings = namedIn(directory);
+            const v8 = check.records === true ? namedIn(`${coverage}/v8`) : [];
+            const beside = check.test === undefined ? new Set<string>() : loadedBeside(recordings, v8, check.test, root);
+            return settle(check, seconds, pathUses(recordings.map((each) => each.text)), beside, lcov, v8.map((each) => each.text));
+          }
+          const own = (test: string, file: string): string | undefined => {
+            const path = `${coverage}/${encodeURIComponent(test)}/${file}`;
+            return textFiles.exists(path) ? textFiles.read(path) : undefined;
           };
-        }),
-        root,
-      );
-      const seconds = (stopwatch.now() - started) / 1000;
-      chunk.forEach((check, index) => {
-        const result = results[index];
-        const directory = directories[index] ?? scratch;
-        if (result?.status !== 0) {
-          lines.push(`failed ${check.id}`);
-          const output = `${result?.stdout ?? ""}${result?.stderr ?? ""}`.trimEnd().split("\n").slice(-40).join("\n");
-          failures.set(check.id, `${check.id} failed:\n${output}\n`);
-          return;
-        }
-        lines.push(`passed ${check.id}`);
-        const lcov = check.records === true ? filesIn(`${directory}/runs`) : [];
-        const recordings = namedIn(directory);
-        const v8 = check.records === true ? namedIn(`${directory}/runs/v8`) : [];
-        // A file another process loaded or ran, such as a child the test starts, ran code the test's coverage
-        // doesn't show, so it is kept whole.
-        const ran = ranIn(lcov);
-        if (check.test !== undefined) for (const path of loadedBeside(recordings, v8, check.test, root)) ran.delete(path);
-        const after = new Map(heldKeys(pathUses(recordings.map((each) => each.text)), ran).map((key) => [key, stateOf(key)]));
-        // A path that changed while the check ran was read in one state and is kept in another, so the pass
-        // describes neither: it is reported and not kept. That is a state other than the one a pass known before
-        // the run kept, or, whether or not one was, a change since the chunk started.
-        if (!keep || [...after].some(([path, state]) => (states.has(path) && states.get(path) !== state) || changedSince(path))) {
-          unrecorded++;
-          return;
-        }
-        const verdict: Verdict = { check: check.id, seconds, states: Object.fromEntries(after) };
-        const report =
-          check.test !== undefined && check.records === true && code !== undefined
-            ? testRuns([{ test: check.test, lcov, v8: v8.map((each) => each.text) }], code.files, root, loaded.config, code.functions, code.texts)[0]
-            : undefined;
-        const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran };
-        evidenceStore.write(store, kindOf(check), heldKey(kept), JSON.stringify(kept));
-        passes.push({ path: sharedPath(kindOf(check), heldKey(kept)), text: JSON.stringify(kept) });
-        recorded++;
-      });
-      textFiles.remove(scratch);
+          const tests = checks.flatMap((each) => (each.test === undefined ? [] : [each.test]));
+          const outcomes = batchAttribution(
+            {
+              tests,
+              status: result?.status ?? null,
+              recordings: filesIn(directory),
+              summary: textFiles.exists(`${coverage}/batch.json`) ? textFiles.read(`${coverage}/batch.json`) : undefined,
+              runs: new Map(
+                tests.flatMap((test): [string, string][] => {
+                  const text = own(test, "run.json");
+                  return text === undefined ? [] : [[test, text]];
+                }),
+              ),
+            },
+            root,
+          );
+          // The runner's own raw coverage is every test's; a test's process's children write theirs apart.
+          const runner = filesIn(`${coverage}/v8`);
+          for (const outcome of outcomes) {
+            const each = checks.find((item) => item.test === outcome.test);
+            if (each === undefined) continue;
+            if (outcome.outcome === "passed") {
+              const lcov = own(outcome.test, "lcov.info");
+              const children = namedIn(`${coverage}/v8/${encodeURIComponent(outcome.test)}`);
+              const beside = loadedBeside([], children, outcome.test, root);
+              settle(each, seconds, outcome.uses, beside, lcov === undefined ? [] : [lcov], [...runner, ...children.map((child) => child.text)]);
+            } else if (outcome.outcome === "failed") fail(each, result);
+            else again.push(each);
+          }
+        });
+        textFiles.remove(scratch);
+        alone += again.length;
+        jobs = again.map((check) => ({ checks: [check], batch: true }));
+      }
     }
   };
 
@@ -269,6 +364,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     failed,
     recorded,
     unrecorded,
+    alone,
     unassigned: unassigned.length,
     shared: { read: shared?.read ?? 0, published: published?.published ?? 0 },
     seconds: (stopwatch.now() - started) / 1000,

@@ -3,9 +3,10 @@ import { isRecord, isText, normalizedPath, relativeLocation } from "./config-val
 
 // The gate an app declares under `verify`: each whole-tree check is an id and one command, run with the tests or,
 // when it reads what they record, after them; the tests are one group or a list of groups, each one command that
-// runs the test file `{test}`, for every test under one or more relative directories, and optionally the modules,
-// and the capabilities of the adapters among `registered`, whose reach selects the group; `share` is the ref
-// prefix on `origin` passes are shared under.
+// runs the test file `{test}`, or several test files `{tests}` with Kit's coverage provider `{provider}` writing
+// into `{dir}`, for every test under one or more relative directories, and optionally the modules, and the
+// capabilities of the adapters among `registered`, whose reach selects the group; `share` is the ref prefix on
+// `origin` passes are shared under.
 export function verification(declared: unknown, registered: readonly string[]): NonNullable<KitConfig["verify"]> {
   if (!isRecord(declared)) throw new Error("verify: declare the gate's checks and, optionally, its tests.");
   const checks = declared["checks"] ?? [];
@@ -48,8 +49,10 @@ function group(declared: unknown, at: string, registered: readonly string[]): Te
   const command = isRecord(declared) ? declared["command"] : undefined;
   const declaredUnder = isRecord(declared) ? declared["under"] : undefined;
   const under = isText(declaredUnder) ? [declaredUnder] : declaredUnder;
-  if (!isText(command) || !command.includes("{test}") || !Array.isArray(under) || under.length === 0 || !under.every(inside))
-    throw new Error(`${at}: declare the command that runs one test file {test}, and the directories under which tests are found.`);
+  if (!isText(command) || !Array.isArray(under) || under.length === 0 || !under.every(inside) || command.includes("{test}") === command.includes("{tests}"))
+    throw new Error(`${at}: declare the command that runs one test file {test}, or several {tests}, and the directories under which tests are found.`);
+  if (command.includes("{tests}") && !(command.includes("{dir}") && command.includes("{provider}")))
+    throw new Error(`${at}: a command running several test files {tests} names Kit's coverage provider {provider} writing into {dir}.`);
   const directories = [...new Set(under.filter(isText).map((path) => normalizedPath(path)))].sort();
   const reaching = isRecord(declared) ? declared["reaching"] : undefined;
   if (reaching !== undefined && (!Array.isArray(reaching) || reaching.length === 0 || !reaching.every(inside)))
@@ -68,3 +71,7 @@ function group(declared: unknown, at: string, registered: readonly string[]): Te
     ...(named.length > 0 ? { capabilities: [...new Set(named)].sort() } : {}),
   };
 }
+
+// The command line a test's pass is kept under: its group's command for that test file alone, whether it runs
+// alone or among others.
+export const testLine = (command: string, test: string): string => command.replaceAll("{tests}", test).replaceAll("{test}", test);

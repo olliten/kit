@@ -18,6 +18,8 @@ test("a gate is whole-tree checks, each an id and a command, and the command tha
     tests: [{ command: "vitest run {test}", under: ["oracle"] }],
   });
   expect(read({ checks: [], tests: { command: "vitest run {test}", under: ["spec/", "oracle/", "spec"] } }).verify?.tests?.[0]?.under).toEqual(["oracle", "spec"]);
+  const batched = "vitest run {tests} --coverage.customProviderModule={provider} --coverage.reportsDirectory={dir}";
+  expect(read({ checks: [], tests: { command: batched, under: "oracle" } }).verify?.tests).toEqual([{ command: batched, under: ["oracle"] }]);
   expect(read({ checks: [] }).verify).toEqual({ checks: [] });
   expect(read({ checks: [], share: "refs/heads/kit-passes/" }).verify).toEqual({ checks: [], share: "refs/heads/kit-passes" });
   expect(read({ checks: [], share: "refs/kit-passes" }).verify).toEqual({ checks: [], share: "refs/kit-passes" });
@@ -56,6 +58,9 @@ test.each([
   [{ checks: [], tests: { command: "vitest run {test}", under: "../outside" } }, /verify\.tests/],
   [{ checks: [], tests: { command: "vitest run {test}", under: ["oracle", "../outside"] } }, /verify\.tests/],
   [{ checks: [], tests: { command: "vitest run {test}", under: [] } }, /verify\.tests/],
+  [{ checks: [], tests: { command: "vitest run {test} {tests} {provider} {dir}", under: "oracle" } }, /verify\.tests: declare the command/],
+  [{ checks: [], tests: { command: "vitest run {tests} --coverage.reportsDirectory={dir}", under: "oracle" } }, /verify\.tests: .*\{provider\}/],
+  [{ checks: [], tests: { command: "vitest run {tests} --coverage.customProviderModule={provider}", under: "oracle" } }, /verify\.tests: .*\{dir\}/],
   [{ checks: [], extra: true }, /verify\.extra is not a key Kit reads/],
   [{ checks: [], tests: [] }, /verify\.tests: list at least one group/],
   [{ checks: [], tests: [{ command: "unit {test}", under: "oracle" }, { command: "browser", under: "oracle" }] }, /verify\.tests\[1\]: declare the command/],

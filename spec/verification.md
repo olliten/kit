@@ -7,11 +7,12 @@ so a later gate runs only what an edit can have changed.
 
 - An app declares its gate under `verify`: whole-tree checks, each an id and one command, optionally run after
   the tests, and its tests as one group or a list of groups, each the command that runs one test file `{test}`,
-  which may also write the test's coverage into `{dir}`, for every test under one or more relative
-  directories, and optionally the modules inside the app and the capabilities of registered adapters whose reach
-  selects it, and optionally `share`, the ref prefix on `origin` its passes are shared under. A malformed
-  declaration, or group, or a capability no adapter registers fails configuration naming where, and `kit verify`
-  without one says what to declare. · {#the-gate-is-declared}
+  which may also write the test's coverage into `{dir}`, or several test files `{tests}` with Kit's coverage
+  provider `{provider}` writing into `{dir}`, for every test under one or more relative directories, and
+  optionally the modules inside the app and the capabilities of registered adapters whose reach selects it, and
+  optionally `share`, the ref prefix on `origin` its passes are shared under. A malformed declaration, or group,
+  or a capability no adapter registers fails configuration naming where, and `kit verify` without one says what
+  to declare. · {#the-gate-is-declared}
   - Implementation: {{verification-configuration}}, {{kit-configuration}}, {{config-schema}}, {{verify-run}}
   - Proof: {{temporary-project}}
 - A test runs under the command of the first group, in declared order, whose directories hold it and whose
@@ -52,6 +53,19 @@ so a later gate runs only what an edit can have changed.
   show. A test that reads an
   unrun function's text through the running code, such as `Function.prototype.toString`, is not seen. · {#a-pass-holds-while-the-code-it-ran-holds}
   - Implementation: {{verify-run}}, {{held-state}}, {{ran-code}}, {{function-span}}, {{coverage-report}}, {{compiler}}, {{read-recorder}}, {{verdict-reuse}}, {{text-files}}, {{filesystem}}
+  - Proof: {{temporary-project}}
+- A group whose command takes `{tests}` runs a chunk's due tests in one invocation of vitest 1.x, with a fresh
+  process per test file and Kit's provider writing each file's result, coverage and executed scripts apart; a
+  test's pass is kept under the command as it reads for that file alone. A recording is a test's when its process
+  learned from the runner's first message naming it among the files that process runs that it runs that test
+  alone, or was started by such a process; the runner's own reads, listings and probes are every test's but
+  those it made of another test of the invocation, and a file it loaded is each test's that executed it, or every
+  test's when none did. A file a process the test's process started loaded or ran is kept whole. A failing test
+  fails alone and leaves the others kept; a test whose process ran another test file, whose coverage holds
+  another, or whose invocation failed without a test failing or with unhandled errors, runs again alone. The
+  provider depends on vitest 1.x's coverage provider interface and worker message; `{test}` serves any
+  runner. · {#a-group-runs-its-tests-in-one-runner}
+  - Implementation: {{verify-run}}, {{batch-attribution}}, {{coverage-provider}}, {{read-recorder}}
   - Proof: {{temporary-project}}
 - With `share` declared, a pass is shared through `origin`: one ref per runtime and UTC day,
   `<share>/<day>-<runtime>` with the runtime's digest cut to 16 characters, whose tree holds each kept pass at
