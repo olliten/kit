@@ -2,24 +2,25 @@
   "test": "oracle/kit/declared-roots-are-checked.test.ts",
   "digests": {
     "oracle/kit/declared-roots-are-checked.test.ts": "09282ae190d8c5bcf655b3c3d451ee3e1823e4358fa76126a1d2dbfabae8a0e3",
-    "src/core/compositions/kit-configuration.ts": "44d731379b75a67f27609c01895c31b0bac4c56b5d5c55f31533240b5617459c",
-    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
-    "src/core/readings/config-schema.ts": "545defaaee9c767ae66833f299dc716495c2e08662f53f723b0a7b82cc06d1b9",
+    "src/core/compositions/kit-configuration.ts": "acc5d8b09c2eac9efdd5826abc6f75fcd6b9eae9bb1f6e13b8d709500fce89d0",
+    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
+    "src/core/readings/config-schema.ts": "902b3fa2ae3d962cfea7698c366ab054aa8bd09eff5990cb7812940408661c6a",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
     "src/core/readings/layout-configuration.ts": "bd883acdb914bbba91af7cc0383e564950779b1a1e0a2dacde00475d104cb220",
-    "src/core/readings/legacy-zone-configuration.ts": "961a2a207527c53db7f16fbcf3d9daaf839ce5f79c3555bcb219e3f5d8e8084f"
+    "src/core/readings/legacy-zone-configuration.ts": "961a2a207527c53db7f16fbcf3d9daaf839ce5f79c3555bcb219e3f5d8e8084f",
+    "src/core/readings/verification-configuration.ts": "dc00d7186918b3dd87474ff4332d81689c47fdcef1b8dd87c3fb892a3b1a3e2b"
   },
   "ran": {
     "src/core/compositions/kit-configuration.ts": [
-      "adapters@105",
-      "configuredKit@18",
-      "dependencyExclusions@84",
-      "ignoredPaths@157",
-      "packages@141"
+      "adapters@107",
+      "configuredKit@19",
+      "dependencyExclusions@86",
+      "ignoredPaths@159",
+      "packages@143"
     ],
     "src/core/readings/config-schema.ts": [
-      "configIssues@44",
-      "visit@46"
+      "configIssues@45",
+      "visit@47"
     ],
     "src/core/readings/config-values.ts": [
       "isRecord@8",

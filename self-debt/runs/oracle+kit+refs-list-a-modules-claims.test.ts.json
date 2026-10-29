@@ -2,12 +2,12 @@
   "test": "oracle/kit/refs-list-a-modules-claims.test.ts",
   "digests": {
     "oracle/kit/refs-list-a-modules-claims.test.ts": "0cddf76e69a0993203a5ecfa98416161f7d22d1015c651acccd3d08f06abe4e3",
-    "src/core/compositions/kit-configuration.ts": "44d731379b75a67f27609c01895c31b0bac4c56b5d5c55f31533240b5617459c",
+    "src/core/compositions/kit-configuration.ts": "acc5d8b09c2eac9efdd5826abc6f75fcd6b9eae9bb1f6e13b8d709500fce89d0",
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/command.ts": "70f2614f2759a300204092f75a5e20958965cf1e9b00f52110e9d5a246ef775d",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
     "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
-    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
     "src/core/primitives/import.ts": "c559201b45c7883f5388fd04a1dcaa1a02bf7d91cbad5f55a3e73f46bcc2d763",
@@ -17,13 +17,14 @@
     "src/core/primitives/term.ts": "4521f00e6ebb6d54477191b58fa0f2bb5b842765ca94c7c34cd327d32b79c139",
     "src/core/primitives/zones.ts": "f49fc9a4bee55f79aa3ab3a33ef842c7b66e95c529a89c47343a3b0005660a01",
     "src/core/readings/claim-inventory.ts": "2da2157c11333a89db7da02ed39b4d5798cff6ffbd3bb48f63f37531020bddf2",
-    "src/core/readings/config-schema.ts": "545defaaee9c767ae66833f299dc716495c2e08662f53f723b0a7b82cc06d1b9",
+    "src/core/readings/config-schema.ts": "902b3fa2ae3d962cfea7698c366ab054aa8bd09eff5990cb7812940408661c6a",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
     "src/core/readings/layout-configuration.ts": "bd883acdb914bbba91af7cc0383e564950779b1a1e0a2dacde00475d104cb220",
     "src/core/readings/legacy-zone-configuration.ts": "961a2a207527c53db7f16fbcf3d9daaf839ce5f79c3555bcb219e3f5d8e8084f",
     "src/core/readings/module-references.ts": "6e4814b98bc6406ac35d3c924b1b654ee2a45dfba1f0e715cfeffc6473b00748",
     "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
     "src/core/readings/refs-description.ts": "7fd76ccfc31cbcfa7de17bef2f1b2a2d67f0ab069637e2e240589edf8ffdf096",
+    "src/core/readings/verification-configuration.ts": "dc00d7186918b3dd87474ff4332d81689c47fdcef1b8dd87c3fb892a3b1a3e2b",
     "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
     "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
     "src/substrate/adapters/terminal-input.ts": "e4b04e811de9e9cbee27169a9885d011d4bbf087d85c4962ed28acf2829afadf",
@@ -33,12 +34,12 @@
   },
   "ran": {
     "src/core/compositions/kit-configuration.ts": [
-      "adapters@105",
-      "configuredKit@18",
-      "dependencyExclusions@84",
-      "ignoredPaths@157",
-      "kitConfig@8",
-      "packages@141"
+      "adapters@107",
+      "configuredKit@19",
+      "dependencyExclusions@86",
+      "ignoredPaths@159",
+      "kitConfig@9",
+      "packages@143"
     ],
     "src/core/readings/claim-inventory.ts": [
       "claimInventory@93",
@@ -52,8 +53,8 @@
       "visit@149"
     ],
     "src/core/readings/config-schema.ts": [
-      "configIssues@44",
-      "visit@46"
+      "configIssues@45",
+      "visit@47"
     ],
     "src/core/readings/config-values.ts": [
       "isRecord@8",
@@ -80,6 +81,9 @@
       "claimText@16",
       "describeRefs@72",
       "moduleRefs@30"
+    ],
+    "src/core/readings/verification-configuration.ts": [
+      "verification@6"
     ],
     "src/substrate/adapters/processes.ts": [
       "node@59",

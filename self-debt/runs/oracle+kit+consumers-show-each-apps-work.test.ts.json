@@ -3,7 +3,7 @@
   "digests": {
     "oracle/kit/consumers-show-each-apps-work.test.ts": "a8d1503880df67ecbc519b2ab925690a3c95ea609a9d66d611acdaf4aa405676",
     "src/core/primitives/command.ts": "70f2614f2759a300204092f75a5e20958965cf1e9b00f52110e9d5a246ef775d",
-    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
     "src/core/readings/check-paths.ts": "af92998ae7e9334360db1a04e2924d1e31f05d38b8d9c3c9548ad67539a75ee0",
     "src/core/readings/claim-inventory.ts": "2da2157c11333a89db7da02ed39b4d5798cff6ffbd3bb48f63f37531020bddf2",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
@@ -13,7 +13,6 @@
     "src/core/readings/name-check.ts": "8aa2a94f88453ab26187f07f2e3cbf1ced612af97d2e4ac5c0b95fb89ed25658",
     "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
     "src/core/readings/topic-shape.ts": "35b8ff90033eeffac50b1e4073be62cab9d4ecbf1cd3c039d981542881204b10",
-    "src/substrate/adapters/evidence-store.ts": "76a918cf148c2a093c69d000850fc73d9dbe492c7595a06d53c1e8b7fc95891f",
     "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
     "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
     "src/substrate/adapters/text-files.ts": "e659d03ec074befb4f925335619caebc8112e8f0574f2cc6dbf70eddd868a9ec",
@@ -55,10 +54,6 @@
     ],
     "src/core/readings/topic-shape.ts": [
       "topicShape@21"
-    ],
-    "src/substrate/adapters/evidence-store.ts": [
-      "files@26",
-      "pathOf@16"
     ],
     "src/substrate/adapters/processes.ts": [
       "node@59",

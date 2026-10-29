@@ -86,6 +86,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **verdict** — a check that passed, with the state of every path inside the app its run read, and how long it took.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **verification** — the supplied checks, input identities, execution contracts, evidence and resource state of a verification request.
   - Role: fact
   - Zone: core
@@ -321,6 +325,14 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
+- **verdict-reuse** — the paths a check's processes recorded, a stored verdict read back, the verdict whose paths all still hold, and where a verdict is kept.
+  - Role: derived
+  - Zone: core
+  - From: {{fact-keys}}, {{verdict}}
+- **verification-configuration** — the gate an app declares under `verify`, checked as it is read.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}, {{default-config}}
 - **verification-partition** — disjoint worker assignments derived from required checks, supplied durations and initial worker loads.
   - Role: derived
   - Zone: core
@@ -353,11 +365,15 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **filesystem** — access to file text and directory entries.
+- **filesystem** — access to file text, directory entries, and the state a path is in.
   - Role: adapter
   - Zone: substrate
   - Of: []
 - **processes** — access to running another program to completion.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **read-recorder** — a preload that records every path inside the app a check's processes read, list or probe.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -381,7 +397,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **toolchain** — access to the identity of the Kit that reads an app, from its own source.
+- **toolchain** — access to the identity of the Kit that reads an app, from its own source, and of the runtime and installed packages a check runs on.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -451,7 +467,7 @@
 - **kit-configuration** — the config an app declares, read from its YAML fence and validated section by section, and the paths a check is given.
   - Role: composition
   - Zone: core
-  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}
+  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{verification-configuration}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate
@@ -536,6 +552,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{source-loader}}
+- **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{config-values}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{processes}}, {{read-config}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
 
 ## Supporting vocabulary and roles
 

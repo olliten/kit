@@ -24,6 +24,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `legacy-areas` | Spec files in an older claim grammar. |
 | `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
 | `runs.record`, `runs.each` | Where `kit runs` records, inside the app, and the command that runs one test. |
+| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the `command` that runs one test file `{test}` for every test `under` a directory. |
 
 An app's plain-Node scripts read the config the way the commands do through
 `src/substrate/compositions/configuration-runner.mjs`: `await configuration()` answers `kitConfig`,
@@ -182,3 +183,26 @@ Two rules read the record, and their findings are debt that may only shrink:
 - `excerpt-cohesion`: a module holding, for two or more claims, code that only that claim runs and that no
   code other claims run holds. Adapters are exempt.
 
+## Verify
+
+```yaml
+verify:
+  checks:
+    - id: typecheck
+      command: npx tsc --noEmit -p tsconfig.json
+    - id: check
+      command: node scripts/kit-check.mjs
+  tests:
+    command: npx vitest run {test}
+    under: oracle/
+```
+
+`kit verify` runs each check, and each test file under `under` alone, in parallel, with a recorder preloaded
+through `NODE_OPTIONS` that notes every path inside the app the run reads, lists or probes, in the run's
+processes, threads and child processes. A pass is kept beside the repository with the state of each of those
+paths, under the command, the Node version and the lockfile; the next `kit verify` reuses it while every path
+is in the same state. A failure is never kept. Worktrees of one repository share what is kept.
+
+`kit verify --plan` lists what would run, `--fresh` runs everything and keeps nothing, and the exit code is 1
+when a check fails. A check that depends on something no file holds, such as the network, the clock or an
+environment variable, should not be a reused check.

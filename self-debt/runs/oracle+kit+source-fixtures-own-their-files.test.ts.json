@@ -14,7 +14,7 @@
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
     "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
-    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file-facts.ts": "3207d63ad8e15d2bbfd4a64aab9e2fd748554cfbaeb6cdd354f8b2ce26e2858f",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
@@ -35,7 +35,7 @@
     "src/core/readings/semantic-references.ts": "f8ea87d4a83ae904a6534e67e07b9e71d3009bc7a73666ba0f11dd1a1c2736b8",
     "src/core/readings/term-inventory.ts": "379a0fd747183b3edee52416ebfd2a36b6db5bfd1e87e360abd9b1df8ad584b1",
     "src/substrate/adapters/compiler.ts": "53880d4648910262a0eb2d7c17d1718eec5ea705308869a5198ac68b1d7180dd",
-    "src/substrate/adapters/filesystem.ts": "797e8c6c71dc5d4522d80185bc759617cfdd7756de84be07aaa632ad53d7bc25",
+    "src/substrate/adapters/filesystem.ts": "08effc3d3863d17a6eb80e266d24ef677223a3cceac5c6b06e44a281cd290f49",
     "src/substrate/compositions/authority-recorder.ts": "a86300ed1007c31e66a93a7605a31a3508e422601e8ce9a7d2ea7f0d08dce229",
     "src/substrate/compositions/behaviour-reading.ts": "99ec3216576aecc0f15fa4ad08659c46c3e5253cb31effde24c0eace20f4852f",
     "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
@@ -121,8 +121,8 @@
       "workerHost@146"
     ],
     "src/substrate/adapters/filesystem.ts": [
-      "entries@35",
-      "readText@24"
+      "entries@37",
+      "readText@26"
     ],
     "src/substrate/compositions/authority-recorder.ts": [
       "access@45",

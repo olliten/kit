@@ -540,3 +540,18 @@ without naming the app.
   lists are stored sorted, and an export's printed type, which no check read, is no longer recorded.
 - **Measured on Kit:** `kit check` with nothing changed takes 1.6 s against 8 s; one edited leaf re-extracts 7
   files and 5 tests.
+
+## 2026-10-29 · A pass is kept with what its run read
+
+- **Decision:** `kit verify` runs the checks and tests an app declares under `verify`, each test file in its own
+  process, with a preloaded recorder that notes every path inside the app the run reads, lists or probes,
+  including in its threads and child processes. A pass is kept with the state of those paths, and reused while
+  they all still hold.
+- **Why:** a static key misses what a test reads that isn't a module, such as a config or a fixture, and on
+  Leeloo the static closure of a test is a third of the app. Observing reads covers modules and data alike with
+  no declarations, and is the rule the runs records already follow. Keeping one entry per distinct set of states
+  lets two worktrees, or an edit and its revert, each keep theirs.
+- **Measured on Kit (4 cores):** cold 172 s; nothing changed 1 s; one leaf edited, 14 of 103 checks rerun in
+  33 s; the edit reverted, all reused in 0.08 s.
+- **Not covered:** inputs no file holds (network, clock, environment variables). Each test runs in its own
+  process, so a cold run costs more than one vitest run; folding `kit runs` into it is next.

@@ -7,12 +7,12 @@
     "oracle/substrate/compositions/extraction-proof.ts": "2e1b95c044e763fda9ddb347cdc95a0cdb1d86e583c7e410ee192a18e8a21984",
     "src/core/compositions/capability-check.ts": "347dfc6eee48827d6aeec663c54b63e7ef935853d2eefbe122124418b722b2ba",
     "src/core/compositions/gate.ts": "bbf113d0c1799770ca3199382dbae561deb4f7e47b9601f48cfa1f4dcb3f1070",
-    "src/core/compositions/kit-configuration.ts": "44d731379b75a67f27609c01895c31b0bac4c56b5d5c55f31533240b5617459c",
+    "src/core/compositions/kit-configuration.ts": "acc5d8b09c2eac9efdd5826abc6f75fcd6b9eae9bb1f6e13b8d709500fce89d0",
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/command.ts": "70f2614f2759a300204092f75a5e20958965cf1e9b00f52110e9d5a246ef775d",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
     "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
-    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file-facts.ts": "3207d63ad8e15d2bbfd4a64aab9e2fd748554cfbaeb6cdd354f8b2ce26e2858f",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
@@ -35,7 +35,7 @@
     "src/core/readings/claim-runs.ts": "9db8ae5e4017bd6065d3e2626f9972eddddc43472fac4e8ce34fd767498314d2",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
     "src/core/readings/compiler-check.ts": "5f3ac210216a184c72c6f104dac3054cdeb235e1ae4ce15b83f982486bef4804",
-    "src/core/readings/config-schema.ts": "545defaaee9c767ae66833f299dc716495c2e08662f53f723b0a7b82cc06d1b9",
+    "src/core/readings/config-schema.ts": "902b3fa2ae3d962cfea7698c366ab054aa8bd09eff5990cb7812940408661c6a",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
     "src/core/readings/construction-check.ts": "f6c84df74248c11f99735438b877da77a0245565685d1aa2c262890b225cf4d4",
     "src/core/readings/dependency-check.ts": "07ec9a1bd0252d3421c1f76824d7fd9af5d155dd59e6c8408910b3fb2e69650a",
@@ -71,14 +71,15 @@
     "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
     "src/core/readings/term-order.ts": "d7ef4373e8e7f9737e06243c9598b7fd7568d7f4b0797b8a39a61deebd667942",
     "src/core/readings/topic-shape.ts": "35b8ff90033eeffac50b1e4073be62cab9d4ecbf1cd3c039d981542881204b10",
+    "src/core/readings/verification-configuration.ts": "dc00d7186918b3dd87474ff4332d81689c47fdcef1b8dd87c3fb892a3b1a3e2b",
     "src/core/readings/zone-authority-check.ts": "976c01e9046a442b0e8f3d0613b5fe8b97c4fddc3ae212e44952814c5b5d05c1",
     "src/core/readings/zone-permission.ts": "c63f6f3eb51b89a185e74b6ca617213a412a655e0b05db848e6ee4812a1a2e7b",
     "src/substrate/adapters/compiler.ts": "53880d4648910262a0eb2d7c17d1718eec5ea705308869a5198ac68b1d7180dd",
-    "src/substrate/adapters/evidence-store.ts": "76a918cf148c2a093c69d000850fc73d9dbe492c7595a06d53c1e8b7fc95891f",
-    "src/substrate/adapters/filesystem.ts": "797e8c6c71dc5d4522d80185bc759617cfdd7756de84be07aaa632ad53d7bc25",
+    "src/substrate/adapters/evidence-store.ts": "7697bcf6de59f8fbcbd8c6bc7890794dfbebd0bd44410b7fe74f63f99d3fa213",
+    "src/substrate/adapters/filesystem.ts": "08effc3d3863d17a6eb80e266d24ef677223a3cceac5c6b06e44a281cd290f49",
     "src/substrate/adapters/stopwatch.ts": "10e38f59dd52adb2bc2b11b313f092c966308a3032d8365d59bf621ca1191cb5",
     "src/substrate/adapters/text-files.ts": "e659d03ec074befb4f925335619caebc8112e8f0574f2cc6dbf70eddd868a9ec",
-    "src/substrate/adapters/toolchain.ts": "e28ae396d51310a8ab5b6d8b6648320002d0b6b39a08433daacb1675d8b6229a",
+    "src/substrate/adapters/toolchain.ts": "d052ac7f3ef10bef3f9d90e580cb1081ce13ba0775ba60f5f91002ab3ac05548",
     "src/substrate/compositions/authority-recorder.ts": "a86300ed1007c31e66a93a7605a31a3508e422601e8ce9a7d2ea7f0d08dce229",
     "src/substrate/compositions/behaviour-reading.ts": "99ec3216576aecc0f15fa4ad08659c46c3e5253cb31effde24c0eace20f4852f",
     "src/substrate/compositions/check-run.ts": "6dc64c92c778184803ed6faea94fbb0a9b6b8b73ecfdfcc8cba0e80e098dc5ea",
@@ -124,12 +125,12 @@
       "violation@33"
     ],
     "src/core/compositions/kit-configuration.ts": [
-      "adapters@105",
-      "configuredKit@18",
-      "dependencyExclusions@84",
-      "ignoredPaths@157",
-      "kitConfig@8",
-      "packages@141"
+      "adapters@107",
+      "configuredKit@19",
+      "dependencyExclusions@86",
+      "ignoredPaths@159",
+      "kitConfig@9",
+      "packages@143"
     ],
     "src/core/readings/access-authority.ts": [
       "accessAuthority@13"
@@ -179,8 +180,8 @@
       "compilerCheck@6"
     ],
     "src/core/readings/config-schema.ts": [
-      "configIssues@44",
-      "visit@46"
+      "configIssues@45",
+      "visit@47"
     ],
     "src/core/readings/config-values.ts": [
       "isRecord@8",
@@ -336,16 +337,16 @@
       "workerHost@146"
     ],
     "src/substrate/adapters/evidence-store.ts": [
-      "directory@44",
-      "files@26",
-      "pathOf@16",
-      "prune@93",
-      "read@64",
-      "write@82"
+      "directory@46",
+      "files@28",
+      "pathOf@18",
+      "prune@104",
+      "read@66",
+      "write@84"
     ],
     "src/substrate/adapters/filesystem.ts": [
-      "entries@35",
-      "readText@24"
+      "entries@37",
+      "readText@26"
     ],
     "src/substrate/adapters/stopwatch.ts": [
       "now@6"
@@ -354,9 +355,9 @@
       "read@15"
     ],
     "src/substrate/adapters/toolchain.ts": [
-      "byName@11",
-      "engine@16",
-      "visit@20"
+      "byName@13",
+      "engine@28",
+      "visit@32"
     ],
     "src/substrate/compositions/authority-recorder.ts": [
       "authorityRecorder@14",

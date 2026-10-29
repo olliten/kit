@@ -23,6 +23,7 @@ const CONFIG_KEYS: Keys = {
   "dependency-exclusions": { rows: { from: null, to: null, imports: null, reach: null } },
   ignore: null,
   runs: { keys: { record: null, each: null } },
+  verify: { keys: { checks: { rows: { id: null, command: null } }, tests: { keys: { command: null, under: null } } } },
   adapters: {
     rows: {
       module: null,

@@ -14,6 +14,15 @@ legacy-areas: []
 runs:
   record: self-debt/runs
   each: npx vitest run {test} --coverage.enabled --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
+verify:
+  checks:
+    - id: typecheck
+      command: npx tsc --noEmit -p tsconfig.json
+    - id: check
+      command: node scripts/kit-check.mjs
+  tests:
+    command: npx vitest run {test}
+    under: oracle/
 exceptions:
   - oracle/code-structure/imports-point-inward.test.ts
   - oracle/code-structure/imports-have-no-cycles.test.ts
@@ -22,6 +31,7 @@ exceptions:
   - scripts/kit-check.mjs
   - scripts/kit-consumers.mjs
   - scripts/kit-runs.mjs
+  - scripts/kit-verify.mjs
   - scripts/kit-refs.mjs
 dependency-exclusions:
   - from: src
@@ -144,6 +154,14 @@ adapters:
     kind: external
     zones: [substrate]
     contract: {type: Toolchain}
+    globals: [process]
+  - module: src/substrate/adapters/read-recorder.mjs
+    export: readRecorder
+    capability: read-recording
+    kind: external
+    zones: [substrate]
+    globals: [process]
+    packages: [node:module, node:worker_threads]
   - module: src/substrate/adapters/terminal-input
     export: terminalInput
     capability: filesystem

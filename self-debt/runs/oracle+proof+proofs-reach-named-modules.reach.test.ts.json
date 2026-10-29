@@ -6,7 +6,7 @@
     "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
     "oracle/substrate/compositions/program-fixture.ts": "fac1201b097dc9889c1c5a259b39d4dd5ed8b73e543e2104fd991e5e73343649",
     "oracle/substrate/compositions/recorded-reach.ts": "bac885ceaa25de776aecb7b0a199143f0ce13d7634c578969e449f217af62230",
-    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
     "src/substrate/adapters/compiler.ts": "53880d4648910262a0eb2d7c17d1718eec5ea705308869a5198ac68b1d7180dd",
     "src/substrate/compositions/test-reach.ts": "55d43069234ca993d95744fad76c4a6720c0e0187739c14394f4c9f9eb340198",
     "src/substrate/primitives/program-scope.ts": "58bb04ca5efe734416da2456f9e9dcbb87283eacd996873de3cfdefdb6469fad"

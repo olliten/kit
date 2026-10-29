@@ -9,6 +9,8 @@ export interface EvidenceStore {
   directory(root: string): string;
   read(store: string, kind: string, key: string): string | undefined;
   write(store: string, kind: string, key: string, text: string): void;
+  // Every entry of one kind, each as its text.
+  entries(store: string, kind: string): string[];
   prune(store: string): void;
 }
 
@@ -89,6 +91,15 @@ export const evidenceStore: EvidenceStore = {
     } finally {
       rmSync(temporary, { force: true });
     }
+  },
+  entries(store, kind) {
+    return files(join(store, kind)).flatMap((entry) => {
+      try {
+        return [readFileSync(entry.path, "utf8")];
+      } catch {
+        return [];
+      }
+    });
   },
   prune(store) {
     const limit = Number(process.env["KIT_STORE_MAX_BYTES"]) || DEFAULT_MAX_BYTES;

@@ -4,6 +4,7 @@ import { type Declaration, isRecord, isText, isTexts, isZone, normalizedPath, re
 import { configIssues } from "../readings/config-schema.js";
 import { configuredLayout } from "../readings/layout-configuration.js";
 import { legacyZones } from "../readings/legacy-zone-configuration.js";
+import { verification } from "../readings/verification-configuration.js";
 
 export function kitConfig(text: string): Declaration {
   const fences = [...text.matchAll(/^```yaml[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*$/gm)];
@@ -71,6 +72,7 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
     ...(isRecord(runs) && isText(runs["record"]) && isText(runs["each"])
       ? { runs: { record: normalizedPath(runs["record"]), each: runs["each"] } }
       : {}),
+    ...(declaration["verify"] === undefined ? {} : { verify: verification(declaration["verify"]) }),
     legacyAreas: texts(declaration["legacy-areas"], "legacy-areas"),
     legacyZones: legacyZones(declaration["legacy-zones"]),
     exceptions: texts(declaration["exceptions"], "exceptions"),

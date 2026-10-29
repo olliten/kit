@@ -2,7 +2,7 @@
   "test": "oracle/kit/proof-discovery-is-configured.test.ts",
   "digests": {
     "oracle/kit/proof-discovery-is-configured.test.ts": "b67f80c0641af63d6d8d77faff664a1e3e7018a915386b92926d8cf5aafa9e2e",
-    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
     "src/core/readings/test-roots.ts": "021ee43b6a7d89538fdbcf9c03e8e9cc5da502f1a11b21439df37b96216e8c4e"
   },
