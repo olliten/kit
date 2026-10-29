@@ -28,6 +28,12 @@ export function globalAuthority(snapshot: Snapshot, context: CapabilityContext):
     for (const global of project.globals) {
       if (!global.runtime || !checked.has(global.file)) continue;
       const name = global.name.startsWith("globalThis.") ? global.name.slice("globalThis.".length) : global.name;
+      // A declared selection covers this literal use and its selected value, not other uses of its root.
+      const selectedAdapters = context.adapters.filter(({ adapter }) =>
+        adapter.globals?.some((selector) =>
+          global.selection === selector || global.selection?.startsWith(`${selector}.`),
+        ),
+      );
       const declared = global.declarationFile ?? "";
       if (
         !name.includes(".") &&
@@ -35,6 +41,7 @@ export function globalAuthority(snapshot: Snapshot, context: CapabilityContext):
         /(?:^|\/)node_modules\//.test(declared) &&
         !/(?:^|\/)node_modules\/typescript\/lib\//.test(declared) &&
         !registered.some((adapter) => adapter.globals?.includes(name)) &&
+        selectedAdapters.length === 0 &&
         !hostGlobals.has(`${global.file}:${name}`)
       ) {
         hostGlobals.add(`${global.file}:${name}`);
@@ -47,7 +54,8 @@ export function globalAuthority(snapshot: Snapshot, context: CapabilityContext):
           ),
         );
       }
-      const declaredAdapters = context.adapters.filter(({ adapter }) => adapter.globals?.includes(global.name));
+      const directAdapters = context.adapters.filter(({ adapter }) => adapter.globals?.includes(global.name));
+      const declaredAdapters = [...new Set([...directAdapters, ...selectedAdapters])];
       const owners = declaredAdapters.filter(({ path }) => path === global.file);
       if (externalAdapterPaths.has(global.file) || declaredAdapters.length === 0)
         for (const authority of global.nativeAuthority ?? []) {
