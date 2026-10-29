@@ -75,6 +75,8 @@ test.each([
   "const env = process.env; return env.VITEST_POOL_ID;",
   "return process.env.HOME;",
   "return process.pid;",
+  "process.cwd(); return process;",
+  "return process.env.VITEST_POOL_ID_EXTRA;",
   'return process["cwd"]();',
   'return process.env["VITEST_POOL_ID"];',
   "return process.env[key];",
@@ -96,4 +98,17 @@ test("an unregistered ambient selector remains blocked", () => {
   expect(inspect("return process.cwd();", owner, [])).toEqual(
     expect.arrayContaining([expect.objectContaining({ blocking: true })]),
   );
+});
+
+test.each([false, true])("actual ownership wins over another adapter's overlapping declaration, broad owner=%s", (broad) => {
+  const other = {
+    ...adapter,
+    module: "substrate/adapters/other",
+    capability: "other.read",
+    globals: broad ? selectors : ["process"],
+  };
+  expect(inspect("return process.cwd();", owner, [
+    { ...adapter, globals: broad ? ["process"] : selectors },
+    other,
+  ])).toEqual([]);
 });
