@@ -52,7 +52,7 @@ test("raw clock access in a declared proof's callback is still checked", () => {
   expect(result.findings).toContainEqual(
     expect.objectContaining({
       debtKey: `R1:raw-primitive:${proof}:clock`,
-      category: "placed-violation",
+      category: "proof-debt",
       blocking: true,
     }),
   );
@@ -160,15 +160,15 @@ test("a test suffix cannot turn a zoned module into an entrypoint", () => {
 });
 
 test("an imported undeclared test file remains an unresolved boundary", () => {
-  const helper = "oracle/count/helper.test.ts";
+  const helper = "oracle/count/helpers/run.test.ts";
   const { result } = inspect({
-    [proof]: "import { run } from './helper.test.js'; run();\n",
+    [proof]: "import { run } from './helpers/run.test.js'; run();\n",
     [helper]: "export function run(): number { return Date.now(); }\n",
   });
   expect(result.findings).toContainEqual(
     expect.objectContaining({
       path: proof,
-      debtKey: `R1:external-boundary:${proof}:./helper.test.js`,
+      debtKey: `R1:external-boundary:${proof}:./helpers/run.test.js`,
       blocking: true,
     }),
   );

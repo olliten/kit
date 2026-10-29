@@ -4,6 +4,7 @@ import { configuredKit, kitConfig } from "../../core/compositions/kit-configurat
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { describeRefs, moduleRefs } from "../../core/readings/refs-description.js";
 import { textFiles } from "../adapters/text-files.js";
+import type { TerminalInput } from "../adapters/terminal-input.js";
 
 // The spec files under a folder, by their path from the root.
 function markdown(root: string, folder: string): string[] {
@@ -33,7 +34,10 @@ export async function moduleClaims(root: string, configPath: string, target: str
   return moduleRefs(config, relative, topics, tests);
 }
 
-export async function runRefs({ engineRoot, args: given, cwd, input }: CommandRequest): Promise<CommandResponse> {
+export async function runRefs(
+  { engineRoot, args: given, cwd }: CommandRequest,
+  input: TerminalInput,
+): Promise<CommandResponse> {
   const args = [...given];
   const option = (name: string): string | undefined => {
     const index = args.indexOf(`--${name}`);
@@ -48,7 +52,7 @@ export async function runRefs({ engineRoot, args: given, cwd, input }: CommandRe
   const at = (path: string): string => normalizedPath(path.startsWith("/") ? path : `${cwd}/${path}`);
   const root = chosen === undefined ? engineRoot : at(chosen);
   const configPath = config === undefined ? `${engineRoot}/self-config.md` : at(config);
-  const event: unknown = hook ? JSON.parse(input()) : undefined;
+  const event: unknown = hook ? JSON.parse(input.read()) : undefined;
   const toolInput: unknown = typeof event === "object" && event !== null ? Reflect.get(event, "tool_input") : undefined;
   const opened: unknown = typeof toolInput === "object" && toolInput !== null ? Reflect.get(toolInput, "file_path") : undefined;
   const target = hook ? opened : args[0];

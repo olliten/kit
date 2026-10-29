@@ -1,7 +1,7 @@
-import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
+import { processes } from "../../src/substrate/adapters/processes.js";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
 const engine = fileURLToPath(new URL("../..", import.meta.url));
@@ -54,8 +54,8 @@ test.each([
 					"```yaml\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\nlegacy-areas: [spec/old.md]\nadapters: []\npackages: []\n```\n",
 				"baseline.json": "{}",
 			});
-			const result = spawnSync(
-				process.execPath,
+			const result = processes.run(
+				processes.node(),
 				[
 					join(engine, "scripts/kit-check.mjs"),
 					`--root=${project.root}`,
@@ -63,9 +63,8 @@ test.each([
 					`--baseline=${join(project.root, "baseline.json")}`,
 					"--report",
 				],
-				{ cwd: engine, encoding: "utf8" },
+				engine,
 			);
-			expect(result.error).toBeUndefined();
 			expect(result.status).toBe(0);
 			const findings = JSON.parse(result.stdout).findings;
 			expect(findings.map((item: { debtKey: string }) => item.debtKey)).toEqual(

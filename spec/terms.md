@@ -349,6 +349,10 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
+- **terminal-input** — access to what a command was given on its standard input.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 - **text-files** — access to plain text files outside a snapshot: configs, baselines and spec listings.
   - Role: adapter
   - Zone: substrate
@@ -463,7 +467,7 @@
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{text-files}}
+  - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{terminal-input}}, {{text-files}}
 - **runs-run** — the `kit runs` workflow: run each test file alone with the app's command and record which named functions it ran.
   - Role: composition
   - Zone: substrate

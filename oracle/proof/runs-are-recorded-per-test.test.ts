@@ -106,7 +106,6 @@ test("kit runs runs each test file alone with the app's command and records what
       engineRoot: project.root,
       args: ["--root", project.root, "--config", join(project.root, "kit/config.md")],
       cwd: project.root,
-      input: () => "",
     });
     expect(result).toMatchObject({ exitCode: 0, stderr: "" });
     const { digests, tests } = JSON.parse(readFileSync(join(project.root, "kit/runs.json"), "utf8"));

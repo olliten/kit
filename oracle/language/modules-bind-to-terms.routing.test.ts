@@ -1,20 +1,20 @@
-import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, expect, test } from "vitest";
+import { processes } from "../../src/substrate/adapters/processes.js";
+import { type TemporaryProject, temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
 const engine = fileURLToPath(new URL("../..", import.meta.url));
-const roots: string[] = [];
+const projects: TemporaryProject[] = [];
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const project of projects.splice(0)) project.dispose();
 });
 
 function fixture(source: string, terms: string, baseline: Record<string, unknown> = {}) {
-  const root = mkdtempSync(join(tmpdir(), "kit-concept-routing-"));
-  roots.push(root);
-  const files = {
+  const project = temporaryProjects.open("kit-concept-routing-");
+  projects.push(project);
+  const root = project.root;
+  project.write({
     "src/core/readings/read.ts": source,
     "spec/terms.md": terms,
     "spec/language.md": "# Language\n\n### core/readings/read\nThe supplied reading.\n",
@@ -33,12 +33,7 @@ function fixture(source: string, terms: string, baseline: Record<string, unknown
     "kit-config.md":
       "```yaml\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\nlegacy-areas: []\nadapters: []\npackages: []\n```\n",
     "baseline.json": JSON.stringify(baseline),
-  };
-  for (const [path, text] of Object.entries(files)) {
-    const file = join(root, path);
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, text);
-  }
+  });
   const args = [
     join(engine, "scripts/kit-check.mjs"),
     `--root=${root}`,
@@ -54,8 +49,7 @@ test("the real gate refuses an unbound placed concept even when its key is forge
     "- **read** — A meaning-only vocabulary entry.\n",
     { "R3:term-module:src/core/readings/read.ts:missing-owner": {} },
   );
-  const result = spawnSync("node", args, { cwd: engine, encoding: "utf8" });
-  expect(result.error).toBeUndefined();
+  const result = processes.run(processes.node(), args, engine);
   expect(result.status).toBe(1);
   expect(result.stderr).toContain("R3:term-module:src/core/readings/read.ts:missing-owner");
 });
@@ -65,8 +59,7 @@ test("term metadata acceptance does not erase an unknown runtime package boundar
     "import { consume } from 'unknown-package';\nexport function read(value: string): string { return consume(value); }\n",
     "- **read** — The entire concept.\n  - Role: derived\n  - Zone: core\n  - From: []\n",
   );
-  const report = spawnSync("node", [...args, "--report"], { cwd: engine, encoding: "utf8" });
-  expect(report.error).toBeUndefined();
+  const report = processes.run(processes.node(), [...args, "--report"], engine);
   expect(report.status).toBe(0);
   const findings = JSON.parse(report.stdout).findings;
   expect(findings).toEqual(
@@ -84,8 +77,7 @@ test("term metadata acceptance does not erase an unknown runtime package boundar
         finding.debtKey.includes(":term-module:") || finding.debtKey.includes(":term-source:"),
     ),
   ).toBe(false);
-  const checked = spawnSync("node", args, { cwd: engine, encoding: "utf8" });
-  expect(checked.error).toBeUndefined();
+  const checked = processes.run(processes.node(), args, engine);
   expect(checked.status).toBe(1);
   expect(checked.stderr).toContain(
     "R1:external-boundary:src/core/readings/read.ts:unknown-package",

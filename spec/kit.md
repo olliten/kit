@@ -53,7 +53,7 @@ its config, and its debt in its own baseline.
   - Proof: {{cache-app}}, {{cache-proof}}
 - `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
   list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}
-  - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}, {{source-loader}}
+  - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}, {{source-loader}}, {{terminal-input}}
   - Proof: {{temporary-project}}
 - `kit consumers <app>…` checks each app checkout against this Kit, with the app's own config and baseline, and
   lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins; an app

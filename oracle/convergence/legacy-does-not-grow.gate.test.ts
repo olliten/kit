@@ -55,7 +55,6 @@ function app(source: string, baseline: unknown) {
         ...extra,
       ],
       cwd: engine,
-      input: () => "",
     });
   const recorded = () => JSON.parse(readFileSync(join(root, "baseline.json"), "utf8"));
   return { run, recorded };

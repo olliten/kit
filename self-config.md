@@ -31,7 +31,7 @@ dependency-exclusions:
 packages:
   - name: vitest
     capabilities: [test-runner]
-    entrypointExports: [describe, test, expect]
+    entrypointExports: [describe, test, expect, beforeAll, afterAll, afterEach]
   - name: mdast-util-from-markdown
     capabilities: []
   - name: mdast-util-gfm-table
@@ -138,6 +138,12 @@ adapters:
     kind: external
     zones: [substrate]
     contract: {type: SnapshotStore}
+  - module: src/substrate/adapters/terminal-input
+    export: terminalInput
+    capability: filesystem
+    kind: external
+    zones: [substrate]
+    contract: {type: TerminalInput}
   - module: src/substrate/adapters/stopwatch
     export: stopwatch
     capability: stopwatch

@@ -1,4 +1,4 @@
-import { readFileSync, realpathSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -55,19 +55,16 @@ export const sourceLoader = {
       return exports;
     });
   },
-  // A launcher in `scripts/` runs one Kit command: it hands the command its arguments, working directory and
-  // input, and answers the terminal with the command's output and exit status.
+  // A launcher in `scripts/` runs one Kit command: it hands the command its arguments and working directory,
+  // with the terminal input adapter for a command that reads its input, and answers the terminal with the
+  // command's output and exit status.
   async run(launcherUrl, module, name) {
     const engineRoot = decodeURIComponent(new URL("..", launcherUrl).pathname).replace(/\/$/, "");
     await withKit(engineRoot, async (load) => {
       const command = Reflect.get(await load(module), name);
       if (typeof command !== "function") throw new Error(`${module} exports no ${name}.`);
-      const response = await command({
-        engineRoot,
-        args: process.argv.slice(2),
-        cwd: process.cwd(),
-        input: () => readFileSync(0, "utf8"),
-      });
+      const { terminalInput } = await load("src/substrate/adapters/terminal-input.ts");
+      const response = await command({ engineRoot, args: process.argv.slice(2), cwd: process.cwd() }, terminalInput);
       process.stdout.write(String(Reflect.get(response, "stdout")));
       process.stderr.write(String(Reflect.get(response, "stderr")));
       process.exitCode = Number(Reflect.get(response, "exitCode"));
