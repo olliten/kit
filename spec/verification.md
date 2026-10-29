@@ -8,17 +8,19 @@ so a later gate runs only what an edit can have changed.
 - An app declares its gate under `verify`: whole-tree checks, each an id and one command, optionally run after
   the tests, and its tests as one group or a list of groups, each the command that runs one test file `{test}`,
   which may also write the test's coverage into `{dir}`, for every test under one or more relative
-  directories, and optionally the modules inside the app whose reach selects it, and optionally `share`, the ref
-  prefix on `origin` its passes are shared under. A malformed declaration, or group, fails configuration naming
-  where, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
+  directories, and optionally the modules inside the app and the capabilities of registered adapters whose reach
+  selects it, and optionally `share`, the ref prefix on `origin` its passes are shared under. A malformed
+  declaration, or group, or a capability no adapter registers fails configuration naming where, and `kit verify`
+  without one says what to declare. · {#the-gate-is-declared}
   - Implementation: {{verification-configuration}}, {{kit-configuration}}, {{config-schema}}, {{verify-run}}
   - Proof: {{temporary-project}}
 - A test runs under the command of the first group, in declared order, whose directories hold it and whose
-  modules its imports reach, directly or through the files they import, and otherwise of the first such group
-  that names no modules. `kit check` reads each test's pass under the command the same choice gives it, so a
+  modules its imports reach, directly or through the files they import, where a group's modules are those it
+  names and the modules of the adapters registered with a capability it names, and otherwise of the first such
+  group that names neither. `kit check` reads each test's pass under the command the same choice gives it, so a
   test that comes to reach another group's module runs again under that group's command. A test no group takes
   is not run, and `kit verify` names it, counts it and fails. · {#tests-run-in-the-group-their-reach-selects}
-  - Implementation: {{test-groups}}, {{verify-run}}, {{check-run}}, {{verification-configuration}}, {{read-snapshot}}
+  - Implementation: {{test-groups}}, {{verify-run}}, {{check-run}}, {{verification-configuration}}, {{kit-configuration}}, {{read-snapshot}}
   - Proof: {{temporary-project}}
 - A recorder preloaded into a check's processes records every path inside the app the check reads, lists,
   probes or loads, in its own process, its worker threads and the processes it starts, and nothing under

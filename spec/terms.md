@@ -313,10 +313,10 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{snapshot}}
-- **test-groups** — the group each test runs in: the first whose directories hold it and whose modules its imports reach, else the first such group that names none.
+- **test-groups** — the group each test runs in: the first whose directories hold it and whose modules, named or registered with a capability it names, its imports reach, else the first such group that names neither.
   - Role: derived
   - Zone: core
-  - From: {{default-config}}, {{import}}
+  - From: {{default-config}}, {{import}}, {{placement-of}}
 - **test-roots** — the directories a test runner discovers: the proof root and the legacy test roots an app declares.
   - Role: derived
   - Zone: core

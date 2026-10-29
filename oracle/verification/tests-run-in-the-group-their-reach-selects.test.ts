@@ -1,6 +1,8 @@
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { testGroups } from "../../src/core/readings/test-groups.js";
+import { configuredKit } from "../../src/core/compositions/kit-configuration.js";
+import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
+import { capabilityModules, testGroups } from "../../src/core/readings/test-groups.js";
 import { runCheck } from "../../src/substrate/compositions/check-run.js";
 import { runVerify } from "../../src/substrate/compositions/verify-run.js";
 import { type TemporaryProject, temporaryProjects } from "../substrate/adapters/temporary-project.js";
@@ -46,6 +48,67 @@ test("a test only groups whose directories hold it can take, and one no group ta
   expect(chosen).toEqual(new Map([["src/sum.test.ts", 1]]));
 });
 
+const driving = new Map([["browser-driving", ["spec/harness/full-stack.ts"]]]);
+
+test("a group naming a capability takes the tests whose imports reach a module registered with it, directly or through what they import", () => {
+  const byCapability = { command: "browser {test}", under: ["oracle"], capabilities: ["browser-driving"] };
+  expect(testGroups(["oracle/a.test.ts", "oracle/b.test.ts", "oracle/c.test.ts"], [byCapability, unit], imports, driving)).toEqual(
+    new Map([
+      ["oracle/a.test.ts", 0],
+      ["oracle/b.test.ts", 0],
+      ["oracle/c.test.ts", 1],
+    ]),
+  );
+});
+
+test("a group naming both modules and capabilities takes a test that reaches either", () => {
+  const both = { command: "both {test}", under: ["oracle"], reaching: ["src/sum"], capabilities: ["browser-driving"] };
+  expect(testGroups(["oracle/a.test.ts", "oracle/c.test.ts", "oracle/d.test.ts"], [both, unit], imports, driving)).toEqual(
+    new Map([
+      ["oracle/a.test.ts", 0],
+      ["oracle/c.test.ts", 0],
+      ["oracle/d.test.ts", 1],
+    ]),
+  );
+});
+
+test("the first group a test reaches takes it whether it names modules or capabilities, and a group naming either is no fallback", () => {
+  const boot = { command: "boot {test}", under: ["oracle"], reaching: ["spec/harness/boot.ts"] };
+  const byCapability = { command: "browser {test}", under: ["oracle"], capabilities: ["browser-driving"] };
+  const unregistered = { command: "none {test}", under: ["oracle"], capabilities: ["printing"] };
+  expect(testGroups(["oracle/a.test.ts", "oracle/b.test.ts", "oracle/c.test.ts"], [unregistered, boot, byCapability, unit], imports, driving)).toEqual(
+    new Map([
+      ["oracle/a.test.ts", 2],
+      ["oracle/b.test.ts", 1],
+      ["oracle/c.test.ts", 3],
+    ]),
+  );
+});
+
+test("a capability's modules are the files of the adapters registered with it that a group names", () => {
+  const adapter = { export: "driver", kind: "external", zones: ["shell"] };
+  const config = configuredKit(DEFAULT_CONFIG, {
+    roots: { src: ["src/", "oracle/"], spec: "spec/", oracle: "oracle/" },
+    verify: { checks: [], tests: [{ command: "b {test}", under: "oracle", capabilities: ["browser-driving"] }, { command: "u {test}", under: "oracle" }] },
+    adapters: [
+      { ...adapter, module: "src/shell/adapters/driver", capability: "browser-driving" },
+      { ...adapter, module: "oracle/shell/adapters/page.mjs", capability: "browser-driving" },
+      { ...adapter, module: "src/shell/adapters/driver", capability: "network" },
+    ],
+  });
+  expect(capabilityModules(config)).toEqual(new Map([["browser-driving", ["src/shell/adapters/driver.ts", "oracle/shell/adapters/page.mjs"]]]));
+});
+
+test("a group naming a capability no adapter registers fails configuration naming where", () => {
+  const read = () =>
+    configuredKit(DEFAULT_CONFIG, {
+      roots: { src: "src/", spec: "spec/", oracle: "oracle/" },
+      verify: { checks: [], tests: [{ command: "u {test}", under: "oracle" }, { command: "b {test}", under: "oracle", capabilities: ["browser-driving", "printing"] }] },
+      adapters: [{ module: "shell/adapters/driver", export: "driver", capability: "browser-driving", kind: "external", zones: ["shell"] }],
+    });
+  expect(read).toThrow("verify.tests[1].capabilities[1]: no adapter registers the capability printing");
+});
+
 const reaches = (helper: string) => `import "../lib/${helper}.mjs";\n`;
 const APP = {
   ".git/HEAD": "ref: refs/heads/main\n",
@@ -82,6 +145,36 @@ test("kit verify runs each test under its group's command, reruns a test that mo
   project.write({ "tests/a.test.mjs": reaches("boot") });
   expect((await verify("--plan")).stdout).toContain("run test:tests/a.test.mjs in tests[0]\nreuse test:tests/b.test.mjs in tests[0]\n");
   expect(summary((await verify()).stdout)).toMatchObject({ ran: 1, reused: 1, failed: 0 });
+}, 120_000);
+
+const BY_CAPABILITY = {
+  ".git/HEAD": "ref: refs/heads/main\n",
+  "kit/config.md":
+    "```yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nverify:\n  checks: []\n  tests:\n" +
+    "    - command: node {test} browser\n      under: tests/\n      capabilities: [browser-driving]\n" +
+    "    - command: node {test} unit\n      under: tests/\n" +
+    "adapters:\n  - {module: shell/adapters/browser.mjs, export: browser, capability: browser-driving, kind: external, zones: [shell]}\n```\n",
+  // The adapter fails unless its test runs under the browser group's command.
+  "src/shell/adapters/browser.mjs": 'if (process.argv[2] !== "browser") process.exit(1);\nexport const browser = {};\n',
+  "lib/boot.mjs": 'import "../src/shell/adapters/browser.mjs";\n',
+  "lib/sum.mjs": "export const sum = 1;\n",
+  "tests/a.test.mjs": reaches("sum"),
+  "tests/b.test.mjs": reaches("boot"),
+};
+
+test("kit verify moves a test into the group of a capability once its imports come to reach an adapter registered with it", async () => {
+  const project = temporaryProjects.open("kit-groups-capability-");
+  projects.push(project);
+  project.write(BY_CAPABILITY);
+  const config = join(project.root, "kit/config.md");
+  const verify = (...flags: string[]) => runVerify({ engineRoot: project.root, args: ["--root", project.root, "--config", config, ...flags], cwd: project.root });
+  expect((await verify("--plan")).stdout).toBe("run test:tests/a.test.mjs in tests[1]\nrun test:tests/b.test.mjs in tests[0]\n");
+  expect((await verify()).exitCode).toBe(0);
+  project.write({ "tests/a.test.mjs": 'import "../src/shell/adapters/browser.mjs";\n' });
+  expect((await verify("--plan")).stdout).toBe("run test:tests/a.test.mjs in tests[0]\nreuse test:tests/b.test.mjs in tests[0]\n");
+  const moved = await verify();
+  expect(moved.exitCode).toBe(0);
+  expect(moved.stdout).toContain("passed test:tests/a.test.mjs\n");
 }, 120_000);
 
 const sumsTest =

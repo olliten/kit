@@ -3,9 +3,10 @@ import { isRecord, isText, normalizedPath, relativeLocation } from "./config-val
 
 // The gate an app declares under `verify`: each whole-tree check is an id and one command, run with the tests or,
 // when it reads what they record, after them; the tests are one group or a list of groups, each one command that
-// runs the test file `{test}`, for every test under one or more relative directories, and optionally the modules
-// whose reach selects the group; `share` is the ref prefix on `origin` passes are shared under.
-export function verification(declared: unknown): NonNullable<KitConfig["verify"]> {
+// runs the test file `{test}`, for every test under one or more relative directories, and optionally the modules,
+// and the capabilities of the adapters among `registered`, whose reach selects the group; `share` is the ref
+// prefix on `origin` passes are shared under.
+export function verification(declared: unknown, registered: readonly string[]): NonNullable<KitConfig["verify"]> {
   if (!isRecord(declared)) throw new Error("verify: declare the gate's checks and, optionally, its tests.");
   const checks = declared["checks"] ?? [];
   if (!Array.isArray(checks)) throw new Error("verify.checks: list each check's id and command.");
@@ -35,15 +36,15 @@ export function verification(declared: unknown): NonNullable<KitConfig["verify"]
   if (tests === undefined) return { checks: rows, ...shared };
   if (Array.isArray(tests)) {
     if (tests.length === 0) throw new Error("verify.tests: list at least one group of tests.");
-    return { checks: rows, tests: tests.map((row: unknown, index) => group(row, `verify.tests[${index}]`)), ...shared };
+    return { checks: rows, tests: tests.map((row: unknown, index) => group(row, `verify.tests[${index}]`, registered)), ...shared };
   }
-  return { checks: rows, tests: [group(tests, "verify.tests")], ...shared };
+  return { checks: rows, tests: [group(tests, "verify.tests", registered)], ...shared };
 }
 
 // A path inside the app, named relative to its root.
 const inside = (path: unknown): path is string => isText(path) && relativeLocation(path) && !normalizedPath(path).split("/").includes("..");
 
-function group(declared: unknown, at: string): TestGroup {
+function group(declared: unknown, at: string, registered: readonly string[]): TestGroup {
   const command = isRecord(declared) ? declared["command"] : undefined;
   const declaredUnder = isRecord(declared) ? declared["under"] : undefined;
   const under = isText(declaredUnder) ? [declaredUnder] : declaredUnder;
@@ -51,8 +52,19 @@ function group(declared: unknown, at: string): TestGroup {
     throw new Error(`${at}: declare the command that runs one test file {test}, and the directories under which tests are found.`);
   const directories = [...new Set(under.filter(isText).map((path) => normalizedPath(path)))].sort();
   const reaching = isRecord(declared) ? declared["reaching"] : undefined;
-  if (reaching === undefined) return { command, under: directories };
-  if (!Array.isArray(reaching) || reaching.length === 0 || !reaching.every(inside))
+  if (reaching !== undefined && (!Array.isArray(reaching) || reaching.length === 0 || !reaching.every(inside)))
     throw new Error(`${at}.reaching: list the modules inside the app, each by its relative path, whose reach selects this group.`);
-  return { command, under: directories, reaching: [...new Set(reaching.filter(isText).map((path) => normalizedPath(path)))].sort() };
+  const capabilities = isRecord(declared) ? declared["capabilities"] : undefined;
+  if (capabilities !== undefined && (!Array.isArray(capabilities) || capabilities.length === 0 || !capabilities.every((name) => isText(name) && name.trim() !== "")))
+    throw new Error(`${at}.capabilities: list the capabilities of registered adapters whose modules' reach selects this group.`);
+  const named = Array.isArray(capabilities) ? capabilities.filter(isText) : [];
+  const unknown = named.findIndex((name) => !registered.includes(name));
+  if (unknown >= 0)
+    throw new Error(`${at}.capabilities[${unknown}]: no adapter registers the capability ${named[unknown] ?? ""}; register one under adapters, or name a registered one.`);
+  return {
+    command,
+    under: directories,
+    ...(Array.isArray(reaching) ? { reaching: [...new Set(reaching.filter(isText).map((path) => normalizedPath(path)))].sort() } : {}),
+    ...(named.length > 0 ? { capabilities: [...new Set(named)].sort() } : {}),
+  };
 }

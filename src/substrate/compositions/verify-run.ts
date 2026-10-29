@@ -2,7 +2,7 @@ import type { CommandRequest, CommandResponse } from "../../core/primitives/comm
 import type { Verdict } from "../../core/primitives/verdict.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { digest } from "../../core/readings/fact-keys.js";
-import { testGroups } from "../../core/readings/test-groups.js";
+import { capabilityModules, testGroups } from "../../core/readings/test-groups.js";
 import { testRuns } from "../../core/readings/test-runs.js";
 import { ranLines } from "../../core/readings/coverage-report.js";
 import { functionsRun } from "../../core/readings/ran-code.js";
@@ -75,7 +75,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const snapshot = () =>
     (read ??= readStoredSnapshot(root, loaded.config, { reuse: evidenceStore.at(store), engine: toolchain.engine(engineRoot) }).snapshot);
   const found = [...new Set(tests)].sort();
-  const chosen = testGroups(found, groups, groups.some((group) => group.reaching !== undefined) ? snapshot().imports : []);
+  const chosen = testGroups(found, groups, groups.some((group) => group.reaching !== undefined || group.capabilities !== undefined) ? snapshot().imports : [], capabilityModules(loaded.config));
   const unassigned = found.filter((test) => !chosen.has(test));
   type Check = { readonly id: string; readonly line: string; readonly test?: string; readonly records?: boolean; readonly group?: number };
   const first: Check[] = [
