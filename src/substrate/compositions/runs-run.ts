@@ -36,6 +36,7 @@ export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promis
     reuse: {
       read: (kind, key) => evidenceStore.read(store, kind, key),
       write: (kind, key, text) => evidenceStore.write(store, kind, key, text),
+      entries: (kind) => evidenceStore.entries(store, kind),
     },
     engine: toolchain.engine(engineRoot),
   });

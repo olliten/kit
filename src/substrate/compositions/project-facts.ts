@@ -21,6 +21,7 @@ import { sourceSize } from "./source-size.js";
 import { syntaxReading } from "./syntax-reading.js";
 import { termRecorder } from "./term-recorder.js";
 import { testReach } from "./test-reach.js";
+import { heldKey, holding } from "../../core/readings/verdict-reuse.js";
 
 type Project = CompilerFacts["projects"][number];
 type Diagnostic = Project["diagnostics"][number];
@@ -56,6 +57,8 @@ export interface AppContext {
 export interface FactReuse {
   read(kind: string, key: string): string | undefined;
   write(kind: string, key: string, text: string): void;
+  // Every entry of one kind, each as its text.
+  entries(kind: string): readonly string[];
 }
 
 export interface ProjectRead {
@@ -238,7 +241,8 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
   const outlines = new Map<string, string>();
   for (const sf of own) outlines.set(local(sf.fileName), outlineOf(sf));
   const keyOf = (path: string): string => factsKey(project, path, closures.get(path) ?? [path], digests, outlines, roles);
-  const proofKeyOf = (path: string): string => digest(`reach\u0000${keyOf(path)}`);
+  // A test's reaches are kept one per set of files followed, so worktrees that differ in those files each keep theirs.
+  const reachesOf = (path: string): string => `reaches/${digest(`reach\u0000${keyOf(path)}`)}`;
 
   const stored = <T>(kind: string, key: string): T | undefined => {
     const text = reuse?.read(kind, key);
@@ -258,9 +262,16 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
   }
   const proofs = new Map<string, StoredProof>();
   for (const sf of proofFiles) {
-    const found = stored<StoredReach>("proofs", proofKeyOf(local(sf.fileName)));
-    if (found?.read.every((each) => digests.get(each.file) === each.digest) === true)
-      proofs.set(local(sf.fileName), found.proof);
+    const kept = (reuse?.entries(reachesOf(local(sf.fileName))) ?? []).flatMap((text) => {
+      try {
+        const value: StoredReach = JSON.parse(withRoot(text, appRoot));
+        return [value];
+      } catch {
+        return [];
+      }
+    });
+    const found = holding(kept, digests);
+    if (found !== undefined) proofs.set(local(sf.fileName), found.proof);
   }
   const projectWide = stored<{ readonly diagnostics: Diagnostic[] }>("project", project);
 
@@ -354,8 +365,8 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
         declarations: declarations.filter((declaration) => declaration.file !== path),
       };
       proofs.set(path, proof);
-      const kept: StoredReach = { proof, read: read.map((each) => ({ file: each, digest: digests.get(each) ?? "" })) };
-      reuse?.write("proofs", proofKeyOf(path), withoutRoot(JSON.stringify(kept), appRoot));
+      const kept: StoredReach = { proof, states: Object.fromEntries(read.map((each) => [each, digests.get(each) ?? ""])) };
+      reuse?.write(reachesOf(path), heldKey(kept), withoutRoot(JSON.stringify(kept), appRoot));
     }
   }
 

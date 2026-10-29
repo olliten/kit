@@ -2,7 +2,7 @@ import type { CommandRequest, CommandResponse } from "../../core/primitives/comm
 import type { Verdict } from "../../core/primitives/verdict.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { digest } from "../../core/readings/fact-keys.js";
-import { holdingVerdict, readPaths, verdictKey, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { heldKey, holding, readPaths, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { filesystem } from "../adapters/filesystem.js";
 import { processes } from "../adapters/processes.js";
@@ -81,7 +81,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         for (const verdict of verdicts)
           for (const path of Object.keys(verdict.states))
             if (!states.has(path)) states.set(path, filesystem.state(`${root}/${path}`));
-        return { check, reused: holdingVerdict(verdicts, states) };
+        return { check, reused: holding(verdicts, states) };
       }),
     };
   };
@@ -147,7 +147,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         return;
       }
       const verdict: Verdict = { check: check.id, seconds, states: Object.fromEntries(after) };
-      evidenceStore.write(store, kindOf(check), verdictKey(verdict), JSON.stringify(verdict));
+      evidenceStore.write(store, kindOf(check), heldKey(verdict), JSON.stringify(verdict));
       recorded++;
     });
     if (reports.length > 0) {
@@ -155,6 +155,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         reuse: {
           read: (kind, key) => evidenceStore.read(store, kind, key),
           write: (kind, key, text) => evidenceStore.write(store, kind, key, text),
+          entries: (kind) => evidenceStore.entries(store, kind),
         },
         engine: toolchain.engine(engineRoot),
       });

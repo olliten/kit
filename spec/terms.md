@@ -329,7 +329,7 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
-- **verdict-reuse** — the paths a check's processes recorded, a stored verdict read back, the verdict whose paths all still hold, and where a verdict is kept.
+- **verdict-reuse** — the paths a check's processes recorded, a stored verdict read back, the kept entry whose paths all still hold, and where an entry is kept among its subject's.
   - Role: derived
   - Zone: core
   - From: {{fact-keys}}, {{verdict}}
@@ -483,7 +483,7 @@
 - **project-facts** — the workflow that reads one compiler project's facts, reusing each file's and test's stored facts while their key matches and walking only the rest.
   - Role: composition
   - Zone: substrate
-  - Of: {{compiler}}, {{compiler-facts}}, {{default-config}}, {{fact-keys}}, {{fact-walk}}, {{file}}, {{file-facts}}, {{ignored-import}}, {{root-token}}, {{source-size}}, {{test-reach}}, {{authority-recorder}}, {{behaviour-reading}}, {{contract-reading}}, {{contract-recorder}}, {{escape-recorder}}, {{function-recorder}}, {{import-recorder}}, {{native-reading}}, {{syntax-reading}}, {{term-recorder}}
+  - Of: {{compiler}}, {{compiler-facts}}, {{default-config}}, {{fact-keys}}, {{fact-walk}}, {{file}}, {{file-facts}}, {{ignored-import}}, {{root-token}}, {{source-size}}, {{test-reach}}, {{verdict-reuse}}, {{authority-recorder}}, {{behaviour-reading}}, {{contract-reading}}, {{contract-recorder}}, {{escape-recorder}}, {{function-recorder}}, {{import-recorder}}, {{native-reading}}, {{syntax-reading}}, {{term-recorder}}
 - **read-config** — the workflow that reads a config file and answers the configured Kit, or the command's failure naming each issue.
   - Role: composition
   - Zone: substrate

@@ -34,6 +34,7 @@ export function smallApp(files: Readonly<Record<string, string>> = SMALL_APP, sh
       return unreadable && text !== undefined ? "{" : text;
     },
     write: (kind: string, key: string, text: string) => evidenceStore.write(store, kind, key, text),
+    entries: (kind: string) => evidenceStore.entries(store, kind).map((text) => (unreadable ? "{" : text)),
   };
   return {
     root: app,

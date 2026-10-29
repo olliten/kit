@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { holdingVerdict, verdictKey, verdictOf } from "../../src/core/readings/verdict-reuse.js";
+import { heldKey, holding, verdictOf } from "../../src/core/readings/verdict-reuse.js";
 import { runVerify } from "../../src/substrate/compositions/verify-run.js";
 import { type TemporaryProject, temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
@@ -69,9 +69,9 @@ test("a pass during which a path it read changed is reported and not kept", asyn
 test("runs on different trees each keep theirs, and the one whose paths hold is reused", () => {
   const one = { check: "lint", seconds: 1, states: { "data.txt": "file:1" } };
   const two = { check: "lint", seconds: 1, states: { "data.txt": "file:2" } };
-  expect(verdictKey(one)).not.toBe(verdictKey(two));
-  expect(holdingVerdict([one, two], new Map([["data.txt", "file:2"]]))).toBe(two);
-  expect(holdingVerdict([one, two], new Map([["data.txt", "file:3"]]))).toBeUndefined();
+  expect(heldKey(one)).not.toBe(heldKey(two));
+  expect(holding([one, two], new Map([["data.txt", "file:2"]]))).toBe(two);
+  expect(holding([one, two], new Map([["data.txt", "file:3"]]))).toBeUndefined();
   expect(verdictOf(JSON.stringify(one))).toEqual(one);
   expect(verdictOf("{")).toBeNull();
   expect(verdictOf(JSON.stringify({ check: "lint", seconds: 1, states: { a: 1 } }))).toBeNull();

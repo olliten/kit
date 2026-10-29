@@ -58,6 +58,9 @@ test("a test's reach holds while the files whose code it followed hold, whatever
   expect(computed(app)).toEqual({ files: 1, proofs: 1 });
   app.put("src/core/readings/half.ts", "export const half = (n: number): number => n / 4 + n / 4;\n");
   expect(computed(app)).toEqual({ files: 1, proofs: 1 });
+  // Each set of followed files keeps its own reach, as two worktrees' edits would.
+  app.put("src/core/readings/half.ts", "export const half = (n: number): number => n * 0.5;\n");
+  expect(computed(app)).toEqual({ files: 0, proofs: 0 });
   expect(app.stored().snapshot).toEqual(app.fresh());
 });
 

@@ -51,14 +51,14 @@ its config, and its debt in its own baseline.
 - A file's compiler facts and a test's reach are stored under a key of what they depend on. A file's facts
   depend on its own content and on the outline of every file its imports reach: its text without the bodies of
   functions whose return type it declares, which no importer can see. A test's reach is keyed the same way on the
-  test, and also names each file whose code it followed, with that file's digest, and is reused only while each
-  still has it. Each key also holds what Kit takes each file for, and
+  test, and is kept with the digest of each file whose code it followed, one entry per set of digests, and
+  reused only while each still has its digest. Each key also holds what Kit takes each file for, and
   the project, which is the Kit that read it, the
   compiler, the config, the project's options, every declaration file the program loads, every file declaring
   globals or ambient modules, and the registered adapter modules. A read reuses every file and test whose key
   still matches and computes the rest, so a change recomputes exactly the files and tests whose key it
   changes, and worktrees of one repository share the store. · {#facts-are-keyed-on-their-inputs}
-  - Implementation: {{fact-keys}}, {{file-facts}}, {{project-facts}}, {{read-snapshot}}, {{evidence-store}}, {{root-token}}, {{fact-walk}}, {{compiler}}
+  - Implementation: {{fact-keys}}, {{file-facts}}, {{project-facts}}, {{read-snapshot}}, {{evidence-store}}, {{root-token}}, {{fact-walk}}, {{compiler}}, {{verdict-reuse}}
   - Proof: {{extraction-proof}}, {{small-app}}, {{temporary-project}}
 - A read through the store equals a read without it, as a snapshot and in its findings, after any sequence of
   edits: the compiler's member and union order, which depends on what it checked first, is never kept. `kit

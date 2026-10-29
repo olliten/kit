@@ -23,12 +23,15 @@ export function verdictOf(text: string): Verdict | null {
   return { check: parsed["check"], seconds: parsed["seconds"], states: Object.fromEntries(Object.entries(states).map(([path, state]) => [path, String(state)])) };
 }
 
-// The verdict that still describes the tree: every path its run read is still in the state it was in. A run
-// reads the same paths while their content is the same, so no path it didn't read can change its outcome.
-export function holdingVerdict(verdicts: readonly Verdict[], states: ReadonlyMap<string, string>): Verdict | undefined {
-  return verdicts.find((verdict) => Object.entries(verdict.states).every(([path, state]) => states.get(path) === state));
+// What Kit keeps is kept with the state of every path it was read from: a check's pass, or a test's reach.
+type Held = { readonly states: Readonly<Record<string, string>> };
+
+// The entry that still describes the tree: every path it was read from is still in the state it was in. A run
+// reads the same paths while their content is the same, so no path it didn't read can change what it found.
+export function holding<T extends Held>(entries: readonly T[], states: ReadonlyMap<string, string>): T | undefined {
+  return entries.find((entry) => Object.entries(entry.states).every(([path, state]) => states.get(path) === state));
 }
 
-// Where a verdict is kept: one entry per distinct set of states, so runs of one check on different trees, such as
-// two worktrees' edits, each keep theirs.
-export const verdictKey = (verdict: Verdict): string => digest(JSON.stringify(Object.entries(verdict.states).sort()));
+// Where an entry is kept among its subject's: one per distinct set of states, so reads of one subject on different
+// trees, such as two worktrees' edits, each keep theirs.
+export const heldKey = (entry: Held): string => digest(JSON.stringify(Object.entries(entry.states).sort()));
