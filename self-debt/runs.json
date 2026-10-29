@@ -1,13 +1,13 @@
 {
   "digests": {
-    "oracle/code-structure/adapters-create-authority.test.ts": "59bacd9893819e83cc3bbb315ec73c40ad1393fdb9abe0ce003bdeea12b1ef92",
+    "oracle/code-structure/adapters-create-authority.test.ts": "c6f9b45519fa40b56b7ece253df387ce4ccef2d4b53833eda0f27d7bdccf7a6e",
     "oracle/code-structure/adapters-create-authority.window.test.ts": "d9bc15609490c35c1f28c9575565526625c32219609dcf5c3fec9f859a3a2b27",
     "oracle/code-structure/adapters-follow-the-same-rules.test.ts": "a7c49a6aa312269602b0fb57b06b3e919876442c745a823f7dd876009f04ae79",
     "oracle/code-structure/authority-is-derived.ambient-coverage.test.ts": "f129eb367f2532ba609d7a8314e093e26009739d6681c6d8b15789bda83afd9d",
     "oracle/code-structure/authority-is-derived.dynamic-constructor.test.ts": "3d7a654af4e86e4b40b180d3448a871750d3eea1411b41069194205180f8aa9b",
     "oracle/code-structure/authority-is-derived.escape-identity.test.ts": "ca437ca40428d7b88eeafdb15644bf8eca95902801d1e1676155583551f8c098",
     "oracle/code-structure/authority-is-derived.inline-types.test.ts": "0c02e373b5a62a5174da6193befa944f92e1e2df3de494baef63dbea3d3cfa0c",
-    "oracle/code-structure/authority-is-derived.test.ts": "7cb6cfd312f4e0e062a8f9ab870ef1020b8644fcfd0ff014cc47cffb90abbe5a",
+    "oracle/code-structure/authority-is-derived.test.ts": "19f9d8d198c2ba1c3aaf571b2c5b4bc32548a78eca8c31b1e7865089acfec5bc",
     "oracle/code-structure/compositions-invoke-producers.test.ts": "e9cac64a8f149cd1adc7b5e3e4d45dea0f0de776e1f97641fdc309aaa1c58c77",
     "oracle/code-structure/core-and-readings-take-data.test.ts": "4e05bb03a01586e8608f5a068d5aff9e8f1ab7d11fb580b825b74f3a82373020",
     "oracle/code-structure/declared-globals-cover-their-handles.shared-process.test.ts": "fc1c71421d37225a2e0a491577254ca102d5df125b75d90c17bf6226ccb4f92c",
@@ -43,6 +43,7 @@
     "oracle/convergence/ratchet-keeps-architecture-obligations.startup.test.ts": "00ab755562e10bdcdbe9a394f271cec13b9c46db5b0ac02f317eaf954bb99632",
     "oracle/convergence/ratchet-keeps-architecture-obligations.test.ts": "1885fd58102fa3a09a5956ff25ee946e6463dd7c1eafa3b12c5350ef21e02f0f",
     "oracle/core/primitives/cache-app.ts": "c8b949dd4d576b56d848245ac3a23ac4e3391670565686cc2d6cfb45884f0fe3",
+    "oracle/core/primitives/capability-app.ts": "44ea2e4341fc7a46e9b013c8002c978a1c3466140a53cec7509d1d27c3497242",
     "oracle/core/primitives/case-inventory.ts": "70abae127c0c269a851affeb19f7a5646bc2543621b4f3cc07a2d166bcf3a7b9",
     "oracle/core/readings/binding-findings.ts": "67a2ad7c12c0469167fc1d69c5858b2786d6c111bb3a32998ac38bd65b1278fe",
     "oracle/core/readings/fixture-config.ts": "f9f470a0fb579d828e3668a05a215b037c6e87f9eed1494dc87056e49503054e",
@@ -56,27 +57,28 @@
     "oracle/kit/cached-check-keeps-evidence.fresh-compare.test.ts": "d156b4026c81d90814f2b0f08b8807e88d1f53c1754872f78e8dd4600fcb83cc",
     "oracle/kit/cached-check-keeps-evidence.graphs.test.ts": "0d8b1572eaad9f44e211b6aeba2d822827cf19153834651453e1aa240e96a392",
     "oracle/kit/cached-check-keeps-evidence.test.ts": "52ab635f8886e13118bf3202a5fed354e1973f0fd5512f1786762b91c314fc4d",
-    "oracle/kit/consumers-show-each-apps-work.test.ts": "abc21639fb05d8e439226ae70288a7e1b3c24b087d7b4b1470a49881d5f48470",
+    "oracle/kit/consumers-show-each-apps-work.test.ts": "a6cf063140ce6a6830988c554efda48f9cc6cdb4b1adb3ead2d9dab93cc889b5",
     "oracle/kit/declared-roots-are-checked.authority.test.ts": "e2f0b260930627acb76c84bc803fd5dfb9960abb5df537c136c657ed0313c3bd",
     "oracle/kit/declared-roots-are-checked.structure.test.ts": "d882ef635d2d71b14943a84019174d66f7880063d7d9b2fd517209173ecb74a0",
     "oracle/kit/declared-roots-are-checked.test.ts": "02fd342bd9d2b29a0b2b61324ef23f608a52971cd46b2bea1daf49daa7cd635d",
     "oracle/kit/directory-roles-are-configured.test.ts": "f32633b3d7dfdea00f78eabcb850b6a4eb35746094e76e0f8f11736a7bcd6511",
+    "oracle/kit/examples-pass-their-check.test.ts": "4cf508bb2dea8c51366bddd92f33018ad7288c67c6a0ed41e73d2a099df301dd",
     "oracle/kit/ignored-paths-are-unread.test.ts": "d36bed84f11a4900fb417870c7f1ca3ff1e966390a3b8525e865f16c6d248efa",
     "oracle/kit/kit-checks-itself.test.ts": "997d83fda766957dd7f13bd7e4773441d5f1019311ee3fe50632162be28680c2",
-    "oracle/kit/paths-from-the-caller.symlinks.test.ts": "42295a021935058b8bf0916428ee49496577b58121c820ed8ef07cf170e14fba",
+    "oracle/kit/paths-from-the-caller.symlinks.test.ts": "777a6ca80385ce7c0de2bdbdf071e4b742c97bb6858f47150d8ab701a6b7cf22",
     "oracle/kit/paths-from-the-caller.test.ts": "5522575f6124d9af7ea8e1977de9b4e94f440df81a4aa9da4764128071878271",
     "oracle/kit/proof-discovery-is-configured.test.ts": "b67f80c0641af63d6d8d77faff664a1e3e7018a915386b92926d8cf5aafa9e2e",
-    "oracle/kit/read-snapshot-fixture.test.ts": "4d0aeabb3abc68f7c2e422be3b93011986d12580b6fa0d916137b6392e657d0e",
-    "oracle/kit/readings-use-data.test.ts": "8264bd95d789b16689f8027753eae2178cc426014cf7d5fe41e082918e6a023e",
+    "oracle/kit/read-snapshot-fixture.test.ts": "09b504d5e9b6698eb2881ec90fdc300e24ee0e0f28a1fc2603d2c0ae961624f7",
+    "oracle/kit/readings-use-data.test.ts": "0f0eaca6f348b7b16b9eb1810c2a23b0b3370fc68391264406c26ca8e9e6dbc3",
     "oracle/kit/refs-list-a-modules-claims.roots.test.ts": "f2e63e21f2263fc5c9afc37653189ee6dd8a80690031ae5f13d6640451d5beec",
-    "oracle/kit/refs-list-a-modules-claims.test.ts": "894b2b2f08d146aafc45eee0687114be1a009743375e421d70876b4eff62ab60",
+    "oracle/kit/refs-list-a-modules-claims.test.ts": "0cddf76e69a0993203a5ecfa98416161f7d22d1015c651acccd3d08f06abe4e3",
     "oracle/kit/source-fixtures-own-their-files.test.ts": "e1f36c9bf01d7d507f52bd68b67a6f11033d04b52bf32dc28e236d6978130431",
     "oracle/language/comments-carry-no-debt.test.ts": "41f0e58aa5464e4444e78b68c0ab3e3911d953254bff3b1cf18958fdacbe2e9f",
     "oracle/language/comments-cite-nothing.test.ts": "c3d21dfdfad28975ebbf8519fdedbbd894a9eeab9afdd7ec7fa853b58d78ac82",
     "oracle/language/modules-are-whole-terms.test.ts": "2374ebc1684e1cd30936662cbc5f9ca97e84f4c56f7fb0fb18ae3ff0065ab390",
     "oracle/language/modules-bind-to-terms.routing.test.ts": "07fdb5fbe8fcf0bc47eba118d1699b6fdf9748f59d22ac625988dcc2771d22f6",
     "oracle/language/modules-bind-to-terms.test.ts": "683e8a3f32ba857ab499046010a7f3f639ee0dc82a9fc5ef87320498edcf7ab5",
-    "oracle/language/references-resolve.test.ts": "3819736a4e5f4a01bf1a0077511c982c392f2ec749bb6ba2d6b4fe8c1ee44533",
+    "oracle/language/references-resolve.test.ts": "1dadb78222467875dc48568360ee637d2fe4a2738f3f8e3a6b41be1e3ead4858",
     "oracle/language/retired-words-are-findings.test.ts": "d30dfb2107c88ea72b18186233a8d0e4ec1cf0894e9c117fdb17080812975c07",
     "oracle/language/supporting-symbols-need-no-terms.test.ts": "82a5325031c2ff7105f4545aac292a1f736c82cf1d726123914e9f1a1835e52c",
     "oracle/language/terms-are-alphabetical.test.ts": "8135c814b4c58eee44e13b874c9d3709a3cc0cb395936d6d344f0fd825438b75",
@@ -160,6 +162,7 @@
     "src/core/readings/function-governance.ts": "807080089cfad6a058fcadda80e7d20deb7c008d61b9525b458c6dcea0c1977c",
     "src/core/readings/global-authority.ts": "089fff033c0ddf2dd4d0af66999d2f30448e5b49f25d1c8ddcc630452ae0d1f2",
     "src/core/readings/handover-check.ts": "42705ec489bf66296714b6298a2448c20c459d7e37bad3f8f71f264cddfaa019",
+    "src/core/readings/ignored-import.ts": "270818021acfe8ab3655cf8e802d6c5b2ff6d6812cc5c5042091739ef2d15007",
     "src/core/readings/import-authority.ts": "afdc16dac0517b90add87e9576f99a4c27d7632e029f3ad8951727164a50f44d",
     "src/core/readings/layout-check.ts": "a55001ab4959b6862bf8a6624aebb46a6748d58b8bcad6fb1c6f2bd87a89a521",
     "src/core/readings/layout-configuration.ts": "bd883acdb914bbba91af7cc0383e564950779b1a1e0a2dacde00475d104cb220",
@@ -173,6 +176,7 @@
     "src/core/readings/ratchet.ts": "d699f5026b5dff947de95c7fead8853ac011040172974cac4bde10c11b4eb866",
     "src/core/readings/refs-description.ts": "7fd76ccfc31cbcfa7de17bef2f1b2a2d67f0ab069637e2e240589edf8ffdf096",
     "src/core/readings/registration-check.ts": "c4c83d245b02131812e435415e3366863cfe1e5d3c9988bd2ae7193b637e667a",
+    "src/core/readings/relative-import.ts": "13cc0e9b129d902d963d873dafd182d48e63af6d3beb9e3856b7b3e480a56bac",
     "src/core/readings/runs-record.ts": "7dbb59cbba406b8f68d2dd4928b4194bfb853b0d5737c13c8b44cf94c5f69e64",
     "src/core/readings/semantic-references.ts": "f8ea87d4a83ae904a6534e67e07b9e71d3009bc7a73666ba0f11dd1a1c2736b8",
     "src/core/readings/snapshot-cache-key.ts": "8055ad0010b7928f271b3d7dfdf0d4a93e0a21b723d2d2dd62ac529b082e19eb",
@@ -210,7 +214,7 @@
     "src/substrate/compositions/function-recorder.ts": "2493170de3b01a2aa449a76526735542db635824f741f191b2128fe9add0d8ff",
     "src/substrate/compositions/import-recorder.ts": "f6ed35a4ecc88967f6fb553cd4fe178f77aed4a6beaa0fc8767ec882abe84ce9",
     "src/substrate/compositions/native-reading.ts": "4807754ca71be2f0503f5750bf42dbb40f910f71e648380923f098647e401d60",
-    "src/substrate/compositions/read-snapshot.ts": "aef79aefaa8b091ffc4a39cdcfb69a366090e670cf46acad4b6c9db3562eb76b",
+    "src/substrate/compositions/read-snapshot.ts": "0a666363e4282c4278cb026e251522dcd98957232c6c78d72ee0fe1f7e3343a7",
     "src/substrate/compositions/refs-run.ts": "70459b2e153aac1f8a6543efae256d723bfb809acee8dcab4964d1bfc7713666",
     "src/substrate/compositions/runs-run.ts": "092468e9aff731f8dcee74bb742d60c6e803c77ec80c859018677e73a1078fcd",
     "src/substrate/compositions/source-size.ts": "afcd726644f23a970c31eed1b13c1f716d70b6a72d2cc1816f2f923ff3e69299",
@@ -687,15 +691,15 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "commentsOf@386",
-        "ignored@52",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "commentsOf@388",
+        "ignored@54",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "sourceSize@9",
@@ -890,17 +894,17 @@
         "valueMember@38"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -1083,17 +1087,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -1263,17 +1267,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -1300,6 +1304,12 @@
       ]
     },
     "oracle/code-structure/authority-is-derived.test.ts": {
+      "oracle/substrate/adapters/temporary-project.ts": [
+        "dispose@48",
+        "inside@21",
+        "open@19",
+        "write@29"
+      ],
       "src/core/compositions/capability-check.ts": [
         "capabilityCheck@28"
       ],
@@ -1462,17 +1472,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -3971,18 +3981,18 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "depth@185",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "depth@187",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -4195,17 +4205,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -4445,17 +4455,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -4937,15 +4947,15 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "commentsOf@386",
-        "ignored@52",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "commentsOf@388",
+        "ignored@54",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -5086,17 +5096,17 @@
         "valueMember@38"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -5265,17 +5275,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -5619,17 +5629,17 @@
         "nativeReading@22"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -5952,17 +5962,17 @@
         "valueMember@38"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -6186,17 +6196,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -6399,17 +6409,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -6611,17 +6621,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -7002,17 +7012,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -7236,17 +7246,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -7448,17 +7458,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -7496,6 +7506,7 @@
         "commentCheck@10"
       ],
       "src/core/readings/config-values.ts": [
+        "isTexts@11",
         "normalizedPath@20"
       ],
       "src/core/readings/consumer-report.ts": [
@@ -7538,6 +7549,18 @@
       ],
       "src/substrate/compositions/consumers-run.ts": [
         "runConsumers@10"
+      ],
+      "src/substrate/compositions/contract-reading.ts": [
+        "contractReading@6",
+        "operationsOf@7"
+      ],
+      "src/substrate/compositions/read-snapshot.ts": [
+        "scopeOf@185"
+      ],
+      "src/substrate/compositions/syntax-reading.ts": [
+        "syntaxReading@7",
+        "targetOf@8",
+        "typeOnlyOf@14"
       ]
     },
     "oracle/kit/declared-roots-are-checked.authority.test.ts": {
@@ -7715,17 +7738,17 @@
         "valueMember@38"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -7961,15 +7984,15 @@
         "nativeReading@22"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "commentsOf@386",
-        "ignored@52",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "commentsOf@388",
+        "ignored@54",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -8000,6 +8023,392 @@
         "testReach@30",
         "topLevelNames@12",
         "visit@484"
+      ]
+    },
+    "oracle/kit/examples-pass-their-check.test.ts": {
+      "src/core/compositions/capability-check.ts": [
+        "capabilityCheck@28"
+      ],
+      "src/core/compositions/gate.ts": [
+        "gate@51"
+      ],
+      "src/core/compositions/kit-configuration.ts": [
+        "adapters@84",
+        "configuredKit@17",
+        "dependencyExclusions@65",
+        "ignoredPaths@134",
+        "kitConfig@7",
+        "packages@120"
+      ],
+      "src/core/readings/access-authority.ts": [
+        "accessAuthority@13"
+      ],
+      "src/core/readings/authority-graph.ts": [
+        "authorityGraph@20"
+      ],
+      "src/core/readings/behaviour-check.ts": [
+        "behaviourCheck@14"
+      ],
+      "src/core/readings/capability-context.ts": [
+        "capabilityContext@159",
+        "checkedFiles@146",
+        "layerConfigLimit@124",
+        "placed@54",
+        "zoneOf@63"
+      ],
+      "src/core/readings/check-paths.ts": [
+        "at@9",
+        "kitCheckPaths@4",
+        "option@10"
+      ],
+      "src/core/readings/claim-cohesion.ts": [
+        "claimCohesion@9",
+        "root@33"
+      ],
+      "src/core/readings/claim-inventory.ts": [
+        "claimInventory@93",
+        "claimMarkdown@12",
+        "claimModules@62",
+        "close@122",
+        "marker@111",
+        "matches@109",
+        "named@116",
+        "visit@149"
+      ],
+      "src/core/readings/claim-proof-binder.ts": [
+        "claimProofBinder@5"
+      ],
+      "src/core/readings/comment-check.ts": [
+        "commentCheck@10"
+      ],
+      "src/core/readings/compiler-check.ts": [
+        "compilerCheck@6"
+      ],
+      "src/core/readings/config-values.ts": [
+        "isRecord@8",
+        "isText@10",
+        "isTexts@11",
+        "normalizedPath@20",
+        "texts@13"
+      ],
+      "src/core/readings/construction-check.ts": [
+        "checked@21",
+        "constructionCheck@15"
+      ],
+      "src/core/readings/dependency-check.ts": [
+        "cycles@56",
+        "visit@68"
+      ],
+      "src/core/readings/dependency-exclusions.ts": [
+        "dependencyExclusions@7"
+      ],
+      "src/core/readings/edge-check.ts": [
+        "edgeCheck@9"
+      ],
+      "src/core/readings/global-authority.ts": [
+        "globalAuthority@15"
+      ],
+      "src/core/readings/handover-check.ts": [
+        "handoverCheck@15",
+        "outside@17"
+      ],
+      "src/core/readings/import-authority.ts": [
+        "importAuthority@13"
+      ],
+      "src/core/readings/layout-check.ts": [
+        "layoutCheck@12"
+      ],
+      "src/core/readings/legacy-size.ts": [
+        "legacySize@18"
+      ],
+      "src/core/readings/legacy-zone-configuration.ts": [
+        "legacyZones@5"
+      ],
+      "src/core/readings/module-references.ts": [
+        "claimsKeptBy@7",
+        "identity@8",
+        "moduleReferences@16",
+        "named@24"
+      ],
+      "src/core/readings/name-check.ts": [
+        "entryOf@33",
+        "nameCheck@12",
+        "scan@42",
+        "wordsOf@79"
+      ],
+      "src/core/readings/placement-of.ts": [
+        "entrypointOf@37",
+        "isZone@22",
+        "legacyCodeOf@41",
+        "placementOf@95",
+        "proofOf@25",
+        "rootOf@67"
+      ],
+      "src/core/readings/proof-reach.ts": [
+        "claimReach@17",
+        "follow@38",
+        "moduleHomes@70",
+        "proofReach@87",
+        "reach@35"
+      ],
+      "src/core/readings/proof-scope.ts": [
+        "composed@28",
+        "proofScope@17"
+      ],
+      "src/core/readings/ratchet.ts": [
+        "isKeyList@19",
+        "ratchetFindings@106",
+        "reachableFrom@72",
+        "recorded@20",
+        "startupCheckRoots@38",
+        "withProofDebt@88"
+      ],
+      "src/core/readings/registration-check.ts": [
+        "registrationCheck@6"
+      ],
+      "src/core/readings/runs-record.ts": [
+        "runsRecord@34"
+      ],
+      "src/core/readings/semantic-references.ts": [
+        "add@73",
+        "identity@62",
+        "plain@27",
+        "referenceCheck@157",
+        "semanticReferenceInventory@24",
+        "semanticReferences@66",
+        "visit@33"
+      ],
+      "src/core/readings/snapshot-cache-key.ts": [
+        "applies@77",
+        "cacheHeader@21",
+        "digest@10",
+        "externalDirectories@84",
+        "rootPattern@38",
+        "settle@63",
+        "visit@86",
+        "withoutRoot@44"
+      ],
+      "src/core/readings/startup-check.ts": [
+        "startupCheck@9"
+      ],
+      "src/core/readings/term-inventory.ts": [
+        "plain@15",
+        "sorted@22",
+        "termInventory@5",
+        "visit@39"
+      ],
+      "src/core/readings/term-model.ts": [
+        "identity@32",
+        "termModel@6",
+        "unique@284"
+      ],
+      "src/core/readings/term-order.ts": [
+        "termOrder@5"
+      ],
+      "src/core/readings/topic-shape.ts": [
+        "sentences@18",
+        "textOf@9",
+        "topicShape@21"
+      ],
+      "src/core/readings/zone-authority-check.ts": [
+        "zoneAuthorityCheck@19"
+      ],
+      "src/substrate/adapters/compiler.ts": [
+        "count@132",
+        "digest@67",
+        "environmentReader@109",
+        "getSourceFile@191",
+        "list@130",
+        "load@177",
+        "names@70",
+        "optionalText@128",
+        "recorded@47",
+        "reread@218",
+        "resolve@215",
+        "same@69",
+        "sourceOf@141",
+        "systemOf@118",
+        "text@126",
+        "tracedSystem@74",
+        "useSourceOfProjectReferenceRedirect@205",
+        "workerHost@156"
+      ],
+      "src/substrate/adapters/filesystem.ts": [
+        "entries@41",
+        "readText@25",
+        "reread@72"
+      ],
+      "src/substrate/adapters/snapshot-store.ts": [
+        "byName@39",
+        "commonGitDirectory@42",
+        "digest@37",
+        "directory@119",
+        "engineHash@52",
+        "environment@137",
+        "mentions@196",
+        "objectPath@38",
+        "put@179",
+        "readIndex@82",
+        "realpath@195",
+        "update@151",
+        "visit@56",
+        "writeAtomically@98"
+      ],
+      "src/substrate/adapters/stopwatch.ts": [
+        "date@7",
+        "now@7"
+      ],
+      "src/substrate/adapters/text-files.ts": [
+        "entries@20",
+        "read@15"
+      ],
+      "src/substrate/compositions/authority-recorder.ts": [
+        "authorityRecorder@14",
+        "recordParameter@24",
+        "visit@44"
+      ],
+      "src/substrate/compositions/behaviour-reading.ts": [
+        "acceptsBehaviour@228",
+        "behaviourReading@57",
+        "contractType@195",
+        "executable@231",
+        "handleOf@221",
+        "libCollection@70",
+        "parameterFacts@179",
+        "typeFacts@76"
+      ],
+      "src/substrate/compositions/cached-check.ts": [
+        "cachedKitCheck@263",
+        "cachedSnapshot@209",
+        "isCompilerRead@56",
+        "isFilesystemRead@54",
+        "lookup@113",
+        "portability@76",
+        "remember@153",
+        "removeUnreferenced@100",
+        "reread@48",
+        "unchanged@58",
+        "validate@236"
+      ],
+      "src/substrate/compositions/check-run.ts": [
+        "check@22",
+        "runCheck@17"
+      ],
+      "src/substrate/compositions/contract-reading.ts": [
+        "contractIdentity@38",
+        "contractReading@6",
+        "operationsOf@7",
+        "portsOf@19",
+        "typeNames@47"
+      ],
+      "src/substrate/compositions/contract-recorder.ts": [
+        "contractRecorder@14",
+        "visit@25"
+      ],
+      "src/substrate/compositions/escape-recorder.ts": [
+        "end@35",
+        "escapeRecorder@9",
+        "visit@14"
+      ],
+      "src/substrate/compositions/fact-walk.ts": [
+        "factWalk@13",
+        "visit@18"
+      ],
+      "src/substrate/compositions/file-scope.ts": [
+        "fileScope@13",
+        "site@26",
+        "syntaxOf@15",
+        "visitToken@17"
+      ],
+      "src/substrate/compositions/function-recorder.ts": [
+        "end@55",
+        "functionRecorder@31",
+        "nameOf@9",
+        "own@12",
+        "visit@37"
+      ],
+      "src/substrate/compositions/import-recorder.ts": [
+        "end@62",
+        "importRecorder@14",
+        "visit@27"
+      ],
+      "src/substrate/compositions/native-reading.ts": [
+        "hostValue@32",
+        "nativeAuthorityOf@102",
+        "nativeContract@189",
+        "nativeLibrary@24",
+        "nativeMember@60",
+        "nativeMemberAuthority@175",
+        "nativeReading@22",
+        "nativeType@70",
+        "referenceType@15"
+      ],
+      "src/substrate/compositions/read-snapshot.ts": [
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
+      ],
+      "src/substrate/compositions/source-size.ts": [
+        "called@33",
+        "fileOf@20",
+        "sourceSize@9",
+        "targetOf@42",
+        "visit@61"
+      ],
+      "src/substrate/compositions/syntax-reading.ts": [
+        "annotation@147",
+        "globalName@80",
+        "literal@103",
+        "primitiveOf@35",
+        "rawAccess@43",
+        "syntaxReading@7",
+        "targetOf@8",
+        "typeOnlyOf@14"
+      ],
+      "src/substrate/compositions/term-recorder.ts": [
+        "end@17",
+        "termRecorder@11"
+      ],
+      "src/substrate/compositions/test-reach.ts": [
+        "assignment@278",
+        "bindingSymbols@282",
+        "bit@548",
+        "chainTop@244",
+        "changeable@430",
+        "changes@454",
+        "code@477",
+        "empty@176",
+        "enter@578",
+        "erased@70",
+        "flow@288",
+        "homeReferences@408",
+        "immutable@136",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
+        "names@16",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
+        "rawSymbolOf@42",
+        "reach@191",
+        "readonlyProperty@131",
+        "referencesOf@47",
+        "summarize@569",
+        "testReach@30",
+        "topLevelNames@12",
+        "unaliased@37",
+        "visit@484",
+        "visit@53",
+        "within@76"
       ]
     },
     "oracle/kit/ignored-paths-are-unread.test.ts": {
@@ -8039,6 +8448,9 @@
         "normalizedPath@20",
         "relativeLocation@33",
         "texts@13"
+      ],
+      "src/core/readings/ignored-import.ts": [
+        "ignoredImport@2"
       ],
       "src/core/readings/legacy-zone-configuration.ts": [
         "legacyZones@5"
@@ -8134,18 +8546,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "ignoredImport@422",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -8458,18 +8869,18 @@
         "valueMember@38"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "depth@185",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "depth@187",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -8552,6 +8963,9 @@
       "src/core/readings/comment-check.ts": [
         "commentCheck@10"
       ],
+      "src/core/readings/config-values.ts": [
+        "isTexts@11"
+      ],
       "src/core/readings/module-references.ts": [
         "claimsKeptBy@7",
         "identity@8"
@@ -8588,8 +9002,20 @@
       "src/substrate/compositions/consumers-run.ts": [
         "runConsumers@10"
       ],
+      "src/substrate/compositions/contract-reading.ts": [
+        "contractReading@6",
+        "operationsOf@7"
+      ],
+      "src/substrate/compositions/read-snapshot.ts": [
+        "scopeOf@185"
+      ],
       "src/substrate/compositions/refs-run.ts": [
         "moduleClaims@23"
+      ],
+      "src/substrate/compositions/syntax-reading.ts": [
+        "syntaxReading@7",
+        "targetOf@8",
+        "typeOnlyOf@14"
       ]
     },
     "oracle/kit/paths-from-the-caller.test.ts": {
@@ -8616,6 +9042,12 @@
     "oracle/kit/read-snapshot-fixture.test.ts": {
       "oracle/core/readings/binding-findings.ts": [
         "bindingFindings@6"
+      ],
+      "oracle/substrate/adapters/temporary-project.ts": [
+        "dispose@48",
+        "inside@21",
+        "open@19",
+        "write@29"
       ],
       "src/core/readings/claim-inventory.ts": [
         "claimInventory@93",
@@ -8658,7 +9090,6 @@
       "src/core/readings/placement-of.ts": [
         "entrypointOf@37",
         "isZone@22",
-        "legacyCodeOf@41",
         "placementOf@95",
         "proofOf@25",
         "rootOf@67"
@@ -8693,8 +9124,11 @@
         "entries@41",
         "readText@25"
       ],
+      "src/substrate/adapters/text-files.ts": [
+        "entries@20",
+        "read@15"
+      ],
       "src/substrate/compositions/authority-recorder.ts": [
-        "access@45",
         "authorityRecorder@14",
         "recordParameter@24",
         "visit@44"
@@ -8759,18 +9193,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "resolve@434",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -8794,10 +9227,46 @@
         "termRecorder@11"
       ],
       "src/substrate/compositions/test-reach.ts": [
-        "testReach@30"
+        "assignment@278",
+        "bindingSymbols@282",
+        "bit@548",
+        "chainTop@244",
+        "changeable@430",
+        "changes@454",
+        "code@477",
+        "empty@176",
+        "enter@578",
+        "erased@70",
+        "flow@288",
+        "homeReferences@408",
+        "immutable@136",
+        "inert@413",
+        "isResults@646",
+        "isSymbol@650",
+        "names@16",
+        "namesOf@654",
+        "own@557",
+        "pieceOf@537",
+        "rawSymbolOf@42",
+        "reach@191",
+        "readonlyProperty@131",
+        "referencesOf@47",
+        "summarize@569",
+        "testReach@30",
+        "topLevelNames@12",
+        "unaliased@37",
+        "visit@484",
+        "visit@53",
+        "within@76"
       ]
     },
     "oracle/kit/readings-use-data.test.ts": {
+      "oracle/substrate/adapters/temporary-project.ts": [
+        "dispose@48",
+        "inside@21",
+        "open@19",
+        "write@29"
+      ],
       "src/core/readings/placement-of.ts": [
         "legacyCodeOf@41",
         "rootOf@67"
@@ -8892,17 +9361,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -8992,12 +9461,6 @@
       ]
     },
     "oracle/kit/refs-list-a-modules-claims.test.ts": {
-      "oracle/substrate/adapters/temporary-project.ts": [
-        "dispose@48",
-        "inside@21",
-        "open@19",
-        "write@29"
-      ],
       "src/core/compositions/kit-configuration.ts": [
         "adapters@84",
         "configuredKit@17",
@@ -9189,17 +9652,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -9326,6 +9789,9 @@
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractReading@6"
+      ],
+      "src/substrate/compositions/read-snapshot.ts": [
+        "scopeOf@185"
       ],
       "src/substrate/compositions/syntax-reading.ts": [
         "syntaxReading@7",
@@ -9749,18 +10215,18 @@
         "valueMember@38"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "depth@185",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "depth@187",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -10032,15 +10498,15 @@
         "readText@25"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "sourceSize@9",
@@ -10256,17 +10722,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -10438,6 +10904,9 @@
       "src/substrate/compositions/contract-reading.ts": [
         "contractReading@6"
       ],
+      "src/substrate/compositions/read-snapshot.ts": [
+        "scopeOf@185"
+      ],
       "src/substrate/compositions/syntax-reading.ts": [
         "syntaxReading@7",
         "targetOf@8",
@@ -10518,6 +10987,9 @@
         "named@116",
         "visit@149"
       ],
+      "src/core/readings/config-values.ts": [
+        "normalizedPath@20"
+      ],
       "src/core/readings/finding.ts": [
         "finding@14"
       ],
@@ -10535,6 +11007,9 @@
         "moduleHomes@70",
         "proofReach@87",
         "reach@35"
+      ],
+      "src/core/readings/relative-import.ts": [
+        "relativeImport@5"
       ],
       "src/core/readings/semantic-references.ts": [
         "plain@27",
@@ -10618,18 +11093,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "resolve@434",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -10901,17 +11375,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",
@@ -11150,17 +11624,17 @@
         "referenceType@15"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
-        "aliasTarget@206",
-        "commentsOf@386",
-        "ignored@52",
-        "importTarget@276",
-        "local@253",
-        "readCompiler@229",
-        "readSnapshot@43",
-        "scopeOf@183",
-        "typeOf@428",
-        "visit@389",
-        "walk@408"
+        "aliasTarget@208",
+        "commentsOf@388",
+        "ignored@54",
+        "importTarget@278",
+        "local@255",
+        "readCompiler@231",
+        "readSnapshot@45",
+        "scopeOf@185",
+        "typeOf@424",
+        "visit@391",
+        "walk@410"
       ],
       "src/substrate/compositions/runs-run.ts": [
         "at@19",

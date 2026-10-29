@@ -1,14 +1,30 @@
-import { fileURLToPath } from "node:url";
-import { describe, expect, test } from "vitest";
-import type { saveValue } from "../../fixture/capabilities/src/core/compositions/save-value.js";
-import type { ScoredValue } from "../../fixture/capabilities/src/core/primitives/scored-value.js";
-import type { transformedValue } from "../../fixture/capabilities/src/core/readings/data-input.js";
-import type { valueOrder } from "../../fixture/capabilities/src/core/readings/value-order.js";
+import { afterAll, describe, expect, test } from "vitest";
 import { sourceLoader } from "../../src/substrate/adapters/source-loader.mjs";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
+import { CAPABILITY_APP } from "../core/primitives/capability-app.js";
 import { cases } from "../core/primitives/case-inventory.js";
+import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
-const fixtureRoot = fileURLToPath(new URL("../../fixture/capabilities/", import.meta.url));
+// The shapes of the case app's readings this proof runs, as the app declares them.
+interface ScoredValue {
+  readonly id: string;
+  readonly limit: number | null;
+  readonly offset: number;
+}
+type ValueOrder = (values: readonly ScoredValue[]) => readonly string[];
+type TransformedValue = (input: { readonly value: string; readonly options: { readonly trim: boolean } }) => string;
+type SaveValue = (
+  key: string,
+  value: string,
+  limit: number,
+) =>
+  | { readonly kind: "invalid"; readonly reason: string }
+  | { readonly kind: "accepted"; readonly writes: readonly { readonly kind: "put-cell"; readonly key: string; readonly value: string }[] };
+
+const project = temporaryProjects.open("kit-capabilities-");
+project.write(CAPABILITY_APP);
+afterAll(() => project.dispose());
+const fixtureRoot = project.root;
 
 // The fixture app's own code runs as loaded source, never as an import of the oracle's.
 const fixture = await sourceLoader.load(fixtureRoot, [
@@ -16,9 +32,9 @@ const fixture = await sourceLoader.load(fixtureRoot, [
   "src/core/readings/data-input.ts",
   "src/core/compositions/save-value.ts",
 ]);
-const isValueOrder = (value: unknown): value is typeof valueOrder => typeof value === "function";
-const isTransformedValue = (value: unknown): value is typeof transformedValue => typeof value === "function";
-const isSaveValue = (value: unknown): value is typeof saveValue => typeof value === "function";
+const isValueOrder = (value: unknown): value is ValueOrder => typeof value === "function";
+const isTransformedValue = (value: unknown): value is TransformedValue => typeof value === "function";
+const isSaveValue = (value: unknown): value is SaveValue => typeof value === "function";
 const order = fixture["valueOrder"];
 const transform = fixture["transformedValue"];
 const save = fixture["saveValue"];

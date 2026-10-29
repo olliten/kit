@@ -48,13 +48,10 @@ test("an app that passes says so; one that fails lists its work under its pin", 
 
 test("the real run checks an app checkout against this Kit and does not fail on the app's findings", async () => {
   const app = join(scratch, "tally");
-  for (const folder of ["src", "spec", "oracle"]) cpSync(join(engine, "fixture", folder), join(app, folder), { recursive: true });
-  mkdirSync(join(app, "kit/debt"), { recursive: true });
-  writeFileSync(
-    join(app, "kit/config.md"),
-    "```yaml\napp: tally\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\n```\n",
-  );
-  writeFileSync(join(app, "kit/debt/legacy.json"), "{}");
+  cpSync(join(engine, "examples/tally"), app, { recursive: true });
+  // The known violation: a module no claim names, planted in the copy of the clean example.
+  mkdirSync(join(app, "src/substrate/compositions"), { recursive: true });
+  writeFileSync(join(app, "src/substrate/compositions/save.ts"), "export function save(text: string): string {\n  return text;\n}\n");
   writeFileSync(join(app, "package-lock.json"), lock("git+https://github.com/olliten/kit.git#552affb"));
   const { stdout: output, exitCode } = await runConsumers({ engineRoot: engine, args: [app], cwd: engine });
   expect(exitCode).toBe(0);

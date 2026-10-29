@@ -6,6 +6,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **capability-app** — the capability case app's source inputs, as data a proof writes into a temporary project.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **case-inventory** — the independently supplied identities, conditions and input paths of the structural fixture cases.
   - Role: fact
   - Zone: core
@@ -42,6 +46,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **ignored-import** — the error for an import into a path the config ignores.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **import** — a supplied relation from an importing file to the file it imports.
   - Role: fact
   - Zone: core
@@ -253,6 +261,10 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
+- **relative-import** — the known file a relative import names when no compiler project resolves it.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}
 - **runs-record** — the runs record while it still describes the code, or the finding that it is missing, unreadable or stale.
   - Role: derived
   - Zone: core
@@ -435,7 +447,7 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{placement-of}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{fact-walk}}, {{function-recorder}}, {{import-recorder}}, {{term-recorder}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{ignored-import}}, {{placement-of}}, {{relative-import}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{fact-walk}}, {{function-recorder}}, {{import-recorder}}, {{term-recorder}}
 - **recorded-authority** — the workflow that compiles a fixture and records only its parameters, accesses and globals.
   - Role: composition
   - Zone: substrate

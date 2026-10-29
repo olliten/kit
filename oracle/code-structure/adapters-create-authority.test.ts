@@ -1,6 +1,4 @@
-import { fileURLToPath } from "node:url";
-import { expect, test } from "vitest";
-import type { Clock } from "../../fixture/adapter-contracts/clock.js";
+import { afterAll, expect, test } from "vitest";
 import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { accessAuthority } from "../../src/core/readings/access-authority.js";
 import { authorityGraph } from "../../src/core/readings/authority-graph.js";
@@ -16,6 +14,7 @@ import { recordedAuthority } from "../substrate/compositions/recorded-authority.
 import { recordedContracts } from "../substrate/compositions/recorded-contracts.js";
 import { recordedImports } from "../substrate/compositions/recorded-imports.js";
 import { sourceLoader } from "../../src/substrate/adapters/source-loader.mjs";
+import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
 // What the authority rules decide over a compiled fixture: each file's derived capabilities, and what the
 // registration, authority, zone and construction checks find. A fixture that doesn't compile throws.
@@ -77,10 +76,39 @@ function inspect(extra: Readonly<Record<string, string>>, configChange?: Partial
   return { snapshot, result };
 }
 
+// A contract beside its real implementation, which throws if anything loads it, and a fake that imports only
+// the contract's type.
+const contracts = temporaryProjects.open("kit-adapter-contracts-");
+contracts.write({
+  "clock.ts": `export interface Clock {
+  now(): number;
+  sample(): number;
+}
+
+export const clock: Clock = {
+  now: () => Date.now(),
+  sample: () => Date.now(),
+};
+
+throw new Error("The fake must not load the real clock module.");
+`,
+  "fake-clock.ts": `import type { Clock } from "./clock.js";
+
+export const fakeClock: Clock = {
+  now: () => 7,
+  sample: () => 7,
+};
+`,
+});
+afterAll(() => contracts.dispose());
+
+interface Clock {
+  now(): number;
+  sample(): number;
+}
+
 test("executing the fake does not load the real implementation beside its interface", async () => {
-  const loaded = await sourceLoader.load(fileURLToPath(new URL("../../fixture/adapter-contracts/", import.meta.url)), [
-    "fake-clock.ts",
-  ]);
+  const loaded = await sourceLoader.load(contracts.root, ["fake-clock.ts"]);
   const fakeClock = loaded["fakeClock"];
   const isClock = (value: unknown): value is Clock =>
     typeof value === "object" && value !== null && typeof Reflect.get(value, "now") === "function";

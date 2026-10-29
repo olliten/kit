@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import type { Snapshot } from "../../src/core/primitives/snapshot.js";
@@ -207,10 +206,28 @@ test("case-insensitive term duplicates remain ambiguous", () => {
 });
 
 test("reading markup preserves real reference spelling and source lines", () => {
-  const text = readFileSync(
-    new URL("../../fixture/semantic-references/reader.md", import.meta.url),
-    "utf8",
-  );
+  // A topic written as a reader would: references in prose, beside code spans and fences that hold none.
+  const text = [
+    "# Planning",
+    "",
+    "Use [[Billing]] to set a {{invoice}}.",
+    "",
+    "- Save the {{period}} without changing [[Archive]]. \u00b7 {#period-stays}",
+    "",
+    "A reflowed reference to",
+    "[[Billing]] and {{period}}",
+    "remains a reference.",
+    "",
+    "`[[Inline example]]` and `{{inline example}}` are code.",
+    "",
+    "```md",
+    "[[Fenced example]] and {{fenced example}}",
+    "```",
+    "",
+    "Escaped \\[[Escaped example]] and \\{{escaped example}} are examples.",
+    "",
+    "Ordinary billing, archive and invoice words carry no references.",
+  ].join("\n") + "\n";
   const result = semanticReferenceInventory(text);
   expect(result.title).toBe("Planning");
   expect(result.references).toEqual([

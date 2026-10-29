@@ -1,19 +1,14 @@
 import { join, resolve } from "node:path";
-import { afterAll, expect, test } from "vitest";
+import { expect, test } from "vitest";
 import { describeRefs } from "../../src/core/readings/refs-description.js";
 import { moduleClaims } from "../../src/substrate/compositions/refs-run.js";
 import { processes } from "../../src/substrate/adapters/processes.js";
 import { sourceLoader } from "../../src/substrate/adapters/source-loader.mjs";
-import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
 const engine = resolve(import.meta.dirname, "../..");
-const fixture = join(engine, "fixture");
-const scratch = temporaryProjects.open("kit-refs-");
-scratch.write({
-  "config.md": "```yaml\napp: tally\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\n```\n",
-});
-const config = join(scratch.root, "config.md");
-afterAll(() => scratch.dispose());
+// The tally example app, with its own config.
+const fixture = join(engine, "examples/tally");
+const config = join(fixture, "kit/config.md");
 
 const refs = (args: string[], input?: string): string => {
   const result = processes.run(
@@ -44,11 +39,11 @@ test("Kit's oracle module view distinguishes implementation and proof relationsh
 });
 
 test("a module's claims are listed with their topic, text and tests", () => {
-  expect(refs(["src/core/readings/total.ts"])).toBe(
+  expect(refs(["src/core/primitives/limits.ts"])).toBe(
     [
-      "core/readings/total keeps 1 claim:",
-      "- spec/tally.md#total-holds: The total equals the sum of the supplied amounts. {{tally}}, {{total}}",
-      "  oracle/tally/total-holds.test.ts",
+      "core/primitives/limits keeps 1 claim:",
+      "- spec/tally.md#one-step-is-capped: One step adds at most the limit, so the tally never grows past it in one add. {{add}}, {{limits}}",
+      "  oracle/tally/one-step-is-capped.test.ts",
       "",
     ].join("\n"),
   );
@@ -80,7 +75,7 @@ test("as a read hook, opening a module adds its claims and opening any other fil
   const output = JSON.parse(read(join(fixture, "src/core/readings/average.ts")));
   expect(output.hookSpecificOutput.hookEventName).toBe("PostToolUse");
   expect(output.hookSpecificOutput.additionalContext).toContain("#average-of-amounts:");
-  expect(read(join(fixture, "src/main.ts"))).toBe("");
+  expect(read(join(fixture, "kit/config.md"))).toBe("");
   expect(read(join(fixture, "spec/tally.md"))).toBe("");
 });
 
