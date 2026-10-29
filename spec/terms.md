@@ -109,6 +109,10 @@
   - Role: derived
   - Zone: core
   - From: []
+- **batch-attribution** — which test of one runner invocation over several test files each recording, use and result belongs to, and the tests whose attribution is unclear and run again alone.
+  - Role: derived
+  - Zone: core
+  - From: {{verdict-reuse}}
 - **behaviour-check** — the check that the core and readings take data or registered contracts, never other behaviour.
   - Role: derived
   - Zone: core
@@ -357,6 +361,10 @@
   - Role: adapter
   - Zone: substrate
   - Of: {{function-span}}
+- **coverage-provider** — a vitest 1.x coverage provider that writes each test file's result, coverage and executed scripts apart.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 - **evidence-store** — ownership of what a machine learns about an app between runs: one file per key beside the repository, read and written whole, and evicted least recently used past a limit.
   - Role: adapter
   - Zone: substrate
@@ -385,7 +393,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **temporary-project** — ownership of an isolated temporary directory, its fixture file writes and its disposal.
+- **temporary-project** — ownership of an isolated temporary directory, its fixture file writes, its links and its disposal.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -419,7 +427,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate
-  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}, {{verification-configuration}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate
@@ -551,7 +559,7 @@
 - **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
   - Role: composition
   - Zone: substrate
-  - Of: {{calendar}}, {{command}}, {{compiler}}, {{config-values}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{pass-sharing}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{shared-passes}}, {{stopwatch}}, {{test-groups}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
+  - Of: {{batch-attribution}}, {{calendar}}, {{command}}, {{compiler}}, {{config-values}}, {{coverage-provider}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{pass-sharing}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{shared-passes}}, {{stopwatch}}, {{test-groups}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
 
 ## Supporting vocabulary and roles
 

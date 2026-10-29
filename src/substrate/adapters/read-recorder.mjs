@@ -8,7 +8,10 @@ import { threadId } from "node:worker_threads";
 // in its own process, its worker threads and the processes it starts, which inherit the preload, each with how it
 // was used: read, listed, only probed, or loaded, which is read by the module loader alone (Node's own, or the
 // test runner's). Only when the recording is asked for does it touch the file system's operations, so loading it
-// to find its path changes nothing.
+// to find its path changes nothing. When the run is given several test files, a process the runner starts for
+// one of them learns which from the first message it is sent that names one among the files it runs; its
+// recording, and those of the processes it starts, name that test, and their raw coverage goes to a directory of
+// the test's own.
 export const readRecorder = {
   location: fileURLToPath(import.meta.url),
 };
@@ -23,6 +26,16 @@ if (directory && root) {
   // The recorder's own walks use the operations as they were, so they are not recorded twice.
   const listing = fs.readdirSync;
   const statOf = fs.statSync;
+  // The tests a process the runner starts may be running, read before reads are recorded, since this read is
+  // the recorder's own.
+  const inherited = process.env["KIT_TEST"];
+  const listed = process.env["KIT_TESTS"];
+  const tests = new Map(
+    (listed && !inherited ? fs.readFileSync(listed, "utf8") : "")
+      .split("\n")
+      .filter(Boolean)
+      .map((test) => [`${prefix}${test}`, test]),
+  );
   /** @type {Set<string>} */
   const seen = new Set();
   // The file of the frame that asked: the first outside this recorder, Node's own modules and built-in functions,
@@ -180,4 +193,48 @@ if (directory && root) {
   wrap(fs.realpath, ["native"]);
   wrap(fs.promises, ["readFile", "readdir", "stat", "lstat", "access", "open", "opendir", "realpath", "readlink", "copyFile", "cp", "statfs", "glob"]);
   syncBuiltinESMExports();
+
+  // The test a process runs is named on a line of its own, `test <path>`, and the test a process it started runs
+  // as `under <path>`.
+  /** @param {string} test */
+  const belongs = (test) => {
+    append(out, `test ${test}\n`);
+    process.env["KIT_TEST"] = test;
+    const coverage = process.env["NODE_V8_COVERAGE"];
+    if (coverage) process.env["NODE_V8_COVERAGE"] = `${coverage}/${encodeURIComponent(test)}`;
+  };
+  // A process the test's own process started is marked as such, since the test's coverage doesn't describe it.
+  if (inherited) append(out, `under ${inherited}\n`);
+  else if (tests.size > 0 && process.channel) {
+    /** @param {unknown} message */
+    const heard = (message) => {
+      /** @type {Set<string>} */
+      const named = new Set();
+      /** @type {Set<unknown>} */
+      const visited = new Set();
+      /** @type {unknown[]} */
+      const pending = [message];
+      while (pending.length > 0) {
+        const value = pending.pop();
+        if (typeof value !== "object" || value === null || visited.has(value)) continue;
+        visited.add(value);
+        for (const [key, held] of Object.entries(value)) {
+          // The runner names the files a process runs under `files`; a path elsewhere, such as in a configured
+          // list of every test, says nothing about this process.
+          if (key === "files" && Array.isArray(held))
+            for (const file of held) {
+              const test = typeof file === "string" ? tests.get(file) : undefined;
+              if (test !== undefined) named.add(test);
+            }
+          pending.push(held);
+        }
+      }
+      if (named.size === 0) return;
+      process.off("message", heard);
+      // A process sent several tests can't tell their reads apart: each is named, so none is kept from it.
+      if (named.size === 1) for (const test of named) belongs(test);
+      else for (const test of named) append(out, `test ${test}\n`);
+    };
+    process.on("message", heard);
+  }
 }

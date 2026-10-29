@@ -5,6 +5,7 @@ import { kitCheckPaths } from "../../core/readings/check-paths.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
 import { capabilityModules, testGroups } from "../../core/readings/test-groups.js";
 import { holding, keptRuns, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { testLine } from "../../core/readings/verification-configuration.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
@@ -55,7 +56,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
             const verdicts =
               command === undefined
                 ? []
-                : evidenceStore.entries(store, verdictKind(`test:${test}`, command.replaceAll("{test}", test), runtime, kit)).flatMap((text) => verdictOf(text) ?? []);
+                : evidenceStore.entries(store, verdictKind(`test:${test}`, testLine(command, test), runtime, kit)).flatMap((text) => verdictOf(text) ?? []);
             for (const verdict of verdicts)
               for (const path of Object.keys(verdict.states))
                 if (!states.has(path)) states.set(path, heldState(root, path));

@@ -19,7 +19,7 @@ verify:
       command: node scripts/kit-check.mjs
       after: tests
   tests:
-    command: npx vitest run {test} --coverage.enabled --coverage.all=false --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
+    command: npx vitest run --pool=forks --poolOptions.forks.isolate=true {tests} --coverage.enabled --coverage.all=false --coverage.provider=custom --coverage.customProviderModule={provider} --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
     under: oracle/
 exceptions:
   - oracle/code-structure/imports-point-inward.test.ts
@@ -162,6 +162,12 @@ adapters:
     zones: [substrate]
     globals: [process]
     packages: [node:module, node:worker_threads]
+  - module: src/substrate/adapters/coverage-provider.mjs
+    export: coverageProvider
+    capability: coverage-reporting
+    kind: external
+    zones: [substrate]
+    packages: ["@vitest/coverage-v8"]
   - module: src/substrate/adapters/terminal-input
     export: terminalInput
     capability: filesystem
@@ -189,6 +195,9 @@ on what they are given, so they are declared pure.
 
 The temporary-project adapter owns temporary directories and writes. Locating the operating system's
 temporary directory uses process-environment authority; `node:os` is not declared pure.
+
+The coverage provider runs inside vitest: it extends the installed `@vitest/coverage-v8`, which an app installs
+beside Kit, and writes each test file's report apart, so it holds the file system the reports need.
 
 The git-refs adapter runs `git` against `origin` alone, so it holds the processes capability as the processes
 adapter does; the calendar reads the wall clock only to name the day a shared pass is published under.
