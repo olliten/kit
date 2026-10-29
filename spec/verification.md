@@ -6,10 +6,18 @@ so a later gate runs only what an edit can have changed.
 ## The gate
 
 - An app declares its gate under `verify`: whole-tree checks, each an id and one command, optionally run after
-  the tests, and the command that runs one test file `{test}`, for every test under one or more relative
-  directories, which may also write the test's coverage into `{dir}`. A malformed declaration fails
-  configuration, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
+  the tests, and its tests as one group or a list of groups, each the command that runs one test file `{test}`,
+  which may also write the test's coverage into `{dir}`, for every test under one or more relative
+  directories, and optionally the modules inside the app whose reach selects it. A malformed declaration, or
+  group, fails configuration naming where, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
   - Implementation: {{verification-configuration}}, {{kit-configuration}}, {{config-schema}}, {{verify-run}}
+  - Proof: {{temporary-project}}
+- A test runs under the command of the first group, in declared order, whose directories hold it and whose
+  modules its imports reach, directly or through the files they import, and otherwise of the first such group
+  that names no modules. `kit check` reads each test's pass under the command the same choice gives it, so a
+  test that comes to reach another group's module runs again under that group's command. A test no group takes
+  is not run, and `kit verify` names it and counts it. · {#tests-run-in-the-group-their-reach-selects}
+  - Implementation: {{test-groups}}, {{verify-run}}, {{check-run}}, {{verification-configuration}}, {{read-snapshot}}
   - Proof: {{temporary-project}}
 - A recorder preloaded into a check's processes records every path inside the app the check reads, lists,
   probes or loads, in its own process, its worker threads and the processes it starts, and nothing under

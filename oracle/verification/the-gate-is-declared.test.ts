@@ -15,10 +15,21 @@ afterEach(() => {
 test("a gate is whole-tree checks, each an id and a command, and the command that runs one test", () => {
   expect(read({ checks: [{ id: "typecheck", command: "tsc --noEmit" }], tests: { command: "vitest run {test}", under: "oracle/" } }).verify).toEqual({
     checks: [{ id: "typecheck", command: "tsc --noEmit" }],
-    tests: { command: "vitest run {test}", under: ["oracle"] },
+    tests: [{ command: "vitest run {test}", under: ["oracle"] }],
   });
-  expect(read({ checks: [], tests: { command: "vitest run {test}", under: ["spec/", "oracle/", "spec"] } }).verify?.tests?.under).toEqual(["oracle", "spec"]);
+  expect(read({ checks: [], tests: { command: "vitest run {test}", under: ["spec/", "oracle/", "spec"] } }).verify?.tests?.[0]?.under).toEqual(["oracle", "spec"]);
   expect(read({ checks: [] }).verify).toEqual({ checks: [] });
+});
+
+test("the tests may be a list of groups, each a command, its directories and the modules whose reach selects it", () => {
+  const tests = [
+    { command: "browser {test}", under: ["oracle/", "spec"], reaching: ["spec/harness/full-stack.ts", "./spec/boot"] },
+    { command: "unit {test}", under: "oracle/" },
+  ];
+  expect(read({ checks: [], tests }).verify?.tests).toEqual([
+    { command: "browser {test}", under: ["oracle", "spec"], reaching: ["spec/boot", "spec/harness/full-stack.ts"] },
+    { command: "unit {test}", under: ["oracle"] },
+  ]);
 });
 
 test.each([
@@ -30,6 +41,13 @@ test.each([
   [{ checks: [], tests: { command: "vitest run {test}", under: ["oracle", "../outside"] } }, /verify\.tests/],
   [{ checks: [], tests: { command: "vitest run {test}", under: [] } }, /verify\.tests/],
   [{ checks: [], extra: true }, /verify\.extra is not a key Kit reads/],
+  [{ checks: [], tests: [] }, /verify\.tests: list at least one group/],
+  [{ checks: [], tests: [{ command: "unit {test}", under: "oracle" }, { command: "browser", under: "oracle" }] }, /verify\.tests\[1\]: declare the command/],
+  [{ checks: [], tests: [{ command: "unit {test}", under: "oracle" }, { command: "b {test}", under: "oracle", reaching: ["../x.ts"] }] }, /verify\.tests\[1\]\.reaching/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", reaching: "spec/boot.ts" }] }, /verify\.tests\[0\]\.reaching/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", reaching: [] }] }, /verify\.tests\[0\]\.reaching/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", reaching: ["/abs/x.ts"] }] }, /verify\.tests\[0\]\.reaching/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", extra: 1 }] }, /verify\.tests\[0\]\.extra is not a key Kit reads/],
 ])("a malformed gate %j fails configuration", (verify, message) => {
   expect(() => read(verify)).toThrow(message);
 });

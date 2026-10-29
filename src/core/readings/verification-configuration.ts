@@ -1,9 +1,10 @@
-import type { KitConfig } from "../primitives/default-config.js";
+import type { KitConfig, TestGroup } from "../primitives/default-config.js";
 import { isRecord, isText, normalizedPath, relativeLocation } from "./config-values.js";
 
 // The gate an app declares under `verify`: each whole-tree check is an id and one command, run with the tests or,
-// when it reads what they record, after them; the tests are one command that runs the test file `{test}`, for
-// every test under one or more relative directories.
+// when it reads what they record, after them; the tests are one group or a list of groups, each one command that
+// runs the test file `{test}`, for every test under one or more relative directories, and optionally the modules
+// whose reach selects the group.
 export function verification(declared: unknown): NonNullable<KitConfig["verify"]> {
   if (!isRecord(declared)) throw new Error("verify: declare the gate's checks and, optionally, its tests.");
   const checks = declared["checks"] ?? [];
@@ -21,16 +22,26 @@ export function verification(declared: unknown): NonNullable<KitConfig["verify"]
   });
   const tests = declared["tests"];
   if (tests === undefined) return { checks: rows };
-  const command = isRecord(tests) ? tests["command"] : undefined;
-  const declaredUnder = isRecord(tests) ? tests["under"] : undefined;
+  if (Array.isArray(tests)) {
+    if (tests.length === 0) throw new Error("verify.tests: list at least one group of tests.");
+    return { checks: rows, tests: tests.map((row: unknown, index) => group(row, `verify.tests[${index}]`)) };
+  }
+  return { checks: rows, tests: [group(tests, "verify.tests")] };
+}
+
+// A path inside the app, named relative to its root.
+const inside = (path: unknown): path is string => isText(path) && relativeLocation(path) && !normalizedPath(path).split("/").includes("..");
+
+function group(declared: unknown, at: string): TestGroup {
+  const command = isRecord(declared) ? declared["command"] : undefined;
+  const declaredUnder = isRecord(declared) ? declared["under"] : undefined;
   const under = isText(declaredUnder) ? [declaredUnder] : declaredUnder;
-  if (
-    !isText(command) ||
-    !command.includes("{test}") ||
-    !Array.isArray(under) ||
-    under.length === 0 ||
-    !under.every((path: unknown) => isText(path) && relativeLocation(path) && !normalizedPath(path).split("/").includes(".."))
-  )
-    throw new Error("verify.tests: declare the command that runs one test file {test}, and the directories under which tests are found.");
-  return { checks: rows, tests: { command, under: [...new Set(under.filter(isText).map((path) => normalizedPath(path)))].sort() } };
+  if (!isText(command) || !command.includes("{test}") || !Array.isArray(under) || under.length === 0 || !under.every(inside))
+    throw new Error(`${at}: declare the command that runs one test file {test}, and the directories under which tests are found.`);
+  const directories = [...new Set(under.filter(isText).map((path) => normalizedPath(path)))].sort();
+  const reaching = isRecord(declared) ? declared["reaching"] : undefined;
+  if (reaching === undefined) return { command, under: directories };
+  if (!Array.isArray(reaching) || reaching.length === 0 || !reaching.every(inside))
+    throw new Error(`${at}.reaching: list the modules inside the app, each by its relative path, whose reach selects this group.`);
+  return { command, under: directories, reaching: [...new Set(reaching.filter(isText).map((path) => normalizedPath(path)))].sort() };
 }

@@ -23,7 +23,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `legacy-zones` | Rows of `zone` with either a `root` or a list of `files`, never both. |
 | `legacy-areas` | Spec files in an older claim grammar. |
 | `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
-| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
+| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the tests: one group, or a list of groups each taking the tests whose imports reach a module it lists in `reaching`, or with no `reaching` the tests no earlier group took; a group is the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
 
 An app's plain-Node scripts read the config the way the commands do through
 `src/substrate/compositions/configuration-runner.mjs`: `await configuration()` answers `kitConfig`,
@@ -167,6 +167,27 @@ through `NODE_OPTIONS` that notes every path inside the app the run reads, lists
 processes, threads and child processes. A pass is kept beside the repository with the state of each of those
 paths, under the command, the Node version and the lockfile; the next `kit verify` reuses it while every path
 is in the same state. A failure is never kept. Worktrees of one repository share what is kept.
+
+The tests may instead be a list of groups, each with its own command, such as a browser tier and a unit tier:
+
+```yaml
+  tests:
+    - command: npx vitest run --config browser.config.ts {test}
+      under: [oracle/, spec/]
+      reaching: [spec/harness/full-stack.ts]
+    - command: npx vitest run {test}
+      under: [oracle/, spec/]
+```
+
+A test runs in the first group whose `under` holds it and whose `reaching` lists a module its imports reach,
+directly or through the files they import, and otherwise in the first group whose `under` holds it that lists
+none. A module is named by its path inside the app, with or without its extension. The imports are those `kit
+check` reads, type-only ones included, so the choice is Kit's own and reads no test runner's configuration.
+Since the command is part of what a pass is kept under, a test that comes to reach another group's module runs
+again, and `kit check` looks for each test's pass under the command the same choice gives it. A test no group
+takes is not run: `kit verify` prints `unassigned test:<path>` and counts it in its summary, and `--plan` names
+each test's group as `in tests[<index>]`. The rules that read what tests ran apply when every group's command
+writes coverage.
 
 A path a run only probed is kept by whether it is absent, a file or a directory. A file a test only loaded, and
 whose functions its coverage lists, is kept as the test ran it: its text with the bodies of the outermost
