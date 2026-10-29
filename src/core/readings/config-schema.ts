@@ -10,7 +10,7 @@ export interface ConfigIssue {
 type Keys = { readonly [key: string]: Section };
 type Section = null | { readonly keys: Keys } | { readonly rows: Keys } | { readonly keys: Keys; readonly rows: Keys };
 
-const GROUP: Keys = { command: null, under: null, reaching: null };
+const GROUP: Keys = { command: null, under: null, reaching: null, capabilities: null };
 
 const CONFIG_KEYS: Keys = {
   app: null,
