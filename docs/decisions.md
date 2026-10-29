@@ -599,3 +599,19 @@ without naming the app.
   observed what each check reads.
 - **Cost:** `kit check` alone on a fresh clone waits on the two rules that read what tests ran until `kit verify`
   has run once, and says so.
+
+## 2026-10-29 · A pass holds while the code its test ran holds
+
+- **Decision:** a file a test only loaded, whose functions its coverage lists, is kept as its text with the
+  bodies of the outermost functions the test never ran left out; a path a check only probed is kept by its kind.
+  A file also read as text is kept whole. `kit verify` runs a gate's checks 64 at a time and keeps each chunk's
+  passes as it ends.
+- **Why:** on Leeloo, file grain reruns every test that loaded an edited file. A preview over 950 of its 1,865
+  test files, for one-line edits inside a function of a placed module: `civil-date.ts` 369 tests rerun at file
+  grain, 90 by the functions run; `retrieval.ts` 139 to 2; `attachment-migration.ts` 113 to 7;
+  `google-claims.ts` 110 to 6. Legacy files keep their own numbers until they are placed, which is the goal.
+  The first cold run on Leeloo held every test's coverage until the end and ran out of memory after 69 minutes,
+  keeping nothing; hence the chunks.
+- **Limits:** a test that reads an unrun function's text through running code, such as
+  `Function.prototype.toString`, is not seen. Leeloo's test workspace reads every test root's files when vitest
+  starts, so under `kit verify` every test would depend on every file until it computes its tiers once.
