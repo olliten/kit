@@ -1,10 +1,14 @@
-import { fileURLToPath } from "node:url";
-import { describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vitest";
 import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { fixtureConfig } from "../core/readings/fixture-config.js";
+import { CAPABILITY_APP } from "../core/primitives/capability-app.js";
+import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
-const fixtureRoot = fileURLToPath(new URL("../../fixture/capabilities/", import.meta.url));
+const project = temporaryProjects.open("kit-capabilities-");
+project.write(CAPABILITY_APP);
+afterAll(() => project.dispose());
+const fixtureRoot = project.root;
 const snapshot = readSnapshot(fixtureRoot, fixtureConfig);
 const result = capabilityCheck(snapshot);
 const requirements = (path: string) => {

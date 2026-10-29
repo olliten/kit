@@ -35,7 +35,7 @@ its config, and its debt in its own baseline.
   - Proof: {{binding-findings}}
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
-  - Proof: {{case-inventory}}, {{source-loader}}
+  - Proof: {{case-inventory}}, {{source-loader}}, {{capability-app}}, {{temporary-project}}
 - A cache hit reuses extraction and reruns the check; a corrupt cache is rebuilt, and a source change during
   extraction or checking rejects the result. `kit check --fresh-compare` also extracts afresh and fails when
   the cached snapshot or its findings differ. Snapshots too large for JSON remain reusable in their original

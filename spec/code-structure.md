@@ -61,7 +61,7 @@ compositions wire the others into behaviour.
   never purity ({{capability-check}}, {{authority-graph}}, {{access-authority}}, {{import-authority}}, {{capability-context}}, {{compiler-check}}, {{compiler-facts}}, {{program-scope}}, {{syntax-reading}}, {{escape-recorder}},
   {{native-reading}}). · {#authority-is-derived}
   - Implementation: {{capability-check}}, {{read-snapshot}}
-  - Proof: {{fixture-config}}, {{source-fixture}}
+  - Proof: {{fixture-config}}, {{source-fixture}}, {{capability-app}}, {{temporary-project}}
 - Only a registered adapter creates authority: it owns its raw operation and its contract in one file, a
   runtime import or re-export inherits it, a reading can't import even its contract type, and the core
   hosts no external adapter. In an explicit root set, a registration names the root-qualified module

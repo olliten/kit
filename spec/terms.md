@@ -6,6 +6,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **capability-app** — the capability case app's source inputs, as data a proof writes into a temporary project.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **case-inventory** — the independently supplied identities, conditions and input paths of the structural fixture cases.
   - Role: fact
   - Zone: core
