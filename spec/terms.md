@@ -472,6 +472,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{processes}}, {{read-snapshot}}, {{test-runs}}, {{text-files}}
+- **scripted-verification** — the workflow that runs verification checks whose effects are scripted as data, reporting what ran together.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{verification}}, {{verification-runner}}
 - **source-fixture** — the workflow that writes an isolated compiler fixture, reads its snapshot and disposes its temporary project.
   - Role: composition
   - Zone: substrate

@@ -49,7 +49,7 @@ a claim depends on are named in it, so each module's claims are found from its n
   ({{claim-inventory}}). A legacy claim with Implementation or Proof rows follows the same module-reference,
   claim-proof and proof-reach rules as a topic claim; other legacy claims remain outside those checks. · {#legacy-claims-keep-their-grammar}
   - Implementation: {{claim-proof-binder}}, {{proof-reach}}, {{finding}}, {{placement-of}}
-  - Proof: {{fixture-snapshot}}, {{temporary-project}}
+  - Proof: {{fixture-snapshot}}, {{temporary-project}}, {{processes}}
 - A claim's tests together reach every placed module the claim names through the code they use, followed
   into helpers and modules as a capture is, and the modules of only types that code is written in; a named
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}

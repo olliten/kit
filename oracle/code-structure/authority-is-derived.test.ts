@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { fixtureConfig } from "../core/readings/fixture-config.js";
@@ -7,15 +7,6 @@ import { fixtureConfig } from "../core/readings/fixture-config.js";
 const fixtureRoot = fileURLToPath(new URL("../../fixture/capabilities/", import.meta.url));
 const snapshot = readSnapshot(fixtureRoot, fixtureConfig);
 const result = capabilityCheck(snapshot);
-beforeAll(() => {
-  console.info(
-    "Stage-a actual check receipt",
-    JSON.stringify({
-      requirements: result.requirements,
-      findings: result.findings,
-    }),
-  );
-});
 const requirements = (path: string) => {
   const row = result.requirements.find((candidate) => candidate.path === path);
   expect(row, `actual derived requirements missing for ${path}`).toBeDefined();
@@ -226,9 +217,7 @@ describe("runtime authority is conservatively derived from actual module inputs"
     expect(requirements("src/substrate/primitives/broad-service.ts").direct).toEqual([
       "cell.apply",
     ]);
-    console.info(
-      "A3 protocol narrowness remains semantic review; no operation-count rule is asserted.",
-    );
+    // A3 protocol narrowness remains semantic review; no operation-count rule is asserted.
   });
 
   test("A4: a raw core clock is forbidden while the registered substrate adapter is supported", () => {
@@ -512,9 +501,7 @@ test("C2: absence of authority does not certify the identity wrapper's compositi
   expect(
     findings("src/core/compositions/value-status.ts").filter((finding) => finding.blocking),
   ).toEqual([]);
-  console.info(
-    "C2 purpose remains review-held; this test establishes derived authority, not workflow intent.",
-  );
+  // C2 purpose remains review-held; this test establishes derived authority, not workflow intent.
 });
 
 test("C4: a core composition taking a callback is the finding, whatever its callers hand it", () => {

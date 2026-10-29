@@ -1,8 +1,6 @@
-import { existsSync, rmSync } from "node:fs";
-import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { cacheApp, removeCacheApps, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
+import { type CacheApp, cacheApp, removeCacheApps, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
 
 
 afterEach(removeCacheApps);
@@ -16,13 +14,10 @@ function random(seed: number): () => number {
   };
 }
 
-const EDITS: readonly ((app: ReturnType<typeof cacheApp>, n: number) => void)[] = [
+const EDITS: readonly ((app: CacheApp, n: number) => void)[] = [
   (app, n) => app.put("src/core/primitives/value.ts", `export const value = ${n};\n`),
   (app, n) => app.put(`src/core/primitives/extra-${n % 3}.ts`, `export const extra = ${n};\n`),
-  (app, n) => {
-    const path = join(app.root, `src/core/primitives/extra-${n % 3}.ts`);
-    if (existsSync(path)) rmSync(path);
-  },
+  (app, n) => app.remove(`src/core/primitives/extra-${n % 3}.ts`),
   (app, n) =>
     app.put(
       "node_modules/a/index.d.ts",
@@ -32,9 +27,8 @@ const EDITS: readonly ((app: ReturnType<typeof cacheApp>, n: number) => void)[] 
   (app, n) => app.put("node_modules/a/README.md", `# a ${n}\n`),
   (app, n) => app.put("spec/numbers.md", `# Numbers\n\nNumbers ${n % 2}.\n`),
   (app, n) => {
-    const path = join(app.root, "node_modules/@types/x/index.d.ts");
     if (n % 2 === 0) app.put("node_modules/@types/x/index.d.ts", "declare const x: number;\n");
-    else if (existsSync(path)) rmSync(join(app.root, "node_modules/@types"), { recursive: true });
+    else app.remove("node_modules/@types");
   },
 ];
 

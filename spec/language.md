@@ -35,7 +35,7 @@ why the code is built the way it is.
   owners; a supporting type or a selected field creates no other module, and a term grants no authority. · {#modules-bind-to-terms}
   - Implementation: {{term-model}}, {{exported-symbol}}, {{term-recorder}}, {{term-inventory}}, {{import-recorder}}, {{authority-recorder}},
     {{fact-walk}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{compiler}}, {{capability-check}}
-  - Proof: {{fixture-snapshot}}, {{recorded-terms}}, {{recorded-imports}}, {{recorded-authority}}, {{project-snapshot}}
+  - Proof: {{fixture-snapshot}}, {{recorded-terms}}, {{recorded-imports}}, {{recorded-authority}}, {{project-snapshot}}, {{processes}}
 
 - A supporting exported type needs no term for its ordinary words, and a retired word in it is still a
   finding. · {#supporting-symbols-need-no-terms}

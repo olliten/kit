@@ -38,7 +38,7 @@ test("input order cannot change worker assignment, including equal and unknown d
 test("known long checks start in the least loaded workers", () => {
   const timed = checks
     .slice(0, 3)
-    .map((c, i) => ({ ...c, milliseconds: [90, 80, 10][i] as number }));
+    .map((c, i) => ({ ...c, milliseconds: [90, 80, 10][i] ?? 0 }));
   const partition = verificationPartition(timed, 2, [100, 0]);
   expect(partition.parts.map((part) => part.map((c) => c.id))).toEqual([
     [timed[2]?.id],

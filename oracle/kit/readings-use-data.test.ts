@@ -1,13 +1,29 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { saveValue } from "../../fixture/capabilities/src/core/compositions/save-value.js";
+import type { saveValue } from "../../fixture/capabilities/src/core/compositions/save-value.js";
 import type { ScoredValue } from "../../fixture/capabilities/src/core/primitives/scored-value.js";
-import { transformedValue } from "../../fixture/capabilities/src/core/readings/data-input.js";
-import { valueOrder } from "../../fixture/capabilities/src/core/readings/value-order.js";
+import type { transformedValue } from "../../fixture/capabilities/src/core/readings/data-input.js";
+import type { valueOrder } from "../../fixture/capabilities/src/core/readings/value-order.js";
+import { sourceLoader } from "../../src/substrate/adapters/source-loader.mjs";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { cases } from "../core/primitives/case-inventory.js";
 
 const fixtureRoot = fileURLToPath(new URL("../../fixture/capabilities/", import.meta.url));
+
+// The fixture app's own code runs as loaded source, never as an import of the oracle's.
+const fixture = await sourceLoader.load(fixtureRoot, [
+  "src/core/readings/value-order.ts",
+  "src/core/readings/data-input.ts",
+  "src/core/compositions/save-value.ts",
+]);
+const isValueOrder = (value: unknown): value is typeof valueOrder => typeof value === "function";
+const isTransformedValue = (value: unknown): value is typeof transformedValue => typeof value === "function";
+const isSaveValue = (value: unknown): value is typeof saveValue => typeof value === "function";
+const order = fixture["valueOrder"];
+const transform = fixture["transformedValue"];
+const save = fixture["saveValue"];
+if (!isValueOrder(order) || !isTransformedValue(transform) || !isSaveValue(save))
+  throw new Error("The fixture app's readings did not load.");
 
 test("the real snapshot reader discovers every independently supplied case input", () => {
   const snapshot = readSnapshot(fixtureRoot);
@@ -59,19 +75,19 @@ describe("meaningful comparator and local mapper over supplied data", () => {
   test.each(rows)("$name without mutating its input", ({ values, expected }) => {
     const original = structuredClone(values);
     const input = Object.freeze(values.map((value) => Object.freeze({ ...value })));
-    expect(valueOrder(input)).toEqual(expected);
+    expect(order(input)).toEqual(expected);
     expect(input).toEqual(original);
   });
 });
 
 test("the plain data neighbour reads a choice rather than a supplied callback", () => {
-  expect(transformedValue({ value: "  next  ", options: { trim: true } })).toBe("next");
-  expect(transformedValue({ value: "  next  ", options: { trim: false } })).toBe("  next  ");
+  expect(transform({ value: "  next  ", options: { trim: true } })).toBe("next");
+  expect(transform({ value: "  next  ", options: { trim: false } })).toBe("  next  ");
 });
 
 test("the actual composition branches on validation and returns a complete write description", () => {
-  expect(saveValue("one", "too-long", 3)).toEqual({ kind: "invalid", reason: "value-too-long" });
-  expect(saveValue("one", "yes", 3)).toEqual({
+  expect(save("one", "too-long", 3)).toEqual({ kind: "invalid", reason: "value-too-long" });
+  expect(save("one", "yes", 3)).toEqual({
     kind: "accepted",
     writes: [{ kind: "put-cell", key: "one", value: "yes" }],
   });

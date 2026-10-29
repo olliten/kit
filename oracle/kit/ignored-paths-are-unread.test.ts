@@ -12,7 +12,7 @@ afterEach(removeCacheApps);
 test("an ignored path is neither a snapshot file nor listed nor read", () => {
   const root = scratch("kit-ignore-");
   writeApp(root, CACHE_APP);
-  const trace = { filesystem: [] as FilesystemRead[], compiler: [] as CompilerRead[] };
+  const trace: { filesystem: FilesystemRead[]; compiler: CompilerRead[] } = { filesystem: [], compiler: [] };
   const snapshot = readSnapshot(root, CACHE_CONFIG, trace);
   expect(snapshot.files.map((file) => file.path)).not.toContain("evidence/read-cost/1.json");
   expect(snapshot.files.map((file) => file.path)).toContain("src/core/primitives/value.ts");

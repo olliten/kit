@@ -1,17 +1,16 @@
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
-import { removeCacheApps, scratch, writeApp, rereaders as adapters, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
+import { cacheRunner, removeCacheApps, scratch, writeApp, CACHE_CONFIG } from "../substrate/compositions/cache-proof.js";
 import { CACHE_APP } from "../core/primitives/cache-app.js";
-import { cachedKitCheck } from "../../src/substrate/compositions/cached-check.js";
+import { processes } from "../../src/substrate/adapters/processes.js";
 import { snapshotStore } from "../../src/substrate/adapters/snapshot-store.js";
+import { CACHE_VERSION } from "../../src/core/readings/snapshot-cache-key.js";
 
 afterEach(removeCacheApps);
 
 function git(cwd: string, ...args: string[]): void {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  const result = processes.run("git", args, cwd);
   expect(result.status, result.stderr).toBe(0);
 }
 
@@ -31,18 +30,11 @@ test("two worktrees of one repository reuse one cache entry", async () => {
   expect(snapshotStore.directory(other)).toBe(join(main, ".git", "kit-cache"));
   expect(snapshotStore.directory(first)).toBe(snapshotStore.directory(other));
 
-  let extractions = 0;
-  const read = (...args: Parameters<typeof readSnapshot>) => {
-    extractions++;
-    return readSnapshot(...args);
-  };
-  const run = (root: string) =>
-    cachedKitCheck(root, CACHE_CONFIG, read, (snapshot: unknown) => snapshot, adapters);
-  expect((await run(first)).receipt.reused).toBe(false);
-  const shared = await run(other);
+  const runner = cacheRunner();
+  expect((await runner.run(first)).receipt.reused).toBe(false);
+  const shared = await runner.run(other);
   expect(shared.receipt.reused).toBe(true);
-  expect(extractions).toBe(1);
+  expect(runner.extractions()).toBe(1);
   expect(shared.result).toEqual(readSnapshot(other, CACHE_CONFIG));
-  const index = JSON.parse(readFileSync(join(main, ".git", "kit-cache", "index.json"), "utf8"));
-  expect(index.entries).toHaveLength(1);
+  expect(snapshotStore.index(join(main, ".git", "kit-cache"), CACHE_VERSION).entries).toHaveLength(1);
 }, 180_000);

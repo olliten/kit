@@ -69,7 +69,7 @@ compositions wire the others into behaviour.
   through a global needs a declared global, whatever types the contract names
   ({{registration-check}}, {{authority-graph}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{zone-authority-check}}, {{compiler-facts}}, {{default-config}}, {{authority-recorder}}, {{contract-recorder}}, {{contract-reading}}). · {#adapters-create-authority}
   - Implementation: {{construction-check}}, {{dependency-check}}, {{zone-permission}}, {{capability-context}}, {{finding}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}
-  - Proof: {{recorded-imports}}, {{recorded-authority}}, {{recorded-contracts}}, {{project-snapshot}}
+  - Proof: {{recorded-imports}}, {{recorded-authority}}, {{recorded-contracts}}, {{project-snapshot}}, {{source-loader}}
 - Inside an adapter, a host global it declares covers every handle reached through it, and a composition
   holding only the adapter's plain contract holds no native authority ({{authority-graph}}, {{global-authority}}, {{zone-authority-check}}). · {#declared-globals-cover-their-handles}
   - Implementation: {{access-authority}}, {{import-authority}}, {{capability-context}}, {{behaviour-check}}, {{zone-permission}}, {{finding}}, {{authority-recorder}}, {{import-recorder}}, {{contract-recorder}}, {{fact-walk}}, {{compiler}}
