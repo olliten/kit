@@ -58,3 +58,13 @@ test("the real run checks an app checkout against this Kit and does not fail on 
   expect(output).toMatch(/^tally: \d+ failing \(pins 552affb\): /);
   expect(output).toContain("  R4:unreferenced-module:substrate/compositions/save:");
 }, 120_000);
+
+test("an app whose config this Kit does not accept is reported with the config error", async () => {
+  const app = join(scratch, "stale");
+  cpSync(join(engine, "examples/tally"), app, { recursive: true });
+  const config = join(app, "kit/config.md");
+  writeFileSync(config, readFileSync(config, "utf8").replace("```yaml\n", "```yaml\nzones: {core: src/core/}\n"));
+  const { stdout: output, exitCode } = await runConsumers({ engineRoot: engine, args: [app], cwd: engine });
+  expect(exitCode).toBe(0);
+  expect(output).toContain(`${app}: Kit config ${config}: zones is not a key Kit reads.`);
+}, 120_000);

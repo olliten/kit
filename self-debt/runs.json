@@ -50,6 +50,7 @@
     "oracle/core/readings/fixture-files.ts": "f68f4e3de4f6654af6334805ccfa23a7bade8b2ef15bb82012fd251f29bd92f2",
     "oracle/core/readings/fixture-snapshot.ts": "acced9cc98154be5a5f7ac91e7cfd96b59b4608633e6b609cc3bb9daed3a7d69",
     "oracle/core/readings/project-snapshot.ts": "4d8a25154a1eebd1422762df0f84b5340230ff36aaba8bc610c20010e3a77a6d",
+    "oracle/kit/apps-load-the-config-from-plain-node.test.ts": "0fe11ea35f46cb4183aef5476893ef1d7485815a06d32539e7db3dd522475c5f",
     "oracle/kit/cache-keys-on-what-was-read.failed-reads.test.ts": "7a9b0e639d41a2887b3d0dcb3da838d97d28a02369a7200720c9539e82a5bbb1",
     "oracle/kit/cache-keys-on-what-was-read.random-edits.test.ts": "9b3485e2b0439e293047d4cb912d1c727730925486c6d0a1c8d5f1ef907f7bb2",
     "oracle/kit/cache-keys-on-what-was-read.test.ts": "afb4a6b0e8d69375efde892ce55bcc35b4cf14c2b217fa57f6a12395d5263eba",
@@ -57,10 +58,11 @@
     "oracle/kit/cached-check-keeps-evidence.fresh-compare.test.ts": "d156b4026c81d90814f2b0f08b8807e88d1f53c1754872f78e8dd4600fcb83cc",
     "oracle/kit/cached-check-keeps-evidence.graphs.test.ts": "0d8b1572eaad9f44e211b6aeba2d822827cf19153834651453e1aa240e96a392",
     "oracle/kit/cached-check-keeps-evidence.test.ts": "52ab635f8886e13118bf3202a5fed354e1973f0fd5512f1786762b91c314fc4d",
-    "oracle/kit/consumers-show-each-apps-work.test.ts": "a6cf063140ce6a6830988c554efda48f9cc6cdb4b1adb3ead2d9dab93cc889b5",
+    "oracle/kit/config-keys-are-known.test.ts": "f1dfd58ffc7e4be2875dcf31bade3b5b9be967262fdedd9c492cc9a4e8cc78ea",
+    "oracle/kit/consumers-show-each-apps-work.test.ts": "a8d1503880df67ecbc519b2ab925690a3c95ea609a9d66d611acdaf4aa405676",
     "oracle/kit/declared-roots-are-checked.authority.test.ts": "e2f0b260930627acb76c84bc803fd5dfb9960abb5df537c136c657ed0313c3bd",
     "oracle/kit/declared-roots-are-checked.structure.test.ts": "d882ef635d2d71b14943a84019174d66f7880063d7d9b2fd517209173ecb74a0",
-    "oracle/kit/declared-roots-are-checked.test.ts": "02fd342bd9d2b29a0b2b61324ef23f608a52971cd46b2bea1daf49daa7cd635d",
+    "oracle/kit/declared-roots-are-checked.test.ts": "09282ae190d8c5bcf655b3c3d451ee3e1823e4358fa76126a1d2dbfabae8a0e3",
     "oracle/kit/directory-roles-are-configured.test.ts": "f32633b3d7dfdea00f78eabcb850b6a4eb35746094e76e0f8f11736a7bcd6511",
     "oracle/kit/examples-pass-their-check.test.ts": "4cf508bb2dea8c51366bddd92f33018ad7288c67c6a0ed41e73d2a099df301dd",
     "oracle/kit/ignored-paths-are-unread.test.ts": "d36bed84f11a4900fb417870c7f1ca3ff1e966390a3b8525e865f16c6d248efa",
@@ -120,13 +122,13 @@
     "oracle/verification/scheduling-follows-dependencies.test.ts": "74b5d6dd463186a35f5509879ebc6a15102497f6aa8b1f24f8f5f1ffd95cc432",
     "src/core/compositions/capability-check.ts": "347dfc6eee48827d6aeec663c54b63e7ef935853d2eefbe122124418b722b2ba",
     "src/core/compositions/gate.ts": "bbf113d0c1799770ca3199382dbae561deb4f7e47b9601f48cfa1f4dcb3f1070",
-    "src/core/compositions/kit-configuration.ts": "441cfea5ed5600f4b455d7213d7aeb86b6c2bb709d0913711c2e176cd05fef94",
+    "src/core/compositions/kit-configuration.ts": "44d731379b75a67f27609c01895c31b0bac4c56b5d5c55f31533240b5617459c",
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/command.ts": "70f2614f2759a300204092f75a5e20958965cf1e9b00f52110e9d5a246ef775d",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
     "src/core/primitives/compiler-facts.ts": "685cc0836921f5966c01dbc66adb9214b8b6c2e66d3f9cc6ab55b045e0951cf9",
     "src/core/primitives/declared-input.ts": "99e25ded68657749a7f8412484a741ad9d31a05bae7ed084ccec19016d233bb0",
-    "src/core/primitives/default-config.ts": "4e56a01de5da82c79be14b938cfe6a9c2af70d2f59d756d97d7f4d77b561028e",
+    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
     "src/core/primitives/import.ts": "c559201b45c7883f5388fd04a1dcaa1a02bf7d91cbad5f55a3e73f46bcc2d763",
@@ -150,6 +152,7 @@
     "src/core/readings/claim-runs.ts": "9db8ae5e4017bd6065d3e2626f9972eddddc43472fac4e8ce34fd767498314d2",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
     "src/core/readings/compiler-check.ts": "5f3ac210216a184c72c6f104dac3054cdeb235e1ae4ce15b83f982486bef4804",
+    "src/core/readings/config-schema.ts": "545defaaee9c767ae66833f299dc716495c2e08662f53f723b0a7b82cc06d1b9",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
     "src/core/readings/construction-check.ts": "f6c84df74248c11f99735438b877da77a0245565685d1aa2c262890b225cf4d4",
     "src/core/readings/consumer-report.ts": "9ddce2f4423da3ce2bcd5daa90cefa9f84fd370b3b99cd2342a04a06bdc462ec",
@@ -167,7 +170,7 @@
     "src/core/readings/layout-check.ts": "a55001ab4959b6862bf8a6624aebb46a6748d58b8bcad6fb1c6f2bd87a89a521",
     "src/core/readings/layout-configuration.ts": "bd883acdb914bbba91af7cc0383e564950779b1a1e0a2dacde00475d104cb220",
     "src/core/readings/legacy-size.ts": "4b397fe854cc0b18af529d95346ff13da7a0d225aaa34aa2ad11ed540322339d",
-    "src/core/readings/legacy-zone-configuration.ts": "b1f6a31b2577667e919d5adc46513b50070ff971603ecc7cb59bf16dd92b4fcc",
+    "src/core/readings/legacy-zone-configuration.ts": "961a2a207527c53db7f16fbcf3d9daaf839ce5f79c3555bcb219e3f5d8e8084f",
     "src/core/readings/module-references.ts": "6e4814b98bc6406ac35d3c924b1b654ee2a45dfba1f0e715cfeffc6473b00748",
     "src/core/readings/name-check.ts": "8aa2a94f88453ab26187f07f2e3cbf1ced612af97d2e4ac5c0b95fb89ed25658",
     "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
@@ -204,8 +207,9 @@
     "src/substrate/compositions/authority-recorder.ts": "a86300ed1007c31e66a93a7605a31a3508e422601e8ce9a7d2ea7f0d08dce229",
     "src/substrate/compositions/behaviour-reading.ts": "99ec3216576aecc0f15fa4ad08659c46c3e5253cb31effde24c0eace20f4852f",
     "src/substrate/compositions/cached-check.ts": "8d61467b9fb5a5de1e3814d25581b555637ce67c67cd5cc3a99934dc0086bc57",
-    "src/substrate/compositions/check-run.ts": "06e2ac29b8832b27dc6fe6912e658e64f7b2bbd6d5b88ac5d8caf8af512be222",
-    "src/substrate/compositions/consumers-run.ts": "6afca105c26a6342ab1fe7212e088994bb7a4b5ece5e7b3d3549d81081fef2b4",
+    "src/substrate/compositions/check-run.ts": "b9f950793694498e5cb3d2f74e9e5b600156007d83d6a77cb0ccae048114e1de",
+    "src/substrate/compositions/configuration-runner.mjs": "c9e94091d406f3c93aa2c8a7fb878a8cb83d9bd74d6929788b63564a37d2cb96",
+    "src/substrate/compositions/consumers-run.ts": "b06dd9f842db7298f054489fc10dc97a75191d067d5cb7633190b66ecaa6ac1d",
     "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
     "src/substrate/compositions/contract-recorder.ts": "e2fcfdb2d50e8eff1b768525764555fb989ea0f68661bcd9a76b4cebf762e6b0",
     "src/substrate/compositions/escape-recorder.ts": "de302d401f665ae162d4cdb0737c15548bd01518e896235b4d949caf59dc44dd",
@@ -214,9 +218,10 @@
     "src/substrate/compositions/function-recorder.ts": "2493170de3b01a2aa449a76526735542db635824f741f191b2128fe9add0d8ff",
     "src/substrate/compositions/import-recorder.ts": "f6ed35a4ecc88967f6fb553cd4fe178f77aed4a6beaa0fc8767ec882abe84ce9",
     "src/substrate/compositions/native-reading.ts": "4807754ca71be2f0503f5750bf42dbb40f910f71e648380923f098647e401d60",
+    "src/substrate/compositions/read-config.ts": "107f186f28e520f6b14137f4d0d15c97175dff3aeae7c25a9334e37a56b902d0",
     "src/substrate/compositions/read-snapshot.ts": "0a666363e4282c4278cb026e251522dcd98957232c6c78d72ee0fe1f7e3343a7",
-    "src/substrate/compositions/refs-run.ts": "70459b2e153aac1f8a6543efae256d723bfb809acee8dcab4964d1bfc7713666",
-    "src/substrate/compositions/runs-run.ts": "092468e9aff731f8dcee74bb742d60c6e803c77ec80c859018677e73a1078fcd",
+    "src/substrate/compositions/refs-run.ts": "f009bdf13b8f52616d3ed253414265984f225d6022a586faafb291b8705f77f0",
+    "src/substrate/compositions/runs-run.ts": "930e73a70e30ce2770b353076ab3dbfbd858fc2c7e641102b7fe00e869c60518",
     "src/substrate/compositions/source-size.ts": "afcd726644f23a970c31eed1b13c1f716d70b6a72d2cc1816f2f923ff3e69299",
     "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb",
     "src/substrate/compositions/term-recorder.ts": "d7b13d65d6ffd7aa08856768199b7ff086d8263107a413c3793d103986ed543c",
@@ -4281,12 +4286,12 @@
         "capabilityCheck@28"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/access-authority.ts": [
         "accessAuthority@13"
@@ -4311,6 +4316,10 @@
       "src/core/readings/compiler-check.ts": [
         "add@10",
         "compilerCheck@6"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
       ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
@@ -4668,12 +4677,12 @@
         "gate@51"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/access-authority.ts": [
         "accessAuthority@13"
@@ -4706,6 +4715,10 @@
       ],
       "src/core/readings/compiler-check.ts": [
         "compilerCheck@6"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
       ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
@@ -4901,8 +4914,8 @@
         "validate@236"
       ],
       "src/substrate/compositions/check-run.ts": [
-        "check@22",
-        "runCheck@17"
+        "check@23",
+        "runCheck@16"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -4945,6 +4958,9 @@
         "nativeReading@22",
         "nativeType@70",
         "referenceType@15"
+      ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
         "commentsOf@388",
@@ -6006,6 +6022,44 @@
         "recorded@20"
       ]
     },
+    "oracle/kit/apps-load-the-config-from-plain-node.test.ts": {
+      "src/core/compositions/kit-configuration.ts": [
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
+      ],
+      "src/core/readings/config-values.ts": [
+        "isRecord@8",
+        "isText@10",
+        "isTexts@11",
+        "isZone@12",
+        "normalizedPath@20",
+        "relativeLocation@33",
+        "texts@13"
+      ],
+      "src/core/readings/legacy-zone-configuration.ts": [
+        "legacyZones@5"
+      ],
+      "src/core/readings/test-roots.ts": [
+        "testRoots@4"
+      ],
+      "src/substrate/adapters/source-loader.mjs": [
+        "fetchModule@33",
+        "load@50",
+        "resolveId@34",
+        "withKit@16"
+      ],
+      "src/substrate/compositions/configuration-runner.mjs": [
+        "configuration@7"
+      ]
+    },
     "oracle/kit/cache-keys-on-what-was-read.failed-reads.test.ts": {
       "oracle/substrate/adapters/temporary-project.ts": [
         "dispose@48",
@@ -6679,12 +6733,12 @@
         "violation@33"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/access-authority.ts": [
         "accessAuthority@13"
@@ -6732,6 +6786,10 @@
       ],
       "src/core/readings/compiler-check.ts": [
         "compilerCheck@6"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
       ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
@@ -6963,8 +7021,8 @@
         "validate@236"
       ],
       "src/substrate/compositions/check-run.ts": [
-        "check@22",
-        "runCheck@17"
+        "check@23",
+        "runCheck@16"
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractIdentity@38",
@@ -7010,6 +7068,9 @@
         "nativeReading@22",
         "nativeType@70",
         "referenceType@15"
+      ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
         "aliasTarget@208",
@@ -7494,6 +7555,52 @@
         "testReach@30"
       ]
     },
+    "oracle/kit/config-keys-are-known.test.ts": {
+      "oracle/substrate/adapters/temporary-project.ts": [
+        "dispose@48",
+        "inside@21",
+        "open@19",
+        "write@29"
+      ],
+      "src/core/compositions/kit-configuration.ts": [
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
+      ],
+      "src/core/readings/check-paths.ts": [
+        "at@9",
+        "kitCheckPaths@4",
+        "option@10"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
+      ],
+      "src/core/readings/config-values.ts": [
+        "isRecord@8",
+        "isText@10",
+        "isTexts@11",
+        "isZone@12",
+        "normalizedPath@20",
+        "relativeLocation@33",
+        "texts@13"
+      ],
+      "src/core/readings/legacy-zone-configuration.ts": [
+        "legacyZones@5"
+      ],
+      "src/substrate/adapters/text-files.ts": [
+        "read@15"
+      ],
+      "src/substrate/compositions/check-run.ts": [
+        "runCheck@16"
+      ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
+      ]
+    },
     "oracle/kit/consumers-show-each-apps-work.test.ts": {
       "src/core/readings/check-paths.ts": [
         "at@9",
@@ -7553,6 +7660,9 @@
       "src/substrate/compositions/contract-reading.ts": [
         "contractReading@6",
         "operationsOf@7"
+      ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
         "scopeOf@185"
@@ -7833,11 +7943,15 @@
     },
     "oracle/kit/declared-roots-are-checked.test.ts": {
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "packages@141"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
       ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
@@ -7863,11 +7977,11 @@
         "sourceFixture@7"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "packages@141"
       ],
       "src/core/readings/claim-inventory.ts": [
         "claimInventory@93",
@@ -7876,6 +7990,10 @@
         "matches@109",
         "named@116",
         "visit@149"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
       ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
@@ -8033,12 +8151,12 @@
         "gate@51"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/access-authority.ts": [
         "accessAuthority@13"
@@ -8076,6 +8194,10 @@
       ],
       "src/core/readings/compiler-check.ts": [
         "compilerCheck@6"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
       ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
@@ -8250,8 +8372,11 @@
         "validate@236"
       ],
       "src/substrate/compositions/check-run.ts": [
-        "check@22",
-        "runCheck@17"
+        "check@23",
+        "runCheck@16"
+      ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
       ]
     },
     "oracle/kit/ignored-paths-are-unread.test.ts": {
@@ -8268,12 +8393,12 @@
         "writeApp@34"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/claim-inventory.ts": [
         "claimInventory@93",
@@ -8284,6 +8409,10 @@
         "matches@109",
         "named@116",
         "visit@149"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
       ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
@@ -8436,12 +8565,12 @@
         "gate@51"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/access-authority.ts": [
         "accessAuthority@13"
@@ -8489,12 +8618,17 @@
       "src/core/readings/compiler-check.ts": [
         "compilerCheck@6"
       ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
+      ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
         "isText@10",
         "isTexts@11",
         "isZone@12",
         "normalizedPath@20",
+        "relativeLocation@33",
         "texts@13"
       ],
       "src/core/readings/construction-check.ts": [
@@ -8855,11 +8989,14 @@
         "contractReading@6",
         "operationsOf@7"
       ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
+      ],
       "src/substrate/compositions/read-snapshot.ts": [
         "scopeOf@185"
       ],
       "src/substrate/compositions/refs-run.ts": [
-        "moduleClaims@23"
+        "moduleClaims@22"
       ],
       "src/substrate/compositions/syntax-reading.ts": [
         "syntaxReading@7",
@@ -9255,12 +9392,12 @@
         "write@29"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/claim-inventory.ts": [
         "claimInventory@93",
@@ -9271,6 +9408,10 @@
         "matches@109",
         "named@116",
         "visit@149"
+      ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
       ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
@@ -9301,22 +9442,25 @@
         "exists@19",
         "read@15"
       ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
+      ],
       "src/substrate/compositions/refs-run.ts": [
-        "at@52",
-        "markdown@10",
-        "moduleClaims@23",
-        "option@42",
-        "runRefs@37"
+        "at@53",
+        "markdown@9",
+        "moduleClaims@22",
+        "option@43",
+        "runRefs@38"
       ]
     },
     "oracle/kit/refs-list-a-modules-claims.test.ts": {
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/claim-inventory.ts": [
         "claimInventory@93",
@@ -9329,12 +9473,17 @@
         "named@116",
         "visit@149"
       ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
+      ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
         "isText@10",
         "isTexts@11",
         "isZone@12",
         "normalizedPath@20",
+        "relativeLocation@33",
         "texts@13"
       ],
       "src/core/readings/legacy-zone-configuration.ts": [
@@ -9373,9 +9522,12 @@
         "exists@19",
         "read@15"
       ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
+      ],
       "src/substrate/compositions/refs-run.ts": [
-        "markdown@10",
-        "moduleClaims@23"
+        "markdown@9",
+        "moduleClaims@22"
       ]
     },
     "oracle/kit/source-fixtures-own-their-files.test.ts": {
@@ -9638,6 +9790,9 @@
       ],
       "src/substrate/compositions/contract-reading.ts": [
         "contractReading@6"
+      ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
       ],
       "src/substrate/compositions/read-snapshot.ts": [
         "scopeOf@185"
@@ -9911,12 +10066,12 @@
         "snapshotOf@9"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/claim-inventory.ts": [
         "claimInventory@93",
@@ -9929,12 +10084,17 @@
         "named@116",
         "visit@149"
       ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
+      ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
         "isText@10",
         "isTexts@11",
         "isZone@12",
         "normalizedPath@20",
+        "relativeLocation@33",
         "texts@13"
       ],
       "src/core/readings/finding.ts": [
@@ -10753,6 +10913,9 @@
       "src/substrate/compositions/contract-reading.ts": [
         "contractReading@6"
       ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
+      ],
       "src/substrate/compositions/read-snapshot.ts": [
         "scopeOf@185"
       ],
@@ -11319,12 +11482,12 @@
         "write@29"
       ],
       "src/core/compositions/kit-configuration.ts": [
-        "adapters@84",
-        "configuredKit@17",
-        "dependencyExclusions@65",
-        "ignoredPaths@134",
-        "kitConfig@7",
-        "packages@120"
+        "adapters@105",
+        "configuredKit@18",
+        "dependencyExclusions@84",
+        "ignoredPaths@157",
+        "kitConfig@8",
+        "packages@141"
       ],
       "src/core/readings/claim-inventory.ts": [
         "claimInventory@93",
@@ -11336,10 +11499,15 @@
         "named@116",
         "visit@149"
       ],
+      "src/core/readings/config-schema.ts": [
+        "configIssues@44",
+        "visit@46"
+      ],
       "src/core/readings/config-values.ts": [
         "isRecord@8",
         "isText@10",
         "normalizedPath@20",
+        "relativeLocation@33",
         "texts@13"
       ],
       "src/core/readings/coverage-report.ts": [
@@ -11472,6 +11640,9 @@
         "nativeType@70",
         "referenceType@15"
       ],
+      "src/substrate/compositions/read-config.ts": [
+        "readConfig@8"
+      ],
       "src/substrate/compositions/read-snapshot.ts": [
         "aliasTarget@208",
         "commentsOf@388",
@@ -11486,10 +11657,10 @@
         "walk@410"
       ],
       "src/substrate/compositions/runs-run.ts": [
-        "at@19",
-        "option@14",
-        "read@42",
-        "runRuns@13"
+        "at@18",
+        "option@13",
+        "read@44",
+        "runRuns@12"
       ],
       "src/substrate/compositions/source-size.ts": [
         "called@33",

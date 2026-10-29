@@ -1,6 +1,7 @@
 import { JSON_SCHEMA, load } from "js-yaml";
 import type { KitConfig } from "../primitives/default-config.js";
 import { type Declaration, isRecord, isText, isTexts, isZone, normalizedPath, relativeLocation, texts } from "../readings/config-values.js";
+import { configIssues } from "../readings/config-schema.js";
 import { configuredLayout } from "../readings/layout-configuration.js";
 import { legacyZones } from "../readings/legacy-zone-configuration.js";
 
@@ -15,6 +16,13 @@ export function kitConfig(text: string): Declaration {
 }
 
 export function configuredKit(defaults: KitConfig, declaration: Declaration): KitConfig {
+  const issues = configIssues(declaration);
+  if (issues.length > 0)
+    throw new Error(
+      [...issues.map((issue) => issue.message), "The keys Kit reads are listed in docs/reference.md."].join("\n"),
+    );
+  const app = declaration["app"];
+  if (app !== undefined && !(isText(app) && app.trim())) throw new Error("Declare app as the app's name.");
   const roots = declaration["roots"];
   const src = isRecord(roots) ? roots["src"] : undefined;
   const spec = isRecord(roots) ? roots["spec"] : undefined;
@@ -36,13 +44,24 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
   const runs = declaration["runs"];
   if (
     runs !== undefined &&
-    !(isRecord(runs) && isText(runs["record"]) && isText(runs["each"]) && runs["each"].includes("{test}") && runs["each"].includes("{dir}"))
+    !(
+      isRecord(runs) &&
+      isText(runs["record"]) &&
+      relativeLocation(runs["record"]) &&
+      !normalizedPath(runs["record"]).split("/").includes("..") &&
+      isText(runs["each"]) &&
+      runs["each"].includes("{test}") &&
+      runs["each"].includes("{dir}")
+    )
   )
-    throw new Error("Declare runs as a record path and the command that runs one test file {test} with its LCOV report in {dir}.");
+    throw new Error(
+      "Declare runs as a record path inside the app and the command that runs one test file {test} with its LCOV report in {dir}.",
+    );
   const separator = declaration["claim-separator"];
   if (separator !== undefined && !isText(separator)) throw new Error("Declare the claim separator as text.");
   return {
     ...defaults,
+    ...(isText(app) ? { app } : {}),
     srcRoot: isText(src) ? src.replace(/\/$/, "") : src.map((path) => path.replace(/\/$/, "")).sort(),
     specRoot: spec.replace(/\/$/, ""),
     oracleRoot: oracle.replace(/\/$/, ""),
@@ -65,7 +84,7 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
 function dependencyExclusions(declared: unknown): NonNullable<KitConfig["dependencyExclusions"]> {
   if (declared === undefined) return [];
   if (!Array.isArray(declared)) throw new Error("The Kit configuration's dependency-exclusions must list rules.");
-  return declared.map((rule: unknown) => {
+  return declared.map((rule: unknown, index) => {
     const from = isRecord(rule) ? rule["from"] : undefined;
     const to = isRecord(rule) ? rule["to"] : undefined;
     const imports = isRecord(rule) ? rule["imports"] : undefined;
@@ -77,15 +96,17 @@ function dependencyExclusions(declared: unknown): NonNullable<KitConfig["depende
       (reach === "direct" || reach === "transitive")
     )
       return { from, to, imports, reach };
-    throw new Error("A dependency exclusion declares from, to, imports (all or runtime) and reach (direct or transitive).");
+    throw new Error(
+      `dependency-exclusions[${index}]: a dependency exclusion declares from, to, imports (all or runtime) and reach (direct or transitive).`,
+    );
   });
 }
 
 function adapters(declared: unknown): NonNullable<KitConfig["adapters"]> {
   if (declared === undefined) return [];
   if (!Array.isArray(declared)) throw new Error("The Kit configuration's adapters must list registrations.");
-  return declared.map((row: unknown) => {
-    if (!isRecord(row)) throw new Error("An adapter registration is a mapping.");
+  return declared.map((row: unknown, index) => {
+    if (!isRecord(row)) throw new Error(`adapters[${index}]: an adapter registration is a mapping.`);
     const { module, export: name, capability, kind, zones, contract, primitives, globals } = row;
     const contractType = isRecord(contract) ? contract["type"] : undefined;
     if (
@@ -100,8 +121,8 @@ function adapters(declared: unknown): NonNullable<KitConfig["adapters"]> {
         !(Array.isArray(primitives) && primitives.every((each) => each === "clock" || each === "randomness")))
     )
       throw new Error(
-        "An adapter registration declares module, export, capability, kind (external, produce or apply) and zones, " +
-          "and optionally a contract type, primitives (clock or randomness), globals and packages.",
+        `adapters[${index}]: an adapter registration declares module, export, capability, kind (external, produce or apply) ` +
+          "and zones, and optionally a contract type, primitives (clock or randomness), globals and packages.",
       );
     return {
       module,
@@ -120,12 +141,14 @@ function adapters(declared: unknown): NonNullable<KitConfig["adapters"]> {
 function packages(declared: unknown): NonNullable<KitConfig["packages"]> {
   if (declared === undefined) return [];
   if (!Array.isArray(declared)) throw new Error("The Kit configuration's packages must list package contracts.");
-  return declared.map((row: unknown) => {
+  return declared.map((row: unknown, index) => {
     const name = isRecord(row) ? row["name"] : undefined;
     const capabilities = isRecord(row) ? row["capabilities"] : undefined;
     const entrypointExports = isRecord(row) ? row["entrypointExports"] : undefined;
     if (!isText(name) || !isTexts(capabilities) || (entrypointExports !== undefined && !isTexts(entrypointExports)))
-      throw new Error("A package contract declares a name, its capabilities and optionally its entrypoint exports.");
+      throw new Error(
+        `packages[${index}]: a package contract declares a name, its capabilities and optionally its entrypoint exports.`,
+      );
     return { name, capabilities, ...(entrypointExports === undefined ? {} : { entrypointExports }) };
   });
 }

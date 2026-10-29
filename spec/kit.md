@@ -12,6 +12,17 @@ its config, and its debt in its own baseline.
   - Implementation: {{kit-configuration}}, {{config-values}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{placement-of}}, {{term-model}}, {{legacy-size}}, {{ratchet}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
+- A configuration declares only the keys Kit reads. An unknown key at any level is an error naming its full
+  path, such as `adapters[3].globalz`, and every configuration error, in the YAML, a section or a row, answers
+  the command on stderr with exit code 1: never a finding a baseline could hold, never a stack trace. `app`
+  names the app in Kit's output. · {#config-keys-are-known}
+  - Implementation: {{config-schema}}, {{kit-configuration}}, {{config-values}}, {{legacy-zone-configuration}}, {{read-config}}, {{check-run}}, {{command}}
+  - Proof: {{temporary-project}}
+
+- An app's plain-Node script loads the Kit configuration and its test roots through the configuration runner,
+  without a build, and reads the values the commands read. · {#apps-load-the-config-from-plain-node}
+  - Implementation: {{configuration-runner}}, {{kit-configuration}}, {{test-roots}}, {{source-loader}}
+
 - Test discovery includes the configured proof root and only explicitly configured
   `legacy-test-roots`, with no application directory names built in. Each is a relative directory
   without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy
@@ -57,8 +68,8 @@ its config, and its debt in its own baseline.
   - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}, {{source-loader}}, {{terminal-input}}
   - Proof: {{temporary-project}}, {{processes}}
 - `kit consumers <app>…` checks each app checkout against this Kit, with the app's own config and baseline, and
-  lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins; an app
-  that fails does not fail the run. · {#consumers-show-each-apps-work}
+  lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins, or the
+  config error when this Kit does not accept the app's config; an app that fails does not fail the run. · {#consumers-show-each-apps-work}
   - Implementation: {{consumer-report}}, {{consumers-run}}, {{processes}}
 - Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. A
   launcher in `scripts/` hands its command the arguments, working directory and input, and answers the terminal

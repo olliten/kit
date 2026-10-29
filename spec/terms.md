@@ -145,6 +145,10 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
+- **config-schema** — the keys a Kit configuration may declare at each level, and the keys a declaration holds that Kit doesn't read, each named by its full path.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}
 - **config-values** — the values a Kit configuration declares, checked as they are read: mappings, text, zones and relative locations.
   - Role: derived
   - Zone: core
@@ -395,7 +399,11 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate
-  - Of: {{cached-check}}, {{check-paths}}, {{command}}, {{compiler}}, {{default-config}}, {{filesystem}}, {{gate}}, {{kit-configuration}}, {{ratchet}}, {{read-snapshot}}, {{snapshot-comparison}}, {{text-files}}
+  - Of: {{cached-check}}, {{check-paths}}, {{command}}, {{compiler}}, {{filesystem}}, {{gate}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{snapshot-comparison}}, {{text-files}}
+- **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{source-loader}}
 - **consumers-run** — the `kit consumers` workflow: check each app checkout against this Kit and report its work.
   - Role: composition
   - Zone: substrate
@@ -435,7 +443,7 @@
 - **kit-configuration** — the config an app declares, read from its YAML fence and validated section by section, and the paths a check is given.
   - Role: composition
   - Zone: core
-  - Of: {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}
+  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate
@@ -444,6 +452,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{default-config}}, {{fixture-files}}, {{program-scope}}, {{temporary-project}}
+- **read-config** — the workflow that reads a config file and answers the configured Kit, or the command's failure naming each issue.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{default-config}}, {{kit-configuration}}, {{text-files}}
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
@@ -479,11 +491,11 @@
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{refs-description}}, {{terminal-input}}, {{text-files}}
+  - Of: {{command}}, {{config-values}}, {{read-config}}, {{refs-description}}, {{terminal-input}}, {{text-files}}
 - **runs-run** — the `kit runs` workflow: run each test file alone with the app's command and record which named functions it ran.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{default-config}}, {{kit-configuration}}, {{processes}}, {{read-snapshot}}, {{test-runs}}, {{text-files}}
+  - Of: {{command}}, {{config-values}}, {{processes}}, {{read-config}}, {{read-snapshot}}, {{test-runs}}, {{text-files}}
 - **scripted-verification** — the workflow that runs verification checks whose effects are scripted as data, reporting what ran together.
   - Role: composition
   - Zone: substrate

@@ -1,5 +1,7 @@
 // The config an app declares; every root is relative to the app root the snapshot was read from.
 export interface KitConfig {
+  // The app's name, as Kit's output names it.
+  readonly app?: string;
   readonly srcRoot: string | readonly string[];
   readonly oracleRoot: string;
   readonly specRoot: string;

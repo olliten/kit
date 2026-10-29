@@ -1,10 +1,9 @@
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
-import { DEFAULT_CONFIG } from "../../core/primitives/default-config.js";
-import { configuredKit, kitConfig } from "../../core/compositions/kit-configuration.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { testRuns } from "../../core/readings/test-runs.js";
 import { processes } from "../adapters/processes.js";
 import { textFiles } from "../adapters/text-files.js";
+import { readConfig } from "./read-config.js";
 import { readSnapshot } from "./read-snapshot.js";
 
 // `kit runs`: run each test file alone with the app's own command, which writes an LCOV report into its own
@@ -20,8 +19,11 @@ export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promis
   const given = option("root");
   const root = given === undefined ? engineRoot : at(given);
   const configPath = option("config") === undefined ? `${engineRoot}/self-config.md` : at(option("config") ?? "");
-  const config = configuredKit(DEFAULT_CONFIG, kitConfig(textFiles.read(configPath)));
-  if (config.runs === undefined) throw new Error("Declare runs in the Kit configuration: its record path and test command.");
+  const loaded = readConfig(configPath);
+  if ("failure" in loaded) return loaded.failure;
+  const { config } = loaded;
+  if (config.runs === undefined)
+    return { stdout: "", stderr: `Kit config ${configPath}: declare runs, its record path and test command.\n`, exitCode: 1 };
   const snapshot = readSnapshot(root, config);
   const tests = snapshot.files
     .filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`))

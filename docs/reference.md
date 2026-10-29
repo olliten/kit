@@ -3,6 +3,32 @@
 What `kit/config.md` can declare beyond the basics in the README, and the portable tools Kit ships. The spec in
 `spec/` says what holds; this page says how to ask for it.
 
+## Keys
+
+A config's YAML fence declares only these keys. Any other key, at any level, is an error that names it, such as
+`adapters[3].globalz`. Every config error answers the command on stderr with exit code 1, naming the file.
+
+| Key | What it declares |
+| --- | --- |
+| `app` | The app's name, as Kit's output names it. |
+| `roots.src`, `roots.spec`, `roots.oracle` | The code roots (one path or a list), the specification root and the proof root. |
+| `terms` | The terms file; `spec/terms.md` when absent. |
+| `claim-separator` | The text that separates a claim's promise from its anchor, such as `·`. |
+| `ignore` | Relative paths the walk never lists or reads; an import into one is an error. |
+| `exceptions` | Exact executable entrypoints outside every zone. |
+| `packages` | Package contracts: `name`, `capabilities`, and optionally `entrypointExports`. |
+| `adapters` | Adapter registrations: `module`, `export`, `capability`, `kind`, `zones`, and optionally `contract.type`, `primitives`, `globals`, `packages`. |
+| `dependency-exclusions` | Separations of local code: `from`, `to`, `imports`, `reach`. |
+| `layout.legacy` | Existing code outside the code roots, kept as location debt. |
+| `legacy-zones` | Rows of `zone` with either a `root` or a list of `files`, never both. |
+| `legacy-areas` | Spec files in an older claim grammar. |
+| `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
+| `runs.record`, `runs.each` | Where `kit runs` records, inside the app, and the command that runs one test. |
+
+An app's plain-Node scripts read the config the way the commands do through
+`src/substrate/compositions/configuration-runner.mjs`: `await configuration()` answers `kitConfig`,
+`configuredKit` and `testRoots`.
+
 ## Claims as table rows
 
 A claim may be a table row. Each data row is one claim, with its anchor closing the final cell:
@@ -106,8 +132,15 @@ home, such as Node built-in declarations; several homes retain uncertainty.
 - `legacy-zones`: the zone a legacy prefix, or an exact list of legacy files, actually belongs to, so imports
   across placement keep zone boundaries.
 - `legacy-areas`: spec files in an older format, outside the topic shape until they gain Implementation rows.
-- `legacy-test-roots`: test directories the runner should still discover; read by `testRoots()` in
-  `src/core/readings/test-roots.ts`.
+- `legacy-test-roots`: test directories the runner should still discover; read by `testRoots()`, which apps
+  load through the configuration runner.
+- A `legacy-zones` row:
+
+  ```yaml
+  legacy-zones:
+    - { root: src/client/, zone: shell }
+    - { files: [src/boot.ts], zone: substrate }
+  ```
 
 ## Portable verification
 
