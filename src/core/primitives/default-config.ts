@@ -41,10 +41,10 @@ export interface KitConfig {
   // Where `kit runs` records which named functions each test ran, and the app's command that runs one test file
   // `{test}` and writes an LCOV report into the directory `{dir}`. Declaring it turns on the rules that read it.
   readonly runs?: { readonly record: string; readonly each: string };
-  // What `kit verify` requires: whole-tree checks, each one command, and the command that runs one test file
-  // `{test}` for every test under `under`.
+  // What `kit verify` requires: whole-tree checks, each one command, run with the tests or after them, and the
+  // command that runs one test file `{test}` for every test under `under`.
   readonly verify?: {
-    readonly checks: readonly { readonly id: string; readonly command: string }[];
+    readonly checks: readonly { readonly id: string; readonly command: string; readonly after?: "tests" }[];
     readonly tests?: { readonly command: string; readonly under: string };
   };
   readonly layerNames?: {

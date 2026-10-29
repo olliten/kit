@@ -1,8 +1,9 @@
 import type { KitConfig } from "../primitives/default-config.js";
 import { isRecord, isText, normalizedPath, relativeLocation } from "./config-values.js";
 
-// The gate an app declares under `verify`: each whole-tree check is an id and one command, and the tests are one
-// command that runs the test file `{test}`, for every test under a relative directory.
+// The gate an app declares under `verify`: each whole-tree check is an id and one command, run with the tests or,
+// when it reads what they record, after them; the tests are one command that runs the test file `{test}`, for
+// every test under a relative directory.
 export function verification(declared: unknown): NonNullable<KitConfig["verify"]> {
   if (!isRecord(declared)) throw new Error("verify: declare the gate's checks and, optionally, its tests.");
   const checks = declared["checks"] ?? [];
@@ -11,11 +12,12 @@ export function verification(declared: unknown): NonNullable<KitConfig["verify"]
   const rows = checks.map((row: unknown, index) => {
     const id = isRecord(row) ? row["id"] : undefined;
     const command = isRecord(row) ? row["command"] : undefined;
-    if (!isText(id) || !id.trim() || id.startsWith("test:") || !isText(command) || !command.trim())
-      throw new Error(`verify.checks[${index}]: a check declares an id, not starting test:, and a command.`);
+    const after = isRecord(row) ? row["after"] : undefined;
+    if (!isText(id) || !id.trim() || id.startsWith("test:") || !isText(command) || !command.trim() || (after !== undefined && after !== "tests"))
+      throw new Error(`verify.checks[${index}]: a check declares an id, not starting test:, a command, and optionally after: tests.`);
     if (seen.has(id)) throw new Error(`verify.checks[${index}]: ${id} is declared twice.`);
     seen.add(id);
-    return { id, command };
+    return after === "tests" ? { id, command, after: "tests" as const } : { id, command };
   });
   const tests = declared["tests"];
   if (tests === undefined) return { checks: rows };

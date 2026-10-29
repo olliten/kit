@@ -2,8 +2,9 @@
   "test": "oracle/convergence/ratchet-keeps-architecture-obligations.test.ts",
   "digests": {
     "oracle/convergence/ratchet-keeps-architecture-obligations.test.ts": "1885fd58102fa3a09a5956ff25ee946e6463dd7c1eafa3b12c5350ef21e02f0f",
-    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
-    "src/core/readings/ratchet.ts": "d699f5026b5dff947de95c7fead8853ac011040172974cac4bde10c11b4eb866"
+    "src/core/primitives/default-config.ts": "c4b593b220401bc76b7ff2b7589b1c568813b5d2f061c0d468733239de1e78ab",
+    "src/core/readings/ratchet.ts": "d699f5026b5dff947de95c7fead8853ac011040172974cac4bde10c11b4eb866",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09"
   },
   "ran": {
     "src/core/readings/ratchet.ts": [
@@ -11,6 +12,15 @@
       "ratchetFindings@106",
       "reachableFrom@72",
       "recorded@20"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ]
   }
 }

@@ -3,13 +3,14 @@
   "digests": {
     "oracle/kit/apps-load-the-config-from-plain-node.test.ts": "0fe11ea35f46cb4183aef5476893ef1d7485815a06d32539e7db3dd522475c5f",
     "src/core/compositions/kit-configuration.ts": "acc5d8b09c2eac9efdd5826abc6f75fcd6b9eae9bb1f6e13b8d709500fce89d0",
-    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
-    "src/core/readings/config-schema.ts": "902b3fa2ae3d962cfea7698c366ab054aa8bd09eff5990cb7812940408661c6a",
+    "src/core/primitives/default-config.ts": "c4b593b220401bc76b7ff2b7589b1c568813b5d2f061c0d468733239de1e78ab",
+    "src/core/readings/config-schema.ts": "d540a847264fdf974b6068cb54b223b35e31834d404581877519c9956361662b",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
     "src/core/readings/layout-configuration.ts": "bd883acdb914bbba91af7cc0383e564950779b1a1e0a2dacde00475d104cb220",
     "src/core/readings/legacy-zone-configuration.ts": "961a2a207527c53db7f16fbcf3d9daaf839ce5f79c3555bcb219e3f5d8e8084f",
     "src/core/readings/test-roots.ts": "021ee43b6a7d89538fdbcf9c03e8e9cc5da502f1a11b21439df37b96216e8c4e",
-    "src/core/readings/verification-configuration.ts": "dc00d7186918b3dd87474ff4332d81689c47fdcef1b8dd87c3fb892a3b1a3e2b",
+    "src/core/readings/verification-configuration.ts": "17c5bb715b46a33f3fb61301674db6d47e097d7a7290651d26d933dd209a0441",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09",
     "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
     "src/substrate/compositions/configuration-runner.mjs": "c9e94091d406f3c93aa2c8a7fb878a8cb83d9bd74d6929788b63564a37d2cb96"
   },
@@ -42,7 +43,17 @@
       "testRoots@4"
     ],
     "src/core/readings/verification-configuration.ts": [
-      "verification@6"
+      "verification@7"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@18",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ],
     "src/substrate/adapters/source-loader.mjs": [
       "fetchModule@33",

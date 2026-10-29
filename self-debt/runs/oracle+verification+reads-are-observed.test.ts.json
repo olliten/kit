@@ -24,9 +24,12 @@
       "worker@50"
     ],
     "src/substrate/adapters/read-recorder.mjs": [
+      "note@20",
       "note@33",
       "runnersListing@26",
+      "wrap@44",
       "wrap@58",
+      "wrapped@46",
       "wrapped@63"
     ]
   }

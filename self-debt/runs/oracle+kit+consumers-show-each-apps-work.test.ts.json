@@ -3,7 +3,7 @@
   "digests": {
     "oracle/kit/consumers-show-each-apps-work.test.ts": "a8d1503880df67ecbc519b2ab925690a3c95ea609a9d66d611acdaf4aa405676",
     "src/core/primitives/command.ts": "70f2614f2759a300204092f75a5e20958965cf1e9b00f52110e9d5a246ef775d",
-    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
+    "src/core/primitives/default-config.ts": "c4b593b220401bc76b7ff2b7589b1c568813b5d2f061c0d468733239de1e78ab",
     "src/core/readings/check-paths.ts": "adea8afa14f4515032bc7526aa022884ba3b0818c96eaf6cf03344be8ca1e6c5",
     "src/core/readings/claim-inventory.ts": "2da2157c11333a89db7da02ed39b4d5798cff6ffbd3bb48f63f37531020bddf2",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
@@ -14,6 +14,7 @@
     "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
     "src/core/readings/topic-shape.ts": "35b8ff90033eeffac50b1e4073be62cab9d4ecbf1cd3c039d981542881204b10",
     "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09",
     "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
     "src/substrate/adapters/text-files.ts": "e659d03ec074befb4f925335619caebc8112e8f0574f2cc6dbf70eddd868a9ec",
     "src/substrate/compositions/consumers-run.ts": "08dc76b58b3f57a51e48900d7903ee6b5a724bf13315ed3e868e617d1f2438d8",
@@ -58,6 +59,16 @@
     "src/substrate/adapters/processes.ts": [
       "node@59",
       "run@38"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@18",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ],
     "src/substrate/adapters/source-loader.mjs": [
       "fetchModule@33",

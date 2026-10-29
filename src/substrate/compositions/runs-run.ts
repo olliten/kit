@@ -1,4 +1,6 @@
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
+import type { KitConfig } from "../../core/primitives/default-config.js";
+import type { Snapshot } from "../../core/primitives/snapshot.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { recordInputs, recordPathOf, runsFreshness } from "../../core/readings/runs-freshness.js";
 import { testRuns } from "../../core/readings/test-runs.js";
@@ -65,25 +67,9 @@ export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promis
     }),
     root,
   );
-  const read = (dir: string): string[] =>
-    textFiles.exists(dir)
-      ? textFiles
-          .entries(dir)
-          .filter((entry) => entry.file)
-          .map((entry) => textFiles.read(`${dir}/${entry.name}`))
-      : [];
-  const reports = tests.map((test, index) => {
-    const dir = dirs[index] ?? scratch;
-    return { test, lcov: read(dir), v8: read(`${dir}/v8`) };
-  });
+  const reports = tests.map((test, index) => reportsIn(test, dirs[index] ?? scratch));
   textFiles.remove(scratch);
-  const functions = (snapshot.compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
-  const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
-  const inputs = recordInputs(snapshot);
-  const written = testRuns(reports, snapshot.files, root, config, new Map(tests.map((test) => [test, inputs(test)])), functions, texts);
-  const directory = `${root}/${config.runs.record}`;
-  textFiles.directory(directory);
-  for (const record of written) textFiles.write(`${root}/${recordPathOf(config.runs.record, record.test)}`, JSON.stringify(record, null, 2) + "\n");
+  writeRuns(root, config, snapshot, reports);
   const removed = chosen.length > 0 ? [] : orphans;
   for (const path of removed) textFiles.remove(`${root}/${path}`);
   const failed = tests.filter((_, index) => results[index]?.status !== 0);
@@ -96,4 +82,34 @@ export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promis
     ].map((line) => `${line}\n`).join(""),
     exitCode: unreported.length > 0 ? 1 : 0,
   };
+}
+
+// One test's coverage reports from the directory its command wrote them into: LCOV files in it, raw V8
+// coverage in its `v8` directory.
+export function reportsIn(test: string, directory: string): { readonly test: string; readonly lcov: string[]; readonly v8: string[] } {
+  const read = (dir: string): string[] =>
+    textFiles.exists(dir)
+      ? textFiles
+          .entries(dir)
+          .filter((entry) => entry.file)
+          .map((entry) => textFiles.read(`${dir}/${entry.name}`))
+      : [];
+  return { test, lcov: read(directory), v8: read(`${directory}/v8`) };
+}
+
+// Writes each reported test's runs record, from its reports and the snapshot the tests ran over.
+export function writeRuns(
+  root: string,
+  config: KitConfig,
+  snapshot: Snapshot,
+  reports: readonly { readonly test: string; readonly lcov: readonly string[]; readonly v8: readonly string[] }[],
+): void {
+  const record = config.runs?.record;
+  if (record === undefined || reports.length === 0) return;
+  const functions = (snapshot.compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
+  const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
+  const inputs = recordInputs(snapshot);
+  const written = testRuns(reports, snapshot.files, root, config, new Map(reports.map(({ test }) => [test, inputs(test)])), functions, texts);
+  textFiles.directory(`${root}/${record}`);
+  for (const each of written) textFiles.write(`${root}/${recordPathOf(record, each.test)}`, JSON.stringify(each, null, 2) + "\n");
 }

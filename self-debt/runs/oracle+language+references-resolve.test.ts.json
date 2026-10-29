@@ -6,7 +6,7 @@
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
     "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
-    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
+    "src/core/primitives/default-config.ts": "c4b593b220401bc76b7ff2b7589b1c568813b5d2f061c0d468733239de1e78ab",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
     "src/core/primitives/import.ts": "c559201b45c7883f5388fd04a1dcaa1a02bf7d91cbad5f55a3e73f46bcc2d763",
@@ -23,7 +23,8 @@
     "src/core/readings/module-references.ts": "6e4814b98bc6406ac35d3c924b1b654ee2a45dfba1f0e715cfeffc6473b00748",
     "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
     "src/core/readings/semantic-references.ts": "f8ea87d4a83ae904a6534e67e07b9e71d3009bc7a73666ba0f11dd1a1c2736b8",
-    "src/core/readings/term-inventory.ts": "379a0fd747183b3edee52416ebfd2a36b6db5bfd1e87e360abd9b1df8ad584b1"
+    "src/core/readings/term-inventory.ts": "379a0fd747183b3edee52416ebfd2a36b6db5bfd1e87e360abd9b1df8ad584b1",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09"
   },
   "ran": {
     "oracle/core/readings/binding-findings.ts": [
@@ -76,6 +77,15 @@
       "sorted@22",
       "termInventory@5",
       "visit@39"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ]
   }
 }

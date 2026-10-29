@@ -12,6 +12,7 @@
     "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
     "src/core/readings/topic-shape.ts": "35b8ff90033eeffac50b1e4073be62cab9d4ecbf1cd3c039d981542881204b10",
     "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09",
     "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
     "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
     "src/substrate/compositions/read-config.ts": "107f186f28e520f6b14137f4d0d15c97175dff3aeae7c25a9334e37a56b902d0",
@@ -54,6 +55,16 @@
     "src/substrate/adapters/processes.ts": [
       "node@59",
       "run@38"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@18",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ],
     "src/substrate/adapters/source-loader.mjs": [
       "fetchModule@33",

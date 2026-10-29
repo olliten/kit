@@ -527,7 +527,7 @@
 - **runs-run** — the `kit runs` workflow: run every test, the given tests or the stale ones, each alone with the app's command, and record which named functions each ran.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{evidence-store}}, {{processes}}, {{read-config}}, {{read-snapshot}}, {{runs-freshness}}, {{test-runs}}, {{text-files}}, {{toolchain}}
+  - Of: {{command}}, {{config-values}}, {{default-config}}, {{evidence-store}}, {{processes}}, {{read-config}}, {{read-snapshot}}, {{runs-freshness}}, {{snapshot}}, {{test-runs}}, {{text-files}}, {{toolchain}}
 - **scripted-verification** — the workflow that runs verification checks whose effects are scripted as data, reporting what ran together.
   - Role: composition
   - Zone: substrate
@@ -559,7 +559,7 @@
 - **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{processes}}, {{read-config}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
+  - Of: {{command}}, {{config-values}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{processes}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{runs-run}}, {{stopwatch}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
 
 ## Supporting vocabulary and roles
 

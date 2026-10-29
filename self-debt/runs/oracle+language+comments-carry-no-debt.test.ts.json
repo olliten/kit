@@ -6,7 +6,7 @@
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
     "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
-    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
+    "src/core/primitives/default-config.ts": "c4b593b220401bc76b7ff2b7589b1c568813b5d2f061c0d468733239de1e78ab",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
     "src/core/primitives/import.ts": "c559201b45c7883f5388fd04a1dcaa1a02bf7d91cbad5f55a3e73f46bcc2d763",
@@ -17,7 +17,8 @@
     "src/core/primitives/zones.ts": "f49fc9a4bee55f79aa3ab3a33ef842c7b66e95c529a89c47343a3b0005660a01",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
     "src/core/readings/finding.ts": "9ee2a05d191688605465cb692dc5e85eb9b6c66e5254bd5856e16c1bda411f33",
-    "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9"
+    "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09"
   },
   "ran": {
     "oracle/core/readings/fixture-snapshot.ts": [
@@ -33,6 +34,15 @@
       "isZone@22",
       "placementOf@95",
       "rootOf@67"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ]
   }
 }

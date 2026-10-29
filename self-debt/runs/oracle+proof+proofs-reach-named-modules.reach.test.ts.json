@@ -6,8 +6,9 @@
     "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
     "oracle/substrate/compositions/program-fixture.ts": "fac1201b097dc9889c1c5a259b39d4dd5ed8b73e543e2104fd991e5e73343649",
     "oracle/substrate/compositions/recorded-reach.ts": "bac885ceaa25de776aecb7b0a199143f0ce13d7634c578969e449f217af62230",
-    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
+    "src/core/primitives/default-config.ts": "c4b593b220401bc76b7ff2b7589b1c568813b5d2f061c0d468733239de1e78ab",
     "src/substrate/adapters/compiler.ts": "53880d4648910262a0eb2d7c17d1718eec5ea705308869a5198ac68b1d7180dd",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09",
     "src/substrate/compositions/test-reach.ts": "55d43069234ca993d95744fad76c4a6720c0e0187739c14394f4c9f9eb340198",
     "src/substrate/primitives/program-scope.ts": "58bb04ca5efe734416da2456f9e9dcbb87283eacd996873de3cfdefdb6469fad"
   },
@@ -44,6 +45,16 @@
       "tracedSystem@73",
       "useSourceOfProjectReferenceRedirect@195",
       "workerHost@146"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@18",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ],
     "src/substrate/compositions/test-reach.ts": [
       "assignment@277",

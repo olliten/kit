@@ -2,9 +2,10 @@
   "test": "oracle/kit/proof-discovery-is-configured.test.ts",
   "digests": {
     "oracle/kit/proof-discovery-is-configured.test.ts": "b67f80c0641af63d6d8d77faff664a1e3e7018a915386b92926d8cf5aafa9e2e",
-    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
+    "src/core/primitives/default-config.ts": "c4b593b220401bc76b7ff2b7589b1c568813b5d2f061c0d468733239de1e78ab",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
-    "src/core/readings/test-roots.ts": "021ee43b6a7d89538fdbcf9c03e8e9cc5da502f1a11b21439df37b96216e8c4e"
+    "src/core/readings/test-roots.ts": "021ee43b6a7d89538fdbcf9c03e8e9cc5da502f1a11b21439df37b96216e8c4e",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09"
   },
   "ran": {
     "src/core/readings/config-values.ts": [
@@ -15,6 +16,15 @@
     ],
     "src/core/readings/test-roots.ts": [
       "testRoots@4"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ]
   }
 }

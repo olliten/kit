@@ -20,6 +20,7 @@ verify:
       command: npx tsc --noEmit -p tsconfig.json
     - id: check
       command: node scripts/kit-check.mjs
+      after: tests
   tests:
     command: npx vitest run {test}
     under: oracle/

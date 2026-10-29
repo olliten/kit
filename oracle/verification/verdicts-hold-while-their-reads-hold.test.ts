@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { holdingVerdict, verdictKey, verdictOf } from "../../src/core/readings/verdict-reuse.js";
@@ -75,3 +76,40 @@ test("runs on different trees each keep theirs, and the one whose paths hold is 
   expect(verdictOf("{")).toBeNull();
   expect(verdictOf(JSON.stringify({ check: "lint", seconds: 1, states: { a: 1 } }))).toBeNull();
 });
+
+test("with runs declared, one run of a test keeps its pass and its runs record, and what reads the records runs after", async () => {
+  const project = temporaryProjects.open("kit-verify-runs-");
+  projects.push(project);
+  const each =
+    "node --experimental-strip-types --no-warnings --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}";
+  project.write({
+    ".git/HEAD": "ref: refs/heads/main\n",
+    "package.json": JSON.stringify({ type: "module" }),
+    "tsconfig.json": JSON.stringify({
+      compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true, noEmit: true, allowImportingTsExtensions: true, types: ["node"] },
+      include: ["src/**/*.ts", "oracle/**/*.ts"],
+    }),
+    "src/core/readings/total.ts": "export function total(values: readonly number[]): number { return values.reduce((sum, value) => sum + value, 0); }\n",
+    "oracle/sums/total-sums.test.ts":
+      "import { test } from 'node:test';\nimport assert from 'node:assert';\nimport { total } from '../../src/core/readings/total.ts';\ntest('sums', () => { assert.equal(total([1, 2]), 3); });\n",
+    "oracle/sums/records-are-read.test.ts":
+      "import { test } from 'node:test';\nimport { readdirSync } from 'node:fs';\ntest('lists', () => { try { readdirSync('kit/runs'); } catch {} });\n",
+    "spec/terms.md": "# Terms\n",
+    "count-records.mjs": 'import { readdirSync } from "node:fs";\nif (readdirSync("kit/runs").length !== 2) process.exit(1);\n',
+    "kit/config.md":
+      "```yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nruns:\n  record: kit/runs\n  each: " +
+      each +
+      "\nverify:\n  checks:\n    - {id: records, command: node count-records.mjs, after: tests}\n  tests:\n    command: node --test {test}\n    under: oracle/\n```\n",
+  });
+  const config = join(project.root, "kit/config.md");
+  const result = await runVerify({ engineRoot: project.root, args: ["--root", project.root, "--config", config], cwd: project.root });
+  expect(result.exitCode).toBe(0);
+  expect(readdirSync(join(project.root, "kit/runs")).sort()).toEqual(["oracle+sums+records-are-read.test.ts.json", "oracle+sums+total-sums.test.ts.json"]);
+  // The test that listed the records ran before they were written, so it ran again, after them.
+  expect(result.stdout).toContain("passed records\npassed test:oracle/sums/records-are-read.test.ts\npassed test:oracle/sums/total-sums.test.ts\n");
+  expect(summary(result.stdout)).toMatchObject({ ran: 3, failed: 0 });
+  expect(summary((await runVerify({ engineRoot: project.root, args: ["--root", project.root, "--config", config], cwd: project.root })).stdout)).toMatchObject({
+    reused: 3,
+    ran: 0,
+  });
+}, 120_000);

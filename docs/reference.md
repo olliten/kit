@@ -197,6 +197,7 @@ verify:
       command: npx tsc --noEmit -p tsconfig.json
     - id: check
       command: node scripts/kit-check.mjs
+      after: tests
   tests:
     command: npx vitest run {test}
     under: oracle/
@@ -207,6 +208,11 @@ through `NODE_OPTIONS` that notes every path inside the app the run reads, lists
 processes, threads and child processes. A pass is kept beside the repository with the state of each of those
 paths, under the command, the Node version and the lockfile; the next `kit verify` reuses it while every path
 is in the same state. A failure is never kept. Worktrees of one repository share what is kept.
+
+With `runs` declared, `kit verify` runs each due test once, under `runs.each`, and writes its runs record from
+that run, so `kit runs` is needed only to record every test from scratch. A check with `after: tests`, such as
+`kit check`, which reads the runs records, runs once they are written, and a test that read something the pass
+wrote afterwards runs again.
 
 `kit verify --plan` lists what would run, `--fresh` runs everything and keeps nothing, and the exit code is 1
 when a check fails. A check that depends on something no file holds, such as the network, the clock or an

@@ -9,7 +9,7 @@
     "src/core/primitives/command.ts": "70f2614f2759a300204092f75a5e20958965cf1e9b00f52110e9d5a246ef775d",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
     "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
-    "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
+    "src/core/primitives/default-config.ts": "c4b593b220401bc76b7ff2b7589b1c568813b5d2f061c0d468733239de1e78ab",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file-facts.ts": "3207d63ad8e15d2bbfd4a64aab9e2fd748554cfbaeb6cdd354f8b2ce26e2858f",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
@@ -33,7 +33,7 @@
     "src/core/readings/claim-runs.ts": "9db8ae5e4017bd6065d3e2626f9972eddddc43472fac4e8ce34fd767498314d2",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
     "src/core/readings/compiler-check.ts": "5f3ac210216a184c72c6f104dac3054cdeb235e1ae4ce15b83f982486bef4804",
-    "src/core/readings/config-schema.ts": "902b3fa2ae3d962cfea7698c366ab054aa8bd09eff5990cb7812940408661c6a",
+    "src/core/readings/config-schema.ts": "d540a847264fdf974b6068cb54b223b35e31834d404581877519c9956361662b",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
     "src/core/readings/construction-check.ts": "f6c84df74248c11f99735438b877da77a0245565685d1aa2c262890b225cf4d4",
     "src/core/readings/dependency-check.ts": "07ec9a1bd0252d3421c1f76824d7fd9af5d155dd59e6c8408910b3fb2e69650a",
@@ -68,12 +68,13 @@
     "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
     "src/core/readings/term-order.ts": "d7ef4373e8e7f9737e06243c9598b7fd7568d7f4b0797b8a39a61deebd667942",
     "src/core/readings/topic-shape.ts": "35b8ff90033eeffac50b1e4073be62cab9d4ecbf1cd3c039d981542881204b10",
-    "src/core/readings/verification-configuration.ts": "dc00d7186918b3dd87474ff4332d81689c47fdcef1b8dd87c3fb892a3b1a3e2b",
+    "src/core/readings/verification-configuration.ts": "17c5bb715b46a33f3fb61301674db6d47e097d7a7290651d26d933dd209a0441",
     "src/core/readings/zone-authority-check.ts": "976c01e9046a442b0e8f3d0613b5fe8b97c4fddc3ae212e44952814c5b5d05c1",
     "src/core/readings/zone-permission.ts": "c63f6f3eb51b89a185e74b6ca617213a412a655e0b05db848e6ee4812a1a2e7b",
     "src/substrate/adapters/compiler.ts": "53880d4648910262a0eb2d7c17d1718eec5ea705308869a5198ac68b1d7180dd",
     "src/substrate/adapters/evidence-store.ts": "7697bcf6de59f8fbcbd8c6bc7890794dfbebd0bd44410b7fe74f63f99d3fa213",
     "src/substrate/adapters/filesystem.ts": "08effc3d3863d17a6eb80e266d24ef677223a3cceac5c6b06e44a281cd290f49",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09",
     "src/substrate/adapters/stopwatch.ts": "10e38f59dd52adb2bc2b11b313f092c966308a3032d8365d59bf621ca1191cb5",
     "src/substrate/adapters/text-files.ts": "e659d03ec074befb4f925335619caebc8112e8f0574f2cc6dbf70eddd868a9ec",
     "src/substrate/adapters/toolchain.ts": "d052ac7f3ef10bef3f9d90e580cb1081ce13ba0775ba60f5f91002ab3ac05548",
@@ -257,6 +258,7 @@
     ],
     "src/core/readings/root-token.ts": [
       "rootPattern@5",
+      "withRoot@15",
       "withoutRoot@12"
     ],
     "src/core/readings/runs-record.ts": [
@@ -317,12 +319,21 @@
       "files@28",
       "pathOf@18",
       "prune@104",
-      "read@66",
-      "write@84"
+      "read@66"
     ],
     "src/substrate/adapters/filesystem.ts": [
       "entries@37",
       "readText@26"
+    ],
+    "src/substrate/adapters/read-recorder.mjs": [
+      "note@23",
+      "note@33",
+      "runnersListing@18",
+      "runnersListing@26",
+      "wrap@45",
+      "wrap@58",
+      "wrapped@49",
+      "wrapped@63"
     ],
     "src/substrate/adapters/stopwatch.ts": [
       "now@6"
@@ -336,83 +347,13 @@
       "engine@28",
       "visit@32"
     ],
-    "src/substrate/compositions/authority-recorder.ts": [
-      "authorityRecorder@14",
-      "recordParameter@24",
-      "visit@44"
-    ],
-    "src/substrate/compositions/behaviour-reading.ts": [
-      "acceptsBehaviour@228",
-      "behaviourReading@57",
-      "contractType@195",
-      "executable@231",
-      "handleOf@221",
-      "libCollection@70",
-      "parameterFacts@179",
-      "typeFacts@76"
-    ],
     "src/substrate/compositions/check-run.ts": [
       "read@32",
-      "runCheck@16",
-      "write@33"
-    ],
-    "src/substrate/compositions/contract-reading.ts": [
-      "contractIdentity@38",
-      "contractReading@6",
-      "operationsOf@7",
-      "portsOf@19",
-      "typeNames@47"
-    ],
-    "src/substrate/compositions/contract-recorder.ts": [
-      "contractRecorder@14",
-      "visit@25"
-    ],
-    "src/substrate/compositions/escape-recorder.ts": [
-      "end@35",
-      "escapeRecorder@9",
-      "visit@14"
-    ],
-    "src/substrate/compositions/fact-walk.ts": [
-      "factWalk@14",
-      "visit@23"
-    ],
-    "src/substrate/compositions/file-scope.ts": [
-      "fileScope@13",
-      "site@26",
-      "syntaxOf@15",
-      "visitToken@17"
-    ],
-    "src/substrate/compositions/function-recorder.ts": [
-      "end@55",
-      "functionRecorder@31",
-      "nameOf@9",
-      "own@12",
-      "visit@37"
-    ],
-    "src/substrate/compositions/import-recorder.ts": [
-      "end@62",
-      "importRecorder@14",
-      "visit@27"
-    ],
-    "src/substrate/compositions/native-reading.ts": [
-      "hostValue@32",
-      "nativeAuthorityOf@102",
-      "nativeContract@189",
-      "nativeLibrary@24",
-      "nativeMember@60",
-      "nativeMemberAuthority@175",
-      "nativeReading@22",
-      "nativeType@70",
-      "referenceType@15"
+      "runCheck@16"
     ],
     "src/substrate/compositions/project-facts.ts": [
-      "byIdentity@148",
-      "byText@147",
-      "canonical@154",
       "declaresGlobals@139",
-      "importTarget@281",
       "keyOf@240",
-      "of@304",
       "outlineOf@111",
       "projectFacts@193",
       "proofKeyOf@241",
@@ -437,60 +378,6 @@
       "typeOf@333",
       "visit@300",
       "walk@319"
-    ],
-    "src/substrate/compositions/source-size.ts": [
-      "called@33",
-      "fileOf@20",
-      "sourceSize@9",
-      "targetOf@42",
-      "visit@61"
-    ],
-    "src/substrate/compositions/syntax-reading.ts": [
-      "annotation@147",
-      "globalName@80",
-      "literal@103",
-      "primitiveOf@35",
-      "rawAccess@43",
-      "syntaxReading@7",
-      "targetOf@8",
-      "typeOnlyOf@14"
-    ],
-    "src/substrate/compositions/term-recorder.ts": [
-      "end@17",
-      "termRecorder@11"
-    ],
-    "src/substrate/compositions/test-reach.ts": [
-      "assignment@277",
-      "bindingSymbols@281",
-      "bit@547",
-      "chainTop@243",
-      "changeable@429",
-      "changes@453",
-      "code@476",
-      "empty@175",
-      "enter@577",
-      "erased@69",
-      "flow@287",
-      "homeReferences@407",
-      "immutable@135",
-      "inert@412",
-      "isResults@645",
-      "isSymbol@649",
-      "names@16",
-      "namesOf@653",
-      "own@556",
-      "pieceOf@536",
-      "rawSymbolOf@41",
-      "reach@190",
-      "readonlyProperty@130",
-      "referencesIn@48",
-      "summarize@568",
-      "testReach@30",
-      "topLevelNames@12",
-      "unaliased@36",
-      "visit@483",
-      "visit@54",
-      "within@75"
     ]
   }
 }
