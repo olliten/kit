@@ -138,3 +138,69 @@ test("a package handle crosses only into the adapter that declares its package",
     `R1:handover:legacy/index.ts:${sdk}#title`,
   ]);
 });
+
+const localAdapter = "src/substrate/adapters/local-journal.ts";
+const localConsumer = "src/substrate/compositions/local-record.ts";
+const localCaller =
+  "import { record, readPort } from '../src/substrate/compositions/local-record.js';\nvoid record; void readPort;\n";
+const localRegistration: NonNullable<KitConfig["adapters"]> = [{
+  module: "substrate/adapters/local-journal",
+  export: "journal",
+  capability: "journal",
+  kind: "external",
+  zones: ["substrate"],
+  contract: { type: "LocalJournal" },
+}];
+const localConsumerSource =
+  "import { journal } from '../adapters/local-journal.js';\n" +
+  "export function record(value: ReturnType<typeof journal>): void { value.note('a'); }\n" +
+  "export function readPort(value: ReturnType<ReturnType<typeof journal>['open']>): string { return value.read(); }\n";
+const localAdapterSource = (declaration: string) =>
+  declaration + "\ninterface ReadPort { read(): string; }\n" +
+  "export function journal(): LocalJournal { return { note: () => {}, open: () => ({ read: () => '' }) }; }\n";
+const localFiles = (source: string): Readonly<Record<string, string>> => ({
+  [localAdapter]: source,
+  [localConsumer]: localConsumerSource,
+});
+
+test.each([
+  ["private interface", "interface LocalJournal { note(text: string): void; open(): ReadPort; }"],
+  ["private type alias", "type LocalJournal = { note(text: string): void; open(): ReadPort; };"],
+  ["exported interface", "export interface LocalJournal { note(text: string): void; open(): ReadPort; }"],
+])("a registered %s and its returned operation port cross without exposing the contract", (_, declaration) => {
+  expect(boundary(localCaller, { adapters: localRegistration }, localFiles(localAdapterSource(declaration)))).toEqual([]);
+});
+
+test.each([
+  ["missing registration", []],
+  ["wrong contract name", localRegistration.map((adapter) => ({ ...adapter, contract: { type: "MissingJournal" } }))],
+])("a private contract with %s remains behaviour", (_, adapters) => {
+  expect(boundary(localCaller, { adapters }, localFiles(localAdapterSource(
+    "interface LocalJournal { note(text: string): void; open(): ReadPort; }",
+  ))).map((item) => item.debtKey)).toEqual([
+    key(localConsumer, "readPort"), key(localConsumer, "record"),
+  ]);
+});
+
+test.each([
+  ["another file", "import type { LocalJournal } from '../compositions/foreign-contract.js';", {
+    "src/substrate/compositions/foreign-contract.ts":
+      "export interface LocalJournal { note(text: string): void; open(): { read(): string }; }",
+  }],
+  ["a nested namespace", "namespace Contracts { export interface LocalJournal { note(text: string): void; open(): ReadPort; } }\ntype Chosen = Contracts.LocalJournal;", {}],
+])("a same-named contract in %s does not grant the adapter's local contract", (_, declaration, extra) => {
+  const source = localAdapterSource(declaration).replace(
+    "journal(): LocalJournal", declaration.includes("namespace") ? "journal(): Chosen" : "journal(): LocalJournal",
+  );
+  expect(boundary(localCaller, { adapters: localRegistration }, {
+    ...localFiles(source), ...extra,
+  }).map((item) => item.debtKey)).toEqual([
+    key(localConsumer, "readPort"), key(localConsumer, "record"),
+  ]);
+});
+
+test("recognizing a local contract preserves opaque callback refusal", () => {
+  const caller = localCaller + "import { run } from '../src/substrate/compositions/run.js'; void run;\n";
+  const files = localFiles(localAdapterSource("interface LocalJournal { note(text: string): void; open(): ReadPort; }"));
+  expect(boundary(caller, { adapters: localRegistration }, files).map((item) => item.debtKey)).toEqual([key(run, "run")]);
+});
