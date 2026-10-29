@@ -50,7 +50,7 @@ its config, and its debt in its own baseline.
   - Proof: {{cache-app}}, {{cache-proof}}, {{processes}}
 - A path the config ignores is never listed or read by {{read-snapshot}}, and an import into it is an error,
   never a missing edge. · {#ignored-paths-are-unread}
-  - Implementation: {{kit-configuration}}, {{read-snapshot}}
+  - Implementation: {{kit-configuration}}, {{read-snapshot}}, {{ignored-import}}
   - Proof: {{cache-app}}, {{cache-proof}}
 - `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
   list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}

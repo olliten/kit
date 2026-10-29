@@ -9,7 +9,9 @@ import type { ImportEdge } from "../../core/primitives/import.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
 import { claimInventory } from "../../core/readings/claim-inventory.js";
+import { ignoredImport } from "../../core/readings/ignored-import.js";
 import { entrypointOf, legacyCodeOf, rootOf } from "../../core/readings/placement-of.js";
+import { relativeImport } from "../../core/readings/relative-import.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
@@ -126,7 +128,7 @@ export function readSnapshot(
         if (ignored(target)) throw ignoredImport(path, target);
       }
       const to = scope === undefined && specifier.startsWith(".")
-        ? resolve(path, specifier, known)
+        ? relativeImport(path, specifier, known)
         : aliasTarget(appRoot, path, specifier, dynamic, scope, ignored, known, trace.compiler);
       if (to !== undefined && !seen.has(to)) {
         seen.add(to);
@@ -419,22 +421,9 @@ function walk(
   });
 }
 
-function ignoredImport(from: string, to: string): Error {
-  return new Error(
-    `${from} imports ${to}, which the config ignores; an ignored path must hold no importable source.`,
-  );
-}
-
 function typeOf(path: string, config: KitConfig): FileType {
   if (path.startsWith(`${config.specRoot}/`) && path.endsWith(".md")) return "spec";
   if (/\.test\.[mc]?[jt]sx?$/.test(path)) return "test";
   return SOURCE.test(path) ? "source" : "other";
 }
 
-function resolve(from: string, specifier: string, known: ReadonlySet<string>): string | undefined {
-  if (!specifier.startsWith(".")) return undefined;
-  const base = posix.normalize(posix.join(posix.dirname(from), specifier));
-  const stem = base.replace(/\.(?:js|mjs|ts|mts)$/, "");
-  const candidates = [base, `${stem}.ts`, `${stem}.mts`, `${stem}.tsx`, `${base}/index.ts`];
-  return candidates.find((c) => known.has(c));
-}

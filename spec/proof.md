@@ -53,7 +53,7 @@ a claim depends on are named in it, so each module's claims are found from its n
 - A claim's tests together reach every placed module the claim names through the code they use, followed
   into helpers and modules as a capture is, and the modules of only types that code is written in; a named
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}
-  - Implementation: {{proof-reach}}, {{placement-of}}, {{read-snapshot}}, {{test-reach}}
+  - Implementation: {{proof-reach}}, {{placement-of}}, {{read-snapshot}}, {{relative-import}}, {{test-reach}}
   - Proof: {{fixture-snapshot}}, {{recorded-reach}}
 - A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. Only
   the modules of only types need no name: a placed oracle module, such as a generator, fixture, driver or
