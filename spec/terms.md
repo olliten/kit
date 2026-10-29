@@ -2,10 +2,6 @@
 
 ## Primitive contracts
 
-- **cache-app** — the small app a cache proof extracts, and what its config ignores.
-  - Role: fact
-  - Zone: core
-  - Of: []
 - **capability-app** — the capability case app's source inputs, as data a proof writes into a temporary project.
   - Role: fact
   - Zone: core
@@ -46,6 +42,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **file-facts** — one file's share of its project's compiler facts, and one test's reach, as stored under the key of what they depend on.
+  - Role: fact
+  - Zone: core
+  - Of: {{compiler-facts}}, {{file}}
 - **ignored-import** — the error for an import into a path the config ignores.
   - Role: derived
   - Zone: core
@@ -70,14 +70,14 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **small-app** — the small app the extraction and ignore proofs write into a temporary project, and what its config ignores.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **snapshot** — the supplied files, declarations, configuration and compiler facts of one codebase.
   - Role: fact
   - Zone: core
   - Of: {{claim}}, {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{reference}}, {{term}}
-- **snapshot-cache** — one stored extraction and the reads its trace replays, with the index and environment that key it.
-  - Role: fact
-  - Zone: core
-  - Of: []
 - **term** — a concept defined once in the global terms file, with its meaning and any declared contract metadata.
   - Role: fact
   - Zone: core
@@ -181,6 +181,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim-runs}}, {{finding}}, {{placement-of}}, {{runs}}, {{snapshot}}
+- **fact-keys** — the key one project's facts answer to, and for each file the files its imports reach and the key of all of them.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **finding** — what a check reports: its rule, a path, the fix and a debt key.
   - Role: derived
   - Zone: core
@@ -269,6 +273,10 @@
   - Role: derived
   - Zone: core
   - From: {{config-values}}
+- **root-token** — how the app root is written inside stored text, so worktrees of one repository share it.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **runs-freshness** — each test's record file and whether it still describes the code, with the files that changed, and the records whose tests are gone.
   - Role: derived
   - Zone: core
@@ -281,10 +289,6 @@
   - Role: derived
   - Zone: core
   - From: {{reference}}, {{topic}}, {{finding}}, {{snapshot}}
-- **snapshot-cache-key** — the key a stored extraction answers, its settled trace, and how its root is written so worktrees share it.
-  - Role: derived
-  - Zone: core
-  - From: {{default-config}}, {{snapshot-cache}}
 - **snapshot-comparison** — whether two snapshots are the same graph.
   - Role: derived
   - Zone: core
@@ -345,6 +349,10 @@
   - Role: adapter
   - Zone: substrate
   - Of: {{declared-input}}
+- **evidence-store** — ownership of what a machine learns about an app between runs: one file per key beside the repository, read and written whole, and evicted least recently used past a limit.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 - **filesystem** — access to file text and directory entries.
   - Role: adapter
   - Zone: substrate
@@ -353,15 +361,11 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **snapshot-store** — ownership of stored extractions: their objects, their index and its lock, and the environment that keys them.
-  - Role: adapter
-  - Zone: substrate
-  - Of: {{snapshot-cache}}
 - **source-loader** — access to Kit's TypeScript modules from a JavaScript launcher.
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **stopwatch** — access to the time, for receipts and cache bookkeeping.
+- **stopwatch** — access to the time, for receipts.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -377,6 +381,10 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
+- **toolchain** — access to the identity of the Kit that reads an app, from its own source.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 
 ## Composition contracts
 
@@ -388,14 +396,6 @@
   - Role: composition
   - Zone: substrate
   - Of: {{contract-reading}}, {{native-reading}}, {{placement-of}}, {{program-scope}}
-- **cache-proof** — the workflow that builds cache apps in temporary directories and checks them through the cache, counting extractions.
-  - Role: composition
-  - Zone: substrate
-  - Of: {{cache-app}}, {{cached-check}}, {{compiler}}, {{default-config}}, {{filesystem}}, {{read-snapshot}}, {{snapshot}}, {{temporary-project}}
-- **cached-check** — the workflow that reuses a stored extraction while every read it made still answers the same, and checks it again.
-  - Role: composition
-  - Zone: substrate
-  - Of: {{compiler}}, {{default-config}}, {{filesystem}}, {{snapshot}}, {{snapshot-cache}}, {{snapshot-cache-key}}, {{snapshot-store}}, {{stopwatch}}
 - **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
   - Role: composition
   - Zone: core
@@ -403,7 +403,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate
-  - Of: {{cached-check}}, {{check-paths}}, {{command}}, {{compiler}}, {{filesystem}}, {{gate}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{snapshot-comparison}}, {{text-files}}
+  - Of: {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{text-files}}, {{toolchain}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate
@@ -424,6 +424,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{file-scope}}
+- **extraction-proof** — the workflow that writes the small app into a temporary project, reads it through a store of its own, edits it, and reports what each read reused beside a read without the store.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{default-config}}, {{evidence-store}}, {{read-snapshot}}, {{small-app}}, {{snapshot}}, {{temporary-project}}
 - **fact-walk** — the one walk over a program's checked sources that hands every node to each recorder it is given.
   - Role: composition
   - Zone: substrate
@@ -456,6 +460,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{default-config}}, {{fixture-files}}, {{program-scope}}, {{temporary-project}}
+- **project-facts** — the workflow that reads one compiler project's facts, reusing each file's and test's stored facts while their key matches and walking only the rest.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler}}, {{compiler-facts}}, {{default-config}}, {{fact-keys}}, {{fact-walk}}, {{file}}, {{file-facts}}, {{ignored-import}}, {{root-token}}, {{source-size}}, {{test-reach}}, {{authority-recorder}}, {{behaviour-reading}}, {{contract-reading}}, {{contract-recorder}}, {{escape-recorder}}, {{function-recorder}}, {{import-recorder}}, {{native-reading}}, {{syntax-reading}}, {{term-recorder}}
 - **read-config** — the workflow that reads a config file and answers the configured Kit, or the command's failure naming each issue.
   - Role: composition
   - Zone: substrate
@@ -463,7 +471,7 @@
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate
-  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{ignored-import}}, {{placement-of}}, {{relative-import}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{source-size}}, {{syntax-reading}}, {{test-reach}}, {{behaviour-reading}}, {{contract-reading}}, {{native-reading}}, {{authority-recorder}}, {{contract-recorder}}, {{escape-recorder}}, {{fact-walk}}, {{function-recorder}}, {{import-recorder}}, {{term-recorder}}
+  - Of: {{comment}}, {{compiler-facts}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}, {{claim-inventory}}, {{ignored-import}}, {{placement-of}}, {{relative-import}}, {{semantic-references}}, {{term-inventory}}, {{compiler}}, {{filesystem}}, {{project-facts}}, {{source-size}}
 - **recorded-authority** — the workflow that compiles a fixture and records only its parameters, accesses and globals.
   - Role: composition
   - Zone: substrate
@@ -499,7 +507,7 @@
 - **runs-run** — the `kit runs` workflow: run every test, the given tests or the stale ones, each alone with the app's command, and record which named functions each ran.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{processes}}, {{read-config}}, {{read-snapshot}}, {{runs-freshness}}, {{test-runs}}, {{text-files}}
+  - Of: {{command}}, {{config-values}}, {{evidence-store}}, {{processes}}, {{read-config}}, {{read-snapshot}}, {{runs-freshness}}, {{test-runs}}, {{text-files}}, {{toolchain}}
 - **scripted-verification** — the workflow that runs verification checks whose effects are scripted as data, reporting what ran together.
   - Role: composition
   - Zone: substrate

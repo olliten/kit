@@ -2,10 +2,12 @@ import type { CommandRequest, CommandResponse } from "../../core/primitives/comm
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { recordInputs, recordPathOf, runsFreshness } from "../../core/readings/runs-freshness.js";
 import { testRuns } from "../../core/readings/test-runs.js";
+import { evidenceStore } from "../adapters/evidence-store.js";
 import { processes } from "../adapters/processes.js";
 import { textFiles } from "../adapters/text-files.js";
+import { toolchain } from "../adapters/toolchain.js";
 import { readConfig } from "./read-config.js";
-import { readSnapshot } from "./read-snapshot.js";
+import { readStoredSnapshot } from "./read-snapshot.js";
 
 // `kit runs`: run each test file alone with the app's own command, which writes an LCOV report into its own
 // directory, and record per test which named functions of each placed module it ran. Given test paths it records
@@ -27,7 +29,14 @@ export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promis
   const { config } = loaded;
   if (config.runs === undefined)
     return { stdout: "", stderr: `Kit config ${configPath}: declare runs, its record path and test command.\n`, exitCode: 1 };
-  const snapshot = readSnapshot(root, config);
+  const store = evidenceStore.directory(root);
+  const { snapshot } = readStoredSnapshot(root, config, {
+    reuse: {
+      read: (kind, key) => evidenceStore.read(store, kind, key),
+      write: (kind, key, text) => evidenceStore.write(store, kind, key, text),
+    },
+    engine: toolchain.engine(engineRoot),
+  });
   const { records, orphans } = runsFreshness(snapshot);
   const stale = args.includes("--stale");
   const named = args.filter((argument, index) => !argument.startsWith("--") && !["--root", "--config"].includes(args[index - 1] ?? ""));

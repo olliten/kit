@@ -48,21 +48,23 @@ its config, and its debt in its own baseline.
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
   - Proof: {{case-inventory}}, {{source-loader}}, {{capability-app}}, {{temporary-project}}
-- A cache hit reuses extraction and reruns the check; a corrupt cache is rebuilt, and a source change during
-  extraction or checking rejects the result. `kit check --fresh-compare` also extracts afresh and fails when
-  the cached snapshot or its findings differ. Snapshots too large for JSON remain reusable in their original
-  checkout. A storage failure is reported and leaves the fresh check authoritative. · {#cached-check-keeps-evidence}
-  - Implementation: {{cached-check}}, {{check-run}}, {{snapshot-cache}}, {{snapshot-cache-key}}, {{snapshot-comparison}}, {{snapshot-store}}, {{stopwatch}}
-  - Proof: {{cache-app}}, {{cache-proof}}
-- A cached snapshot is reused only while every read its extraction made through {{filesystem}} and
-  {{compiler}} returns the same: each file's bytes, each directory listing and each probe that found nothing.
-  A change nothing read misses no entry, and worktrees of one repository share one cache. · {#cache-keys-on-what-was-read}
-  - Implementation: {{cached-check}}, {{read-snapshot}}, {{snapshot-cache-key}}, {{snapshot-store}}
-  - Proof: {{cache-app}}, {{cache-proof}}, {{processes}}
+- A file's compiler facts and a test's reach are stored under a key of what they depend on: the file and every
+  file its imports reach, with what Kit takes each for, and its project, which is the Kit that read it, the
+  compiler, the config, the project's options, every declaration file the program loads, every file declaring
+  globals or ambient modules, and the registered adapter modules. A read reuses every file and test whose key
+  still matches and computes the rest, so a change recomputes exactly the files and tests whose key it
+  changes, and worktrees of one repository share the store. · {#facts-are-keyed-on-their-inputs}
+  - Implementation: {{fact-keys}}, {{file-facts}}, {{project-facts}}, {{read-snapshot}}, {{evidence-store}}, {{root-token}}, {{fact-walk}}, {{compiler}}
+  - Proof: {{extraction-proof}}, {{small-app}}, {{temporary-project}}
+- A read through the store equals a read without it, as a snapshot and in its findings, after any sequence of
+  edits: the compiler's member and union order, which depends on what it checked first, is never kept. `kit
+  check --fresh` reads without the store, and an entry the store can't read is computed again. · {#stored-equals-fresh}
+  - Implementation: {{project-facts}}, {{read-snapshot}}, {{check-run}}, {{evidence-store}}, {{toolchain}}, {{stopwatch}}
+  - Proof: {{extraction-proof}}, {{small-app}}, {{snapshot-comparison}}
 - A path the config ignores is never listed or read by {{read-snapshot}}, and an import into it is an error,
   never a missing edge. · {#ignored-paths-are-unread}
   - Implementation: {{kit-configuration}}, {{read-snapshot}}, {{ignored-import}}
-  - Proof: {{cache-app}}, {{cache-proof}}
+  - Proof: {{small-app}}, {{temporary-project}}
 - `kit refs` lists the claims that name a module, each with its topic and tests; as a read hook it adds that
   list to what an agent sees when it opens the module, and adds nothing for any other file. · {#refs-list-a-modules-claims}
   - Implementation: {{refs-description}}, {{refs-run}}, {{text-files}}, {{source-loader}}, {{terminal-input}}

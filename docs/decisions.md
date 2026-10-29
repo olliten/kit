@@ -522,3 +522,21 @@ without naming the app.
 - **Cost:** about 100 small committed files for Kit. Re-recording one test takes about 30 seconds, against about
   5 minutes for all of them.
 - **For apps:** `runs.record` names a directory; delete the old file and run `kit runs`.
+
+## 2026-10-29 · Facts are kept per file, keyed on what they depend on
+
+- **Decision:** extraction stores each file's compiler facts and each test's reach in a store beside the
+  repository, one file per key, and reuses an entry while its key matches. A file's key is its project's key and
+  the content of every file its imports reach; a project's key is the Kit, the compiler, the config, the
+  project's options, its declaration files, its files declaring globals and its registered adapters. `kit check
+  --fresh` reads without the store. The whole-snapshot cache, its trace replay and `--fresh-compare` are gone,
+  and each project's program is released once its facts are read.
+- **Why:** the cache reused a snapshot only when nothing it read had changed, so any edit re-extracted the whole
+  app, and on Leeloo the cache's single JSON string of the snapshot exceeded the default heap. Leeloo's four
+  programs were all held to the end: 3.1 GB of heap after extraction, 1.1 GB once released. Keying on content
+  rather than replaying reads makes a key a value, which worktrees share and a store can hold without an index.
+- **The order rule:** the compiler orders a union's parts and a type's members by when it created them, which
+  depends on what it checked first, so a file walked alone could record them differently from a full walk. Such
+  lists are stored sorted, and an export's printed type, which no check read, is no longer recorded.
+- **Measured on Kit:** `kit check` with nothing changed takes 1.6 s against 8 s; one edited leaf re-extracts 7
+  files and 5 tests.

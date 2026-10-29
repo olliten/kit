@@ -124,20 +124,26 @@ adapters:
     contract: {type: Processes}
     globals: [process]
     packages: [node:child_process]
-  - module: src/substrate/adapters/snapshot-store
-    export: snapshotStore
+  - module: src/substrate/adapters/evidence-store
+    export: evidenceStore
     capability: filesystem
     kind: external
     zones: [substrate]
-    contract: {type: SnapshotStore}
-    globals: [Buffer, process]
-    primitives: [clock, randomness]
-  - module: src/substrate/adapters/snapshot-store
-    export: snapshotStore
+    contract: {type: EvidenceStore}
+    globals: [process]
+    primitives: [clock]
+  - module: src/substrate/adapters/evidence-store
+    export: evidenceStore
     capability: process-environment
     kind: external
     zones: [substrate]
-    contract: {type: SnapshotStore}
+    contract: {type: EvidenceStore}
+  - module: src/substrate/adapters/toolchain
+    export: toolchain
+    capability: filesystem
+    kind: external
+    zones: [substrate]
+    contract: {type: Toolchain}
   - module: src/substrate/adapters/terminal-input
     export: terminalInput
     capability: filesystem

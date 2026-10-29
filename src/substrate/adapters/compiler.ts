@@ -39,7 +39,6 @@ export interface CompilerWorkspace {
     trace: CompilerRead[],
     mode?: ts.ResolutionMode,
   ): ts.ResolvedModuleFull | undefined;
-  reread(read: CompilerRead): CompilerRead;
 }
 
 type Argument = string | number | readonly string[] | undefined;
@@ -122,15 +121,6 @@ function systemOf(trace: CompilerRead[]): ts.System {
   systems.set(trace, system);
   return system;
 }
-
-const text = (value: CompilerRead["arguments"][number] | undefined): string =>
-  typeof value === "string" ? value : "";
-const optionalText = (value: CompilerRead["arguments"][number] | undefined): string | undefined =>
-  typeof value === "string" ? value : undefined;
-const list = (value: CompilerRead["arguments"][number] | undefined): readonly string[] | undefined =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : undefined;
-const count = (value: CompilerRead["arguments"][number] | undefined): number | undefined =>
-  typeof value === "number" ? value : undefined;
 
 let workerHostCache: { readonly text: string; readonly host: WorkerHost } | undefined;
 
@@ -215,22 +205,4 @@ export const compilerWorkspace: CompilerWorkspace = {
   resolve: (specifier, containingFile, options, trace, mode) =>
     ts.resolveModuleName(specifier, containingFile, options, systemOf(trace), undefined, undefined, mode)
       .resolvedModule,
-  reread(read) {
-    const again: CompilerRead[] = [];
-    const system = tracedSystem(again);
-    const [first, second, third, fourth, fifth] = read.arguments;
-    try {
-      if (read.operation === "readFile") system.readFile(text(first), optionalText(second));
-      else if (read.operation === "fileExists") system.fileExists(text(first));
-      else if (read.operation === "directoryExists") system.directoryExists(text(first));
-      else if (read.operation === "getDirectories") system.getDirectories(text(first));
-      else if (read.operation === "realpath") system.realpath?.(text(first));
-      else if (read.operation === "readDirectory")
-        system.readDirectory(text(first), list(second), list(third), list(fourth), count(fifth));
-      else environmentReader(again)(text(first));
-    } catch {
-      // A thrown read is recorded with its error code, which is what gets compared.
-    }
-    return again[0] ?? read;
-  },
 };

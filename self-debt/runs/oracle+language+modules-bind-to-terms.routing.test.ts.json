@@ -10,9 +10,9 @@
     "src/core/readings/name-check.ts": "8aa2a94f88453ab26187f07f2e3cbf1ced612af97d2e4ac5c0b95fb89ed25658",
     "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
     "src/core/readings/topic-shape.ts": "35b8ff90033eeffac50b1e4073be62cab9d4ecbf1cd3c039d981542881204b10",
+    "src/substrate/adapters/evidence-store.ts": "76a918cf148c2a093c69d000850fc73d9dbe492c7595a06d53c1e8b7fc95891f",
     "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
     "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
-    "src/substrate/adapters/stopwatch.ts": "d5e22526fc9c865a262d5df46e174a0f73c52128f8bf24cee018e0ae7dc243a2",
     "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
     "src/substrate/compositions/read-config.ts": "107f186f28e520f6b14137f4d0d15c97175dff3aeae7c25a9334e37a56b902d0",
     "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb"
@@ -48,6 +48,10 @@
       "add@30",
       "topicShape@21"
     ],
+    "src/substrate/adapters/evidence-store.ts": [
+      "files@26",
+      "pathOf@16"
+    ],
     "src/substrate/adapters/processes.ts": [
       "node@59",
       "run@38"
@@ -58,10 +62,6 @@
       "resolveId@34",
       "run@61",
       "withKit@16"
-    ],
-    "src/substrate/adapters/stopwatch.ts": [
-      "date@7",
-      "now@7"
     ],
     "src/substrate/compositions/contract-reading.ts": [
       "contractReading@6"

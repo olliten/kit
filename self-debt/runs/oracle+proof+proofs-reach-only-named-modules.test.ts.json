@@ -5,7 +5,7 @@
     "oracle/proof/proofs-reach-only-named-modules.test.ts": "45cb78e248b97685bd3866e150c7c7fa24cf36cc2dee01c4f29110a6bbee0faf",
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
-    "src/core/primitives/compiler-facts.ts": "685cc0836921f5966c01dbc66adb9214b8b6c2e66d3f9cc6ab55b045e0951cf9",
+    "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
     "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",

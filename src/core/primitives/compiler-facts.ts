@@ -101,7 +101,6 @@ export interface CompilerFacts {
       readonly file: string;
       readonly name: string;
       readonly declarationFile: string;
-      readonly type: string;
       readonly explicit: boolean;
       readonly any: boolean;
       readonly unknown: boolean;

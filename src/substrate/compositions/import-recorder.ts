@@ -97,7 +97,6 @@ export function importRecorder(
           file: path,
           name: exported.name,
           declarationFile: local(declaration.getSourceFile().fileName),
-          type: checker.typeToString(type),
           explicit,
           any: (type.flags & ts.TypeFlags.Any) !== 0,
           unknown: (type.flags & ts.TypeFlags.Unknown) !== 0,

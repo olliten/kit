@@ -9,7 +9,7 @@
     "oracle/substrate/compositions/recorded-authority.ts": "423778c69f2e8d39411487c0dc7ecbfb5f08b017344a5f340cd13b481eb14b5d",
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
-    "src/core/primitives/compiler-facts.ts": "685cc0836921f5966c01dbc66adb9214b8b6c2e66d3f9cc6ab55b045e0951cf9",
+    "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
     "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
@@ -28,11 +28,11 @@
     "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
     "src/core/readings/zone-authority-check.ts": "976c01e9046a442b0e8f3d0613b5fe8b97c4fddc3ae212e44952814c5b5d05c1",
     "src/core/readings/zone-permission.ts": "c63f6f3eb51b89a185e74b6ca617213a412a655e0b05db848e6ee4812a1a2e7b",
-    "src/substrate/adapters/compiler.ts": "2ef6eed3842686db6ce4fa272c79314a4f49249c37e8796eb41d65af83cb783a",
+    "src/substrate/adapters/compiler.ts": "53880d4648910262a0eb2d7c17d1718eec5ea705308869a5198ac68b1d7180dd",
     "src/substrate/compositions/authority-recorder.ts": "a86300ed1007c31e66a93a7605a31a3508e422601e8ce9a7d2ea7f0d08dce229",
     "src/substrate/compositions/behaviour-reading.ts": "99ec3216576aecc0f15fa4ad08659c46c3e5253cb31effde24c0eace20f4852f",
     "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
-    "src/substrate/compositions/fact-walk.ts": "3ac7090d9d2a71561acde1e1b421ac2da1494690739e4cc45016f3db76190873",
+    "src/substrate/compositions/fact-walk.ts": "e6a12a5e1bfa1cac8b5f275dd0abc1b0e929f26274af66cf46481d3afa5b38d9",
     "src/substrate/compositions/file-scope.ts": "db032e8b829a4f2ae55dda7d1c0f594a005fe7da216ed2c3a1b133c5b93657ee",
     "src/substrate/compositions/native-reading.ts": "4807754ca71be2f0503f5750bf42dbb40f910f71e648380923f098647e401d60",
     "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb",
@@ -96,18 +96,18 @@
       "permits@20"
     ],
     "src/substrate/adapters/compiler.ts": [
-      "digest@67",
-      "environmentReader@109",
-      "getSourceFile@191",
-      "load@177",
-      "names@70",
-      "recorded@47",
-      "same@69",
-      "sourceOf@141",
-      "systemOf@118",
-      "tracedSystem@74",
-      "useSourceOfProjectReferenceRedirect@205",
-      "workerHost@156"
+      "digest@66",
+      "environmentReader@108",
+      "getSourceFile@181",
+      "load@167",
+      "names@69",
+      "recorded@46",
+      "same@68",
+      "sourceOf@131",
+      "systemOf@117",
+      "tracedSystem@73",
+      "useSourceOfProjectReferenceRedirect@195",
+      "workerHost@146"
     ],
     "src/substrate/compositions/authority-recorder.ts": [
       "authorityRecorder@14",
@@ -121,8 +121,8 @@
       "contractReading@6"
     ],
     "src/substrate/compositions/fact-walk.ts": [
-      "factWalk@13",
-      "visit@18"
+      "factWalk@14",
+      "visit@23"
     ],
     "src/substrate/compositions/file-scope.ts": [
       "fileScope@13"

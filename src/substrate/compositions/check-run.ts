@@ -2,17 +2,16 @@ import { gate } from "../../core/compositions/gate.js";
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
 import { kitCheckPaths } from "../../core/readings/check-paths.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
-import { sameSnapshot } from "../../core/readings/snapshot-comparison.js";
-import { compilerWorkspace } from "../adapters/compiler.js";
-import { filesystem } from "../adapters/filesystem.js";
+import { evidenceStore } from "../adapters/evidence-store.js";
+import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
-import { cachedKitCheck } from "./cached-check.js";
+import { toolchain } from "../adapters/toolchain.js";
 import { readConfig } from "./read-config.js";
-import { readSnapshot } from "./read-snapshot.js";
+import { readStoredSnapshot } from "./read-snapshot.js";
 
-// `kit check`: read the governed root, run every rule, and fail on what the baseline doesn't hold. `--tighten`
-// shrinks the baseline to what is left, `--report` prints the findings, and `--fresh-compare` proves the
-// cache changed nothing.
+// `kit check`: read the governed root, run every rule, and fail on what the baseline doesn't hold. Facts read
+// before are reused while what they depend on is unchanged; `--fresh` reads everything again and stores nothing.
+// `--tighten` shrinks the baseline to what is left, and `--report` prints the findings.
 export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promise<CommandResponse> {
   let stdout = "";
   let stderr = "";
@@ -20,18 +19,26 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
   const loaded = readConfig(configPath);
   if ("failure" in loaded) return loaded.failure;
   const { config } = loaded;
-  const check = (snapshot: Parameters<typeof gate>[0]) => gate(snapshot, config);
-  const checked = await cachedKitCheck(root, config, readSnapshot, check, {
-    filesystem,
-    compiler: compilerWorkspace,
-  });
-  if (args.includes("--fresh-compare")) {
-    const fresh = readSnapshot(root, config);
-    if (!sameSnapshot(fresh, checked.snapshot) || JSON.stringify(check(fresh)) !== JSON.stringify(checked.result)) {
-      return { stdout, stderr: "Kit cache diverged: a fresh extraction differs from the cached one.\n", exitCode: 2 };
-    }
-    stdout += "Kit fresh-compare: the cached snapshot equals a fresh extraction.\n";
-  }
+  const store = evidenceStore.directory(root);
+  const started = stopwatch.now();
+  const { snapshot, receipt: extraction } = readStoredSnapshot(
+    root,
+    config,
+    args.includes("--fresh")
+      ? undefined
+      : {
+          reuse: {
+            read: (kind, key) => evidenceStore.read(store, kind, key),
+            write: (kind, key, text) => evidenceStore.write(store, kind, key, text),
+          },
+          engine: toolchain.engine(engineRoot),
+        },
+  );
+  if (!args.includes("--fresh")) evidenceStore.prune(store);
+  const read = stopwatch.now();
+  const result = gate(snapshot, config);
+  const receipt = { ...extraction, seconds: (read - started) / 1000, checkSeconds: (stopwatch.now() - read) / 1000 };
+  const checked = { result, receipt };
   const { findings, placedPaths, imports, requiredLimits } = checked.result;
   if (args.includes("--report"))
     return { stdout: stdout + JSON.stringify({ findings, receipt: checked.receipt }, null, 2) + "\n", stderr, exitCode: 0 };

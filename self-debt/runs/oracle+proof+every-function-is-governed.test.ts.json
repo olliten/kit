@@ -9,7 +9,7 @@
     "oracle/substrate/compositions/recorded-functions.ts": "88d5f3382c62bd955b78b8857f77434282a9db0bedd389ebd32ce4de70160670",
     "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
     "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
-    "src/core/primitives/compiler-facts.ts": "685cc0836921f5966c01dbc66adb9214b8b6c2e66d3f9cc6ab55b045e0951cf9",
+    "src/core/primitives/compiler-facts.ts": "778e0e64e228e8ddca6f5d65548959e5a17187da86e9ce52b8ff1e365b93b19c",
     "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
     "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
     "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
@@ -25,8 +25,8 @@
     "src/core/readings/function-governance.ts": "807080089cfad6a058fcadda80e7d20deb7c008d61b9525b458c6dcea0c1977c",
     "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
     "src/core/readings/proof-reach.ts": "46185de7aaedb3bc086c6449a5d2384b23017d5b75b13cbc352926405c174924",
-    "src/substrate/adapters/compiler.ts": "2ef6eed3842686db6ce4fa272c79314a4f49249c37e8796eb41d65af83cb783a",
-    "src/substrate/compositions/fact-walk.ts": "3ac7090d9d2a71561acde1e1b421ac2da1494690739e4cc45016f3db76190873",
+    "src/substrate/adapters/compiler.ts": "53880d4648910262a0eb2d7c17d1718eec5ea705308869a5198ac68b1d7180dd",
+    "src/substrate/compositions/fact-walk.ts": "e6a12a5e1bfa1cac8b5f275dd0abc1b0e929f26274af66cf46481d3afa5b38d9",
     "src/substrate/compositions/file-scope.ts": "db032e8b829a4f2ae55dda7d1c0f594a005fe7da216ed2c3a1b133c5b93657ee",
     "src/substrate/compositions/function-recorder.ts": "2493170de3b01a2aa449a76526735542db635824f741f191b2128fe9add0d8ff",
     "src/substrate/primitives/program-scope.ts": "58bb04ca5efe734416da2456f9e9dcbb87283eacd996873de3cfdefdb6469fad"
@@ -72,22 +72,22 @@
       "moduleHomes@83"
     ],
     "src/substrate/adapters/compiler.ts": [
-      "digest@67",
-      "environmentReader@109",
-      "getSourceFile@191",
-      "load@177",
-      "names@70",
-      "recorded@47",
-      "same@69",
-      "sourceOf@141",
-      "systemOf@118",
-      "tracedSystem@74",
-      "useSourceOfProjectReferenceRedirect@205",
-      "workerHost@156"
+      "digest@66",
+      "environmentReader@108",
+      "getSourceFile@181",
+      "load@167",
+      "names@69",
+      "recorded@46",
+      "same@68",
+      "sourceOf@131",
+      "systemOf@117",
+      "tracedSystem@73",
+      "useSourceOfProjectReferenceRedirect@195",
+      "workerHost@146"
     ],
     "src/substrate/compositions/fact-walk.ts": [
-      "factWalk@13",
-      "visit@18"
+      "factWalk@14",
+      "visit@23"
     ],
     "src/substrate/compositions/file-scope.ts": [
       "fileScope@13"
