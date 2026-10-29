@@ -33,6 +33,18 @@ test("an edit recomputes exactly the files whose imports reach it, and the tests
   expect(computed(app)).toEqual({ files: 3, proofs: 1 });
 });
 
+test("a body behind a declared return type is the file's own: its importers' facts stay, its tests' reach does not", () => {
+  const app = open();
+  app.stored();
+  app.put(
+    "src/core/readings/double.ts",
+    'import type { Shape } from "a";\nimport { value } from "../primitives/value.js";\nexport const double = (shape: Shape): number => shape.n * value * 3;\n',
+  );
+  expect(computed(app)).toEqual({ files: 1, proofs: 1 });
+  app.put("src/core/readings/third.ts", "export const third = (n: number) => n / 3 + 0;\n");
+  expect(computed(app)).toEqual({ files: 2, proofs: 0 });
+});
+
 test("an edit to what the whole project depends on recomputes every file", () => {
   const app = open();
   const all = app.stored().receipt.files.computed;

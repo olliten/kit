@@ -48,8 +48,11 @@ its config, and its debt in its own baseline.
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
   - Proof: {{case-inventory}}, {{source-loader}}, {{capability-app}}, {{temporary-project}}
-- A file's compiler facts and a test's reach are stored under a key of what they depend on: the file and every
-  file its imports reach, with what Kit takes each for, and its project, which is the Kit that read it, the
+- A file's compiler facts and a test's reach are stored under a key of what they depend on. A file's facts
+  depend on its own content and on the outline of every file its imports reach: its text without the bodies of
+  functions whose return type it declares, which no importer can see; a test's reach follows bodies, so it
+  depends on the content of every file its imports reach. Each key also holds what Kit takes each file for, and
+  the project, which is the Kit that read it, the
   compiler, the config, the project's options, every declaration file the program loads, every file declaring
   globals or ambient modules, and the registered adapter modules. A read reuses every file and test whose key
   still matches and computes the rest, so a change recomputes exactly the files and tests whose key it

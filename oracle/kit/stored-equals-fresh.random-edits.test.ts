@@ -26,6 +26,12 @@ const EDITS: readonly ((app: SmallApp, n: number) => void)[] = [
         ? "export const half = (n: number): number => n / 2;\n"
         : 'import { value } from "../primitives/value.js";\nexport const half = (n: number): number => n / value;\n',
     ),
+  (app, n) =>
+    app.put(
+      "src/core/readings/double.ts",
+      `import type { Shape } from "a";\nimport { value } from "../primitives/value.js";\nexport const double = (shape: Shape): number => shape.n * value * ${n};\n`,
+    ),
+  (app, n) => app.put("src/core/readings/third.ts", n % 2 === 0 ? `export const third = (n: number) => n / ${n};\n` : `export const third = (n: number) => String(n / ${n});\n`),
   (app, n) => app.put("node_modules/a/index.d.ts", `export interface Shape { readonly n: ${n % 2 === 0 ? "number" : "string"}; }\n`),
   (app, n) => app.put(`evidence/read-cost/${n}.json`, `{"n":${n}}\n`),
   (app, n) => app.put("node_modules/a/README.md", `# a ${n}\n`),

@@ -4,7 +4,7 @@ import type { CompilerFacts } from "../../core/primitives/compiler-facts.js";
 import type { KitConfig } from "../../core/primitives/default-config.js";
 import type { FileFacts, StoredProof } from "../../core/primitives/file-facts.js";
 import type { SourceSize } from "../../core/primitives/file.js";
-import { closureKey, digest, importClosures, projectKey } from "../../core/readings/fact-keys.js";
+import { closureKey, digest, factsKey, importClosures, projectKey } from "../../core/readings/fact-keys.js";
 import { ignoredImport } from "../../core/readings/ignored-import.js";
 import { withRoot, withoutRoot } from "../../core/readings/root-token.js";
 import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
@@ -103,6 +103,36 @@ function specifiersOf(sf: ts.SourceFile): ts.StringLiteralLike[] {
   };
   visit(sf);
   return found;
+}
+
+// What a file lends the files that import it: its text without the bodies of functions whose return type it
+// declares, which no importer's types can see. A body whose return type is inferred stays, since the type is
+// the body's. Initializers stay too, since readings follow a constant to what it holds.
+function outlineOf(sf: ts.SourceFile): string {
+  const cuts: (readonly [number, number])[] = [];
+  const visit = (node: ts.Node): void => {
+    const typed =
+      ((ts.isFunctionDeclaration(node) ||
+        ts.isMethodDeclaration(node) ||
+        ts.isFunctionExpression(node) ||
+        ts.isArrowFunction(node) ||
+        ts.isGetAccessorDeclaration(node)) &&
+        node.type !== undefined) ||
+      ts.isSetAccessorDeclaration(node);
+    if (typed && node.body !== undefined) {
+      cuts.push([node.body.getStart(sf), node.body.getEnd()]);
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  let outline = "";
+  let at = 0;
+  for (const [start, end] of cuts) {
+    outline += `${sf.text.slice(at, start)}{}`;
+    at = end;
+  }
+  return digest(outline + sf.text.slice(at));
 }
 
 // A file that declares globals or ambient modules changes what every file of its program means.
@@ -205,7 +235,11 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
   });
   const roles = new Map<string, string>();
   for (const path of closures.keys()) roles.set(path, source.has(path) ? "source" : tests.has(path) ? "test" : "other");
-  const keyOf = (path: string): string => closureKey(project, closures.get(path) ?? [path], digests, roles);
+  const outlines = new Map<string, string>();
+  for (const sf of own) outlines.set(local(sf.fileName), outlineOf(sf));
+  const keyOf = (path: string): string => factsKey(project, path, closures.get(path) ?? [path], digests, outlines, roles);
+  const proofKeyOf = (path: string): string =>
+    digest(`proof\u0000${closureKey(project, closures.get(path) ?? [path], digests, roles)}`);
 
   const stored = <T>(kind: string, key: string): T | undefined => {
     const text = reuse?.read(kind, key);
@@ -225,7 +259,7 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
   }
   const proofs = new Map<string, StoredProof>();
   for (const sf of proofFiles) {
-    const found = stored<StoredProof>("proofs", digest(`proof\u0000${fileKeys.get(local(sf.fileName)) ?? ""}`));
+    const found = stored<StoredProof>("proofs", proofKeyOf(local(sf.fileName)));
     if (found !== undefined) proofs.set(local(sf.fileName), found);
   }
   const projectWide = stored<{ readonly diagnostics: Diagnostic[] }>("project", project);
@@ -320,7 +354,7 @@ export function projectFacts(context: AppContext, file: string, trace: CompilerR
         declarations: declarations.filter((declaration) => declaration.file !== path),
       };
       proofs.set(path, proof);
-      reuse?.write("proofs", digest(`proof\u0000${fileKeys.get(path) ?? ""}`), withoutRoot(JSON.stringify(proof), appRoot));
+      reuse?.write("proofs", proofKeyOf(path), withoutRoot(JSON.stringify(proof), appRoot));
     }
   }
 

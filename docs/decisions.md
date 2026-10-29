@@ -563,3 +563,15 @@ without naming the app.
 - **Why:** Leeloo's single baseline held 3,244 keys in 1.2 MB, so every agent paying down debt edited one shared
   file, the conflict the runs record had. The baseline is a ledger of accepted debt, so only its storage changes:
   the ratchet reads the files as one record.
+
+## 2026-10-29 · Facts key on what an import lends: its outline
+
+- **Decision:** a file's facts key on its own content and on the outline of every file its imports reach: the
+  text without the bodies of functions whose return type is declared. A test's reach still keys on content,
+  since it follows bodies.
+- **Why:** no recorder reads past another file's declarations except test reach, and a declared return type
+  hides the body from every importer. Keying on full content made one edit to Leeloo's widely used
+  `civil-date.ts` recompute 2,614 of 3,777 files' facts; a body-only edit now recomputes 4. The outline is
+  syntax alone, so it is deterministic and cheap, unlike emitted declarations, which depend on options and on
+  the order the compiler checked in.
+- **Next:** test reach is now most of an edit's cost (1,524 of 1,857 reaches recomputed for that edit).
