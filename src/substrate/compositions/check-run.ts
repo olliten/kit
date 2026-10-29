@@ -3,6 +3,7 @@ import type { CommandRequest, CommandResponse } from "../../core/primitives/comm
 import { baselineFiles, mergedBaseline } from "../../core/readings/baseline-files.js";
 import { kitCheckPaths } from "../../core/readings/check-paths.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
+import { testGroups } from "../../core/readings/test-groups.js";
 import { holding, keptRuns, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { stopwatch } from "../adapters/stopwatch.js";
@@ -36,23 +37,28 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
         },
   );
   if (!args.includes("--fresh")) evidenceStore.prune(store);
-  // Only a test command that writes coverage keeps what tests ran; without one, the rules that read it don't apply.
-  const command = config.verify?.tests?.command;
-  const records = command?.includes("{dir}") === true;
+  // Only a test command that writes coverage keeps what tests ran; unless every group's does, the rules that read
+  // it don't apply. Each test's pass is the one kept under the command of the group `kit verify` chose for it.
+  const groups = config.verify?.tests ?? [];
+  const records = groups.length > 0 && groups.every((group) => group.command.includes("{dir}"));
   const runtime = toolchain.runtime(root);
   const states = new Map<string, string>();
+  const tests = records ? snapshot.files.filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`)).map((file) => file.path) : [];
+  const chosen = testGroups(tests, groups, groups.some((group) => group.reaching !== undefined) ? snapshot.imports : []);
   const passes = new Map(
     records
-      ? snapshot.files
-          .filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`))
-          .map((file) => {
-            const verdicts = evidenceStore
-              .entries(store, verdictKind(`test:${file.path}`, (command ?? "").replaceAll("{test}", file.path), runtime))
-              .flatMap((text) => verdictOf(text) ?? []);
+      ? tests
+          .map((test) => {
+            const group = chosen.get(test);
+            const command = group === undefined ? undefined : groups[group]?.command;
+            const verdicts =
+              command === undefined
+                ? []
+                : evidenceStore.entries(store, verdictKind(`test:${test}`, command.replaceAll("{test}", test), runtime)).flatMap((text) => verdictOf(text) ?? []);
             for (const verdict of verdicts)
               for (const path of Object.keys(verdict.states))
                 if (!states.has(path)) states.set(path, heldState(root, path));
-            return [file.path, holding(verdicts, states)] as const;
+            return [test, holding(verdicts, states)] as const;
           })
       : [],
   );

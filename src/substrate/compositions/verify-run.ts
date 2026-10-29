@@ -2,6 +2,7 @@ import type { CommandRequest, CommandResponse } from "../../core/primitives/comm
 import type { Verdict } from "../../core/primitives/verdict.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { digest } from "../../core/readings/fact-keys.js";
+import { testGroups } from "../../core/readings/test-groups.js";
 import { testRuns } from "../../core/readings/test-runs.js";
 import { ranLines } from "../../core/readings/coverage-report.js";
 import { functionsRun } from "../../core/readings/ran-code.js";
@@ -22,10 +23,10 @@ const TEST = /\.test\.[mc]?[jt]sx?$/;
 const CHUNK = 64;
 const SKIP = /^(?:node_modules|\..*)$/;
 
-// `kit verify`: run every check the config's `verify` declares, and every test under its tests directories,
-// except those whose last passing run read only paths that are still in the state that run saw. Each run is
-// watched for what it reads, in its processes and theirs, and a pass is kept with those states; a failure is
-// never kept. A test command that writes the test's coverage into `{dir}` keeps what the test ran with its pass.
+// `kit verify`: run every check the config's `verify` declares, and every test under its tests directories under
+// the command of the group its reach selects, except those whose last passing run read only paths that are still
+// in the state that run saw. Each run is watched for what it reads, in its processes and theirs, and a pass is
+// kept with those states; a failure is never kept. A test command that writes the test's coverage into `{dir}` keeps what the test ran with its pass.
 // `--fresh` reuses and keeps nothing, and `--plan` says what would run without running it.
 export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Promise<CommandResponse> {
   const option = (name: string): string | undefined => {
@@ -54,22 +55,36 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
       return;
     }
     for (const entry of listed) {
-      const path = `${directory}/${entry.name}`;
+      const path = directory === "." ? entry.name : `${directory}/${entry.name}`;
       if (entry.directory && !SKIP.test(entry.name)) walk(path);
       else if (entry.file && TEST.test(entry.name)) tests.push(path);
     }
   };
-  for (const directory of policy.tests?.under ?? []) walk(directory);
-  const testCommand = policy.tests?.command ?? "";
-  const records = testCommand.includes("{dir}");
-  type Check = { readonly id: string; readonly line: string; readonly test?: string };
+  const groups = policy.tests ?? [];
+  for (const directory of new Set(groups.flatMap((group) => group.under))) walk(directory);
+  const store = evidenceStore.directory(root);
+  // The snapshot is read once, through the store, and only when a group is chosen by reach or a test's coverage is
+  // read against the code it ran; it is let go once neither needs it, so the tests run without it held.
+  let read: ReturnType<typeof readStoredSnapshot>["snapshot"] | undefined;
+  const snapshot = () =>
+    (read ??= readStoredSnapshot(root, loaded.config, { reuse: evidenceStore.at(store), engine: toolchain.engine(engineRoot) }).snapshot);
+  const found = [...new Set(tests)].sort();
+  const chosen = testGroups(found, groups, groups.some((group) => group.reaching !== undefined) ? snapshot().imports : []);
+  const unassigned = found.filter((test) => !chosen.has(test));
+  type Check = { readonly id: string; readonly line: string; readonly test?: string; readonly records?: boolean; readonly group?: number };
   const first: Check[] = [
     ...policy.checks.filter((check) => check.after === undefined).map((check) => ({ id: check.id, line: check.command })),
-    ...tests.sort().map((test) => ({ id: `test:${test}`, line: testCommand.replaceAll("{test}", test), test })),
+    ...found.flatMap((test) => {
+      const group = chosen.get(test);
+      const command = group === undefined ? undefined : groups[group]?.command;
+      return group === undefined || command === undefined
+        ? []
+        : [{ id: `test:${test}`, line: command.replaceAll("{test}", test), test, records: command.includes("{dir}"), group }];
+    }),
   ];
   const last: Check[] = policy.checks.filter((check) => check.after === "tests").map((check) => ({ id: check.id, line: check.command }));
+  if (!first.some((check) => check.records === true)) read = undefined;
 
-  const store = evidenceStore.directory(root);
   const runtime = toolchain.runtime(root);
   const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime);
   const stateOf = (key: string): string => heldState(root, key);
@@ -123,18 +138,15 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         : [];
     // What each test ran is read against the code it ran, by the named functions extraction finds in it: read
     // once, before the tests, and kept as only what that needs.
-    const code =
-      records && due.some((check) => check.test !== undefined)
-        ? (() => {
-            const { snapshot } = readStoredSnapshot(root, loaded.config, {
-              reuse: evidenceStore.at(store),
-              engine: toolchain.engine(engineRoot),
-            });
-            const functions = (snapshot.compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
-            const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
-            return { files: snapshot.files, functions, texts };
-          })()
-        : undefined;
+    const code = due.some((check) => check.records === true)
+      ? (() => {
+          const { files, compiler } = snapshot();
+          read = undefined;
+          const functions = (compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
+          const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
+          return { files, functions, texts };
+        })()
+      : undefined;
     // The checks run a chunk at a time, and each chunk's passes are kept and its scratch removed before the next,
     // so a long gate holds one chunk's output and loses at most one chunk if it stops.
     for (let from = 0; from < due.length; from += CHUNK) {
@@ -153,7 +165,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
               NODE_OPTIONS: `--import ${readRecorder.location}`,
               KIT_READS: directory,
               KIT_ROOT: root,
-              ...(check.test !== undefined && records ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
+              ...(check.records === true ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
             },
           };
         }),
@@ -170,7 +182,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
           return;
         }
         lines.push(`passed ${check.id}`);
-        const lcov = check.test !== undefined && records ? filesIn(`${directory}/runs`) : [];
+        const lcov = check.records === true ? filesIn(`${directory}/runs`) : [];
         const after = new Map(heldKeys(pathUses(filesIn(directory)), ranIn(lcov)).map((key) => [key, stateOf(key)]));
         // A path that changed while the check ran was read in one state and is kept in another, so the pass
         // describes neither: it is reported and not kept.
@@ -180,7 +192,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         }
         const verdict: Verdict = { check: check.id, seconds, states: Object.fromEntries(after) };
         const report =
-          check.test !== undefined && code !== undefined
+          check.test !== undefined && check.records === true && code !== undefined
             ? testRuns([{ test: check.test, lcov, v8: filesIn(`${directory}/runs/v8`) }], code.files, root, loaded.config, code.functions, code.texts)[0]
             : undefined;
         const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran };
@@ -191,10 +203,13 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     }
   };
 
+  // With more than one group, a test's line names the group it runs in; a test no group takes is named, not run.
+  const named = (check: Check): string => (check.group !== undefined && groups.length > 1 ? `${check.id} in tests[${check.group}]` : check.id);
+  const left = unassigned.map((test) => `unassigned test:${test}`);
   if (args.includes("--plan")) {
     const planned = [...plan(first).planned, ...plan(last).planned];
     return {
-      stdout: planned.map(({ check, reused: kept }) => `${kept === undefined ? "run" : "reuse"} ${check.id}\n`).join(""),
+      stdout: [...planned.map(({ check, reused: kept }) => `${kept === undefined ? "run" : "reuse"} ${named(check)}`), ...left].map((line) => `${line}\n`).join(""),
       stderr: "",
       exitCode: 0,
     };
@@ -204,9 +219,9 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   await run(last, failures.size === 0 && unrecorded === 0);
   evidenceStore.prune(store);
   const failed = lines.filter((line) => line.startsWith("failed ")).length;
-  const summary = { reused, ran, failed, recorded, unrecorded, seconds: (stopwatch.now() - started) / 1000 };
+  const summary = { reused, ran, failed, recorded, unrecorded, unassigned: unassigned.length, seconds: (stopwatch.now() - started) / 1000 };
   return {
-    stdout: `${lines.sort().join("\n")}\nKit verify ${JSON.stringify(summary)}\n`,
+    stdout: `${[...lines, ...left].sort().join("\n")}\nKit verify ${JSON.stringify(summary)}\n`,
     stderr: [...failures.values()].join(""),
     exitCode: failed > 0 ? 1 : 0,
   };

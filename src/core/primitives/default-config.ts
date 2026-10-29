@@ -39,11 +39,11 @@ export interface KitConfig {
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
   // What `kit verify` requires: whole-tree checks, each one command, run with the tests or after them, and the
-  // command that runs one test file `{test}` for every test under the directories `under` lists. A test command that writes the test's
-  // LCOV report into the directory `{dir}` keeps what each test ran, and turns on the rules that read it.
+  // groups of tests, in declared order. A test command that writes the test's LCOV report into the directory
+  // `{dir}` keeps what each test ran, and when every group's does, turns on the rules that read it.
   readonly verify?: {
     readonly checks: readonly { readonly id: string; readonly command: string; readonly after?: "tests" }[];
-    readonly tests?: { readonly command: string; readonly under: readonly string[] };
+    readonly tests?: readonly TestGroup[];
   };
   readonly layerNames?: {
     readonly primitives: string;
@@ -82,3 +82,12 @@ export const DEFAULT_CONFIG: KitConfig = {
   anchor: "\\{#[\\w-]+\\}",
   debtMarkers: ["TODO", "FIXME", "XXX", "HACK"],
 };
+
+// One group of an app's tests: the command that runs one test file `{test}`, for each test under the directories
+// `under` lists that the group takes. A group naming modules in `reaching` takes the tests whose imports reach
+// one of them; one naming none takes the tests no earlier group took.
+export interface TestGroup {
+  readonly command: string;
+  readonly under: readonly string[];
+  readonly reaching?: readonly string[];
+}

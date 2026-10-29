@@ -615,3 +615,20 @@ without naming the app.
 - **Limits:** a test that reads an unrun function's text through running code, such as
   `Function.prototype.toString`, is not seen. Leeloo's test workspace reads every test root's files when vitest
   starts, so under `kit verify` every test would depend on every file until it computes its tiers once.
+
+## 2026-10-29 · Kit picks each test's group by what its imports reach
+
+- **Decision:** `verify.tests` may list groups, each a command, its directories and optionally `reaching`, the
+  modules whose reach selects it. A test runs in the first group whose modules its import closure reaches, else in
+  the first that names none; a test no group takes is named and counted, not run. `kit check` makes the same
+  choice to find each test's pass, through one core reading over the snapshot's import edges.
+- **Why:** Leeloo chose a unit or browser tier in its test runner's workspace config, which read every file
+  under every test root at each start, so under `kit verify` each test's pass would have depended on the whole
+  tree. Kit already holds the import edges, and the group's command is part of what a pass is kept under, so a test
+  that comes to reach a browser harness reruns under the browser command without anything reading more.
+- **Evidence:** on Leeloo, with the two boot harnesses as `reaching`, Kit's unit group holds 1083 tests where the
+  app's own rule holds 1073. Eleven are browser there only by an `e2e` name and reach neither boot harness; they
+  drive a shared browser module instead, and naming it too takes all eleven but also six gate meta-tests that
+  import the legacy workspace file, which imports it. One test goes the other way, through an import Kit's
+  snapshot reads from a fixture string. No name-based selection was added: the app can name the module its e2e
+  tests use once the workspace file is gone.
