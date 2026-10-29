@@ -52,11 +52,8 @@ export async function scriptedVerification(
   const recorded: string[] = [];
   const running = new Set<string>();
   const releases = new Map<string, () => void>();
-  let notify = (): void => {};
-  const started = (): Promise<void> =>
-    new Promise<void>((resolve) => {
-      notify = resolve;
-    });
+  const waiting: (() => void)[] = [];
+  const started = (): Promise<void> => new Promise<void>((resolve) => waiting.push(resolve));
   const held = options.steps !== undefined;
   const execution = runVerification(checks, {
     ...(options.capacity === undefined ? {} : { capacity: options.capacity }),
@@ -68,7 +65,7 @@ export async function scriptedVerification(
       if (held)
         await new Promise<void>((resolve) => {
           releases.set(check.id, resolve);
-          notify();
+          for (const wake of waiting.splice(0)) wake();
         });
       running.delete(check.id);
       const verdict = options.scripts?.[check.id]?.verdict ?? "pass";

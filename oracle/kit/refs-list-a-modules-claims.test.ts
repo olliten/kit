@@ -65,6 +65,16 @@ test("a module no claim names says so", () => {
   );
 });
 
+test("a command's input is read whole from the terminal input adapter", () => {
+  const event = JSON.stringify({ tool_input: { file_path: "src/core/readings/total.ts" } });
+  const reader =
+    'const { terminalInput } = await import("./src/substrate/adapters/terminal-input.ts"); ' +
+    "console.log(terminalInput.read());";
+  const result = processes.run(processes.node(), ["--input-type=module", "-e", reader], engine, event);
+  expect(result.status, result.stderr).toBe(0);
+  expect(result.stdout).toBe(`${event}\n`);
+});
+
 test("as a read hook, opening a module adds its claims and opening any other file adds nothing", () => {
   const read = (path: string) => refs(["--hook"], JSON.stringify({ tool_input: { file_path: path } }));
   const output = JSON.parse(read(join(fixture, "src/core/readings/average.ts")));
