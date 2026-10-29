@@ -633,6 +633,19 @@ without naming the app.
   snapshot reads from a fixture string. No name-based selection was added: the app can name the module its e2e
   tests use once the workspace file is gone.
 
+## 2026-10-29 · A test group may be selected by capability
+
+- **Decision:** a group under `verify.tests` may list `capabilities` beside or instead of `reaching`. It takes a
+  test whose import closure reaches a listed module or the module of an adapter registered with a listed
+  capability; a group listing neither is the fallback, and the first group that takes a test still wins. A
+  capability no adapter registers fails configuration, naming the entry. The adapters' modules are resolved to
+  files by the same placement the capability rules use, and `kit verify` and `kit check` hand them to one core
+  reading as data.
+- **Why:** Leeloo's browser tier is the tests that drive the browser, and which module does that is already a
+  registration: the adapter with the browser-driving capability. Listing harness files under `reaching` has to
+  follow every new harness, and a browser test that imports the driver from a new place would otherwise land in
+  the unit group. Naming the capability keeps the tier where the design decision already lives.
+
 ## 2026-10-29 · Compiler reads are no longer recorded
 
 - **Decision:** the compiler adapter reads through the compiler's own system and records nothing. Extraction keeps

@@ -87,10 +87,12 @@ export const DEFAULT_CONFIG: KitConfig = {
 };
 
 // One group of an app's tests: the command that runs one test file `{test}`, for each test under the directories
-// `under` lists that the group takes. A group naming modules in `reaching` takes the tests whose imports reach
-// one of them; one naming none takes the tests no earlier group took.
+// `under` lists that the group takes. A group naming modules in `reaching`, or capabilities in `capabilities`,
+// takes the tests whose imports reach one of those modules or a module an adapter registers with one of those
+// capabilities; one naming neither takes the tests no earlier group took.
 export interface TestGroup {
   readonly command: string;
   readonly under: readonly string[];
   readonly reaching?: readonly string[];
+  readonly capabilities?: readonly string[];
 }

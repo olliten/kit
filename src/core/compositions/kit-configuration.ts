@@ -44,6 +44,7 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
   if (terms !== undefined && !isText(terms)) throw new Error("Declare the terms file as a path.");
   const separator = declaration["claim-separator"];
   if (separator !== undefined && !isText(separator)) throw new Error("Declare the claim separator as text.");
+  const registered = adapters(declaration["adapters"]);
   return {
     ...defaults,
     ...(isText(app) ? { app } : {}),
@@ -53,13 +54,13 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
     ...(declaration["layout"] === undefined ? {} : { layout: configuredLayout(declaration["layout"]) }),
     termsFile: terms ?? defaults.termsFile,
     ...(separator === undefined ? {} : { claimSeparator: separator }),
-    ...(declaration["verify"] === undefined ? {} : { verify: verification(declaration["verify"]) }),
+    ...(declaration["verify"] === undefined ? {} : { verify: verification(declaration["verify"], registered.map((adapter) => adapter.capability)) }),
     legacyAreas: texts(declaration["legacy-areas"], "legacy-areas"),
     legacyZones: legacyZones(declaration["legacy-zones"]),
     exceptions: texts(declaration["exceptions"], "exceptions"),
     dependencyExclusions: dependencyExclusions(declaration["dependency-exclusions"]),
     ignore: ignoredPaths(declaration["ignore"]),
-    adapters: adapters(declaration["adapters"]),
+    adapters: registered,
     packages: packages(declaration["packages"]),
   };
 }

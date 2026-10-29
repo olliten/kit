@@ -33,6 +33,20 @@ test("the tests may be a list of groups, each a command, its directories and the
   ]);
 });
 
+test("a group may name the capabilities of registered adapters whose reach selects it, beside or instead of modules", () => {
+  const adapters = [{ module: "shell/adapters/driver", export: "driver", capability: "browser-driving", kind: "external", zones: ["shell"] }];
+  const tests = [
+    { command: "browser {test}", under: "oracle/", capabilities: ["browser-driving", "browser-driving"], reaching: ["spec/boot"] },
+    { command: "driver {test}", under: "oracle/", capabilities: ["browser-driving"] },
+    { command: "unit {test}", under: "oracle/" },
+  ];
+  expect(configuredKit(DEFAULT_CONFIG, { roots, verify: { checks: [], tests }, adapters }).verify?.tests).toEqual([
+    { command: "browser {test}", under: ["oracle"], reaching: ["spec/boot"], capabilities: ["browser-driving"] },
+    { command: "driver {test}", under: ["oracle"], capabilities: ["browser-driving"] },
+    { command: "unit {test}", under: ["oracle"] },
+  ]);
+});
+
 test.each([
   [{ checks: [{ id: "a" }] }, /verify\.checks\[0\]/],
   [{ checks: [{ id: "a", command: "x" }, { id: "a", command: "y" }] }, /declared twice/],
@@ -49,6 +63,11 @@ test.each([
   [{ checks: [], tests: [{ command: "b {test}", under: "oracle", reaching: [] }] }, /verify\.tests\[0\]\.reaching/],
   [{ checks: [], tests: [{ command: "b {test}", under: "oracle", reaching: ["/abs/x.ts"] }] }, /verify\.tests\[0\]\.reaching/],
   [{ checks: [], tests: [{ command: "b {test}", under: "oracle", extra: 1 }] }, /verify\.tests\[0\]\.extra is not a key Kit reads/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", capabilities: "browser-driving" }] }, /verify\.tests\[0\]\.capabilities: list/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", capabilities: [] }] }, /verify\.tests\[0\]\.capabilities: list/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", capabilities: ["browser-driving", 7] }] }, /verify\.tests\[0\]\.capabilities: list/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", capabilities: [" "] }] }, /verify\.tests\[0\]\.capabilities: list/],
+  [{ checks: [], tests: { command: "b {test}", under: "oracle", capabilities: ["printing"] } }, /verify\.tests\.capabilities\[0\]: no adapter registers the capability printing/],
   [{ checks: [], share: "kit-passes" }, /verify\.share/],
   [{ checks: [], share: "refs/heads/kit..passes" }, /verify\.share/],
   [{ checks: [], share: "refs/heads/kit.lock" }, /verify\.share/],

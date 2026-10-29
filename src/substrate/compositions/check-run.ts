@@ -3,7 +3,7 @@ import type { CommandRequest, CommandResponse } from "../../core/primitives/comm
 import { baselineFiles, mergedBaseline } from "../../core/readings/baseline-files.js";
 import { kitCheckPaths } from "../../core/readings/check-paths.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
-import { testGroups } from "../../core/readings/test-groups.js";
+import { capabilityModules, testGroups } from "../../core/readings/test-groups.js";
 import { holding, keptRuns, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { stopwatch } from "../adapters/stopwatch.js";
@@ -44,7 +44,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
   const runtime = toolchain.runtime(root);
   const states = new Map<string, string>();
   const tests = records ? snapshot.files.filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`)).map((file) => file.path) : [];
-  const chosen = testGroups(tests, groups, groups.some((group) => group.reaching !== undefined) ? snapshot.imports : []);
+  const chosen = testGroups(tests, groups, groups.some((group) => group.reaching !== undefined || group.capabilities !== undefined) ? snapshot.imports : [], capabilityModules(config));
   const passes = new Map(
     records
       ? tests

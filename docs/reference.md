@@ -23,7 +23,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `legacy-zones` | Rows of `zone` with either a `root` or a list of `files`, never both. |
 | `legacy-areas` | Spec files in an older claim grammar. |
 | `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
-| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the tests: one group, or a list of groups each taking the tests whose imports reach a module it lists in `reaching`, or with no `reaching` the tests no earlier group took; a group is the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
+| `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the tests: one group, or a list of groups each taking the tests whose imports reach a module it lists in `reaching` or a module an adapter registers with a capability it lists in `capabilities`, or with neither the tests no earlier group took; a group is the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
 | `verify.share` | A ref prefix on `origin`, such as `refs/heads/kit-passes`, under which `kit verify` shares kept passes with every other clone. |
 
 An app's plain-Node scripts read the config the way the commands do through
@@ -182,7 +182,23 @@ The tests may instead be a list of groups, each with its own command, such as a 
 
 A test runs in the first group whose `under` holds it and whose `reaching` lists a module its imports reach,
 directly or through the files they import, and otherwise in the first group whose `under` holds it that lists
-none. A module is named by its path inside the app, with or without its extension. The imports are those `kit
+none. A module is named by its path inside the app, with or without its extension.
+
+A group may instead, or as well, list `capabilities`: it then also takes the tests whose imports reach the module
+of any `adapters` row registered with one of them, so a new test that drives the browser adapter lands in the
+browser group wherever it lives, without its harness files being listed:
+
+```yaml
+  tests:
+    - command: npx vitest run --config browser.config.ts {test}
+      under: [oracle/, spec/]
+      capabilities: [browser]
+    - command: npx vitest run {test}
+      under: [oracle/, spec/]
+```
+
+A group listing both takes a test that reaches either. A capability no adapter row registers fails
+configuration, naming the entry, such as `verify.tests[0].capabilities[1]`. The imports are those `kit
 check` reads, type-only ones included, so the choice is Kit's own and reads no test runner's configuration.
 Since the command is part of what a pass is kept under, a test that comes to reach another group's module runs
 again, and `kit check` looks for each test's pass under the command the same choice gives it. A test no group
