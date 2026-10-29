@@ -403,7 +403,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate
-  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{filesystem}}, {{gate}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate
@@ -444,6 +444,10 @@
   - Role: composition
   - Zone: core
   - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its text as the functions a run ran see it.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{compiler}}, {{filesystem}}, {{ran-code}}, {{text-files}}, {{verdict-reuse}}
 - **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
   - Role: composition
   - Zone: substrate
@@ -527,7 +531,7 @@
 - **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{compiler}}, {{config-values}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{stopwatch}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
+  - Of: {{command}}, {{compiler}}, {{config-values}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{stopwatch}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}
 
 ## Supporting vocabulary and roles
 

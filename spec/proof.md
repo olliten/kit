@@ -78,7 +78,7 @@ a claim depends on are named in it, so each module's claims are found from its n
   still holds. While a test under the proof root has none, the rules that read what tests ran wait, and the check
   says how many tests they wait for. A placed module no test ran is not missing: its functions are simply
   unrun. · {#runs-are-kept-with-each-pass}
-  - Implementation: {{verify-run}}, {{check-run}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{verdict}}, {{verdict-reuse}}, {{evidence-store}}, {{filesystem}}, {{processes}}, {{text-files}}
+  - Implementation: {{verify-run}}, {{check-run}}, {{held-state}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{verdict}}, {{verdict-reuse}}, {{evidence-store}}, {{filesystem}}, {{processes}}, {{text-files}}
   - Proof: {{temporary-project}}
 - Every named function of a placed module is run by a test of a claim that names the module, so each piece of
   code is governed by a claim that promises something about it. A named function none of those claims runs is

@@ -34,5 +34,5 @@ so a later gate runs only what an edit can have changed.
   a function the test never ran reruns nothing, and an edit to code it ran, to the module's top level, or to
   which functions the file has reruns it. A file the test also reads as text is kept whole. A test that reads an
   unrun function's text through the running code, such as `Function.prototype.toString`, is not seen. · {#a-pass-holds-while-the-code-it-ran-holds}
-  - Implementation: {{verify-run}}, {{ran-code}}, {{function-span}}, {{coverage-report}}, {{compiler}}, {{read-recorder}}, {{verdict-reuse}}, {{text-files}}, {{filesystem}}
+  - Implementation: {{verify-run}}, {{held-state}}, {{ran-code}}, {{function-span}}, {{coverage-report}}, {{compiler}}, {{read-recorder}}, {{verdict-reuse}}, {{text-files}}, {{filesystem}}
   - Proof: {{temporary-project}}

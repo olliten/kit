@@ -5,10 +5,10 @@ import { kitCheckPaths } from "../../core/readings/check-paths.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
 import { holding, keptRuns, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
-import { filesystem } from "../adapters/filesystem.js";
 import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
 import { toolchain } from "../adapters/toolchain.js";
+import { heldState } from "./held-state.js";
 import { readConfig } from "./read-config.js";
 import { readStoredSnapshot } from "./read-snapshot.js";
 
@@ -51,7 +51,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
               .flatMap((text) => verdictOf(text) ?? []);
             for (const verdict of verdicts)
               for (const path of Object.keys(verdict.states))
-                if (!states.has(path)) states.set(path, filesystem.state(`${root}/${path}`));
+                if (!states.has(path)) states.set(path, heldState(root, path));
             return [file.path, holding(verdicts, states)] as const;
           })
       : [],

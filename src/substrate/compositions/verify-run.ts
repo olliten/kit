@@ -4,8 +4,8 @@ import { normalizedPath } from "../../core/readings/config-values.js";
 import { digest } from "../../core/readings/fact-keys.js";
 import { testRuns } from "../../core/readings/test-runs.js";
 import { ranLines } from "../../core/readings/coverage-report.js";
-import { functionsRun, ranState } from "../../core/readings/ran-code.js";
-import { heldKey, heldPath, heldKeys, holding, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { functionsRun } from "../../core/readings/ran-code.js";
+import { heldKey, heldKeys, holding, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { compilerWorkspace } from "../adapters/compiler.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { filesystem } from "../adapters/filesystem.js";
@@ -14,6 +14,7 @@ import { readRecorder } from "../adapters/read-recorder.mjs";
 import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
 import { toolchain } from "../adapters/toolchain.js";
+import { heldState } from "./held-state.js";
 import { readConfig } from "./read-config.js";
 import { readStoredSnapshot } from "./read-snapshot.js";
 
@@ -71,16 +72,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const store = evidenceStore.directory(root);
   const runtime = toolchain.runtime(root);
   const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime);
-  // What a kept key's path holds now: its content, its kind, or its text as the functions a run ran see it.
-  const stateOf = (key: string): string => {
-    const { path, kind, ran } = heldPath(key);
-    const at = `${root}/${path}`;
-    if (kind) return filesystem.kind(at);
-    if (ran === undefined) return filesystem.state(at);
-    if (!textFiles.exists(at)) return "absent";
-    const text = textFiles.read(at);
-    return ranState(text, compilerWorkspace.outermostFunctions(path, text), ran);
-  };
+  const stateOf = (key: string): string => heldState(root, key);
   // The outermost functions a test ran in each file its coverage lists.
   const ranIn = (lcov: readonly string[]): Map<string, number[]> => {
     const ran = new Map<string, number[]>();
