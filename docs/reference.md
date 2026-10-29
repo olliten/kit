@@ -24,6 +24,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `legacy-areas` | Spec files in an older claim grammar. |
 | `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
 | `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
+| `verify.share` | A ref prefix on `origin`, such as `refs/heads/kit-passes`, under which `kit verify` shares kept passes with every other clone. |
 
 An app's plain-Node scripts read the config the way the commands do through
 `src/substrate/compositions/configuration-runner.mjs`: `await configuration()` answers `kitConfig`,
@@ -193,6 +194,28 @@ them. Their findings are debt that may only shrink:
 
 A check with `after: tests`, such as `kit check`, runs once the tests' passes are kept, and is not kept itself
 when a test's pass was not.
+
+## Sharing passes
+
+```yaml
+verify:
+  share: refs/heads/kit-passes
+```
+
+With `share`, clones that start with an empty store, such as agents' cloud sessions, reuse each other's passes
+through `origin`. Each runtime and UTC day has one ref, `<share>/<YYYY-MM-DD>-<runtime digest, 16 characters>`,
+whose tree holds each pass at `verdicts/<kind>/<key>.json`, the text the local store holds. Before planning,
+`kit verify` fetches today's and yesterday's ref and keeps every pass the local store lacks; a file that is not
+a pass kept under its own key is ignored. After the run it adds every pass it kept or reused that today's ref
+lacks, as one commit on the tip pushed without force, so a day's ref holds the passes still in use. A push the
+remote refuses because the tip moved reads the ref again and adds on top, up to four times; a path already
+there stays. No `origin`, no network or a push refused for another reason is said on its own line, `Shared no
+passes:` or `Published no passes:`, and the gate goes on with the local store. The summary counts `shared:
+{read, published}`. `--plan` reads and never publishes; `--fresh` and `--no-share` neither read nor publish.
+
+Anyone who can push to `origin` can publish a pass, so a shared pass is as trustworthy as the people with push
+access; a scheduled `kit verify --fresh` checks that every kept pass still passes. The refs only grow within a
+day, and old days' refs are never read again: delete them on `origin` as you like.
 
 `kit verify --plan` lists what would run, `--fresh` runs everything and keeps nothing, and the exit code is 1
 when a check fails. A check that depends on something no file holds, such as the network, the clock or an

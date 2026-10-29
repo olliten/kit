@@ -615,3 +615,15 @@ without naming the app.
 - **Limits:** a test that reads an unrun function's text through running code, such as
   `Function.prototype.toString`, is not seen. Leeloo's test workspace reads every test root's files when vitest
   starts, so under `kit verify` every test would depend on every file until it computes its tiers once.
+
+## 2026-10-29 · Passes are shared through refs on origin
+
+- **Decision:** with `verify.share` declared, `kit verify` reads the passes on `origin`'s refs
+  `<share>/<day>-<runtime>` for today and yesterday into the local store before planning, and afterwards adds
+  every pass it kept or reused to today's ref as one commit pushed without force; a lost race reads again and
+  adds on top. Failing to share is reported and never fails the gate. Kit's own config does not declare it yet.
+- **Why:** each agent's cloud session starts with an empty store beside its clone and paid a full cold run. A
+  ref on `origin` reaches every lane with nothing but git, and Leeloo's `test-cache` refs already run this
+  protocol: anyone with push access may publish, and a nightly `kit verify --fresh` is the honesty check. A
+  pass's path names its command, runtime and the states it holds, so racing writers converge. Republishing the
+  passes a run reused keeps a day's ref whole, so reading two days is enough.

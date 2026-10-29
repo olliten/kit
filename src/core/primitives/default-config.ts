@@ -44,6 +44,9 @@ export interface KitConfig {
   readonly verify?: {
     readonly checks: readonly { readonly id: string; readonly command: string; readonly after?: "tests" }[];
     readonly tests?: { readonly command: string; readonly under: readonly string[] };
+    // The ref prefix on `origin` under which kept passes are shared with every other clone, one ref per runtime
+    // and day.
+    readonly share?: string;
   };
   readonly layerNames?: {
     readonly primitives: string;
