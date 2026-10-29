@@ -13,7 +13,7 @@ claim-separator: "·"
 legacy-areas: []
 runs:
   record: self-debt/runs
-  each: npx vitest run {test} --coverage.enabled --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
+  each: npx vitest run {test} --coverage.enabled --coverage.all=false --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
 verify:
   checks:
     - id: typecheck

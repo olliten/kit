@@ -178,9 +178,10 @@ Commit the directory, and don't `ignore` it.
 `runs-orphan` on a record's file otherwise. `kit runs --stale` records exactly those tests and removes the records
 of tests that are gone; `kit runs <test>…` records the tests named; `kit runs` alone records every test.
 
-With vitest, `each` is `npx vitest run {test} --coverage.enabled --coverage.provider=v8
---coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}`, with
-`@vitest/coverage-v8` installed.
+With vitest, `each` is `npx vitest run {test} --coverage.enabled --coverage.all=false
+--coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}`,
+with `@vitest/coverage-v8` installed. `--coverage.all=false` keeps coverage from reading every source file, which
+would make each test's verdict depend on the whole tree under `kit verify`.
 
 Two rules read the record, and their findings are debt that may only shrink:
 
