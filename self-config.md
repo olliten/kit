@@ -62,18 +62,6 @@ packages:
   - name: node:v8
     capabilities: []
 adapters:
-  - module: src/substrate/adapters/declared-input-files
-    export: declaredInputFiles
-    capability: filesystem
-    kind: external
-    zones: [substrate]
-    contract: {type: DeclaredInputFiles}
-  - module: src/substrate/adapters/declared-input-files
-    export: declaredInputFiles
-    capability: process-environment
-    kind: external
-    zones: [substrate]
-    contract: {type: DeclaredInputFiles}
   - module: oracle/substrate/adapters/temporary-project
     export: temporaryProjects
     capability: filesystem

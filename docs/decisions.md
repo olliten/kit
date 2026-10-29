@@ -585,3 +585,17 @@ without naming the app.
   21, and an edit to the widely used `civil-date.ts` 1,246 instead of 1,524 (30 s instead of 42 s). Naming
   each body followed instead of each file was measured too: for a random body, the tests that follow it are
   nearly all the tests that follow its file, while the reach took three times as long.
+
+## 2026-10-29 · One rule for what Kit keeps, and nothing kept in Git
+
+- **Decision:** a gate result and a test's reach are each kept with the state of every path they were read
+  from, one entry per set of states, and hold while each path still has its state. What a test ran is kept
+  with its pass by `kit verify`, under the one test command, which writes coverage into `{dir}`; `kit check`
+  reads it from the passes that still hold. The committed runs records, `kit runs`, the `runs` section and the
+  earlier verification planner, partitioner, runner and declared-input keying are deleted.
+- **Why:** committed runs records were most of every commit (102 of 113 files, 36 of 46, 35 of 42), so
+  parallel agents would conflict on them, and they kept a second freshness rule. A reach kept under one key
+  per test made two worktrees overwrite each other. Nothing launched the earlier planner once `kit verify`
+  observed what each check reads.
+- **Cost:** `kit check` alone on a fresh clone waits on the two rules that read what tests ran until `kit verify`
+  has run once, and says so.

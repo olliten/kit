@@ -147,17 +147,6 @@ home, such as Node built-in declarations; several homes retain uncertainty.
     - { files: [src/boot.ts], zone: substrate }
   ```
 
-## Portable verification
-
-`src/substrate/compositions/verification-runner.mjs` exports `verification()`, which loads the pure evidence planner and
-duration-aware partitioner, and `runVerification(checks, io)`, which runs a dependency graph with supplied effects
-and resource capacity. Checks declare stable identities, input fingerprints, execution contracts and required
-strength; the caller supplies discovery, input tracking, evidence storage and policy.
-
-For checks with declared filesystem inputs, `declaredInputFiles` in
-`src/substrate/adapters/declared-input-files.ts` resolves files, suffix-filtered trees and path-kind probes into an
-input key. It keys only declared inputs: it does not discover a check's reads or choose its cache policy.
-
 ## Verify
 
 ```yaml
