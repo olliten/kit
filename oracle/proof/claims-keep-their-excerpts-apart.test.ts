@@ -29,7 +29,6 @@ function snapshot(module: string): Snapshot {
 }
 
 const ran = (module: string, sums: string[], formats: string[]): Runs => ({
-  digests: {},
   tests: { "oracle/text/sums.test.ts": { [module]: sums }, "oracle/text/formats.test.ts": { [module]: formats } },
 });
 

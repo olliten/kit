@@ -1,62 +1,27 @@
 import type { Runs } from "../primitives/runs.js";
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, finding } from "./finding.js";
-import { placementOf } from "./placement-of.js";
+import { runsFreshness } from "./runs-freshness.js";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-const isTexts = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === "string");
-
-function runsOf(value: unknown): Runs | null {
-  if (!isRecord(value)) return null;
-  const { digests, tests } = value;
-  if (!isRecord(digests) || !Object.values(digests).every((digest) => typeof digest === "string")) return null;
-  if (!isRecord(tests)) return null;
-  const read: Record<string, Record<string, string[]>> = {};
-  for (const [test, modules] of Object.entries(tests)) {
-    if (!isRecord(modules)) return null;
-    const ran: Record<string, string[]> = {};
-    for (const [module, names] of Object.entries(modules)) {
-      if (!isTexts(names)) return null;
-      ran[module] = names;
-    }
-    read[test] = ran;
-  }
-  const recorded: Record<string, string> = {};
-  for (const [path, digest] of Object.entries(digests)) if (typeof digest === "string") recorded[path] = digest;
-  return { digests: recorded, tests: read };
-}
-
-// The record `kit runs` wrote, while it still describes this code: every placed module and test has the
-// digest it was recorded with, and the record names no file that is gone. Otherwise it is a finding, and the
-// rules that read it wait until `kit runs` is run again.
+// The records `kit runs` wrote, while each still describes the code. A missing, unreadable or stale record, and a
+// record whose test is gone, is a finding on that record's file, and the rules that read the records wait until
+// `kit runs` records again, since partial runs would show the stale tests' functions as unrun.
 export function runsRecord(snapshot: Snapshot): { readonly runs: Runs | null; readonly findings: readonly Finding[] } {
-  const path = snapshot.config.runs?.record;
-  if (path === undefined) return { runs: null, findings: [] };
-  const fix = "Run `kit runs` to record which named functions each test runs, and commit the record.";
-  if (snapshot.runsText === undefined || snapshot.runsText === null)
-    return { runs: null, findings: [finding("R4", "runs-missing", path, fix)] };
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(snapshot.runsText);
-  } catch {
-    parsed = null;
+  if (snapshot.config.runs === undefined) return { runs: null, findings: [] };
+  const { records, orphans } = runsFreshness(snapshot);
+  const findings: Finding[] = [];
+  for (const { test, path, status, changed } of records) {
+    if (status === "missing")
+      findings.push(finding("R4", "runs-missing", path, `Run \`kit runs --stale\` to record what ${test} runs, and commit the record.`));
+    if (status === "unreadable")
+      findings.push(finding("R4", "runs-unreadable", path, `Run \`kit runs --stale\` to record ${test} again, and commit the record.`));
+    if (status === "stale")
+      findings.push(
+        finding("R4", "runs-stale", path, `${changed.join(", ")} changed since ${test} was recorded: run \`kit runs --stale\` and commit the record.`),
+      );
   }
-  const runs = runsOf(parsed);
-  if (runs === null) return { runs: null, findings: [finding("R4", "runs-unreadable", path, fix)] };
-  const { srcRoot, layerNames, oracleRoot } = snapshot.config;
-  const covered = snapshot.files.filter(
-    (file) =>
-      (file.type === "test" && file.path.startsWith(`${oracleRoot}/`)) ||
-      (file.type === "source" && placementOf(file.path, srcRoot, layerNames).placed),
-  );
-  const present = new Set(covered.map((file) => file.path));
-  const stale = [
-    ...covered.filter((file) => runs.digests[file.path] !== file.digest).map((file) => file.path),
-    ...Object.keys(runs.digests).filter((recorded) => !present.has(recorded)),
-  ].sort();
-  return stale.length === 0
-    ? { runs, findings: [] }
-    : { runs: null, findings: [finding("R4", "runs-stale", path, fix, stale.join(","))] };
+  for (const path of orphans)
+    findings.push(finding("R4", "runs-orphan", path, "This record's test is gone: run `kit runs --stale` to remove it, and commit."));
+  if (findings.length > 0) return { runs: null, findings };
+  return { runs: { tests: Object.fromEntries(records.flatMap(({ test, record }) => (record === undefined ? [] : [[test, record.ran]]))) }, findings };
 }

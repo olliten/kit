@@ -41,14 +41,13 @@ test("a module's named functions are recorded with the name a runtime reports, i
 
 test("a function a claim naming its module runs is governed; an anonymous function belongs to the one holding it", () => {
   expect(
-    keys({ digests: {}, tests: { "oracle/sums/total-sums.test.ts": { [module]: ["total@1", "average@4", "half@5"] } } }),
+    keys({ tests: { "oracle/sums/total-sums.test.ts": { [module]: ["total@1", "average@4", "half@5"] } } }),
   ).toEqual([]);
 });
 
 test("a function only claims that don't name the module run is debt, and so is one no test runs", () => {
   expect(
     keys({
-      digests: {},
       tests: {
         "oracle/sums/total-sums.test.ts": { [module]: ["total@1"] },
         "oracle/sums/rounds-halves.test.ts": { [module]: ["half@5"] },
@@ -58,5 +57,5 @@ test("a function only claims that don't name the module run is debt, and so is o
     `R4:ungoverned-function:${module}:average No test runs average: prove it from a claim that names this module, or delete it.`,
     `R4:ungoverned-function:${module}:half Only claims that don't name this module run half: prove it from a claim that names the module.`,
   ]);
-  expect(functionGovernance(snapshot(), { digests: {}, tests: {} }).every((item) => item.category === "legacy-debt")).toBe(true);
+  expect(functionGovernance(snapshot(), { tests: {} }).every((item) => item.category === "legacy-debt")).toBe(true);
 });

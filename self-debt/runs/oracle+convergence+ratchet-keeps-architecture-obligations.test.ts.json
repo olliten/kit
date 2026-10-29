@@ -1,0 +1,16 @@
+{
+  "test": "oracle/convergence/ratchet-keeps-architecture-obligations.test.ts",
+  "digests": {
+    "oracle/convergence/ratchet-keeps-architecture-obligations.test.ts": "1885fd58102fa3a09a5956ff25ee946e6463dd7c1eafa3b12c5350ef21e02f0f",
+    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/readings/ratchet.ts": "d699f5026b5dff947de95c7fead8853ac011040172974cac4bde10c11b4eb866"
+  },
+  "ran": {
+    "src/core/readings/ratchet.ts": [
+      "isKeyList@19",
+      "ratchetFindings@106",
+      "reachableFrom@72",
+      "recorded@20"
+    ]
+  }
+}

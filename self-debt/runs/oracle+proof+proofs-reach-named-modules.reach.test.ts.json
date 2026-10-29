@@ -1,0 +1,91 @@
+{
+  "test": "oracle/proof/proofs-reach-named-modules.reach.test.ts",
+  "digests": {
+    "oracle/core/readings/fixture-files.ts": "f68f4e3de4f6654af6334805ccfa23a7bade8b2ef15bb82012fd251f29bd92f2",
+    "oracle/proof/proofs-reach-named-modules.reach.test.ts": "0947656e927baf595bf039a5959e4c23fedfc5d33bac3e6869767186dce439e5",
+    "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
+    "oracle/substrate/compositions/program-fixture.ts": "fac1201b097dc9889c1c5a259b39d4dd5ed8b73e543e2104fd991e5e73343649",
+    "oracle/substrate/compositions/recorded-reach.ts": "8f359926046d863427b44405965ff57b9a9fdbf09ecff4528b982db22ce18bb6",
+    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/substrate/adapters/compiler.ts": "2ef6eed3842686db6ce4fa272c79314a4f49249c37e8796eb41d65af83cb783a",
+    "src/substrate/compositions/test-reach.ts": "67624428fcec83cb748bbd5c580bdbcabb01578654991fbd5e88c6030f93b47d",
+    "src/substrate/primitives/program-scope.ts": "58bb04ca5efe734416da2456f9e9dcbb87283eacd996873de3cfdefdb6469fad"
+  },
+  "ran": {
+    "oracle/core/readings/fixture-files.ts": [
+      "fixtureFiles@6"
+    ],
+    "oracle/substrate/adapters/temporary-project.ts": [
+      "dispose@48",
+      "inside@21",
+      "open@19",
+      "write@29"
+    ],
+    "oracle/substrate/compositions/program-fixture.ts": [
+      "importTarget@73",
+      "local@41",
+      "openProgram@25",
+      "visit@54"
+    ],
+    "oracle/substrate/compositions/recorded-reach.ts": [
+      "recordedReach@7"
+    ],
+    "src/substrate/adapters/compiler.ts": [
+      "digest@67",
+      "environmentReader@109",
+      "getSourceFile@191",
+      "load@177",
+      "names@70",
+      "recorded@47",
+      "resolve@215",
+      "same@69",
+      "sourceOf@141",
+      "systemOf@118",
+      "tracedSystem@74",
+      "useSourceOfProjectReferenceRedirect@205",
+      "workerHost@156"
+    ],
+    "src/substrate/compositions/test-reach.ts": [
+      "assignment@278",
+      "bindingSymbols@282",
+      "bit@548",
+      "chainTop@244",
+      "changeable@430",
+      "changes@454",
+      "code@477",
+      "collectNames@658",
+      "empty@176",
+      "enter@578",
+      "erased@70",
+      "flow@288",
+      "functionOf@98",
+      "holderOf@262",
+      "homeReferences@408",
+      "immutable@136",
+      "inert@413",
+      "isResults@646",
+      "isSymbol@650",
+      "nameSymbolOf@116",
+      "names@16",
+      "namesOf@654",
+      "own@557",
+      "pieceOf@537",
+      "rawSymbolOf@42",
+      "reach@191",
+      "readonlyProperty@131",
+      "referenceType@127",
+      "referencesOf@47",
+      "results@462",
+      "resultsOf@182",
+      "statementOf@81",
+      "summarize@569",
+      "testReach@30",
+      "thisContainerOf@103",
+      "topLevelNames@12",
+      "unaliased@37",
+      "visit@484",
+      "visit@53",
+      "within@76"
+    ]
+  }
+}

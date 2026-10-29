@@ -1,0 +1,19 @@
+{
+  "test": "oracle/kit/paths-from-the-caller.test.ts",
+  "digests": {
+    "oracle/kit/paths-from-the-caller.test.ts": "5522575f6124d9af7ea8e1977de9b4e94f440df81a4aa9da4764128071878271",
+    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/readings/check-paths.ts": "af92998ae7e9334360db1a04e2924d1e31f05d38b8d9c3c9548ad67539a75ee0",
+    "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6"
+  },
+  "ran": {
+    "src/core/readings/check-paths.ts": [
+      "at@9",
+      "kitCheckPaths@4",
+      "option@10"
+    ],
+    "src/core/readings/config-values.ts": [
+      "normalizedPath@20"
+    ]
+  }
+}

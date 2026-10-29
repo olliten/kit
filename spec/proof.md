@@ -74,12 +74,20 @@ a claim depends on are named in it, so each module's claims are found from its n
 
 - `kit runs` runs each test file alone with the app's own test command, which writes an LCOV report of the
   named functions it ran; raw V8 coverage adds the processes a test starts, where a function's reported name and
-  line match the source. It records for every placed module which of its named functions each test ran,
-  with the digest of every placed module and test it ran over. A check reads the record only while each of
-  those files still has its recorded digest; a missing or stale record is a finding until `kit runs` is run
-  again. · {#runs-are-recorded-per-test}
-  - Implementation: {{runs-run}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{runs-record}}, {{processes}}, {{text-files}}
-  - Proof: {{fixture-snapshot}}, {{temporary-project}}
+  line match the source. It writes one record per test into the configured record directory, named by the
+  test's path, holding the named functions of each placed module the test ran and the digest of every file the
+  record depends on: the test, the placed files its code reaches and the modules it ran. Given test paths it
+  records only those; with `--stale` only the tests whose records no longer describe the code; with neither,
+  every test. Recording every test or the stale ones removes the records of tests that are gone. · {#runs-are-recorded-per-test}
+  - Implementation: {{runs-run}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{runs-freshness}}, {{proof-reach}}, {{processes}}, {{text-files}}
+  - Proof: {{temporary-project}}
+- A check reads the records only while each is fresh: a test's record is stale when a file it depends on no
+  longer has its recorded digest, or when the test now reaches a placed file the record doesn't hold. A test
+  without a record, an unreadable record, a stale record and a record whose test is gone are each a finding on
+  that record's file until `kit runs` records again, and the rules that read the records wait. A placed module
+  no record mentions is not stale: its functions are simply unrun. · {#runs-records-are-fresh-per-test}
+  - Implementation: {{runs-record}}, {{runs-freshness}}, {{runs}}, {{proof-reach}}, {{finding}}, {{placement-of}}
+  - Proof: {{fixture-snapshot}}
 - Every named function of a placed module is run by a test of a claim that names the module, so each piece of
   code is governed by a claim that promises something about it. A named function none of those claims runs is
   debt: proved only incidentally by another claim, or by none. A module of only types has no functions, and an

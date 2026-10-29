@@ -1,0 +1,36 @@
+{
+  "test": "oracle/verification/scheduling-follows-dependencies.runner.test.ts",
+  "digests": {
+    "oracle/substrate/compositions/scripted-verification.ts": "e3d99a57a5d5a9f28367b25340274f918420520e3b65374e447ed54c45749c54",
+    "oracle/verification/scheduling-follows-dependencies.runner.test.ts": "0ee994a2e0397fe9defade17476c6d95aed23964f07206aba2528afe7d3abcf0",
+    "src/core/primitives/verification.ts": "3c93b54b856f009e218cfb45c5adb43c1505250ce6bb46f4ff1b768f11bc0328",
+    "src/core/readings/verification-partition.ts": "9f1b1b46c21690dcc9c689155a5b53be377046ad9f4132ed2584efdcb293b0df",
+    "src/core/readings/verification-plan.ts": "7e0e59e18f58bf81cc695683a25173effecf0b034f78966d6f04b903275b7e1f",
+    "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
+    "src/substrate/compositions/verification-runner.mjs": "5a090ebc293fc278428b07fcae1565b1644d2aeaccbd5d93897eb28c5d85cbdc"
+  },
+  "ran": {
+    "oracle/substrate/compositions/scripted-verification.ts": [
+      "record@75",
+      "run@62",
+      "scriptedVerification@40",
+      "started@56"
+    ],
+    "src/core/readings/verification-partition.ts": [
+      "get@45"
+    ],
+    "src/core/readings/verification-plan.ts": [
+      "validate@12",
+      "visit@18"
+    ],
+    "src/substrate/adapters/source-loader.mjs": [
+      "fetchModule@33",
+      "load@50",
+      "withKit@16"
+    ],
+    "src/substrate/compositions/verification-runner.mjs": [
+      "runVerification@22",
+      "verification@6"
+    ]
+  }
+}

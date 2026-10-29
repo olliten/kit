@@ -157,15 +157,20 @@ input key. It keys only declared inputs: it does not discover a check's reads or
 
 ```yaml
 runs:
-  record: kit/runs.json
+  record: kit/runs
   each: node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}
 ```
 
 `kit runs` runs each test file under the proof root alone with `each`, with `{test}` replaced by the file and
 `{dir}` by a directory of its own, where the command writes an LCOV report. It also sets `NODE_V8_COVERAGE`, so
-processes a test starts count too. The record holds every placed module's and test's digest and, per test, the
-named functions of each placed module it ran. Commit it; `kit check` reads it while every digest still matches,
-and reports `runs-stale` until `kit runs` is run again.
+processes a test starts count too. It writes one record per test into the `record` directory, named by the
+test's path with `/` replaced by `+`: the named functions of each placed module the test ran, and the digest of
+every file the record depends on, which is the test, the placed files its code reaches and the modules it ran.
+Commit the directory, and don't `ignore` it.
+
+`kit check` reads the records while each is fresh, and reports `runs-missing`, `runs-unreadable`, `runs-stale` or
+`runs-orphan` on a record's file otherwise. `kit runs --stale` records exactly those tests and removes the records
+of tests that are gone; `kit runs <test>…` records the tests named; `kit runs` alone records every test.
 
 With vitest, `each` is `npx vitest run {test} --coverage.enabled --coverage.provider=v8
 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}`, with

@@ -1,0 +1,22 @@
+{
+  "test": "oracle/kit/cache-keys-on-what-was-read.failed-reads.test.ts",
+  "digests": {
+    "oracle/kit/cache-keys-on-what-was-read.failed-reads.test.ts": "7a9b0e639d41a2887b3d0dcb3da838d97d28a02369a7200720c9539e82a5bbb1",
+    "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
+    "src/substrate/adapters/filesystem.ts": "380efb89d061284215f5ef705d0458cf502cafb6656aff1dbbb3ae989392593d"
+  },
+  "ran": {
+    "oracle/substrate/adapters/temporary-project.ts": [
+      "dispose@48",
+      "inside@21",
+      "open@19",
+      "write@29"
+    ],
+    "src/substrate/adapters/filesystem.ts": [
+      "codeOf@65",
+      "entries@41",
+      "readText@25",
+      "reread@72"
+    ]
+  }
+}

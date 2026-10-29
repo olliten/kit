@@ -66,7 +66,7 @@
   - Role: fact
   - Zone: core
   - Of: []
-- **runs** — what `kit runs` recorded: the digest of each placed module and test, and the named functions each test ran.
+- **runs** — what `kit runs` recorded about each test: the named functions of each placed module it ran and the digests of the files the record depends on, and the fresh records read together.
   - Role: fact
   - Zone: core
   - Of: []
@@ -269,10 +269,14 @@
   - Role: derived
   - Zone: core
   - From: {{config-values}}
-- **runs-record** — the runs record while it still describes the code, or the finding that it is missing, unreadable or stale.
+- **runs-freshness** — each test's record file and whether it still describes the code, with the files that changed, and the records whose tests are gone.
   - Role: derived
   - Zone: core
-  - From: {{finding}}, {{placement-of}}, {{runs}}, {{snapshot}}
+  - From: {{placement-of}}, {{proof-reach}}, {{runs}}, {{snapshot}}
+- **runs-record** — the runs records while each still describes the code, or the findings on the records that are missing, unreadable, stale or of gone tests.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{runs}}, {{runs-freshness}}, {{snapshot}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
@@ -305,7 +309,7 @@
   - Role: derived
   - Zone: core
   - From: {{config-values}}
-- **test-runs** — the runs record built from each test's coverage reports and the digests of the files they ran over.
+- **test-runs** — each test's record built from its coverage reports and the digests of the files it reaches and ran.
   - Role: derived
   - Zone: core
   - From: {{compiler-facts}}, {{coverage-report}}, {{default-config}}, {{file}}, {{placement-of}}, {{runs}}
@@ -492,10 +496,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{command}}, {{config-values}}, {{read-config}}, {{refs-description}}, {{terminal-input}}, {{text-files}}
-- **runs-run** — the `kit runs` workflow: run each test file alone with the app's command and record which named functions it ran.
+- **runs-run** — the `kit runs` workflow: run every test, the given tests or the stale ones, each alone with the app's command, and record which named functions each ran.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{config-values}}, {{processes}}, {{read-config}}, {{read-snapshot}}, {{test-runs}}, {{text-files}}
+  - Of: {{command}}, {{config-values}}, {{processes}}, {{read-config}}, {{read-snapshot}}, {{runs-freshness}}, {{test-runs}}, {{text-files}}
 - **scripted-verification** — the workflow that runs verification checks whose effects are scripted as data, reporting what ran together.
   - Role: composition
   - Zone: substrate

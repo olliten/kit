@@ -1,0 +1,16 @@
+{
+  "test": "oracle/verification/partitions-cover-required-checks.test.ts",
+  "digests": {
+    "oracle/verification/partitions-cover-required-checks.test.ts": "f5e27d70c7e0c992c9ec856feb294b7ebe58930cef839d9caf4f48b165a5a00c",
+    "src/core/primitives/verification.ts": "3c93b54b856f009e218cfb45c5adb43c1505250ce6bb46f4ff1b768f11bc0328",
+    "src/core/readings/verification-partition.ts": "9f1b1b46c21690dcc9c689155a5b53be377046ad9f4132ed2584efdcb293b0df"
+  },
+  "ran": {
+    "src/core/readings/verification-partition.ts": [
+      "positive@3",
+      "verificationPartition@36",
+      "verificationWeights@6",
+      "weight@49"
+    ]
+  }
+}

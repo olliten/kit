@@ -1,0 +1,34 @@
+{
+  "test": "oracle/verification/declared-inputs-determine-the-key.test.ts",
+  "digests": {
+    "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
+    "oracle/verification/declared-inputs-determine-the-key.test.ts": "39906e445887370649e1562fe5df2807d99b4c80120de9e473959362ea5d8ac8",
+    "src/core/primitives/declared-input.ts": "99e25ded68657749a7f8412484a741ad9d31a05bae7ed084ccec19016d233bb0",
+    "src/substrate/adapters/declared-input-files.ts": "64ecb4a2c4420bb6f56ddc03332a8107a7a32b99f1cb84e71614838417895b09"
+  },
+  "ran": {
+    "oracle/substrate/adapters/temporary-project.ts": [
+      "directory@36",
+      "dispose@48",
+      "inside@21",
+      "open@19",
+      "remove@39",
+      "symlink@42",
+      "write@29"
+    ],
+    "src/substrate/adapters/declared-input-files.ts": [
+      "directoriesOf@114",
+      "filesOf@112",
+      "frame@17",
+      "inputKey@125",
+      "inputKeyOf@110",
+      "keyOver@31",
+      "kindOf@78",
+      "kindsOf@116",
+      "resolveInputs@89",
+      "text16@24",
+      "text@42",
+      "walk@91"
+    ]
+  }
+}

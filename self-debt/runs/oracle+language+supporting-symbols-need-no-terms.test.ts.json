@@ -1,0 +1,291 @@
+{
+  "test": "oracle/language/supporting-symbols-need-no-terms.test.ts",
+  "digests": {
+    "oracle/core/readings/fixture-snapshot.ts": "acced9cc98154be5a5f7ac91e7cfd96b59b4608633e6b609cc3bb9daed3a7d69",
+    "oracle/language/supporting-symbols-need-no-terms.test.ts": "82a5325031c2ff7105f4545aac292a1f736c82cf1d726123914e9f1a1835e52c",
+    "src/core/compositions/kit-configuration.ts": "44d731379b75a67f27609c01895c31b0bac4c56b5d5c55f31533240b5617459c",
+    "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
+    "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
+    "src/core/primitives/compiler-facts.ts": "685cc0836921f5966c01dbc66adb9214b8b6c2e66d3f9cc6ab55b045e0951cf9",
+    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
+    "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
+    "src/core/primitives/import.ts": "c559201b45c7883f5388fd04a1dcaa1a02bf7d91cbad5f55a3e73f46bcc2d763",
+    "src/core/primitives/layer.ts": "a9d4e6643a09e6d7fae2087847217af762cc6b5cbc613dcb49293f91c0d3c9d5",
+    "src/core/primitives/reference.ts": "89e47766ba6114c0b4c99311e8d63156191f7086b7afdc59edcf4dd576b51604",
+    "src/core/primitives/snapshot.ts": "49f32823e0f79f8598730f2ec2a9cc3a977ba8ae502d9193ed40b0933e485b18",
+    "src/core/primitives/term.ts": "4521f00e6ebb6d54477191b58fa0f2bb5b842765ca94c7c34cd327d32b79c139",
+    "src/core/primitives/topic.ts": "2e3ba8e378bc8c7bae609d87705580a6cb344276a9a87ab1d977130b7a54a3e6",
+    "src/core/primitives/zones.ts": "f49fc9a4bee55f79aa3ab3a33ef842c7b66e95c529a89c47343a3b0005660a01",
+    "src/core/readings/claim-inventory.ts": "2da2157c11333a89db7da02ed39b4d5798cff6ffbd3bb48f63f37531020bddf2",
+    "src/core/readings/config-schema.ts": "545defaaee9c767ae66833f299dc716495c2e08662f53f723b0a7b82cc06d1b9",
+    "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
+    "src/core/readings/finding.ts": "9ee2a05d191688605465cb692dc5e85eb9b6c66e5254bd5856e16c1bda411f33",
+    "src/core/readings/ignored-import.ts": "270818021acfe8ab3655cf8e802d6c5b2ff6d6812cc5c5042091739ef2d15007",
+    "src/core/readings/layout-configuration.ts": "bd883acdb914bbba91af7cc0383e564950779b1a1e0a2dacde00475d104cb220",
+    "src/core/readings/legacy-zone-configuration.ts": "961a2a207527c53db7f16fbcf3d9daaf839ce5f79c3555bcb219e3f5d8e8084f",
+    "src/core/readings/name-check.ts": "8aa2a94f88453ab26187f07f2e3cbf1ced612af97d2e4ac5c0b95fb89ed25658",
+    "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
+    "src/core/readings/relative-import.ts": "13cc0e9b129d902d963d873dafd182d48e63af6d3beb9e3856b7b3e480a56bac",
+    "src/core/readings/semantic-references.ts": "f8ea87d4a83ae904a6534e67e07b9e71d3009bc7a73666ba0f11dd1a1c2736b8",
+    "src/core/readings/term-inventory.ts": "379a0fd747183b3edee52416ebfd2a36b6db5bfd1e87e360abd9b1df8ad584b1",
+    "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
+    "src/substrate/adapters/compiler.ts": "2ef6eed3842686db6ce4fa272c79314a4f49249c37e8796eb41d65af83cb783a",
+    "src/substrate/adapters/filesystem.ts": "380efb89d061284215f5ef705d0458cf502cafb6656aff1dbbb3ae989392593d",
+    "src/substrate/compositions/authority-recorder.ts": "a86300ed1007c31e66a93a7605a31a3508e422601e8ce9a7d2ea7f0d08dce229",
+    "src/substrate/compositions/behaviour-reading.ts": "99ec3216576aecc0f15fa4ad08659c46c3e5253cb31effde24c0eace20f4852f",
+    "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
+    "src/substrate/compositions/contract-recorder.ts": "e2fcfdb2d50e8eff1b768525764555fb989ea0f68661bcd9a76b4cebf762e6b0",
+    "src/substrate/compositions/escape-recorder.ts": "de302d401f665ae162d4cdb0737c15548bd01518e896235b4d949caf59dc44dd",
+    "src/substrate/compositions/fact-walk.ts": "3ac7090d9d2a71561acde1e1b421ac2da1494690739e4cc45016f3db76190873",
+    "src/substrate/compositions/file-scope.ts": "db032e8b829a4f2ae55dda7d1c0f594a005fe7da216ed2c3a1b133c5b93657ee",
+    "src/substrate/compositions/function-recorder.ts": "2493170de3b01a2aa449a76526735542db635824f741f191b2128fe9add0d8ff",
+    "src/substrate/compositions/import-recorder.ts": "f6ed35a4ecc88967f6fb553cd4fe178f77aed4a6beaa0fc8767ec882abe84ce9",
+    "src/substrate/compositions/native-reading.ts": "4807754ca71be2f0503f5750bf42dbb40f910f71e648380923f098647e401d60",
+    "src/substrate/compositions/read-snapshot.ts": "55029f5b3108cc25fd3e8fecf44301979a43124d8bb8d929114ced14c957926f",
+    "src/substrate/compositions/source-size.ts": "afcd726644f23a970c31eed1b13c1f716d70b6a72d2cc1816f2f923ff3e69299",
+    "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb",
+    "src/substrate/compositions/term-recorder.ts": "d7b13d65d6ffd7aa08856768199b7ff086d8263107a413c3793d103986ed543c",
+    "src/substrate/compositions/test-reach.ts": "67624428fcec83cb748bbd5c580bdbcabb01578654991fbd5e88c6030f93b47d",
+    "src/substrate/primitives/program-scope.ts": "58bb04ca5efe734416da2456f9e9dcbb87283eacd996873de3cfdefdb6469fad"
+  },
+  "ran": {
+    "oracle/core/readings/fixture-snapshot.ts": [
+      "snapshotOf@9"
+    ],
+    "src/core/compositions/kit-configuration.ts": [
+      "adapters@105",
+      "configuredKit@18",
+      "dependencyExclusions@84",
+      "ignoredPaths@157",
+      "kitConfig@8",
+      "packages@141"
+    ],
+    "src/core/readings/claim-inventory.ts": [
+      "claimInventory@93",
+      "claimMarkdown@12",
+      "claimModules@62",
+      "close@122",
+      "marker@111",
+      "matches@109",
+      "moduleNames@15",
+      "named@116",
+      "visit@149"
+    ],
+    "src/core/readings/config-schema.ts": [
+      "configIssues@44",
+      "visit@46"
+    ],
+    "src/core/readings/config-values.ts": [
+      "isRecord@8",
+      "isText@10",
+      "isTexts@11",
+      "isZone@12",
+      "normalizedPath@20",
+      "relativeLocation@33",
+      "texts@13"
+    ],
+    "src/core/readings/finding.ts": [
+      "finding@14"
+    ],
+    "src/core/readings/legacy-zone-configuration.ts": [
+      "legacyZones@5"
+    ],
+    "src/core/readings/name-check.ts": [
+      "entryOf@33",
+      "nameCheck@12",
+      "scan@42",
+      "wordsOf@79"
+    ],
+    "src/core/readings/placement-of.ts": [
+      "entrypointOf@37",
+      "isZone@22",
+      "legacyCodeOf@41",
+      "moduleFileOf@46",
+      "placementOf@95",
+      "proofOf@25",
+      "rootOf@67"
+    ],
+    "src/core/readings/semantic-references.ts": [
+      "plain@27",
+      "semanticReferenceInventory@24",
+      "visit@33"
+    ],
+    "src/core/readings/term-inventory.ts": [
+      "plain@15",
+      "sorted@22",
+      "termInventory@5",
+      "visit@39"
+    ],
+    "src/core/readings/term-model.ts": [
+      "identity@32",
+      "termModel@6",
+      "unique@284"
+    ],
+    "src/substrate/adapters/compiler.ts": [
+      "digest@67",
+      "environmentReader@109",
+      "getSourceFile@191",
+      "load@177",
+      "names@70",
+      "recorded@47",
+      "resolve@215",
+      "same@69",
+      "sourceOf@141",
+      "systemOf@118",
+      "tracedSystem@74",
+      "useSourceOfProjectReferenceRedirect@205",
+      "workerHost@156"
+    ],
+    "src/substrate/adapters/filesystem.ts": [
+      "entries@41",
+      "readText@25"
+    ],
+    "src/substrate/compositions/authority-recorder.ts": [
+      "access@45",
+      "authorityRecorder@14",
+      "native@48",
+      "recordParameter@24",
+      "visit@44"
+    ],
+    "src/substrate/compositions/behaviour-reading.ts": [
+      "acceptsBehaviour@228",
+      "behaviourReading@57",
+      "constAsserted@36",
+      "contractType@195",
+      "executable@231",
+      "handleOf@221",
+      "libCollection@70",
+      "parameterFacts@179",
+      "typeFacts@76"
+    ],
+    "src/substrate/compositions/contract-reading.ts": [
+      "contractIdentity@38",
+      "contractReading@6",
+      "operationsOf@7",
+      "portsOf@19",
+      "typeNames@47"
+    ],
+    "src/substrate/compositions/contract-recorder.ts": [
+      "contractRecorder@14",
+      "visit@25"
+    ],
+    "src/substrate/compositions/escape-recorder.ts": [
+      "end@35",
+      "escapeRecorder@9",
+      "visit@14"
+    ],
+    "src/substrate/compositions/fact-walk.ts": [
+      "factWalk@13",
+      "visit@18"
+    ],
+    "src/substrate/compositions/file-scope.ts": [
+      "fileScope@13",
+      "site@26",
+      "syntaxOf@15",
+      "visitToken@17"
+    ],
+    "src/substrate/compositions/function-recorder.ts": [
+      "end@55",
+      "functionRecorder@31",
+      "nameOf@9",
+      "own@12",
+      "visit@37"
+    ],
+    "src/substrate/compositions/import-recorder.ts": [
+      "end@62",
+      "importRecorder@14",
+      "visit@27"
+    ],
+    "src/substrate/compositions/native-reading.ts": [
+      "baseTypes@97",
+      "hostDeclaration@27",
+      "hostValue@32",
+      "nativeAuthorityOf@102",
+      "nativeContract@189",
+      "nativeLibrary@24",
+      "nativeMember@60",
+      "nativeMemberAuthority@175",
+      "nativeReading@22",
+      "nativeType@70",
+      "referenceType@15",
+      "valueMember@38"
+    ],
+    "src/substrate/compositions/read-snapshot.ts": [
+      "aliasTarget@208",
+      "commentsOf@388",
+      "depth@187",
+      "ignored@54",
+      "importTarget@278",
+      "local@255",
+      "readCompiler@231",
+      "readSnapshot@45",
+      "scopeOf@185",
+      "typeOf@424",
+      "visit@391",
+      "walk@410"
+    ],
+    "src/substrate/compositions/source-size.ts": [
+      "called@33",
+      "fileOf@20",
+      "sourceSize@9",
+      "targetOf@42",
+      "visit@61"
+    ],
+    "src/substrate/compositions/syntax-reading.ts": [
+      "annotation@147",
+      "globalName@80",
+      "literal@103",
+      "primitiveOf@35",
+      "rawAccess@43",
+      "syntaxReading@7",
+      "targetOf@8",
+      "typeOnlyOf@14"
+    ],
+    "src/substrate/compositions/term-recorder.ts": [
+      "end@17",
+      "termRecorder@11"
+    ],
+    "src/substrate/compositions/test-reach.ts": [
+      "assignment@278",
+      "bindingSymbols@282",
+      "bit@548",
+      "chainTop@244",
+      "changeable@430",
+      "changes@454",
+      "code@477",
+      "collectNames@658",
+      "empty@176",
+      "enter@578",
+      "erased@70",
+      "flow@288",
+      "functionOf@98",
+      "holderOf@262",
+      "homeReferences@408",
+      "immutable@136",
+      "inert@413",
+      "isResults@646",
+      "isSymbol@650",
+      "nameSymbolOf@116",
+      "names@16",
+      "namesOf@654",
+      "own@557",
+      "pieceOf@537",
+      "rawSymbolOf@42",
+      "reach@191",
+      "readonlyProperty@131",
+      "referenceType@127",
+      "referencesOf@47",
+      "results@462",
+      "resultsOf@182",
+      "statementOf@81",
+      "summarize@569",
+      "testReach@30",
+      "topLevelNames@12",
+      "unaliased@37",
+      "visit@484",
+      "visit@53",
+      "within@76"
+    ]
+  }
+}

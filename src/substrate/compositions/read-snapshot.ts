@@ -139,20 +139,20 @@ export function readSnapshot(
   const sizes = [...sources].map(([path, text]) =>
     sourceSize(path, text, scopeOf(path, scopes, appRoot)?.program, appRoot, known),
   );
-  // The runs record is read like any other input, so a cached snapshot is reused only while it is unchanged.
-  let runsText: string | null | undefined;
-  if (config.runs !== undefined)
-    try {
-      runsText = filesystem.readText(join(appRoot, config.runs.record), trace.filesystem);
-    } catch {
-      runsText = null;
-    }
+  // The runs records are read like any other input, so a cached snapshot is reused only while they are unchanged.
+  const record = config.runs?.record;
+  const runsRecords =
+    record === undefined
+      ? undefined
+      : paths
+          .filter((path) => path.startsWith(`${record}/`) && path.endsWith(".json"))
+          .map((path) => ({ path, text: filesystem.readText(join(appRoot, path), trace.filesystem) }));
   return {
     files: files.map((file) => {
       const digest = digests.get(file.path);
       return digest === undefined ? file : { ...file, digest };
     }),
-    ...(runsText === undefined ? {} : { runsText }),
+    ...(runsRecords === undefined ? {} : { runsRecords }),
     sizes,
     imports,
     terms,

@@ -1,7 +1,7 @@
 import type { CompilerFacts } from "../primitives/compiler-facts.js";
 import type { KitConfig } from "../primitives/default-config.js";
 import type { SnapshotFile } from "../primitives/file.js";
-import type { Runs } from "../primitives/runs.js";
+import type { TestRecord } from "../primitives/runs.js";
 import { coverageReport } from "./coverage-report.js";
 import { placementOf } from "./placement-of.js";
 
@@ -48,43 +48,45 @@ function rawRuns(
   return ran;
 }
 
-// The runs record from each test's LCOV reports and raw V8 coverage, which also covers processes the test
-// starts: the digest of every placed module and proof-root test, and for each test the named functions of each
-// placed module it ran, as `name@line`. A report names a file absolutely or relative to the app root.
+// Each test's record from its LCOV reports and raw V8 coverage, which also covers processes the test starts: the
+// named functions of each placed module it ran, as `name@line`, and the digest of every file the record depends
+// on, which is the files its code reaches (`inputs`) and the modules it ran. A report names a file absolutely or
+// relative to the app root.
 export function testRuns(
   reports: readonly { readonly test: string; readonly lcov: readonly string[]; readonly v8: readonly string[] }[],
   files: readonly SnapshotFile[],
   root: string,
-  { srcRoot, layerNames, oracleRoot }: Pick<KitConfig, "srcRoot" | "layerNames" | "oracleRoot">,
+  { srcRoot, layerNames }: Pick<KitConfig, "srcRoot" | "layerNames">,
+  inputs: ReadonlyMap<string, readonly string[]>,
   functions: readonly NamedFunction[] = [],
   texts: ReadonlyMap<string, string> = new Map(),
-): Runs {
-  const covered = files.filter(
-    (file) =>
-      (file.type === "test" && file.path.startsWith(`${oracleRoot}/`)) ||
-      (file.type === "source" && placementOf(file.path, srcRoot, layerNames).placed),
+): TestRecord[] {
+  const digests = new Map<string, string>();
+  for (const file of files) if (file.digest !== undefined) digests.set(file.path, file.digest);
+  const placed = new Set(
+    files.filter((file) => file.type === "source" && placementOf(file.path, srcRoot, layerNames).placed).map((file) => file.path),
   );
-  const placed = new Set(covered.filter((file) => file.type === "source").map((file) => file.path));
   const named = new Set(functions.map((fn) => `${fn.file}:${fn.name}@${fn.line}`));
   const local = (file: string): string => (file.startsWith(`${root}/`) ? file.slice(root.length + 1) : file);
-  const tests: Record<string, Record<string, string[]>> = {};
-  for (const { test, lcov, v8 } of [...reports].sort((a, b) => (a.test < b.test ? -1 : a.test > b.test ? 1 : 0))) {
-    const modules = new Map<string, Set<string>>();
-    const add = (module: string, key: string): void => {
-      if (placed.has(module)) modules.set(module, new Set([...(modules.get(module) ?? []), key]));
-    };
-    for (const report of lcov.flatMap(coverageReport))
-      for (const fn of report.functions) if (fn.count > 0) add(local(report.file), `${fn.name}@${fn.line}`);
-    for (const text of v8) for (const [module, keys] of rawRuns(text, local, texts, named)) for (const key of keys) add(module, key);
-    tests[test] = Object.fromEntries(
-      [...modules]
-        .filter(([, ran]) => ran.size > 0)
-        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-        .map(([module, ran]) => [module, [...ran].sort()]),
-    );
-  }
-  return {
-    digests: Object.fromEntries(covered.flatMap((file) => (file.digest === undefined ? [] : [[file.path, file.digest]]))),
-    tests,
-  };
+  return [...reports]
+    .sort((a, b) => (a.test < b.test ? -1 : a.test > b.test ? 1 : 0))
+    .map(({ test, lcov, v8 }) => {
+      const modules = new Map<string, Set<string>>();
+      const add = (module: string, key: string): void => {
+        if (placed.has(module)) modules.set(module, new Set([...(modules.get(module) ?? []), key]));
+      };
+      for (const report of lcov.flatMap(coverageReport))
+        for (const fn of report.functions) if (fn.count > 0) add(local(report.file), `${fn.name}@${fn.line}`);
+      for (const text of v8) for (const [module, keys] of rawRuns(text, local, texts, named)) for (const key of keys) add(module, key);
+      const ran = [...modules].filter(([, keys]) => keys.size > 0).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+      const depends = [...new Set([test, ...(inputs.get(test) ?? []), ...ran.map(([module]) => module)])].sort();
+      return {
+        test,
+        digests: Object.fromEntries(depends.flatMap((path) => {
+          const digest = digests.get(path);
+          return digest === undefined ? [] : [[path, digest]];
+        })),
+        ran: Object.fromEntries(ran.map(([module, keys]) => [module, [...keys].sort()])),
+      };
+    });
 }

@@ -1,0 +1,12 @@
+{
+  "test": "oracle/convergence/finding-debt-key.test.ts",
+  "digests": {
+    "oracle/convergence/finding-debt-key.test.ts": "fbe3f6a3fc37952f850cc0a5e947b1a6f102b932707c60b049204d8abc5b8027",
+    "src/core/readings/finding.ts": "9ee2a05d191688605465cb692dc5e85eb9b6c66e5254bd5856e16c1bda411f33"
+  },
+  "ran": {
+    "src/core/readings/finding.ts": [
+      "finding@14"
+    ]
+  }
+}

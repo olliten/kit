@@ -1,0 +1,15 @@
+{
+  "test": "oracle/verification/evidence-matches-inputs.test.ts",
+  "digests": {
+    "oracle/verification/evidence-matches-inputs.test.ts": "5df76a216160fa93d84d368beb3c01c3c41ae87f0a01ef1bff29d467645ca49b",
+    "src/core/primitives/verification.ts": "3c93b54b856f009e218cfb45c5adb43c1505250ce6bb46f4ff1b768f11bc0328",
+    "src/core/readings/verification-plan.ts": "7e0e59e18f58bf81cc695683a25173effecf0b034f78966d6f04b903275b7e1f"
+  },
+  "ran": {
+    "src/core/readings/verification-plan.ts": [
+      "validate@8",
+      "verificationPlan@29",
+      "visit@14"
+    ]
+  }
+}

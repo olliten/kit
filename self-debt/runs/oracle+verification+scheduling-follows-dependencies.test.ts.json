@@ -1,0 +1,15 @@
+{
+  "test": "oracle/verification/scheduling-follows-dependencies.test.ts",
+  "digests": {
+    "oracle/verification/scheduling-follows-dependencies.test.ts": "74b5d6dd463186a35f5509879ebc6a15102497f6aa8b1f24f8f5f1ffd95cc432",
+    "src/core/primitives/verification.ts": "3c93b54b856f009e218cfb45c5adb43c1505250ce6bb46f4ff1b768f11bc0328",
+    "src/core/readings/verification-plan.ts": "7e0e59e18f58bf81cc695683a25173effecf0b034f78966d6f04b903275b7e1f"
+  },
+  "ran": {
+    "src/core/readings/verification-plan.ts": [
+      "validate@8",
+      "verificationPlan@29",
+      "visit@14"
+    ]
+  }
+}

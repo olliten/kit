@@ -497,3 +497,28 @@ without naming the app.
 - **Cost:** recording runs each test file in its own process: about 2 minutes for Tuck and 5 for Kit. The check
   itself stays static and fast.
 
+
+## 2026-10-29 · A config declares only the keys Kit reads
+
+- **Decision:** an unknown key at any level of a config is an error naming its full path, and every config error
+  answers the command on stderr with exit code 1. `app` names the app. Apps' plain-Node scripts load the config
+  readers through `configuration-runner.mjs`.
+- **Why:** Kit ignored keys it didn't read, so an app could believe it had declared something Kit never
+  enforced. Leeloo's config carried five such keys (`zones`, `tests`, `state`, `probe-port`, `trusted-base`)
+  from an older Kit. A config error is not a finding because a baseline must never be able to hold it.
+- **For apps:** delete keys Kit doesn't read; `kit consumers` names them. Scripts that imported the loaders
+  removed in #59 import `configuration-runner.mjs`.
+
+## 2026-10-29 · One runs record per test
+
+- **Decision:** `kit runs` writes one record per test into the `runs.record` directory. A record holds what the
+  test ran and the digest of every file it depends on: the test, the placed files its code reaches and the
+  modules it ran. A check reads it while each digest holds and the test reaches nothing new; `--stale` records
+  exactly the tests whose records don't, and named tests record alone.
+- **Why:** the single record named every placed module and test, so any edit staled it whole, every agent
+  rewrote one 325 KB file, and parallel work conflicted on it. Holding only the modules a test ran would miss
+  an edit to a module it imports but never ran, such as a constant that turns on a branch, so the record holds
+  its reach too.
+- **Cost:** about 100 small committed files for Kit. Re-recording one test takes about 30 seconds, against about
+  5 minutes for all of them.
+- **For apps:** `runs.record` names a directory; delete the old file and run `kit runs`.

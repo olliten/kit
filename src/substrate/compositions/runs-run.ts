@@ -1,5 +1,6 @@
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
+import { recordInputs, recordPathOf, runsFreshness } from "../../core/readings/runs-freshness.js";
 import { testRuns } from "../../core/readings/test-runs.js";
 import { processes } from "../adapters/processes.js";
 import { textFiles } from "../adapters/text-files.js";
@@ -7,7 +8,9 @@ import { readConfig } from "./read-config.js";
 import { readSnapshot } from "./read-snapshot.js";
 
 // `kit runs`: run each test file alone with the app's own command, which writes an LCOV report into its own
-// directory, and record which named functions of each placed module each test ran. A failing test still
+// directory, and record per test which named functions of each placed module it ran. Given test paths it records
+// only those; with `--stale` only the tests whose records no longer describe the code; with neither, every test.
+// Recording every test or the stale ones removes the records of tests that are gone. A failing test still
 // records what it ran; the failure is reported, since the test suite is where it is fixed.
 export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promise<CommandResponse> {
   const option = (name: string): string | undefined => {
@@ -25,9 +28,21 @@ export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promis
   if (config.runs === undefined)
     return { stdout: "", stderr: `Kit config ${configPath}: declare runs, its record path and test command.\n`, exitCode: 1 };
   const snapshot = readSnapshot(root, config);
-  const tests = snapshot.files
-    .filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`))
-    .map((file) => file.path);
+  const { records, orphans } = runsFreshness(snapshot);
+  const stale = args.includes("--stale");
+  const named = args.filter((argument, index) => !argument.startsWith("--") && !["--root", "--config"].includes(args[index - 1] ?? ""));
+  const known = new Set(records.map((state) => state.test));
+  const chosen = named.map((path) => {
+    const absolute = at(path);
+    return absolute.startsWith(`${root}/`) ? absolute.slice(root.length + 1) : absolute;
+  });
+  const unknown = chosen.filter((test) => !known.has(test));
+  if (unknown.length > 0)
+    return { stdout: "", stderr: unknown.map((test) => `${test} is not a test under ${config.oracleRoot}/.\n`).join(""), exitCode: 1 };
+  const tests =
+    chosen.length > 0
+      ? chosen
+      : records.filter((state) => !stale || state.status !== "fresh").map((state) => state.test);
   const scratch = `${root}/.kit-runs`;
   textFiles.remove(scratch);
   const dirs = tests.map((_, index) => `${scratch}/${index}`);
@@ -55,12 +70,17 @@ export async function runRuns({ engineRoot, args, cwd }: CommandRequest): Promis
   textFiles.remove(scratch);
   const functions = (snapshot.compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
   const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
-  const runs = testRuns(reports, snapshot.files, root, config, functions, texts);
-  textFiles.write(`${root}/${config.runs.record}`, JSON.stringify(runs, null, 2) + "\n");
+  const inputs = recordInputs(snapshot);
+  const written = testRuns(reports, snapshot.files, root, config, new Map(tests.map((test) => [test, inputs(test)])), functions, texts);
+  const directory = `${root}/${config.runs.record}`;
+  textFiles.directory(directory);
+  for (const record of written) textFiles.write(`${root}/${recordPathOf(config.runs.record, record.test)}`, JSON.stringify(record, null, 2) + "\n");
+  const removed = chosen.length > 0 ? [] : orphans;
+  for (const path of removed) textFiles.remove(`${root}/${path}`);
   const failed = tests.filter((_, index) => results[index]?.status !== 0);
   const unreported = reports.filter((report) => report.lcov.length === 0).map((report) => report.test);
   return {
-    stdout: `Kit runs recorded ${tests.length} tests in ${config.runs.record}.\n`,
+    stdout: `Kit runs recorded ${tests.length} tests in ${config.runs.record}/, removed ${removed.length} records of gone tests.\n`,
     stderr: [
       ...failed.map((test) => `${test}: the test command failed; what it ran is recorded.`),
       ...unreported.map((test) => `${test}: the test command wrote no LCOV report into {dir}.`),

@@ -12,7 +12,7 @@ terms: spec/terms.md
 claim-separator: "·"
 legacy-areas: []
 runs:
-  record: self-debt/runs.json
+  record: self-debt/runs
   each: npx vitest run {test} --coverage.enabled --coverage.provider=v8 --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
 exceptions:
   - oracle/code-structure/imports-point-inward.test.ts

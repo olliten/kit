@@ -1,0 +1,53 @@
+{
+  "test": "oracle/kit/apps-load-the-config-from-plain-node.test.ts",
+  "digests": {
+    "oracle/kit/apps-load-the-config-from-plain-node.test.ts": "0fe11ea35f46cb4183aef5476893ef1d7485815a06d32539e7db3dd522475c5f",
+    "src/core/compositions/kit-configuration.ts": "44d731379b75a67f27609c01895c31b0bac4c56b5d5c55f31533240b5617459c",
+    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/readings/config-schema.ts": "545defaaee9c767ae66833f299dc716495c2e08662f53f723b0a7b82cc06d1b9",
+    "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
+    "src/core/readings/layout-configuration.ts": "bd883acdb914bbba91af7cc0383e564950779b1a1e0a2dacde00475d104cb220",
+    "src/core/readings/legacy-zone-configuration.ts": "961a2a207527c53db7f16fbcf3d9daaf839ce5f79c3555bcb219e3f5d8e8084f",
+    "src/core/readings/test-roots.ts": "021ee43b6a7d89538fdbcf9c03e8e9cc5da502f1a11b21439df37b96216e8c4e",
+    "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
+    "src/substrate/compositions/configuration-runner.mjs": "c9e94091d406f3c93aa2c8a7fb878a8cb83d9bd74d6929788b63564a37d2cb96"
+  },
+  "ran": {
+    "src/core/compositions/kit-configuration.ts": [
+      "adapters@105",
+      "configuredKit@18",
+      "dependencyExclusions@84",
+      "ignoredPaths@157",
+      "kitConfig@8",
+      "packages@141"
+    ],
+    "src/core/readings/config-schema.ts": [
+      "configIssues@44",
+      "visit@46"
+    ],
+    "src/core/readings/config-values.ts": [
+      "isRecord@8",
+      "isText@10",
+      "isTexts@11",
+      "isZone@12",
+      "normalizedPath@20",
+      "relativeLocation@33",
+      "texts@13"
+    ],
+    "src/core/readings/legacy-zone-configuration.ts": [
+      "legacyZones@5"
+    ],
+    "src/core/readings/test-roots.ts": [
+      "testRoots@4"
+    ],
+    "src/substrate/adapters/source-loader.mjs": [
+      "fetchModule@33",
+      "load@50",
+      "resolveId@34",
+      "withKit@16"
+    ],
+    "src/substrate/compositions/configuration-runner.mjs": [
+      "configuration@7"
+    ]
+  }
+}

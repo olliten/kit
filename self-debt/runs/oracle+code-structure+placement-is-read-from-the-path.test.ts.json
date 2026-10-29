@@ -1,0 +1,128 @@
+{
+  "test": "oracle/code-structure/placement-is-read-from-the-path.test.ts",
+  "digests": {
+    "oracle/code-structure/placement-is-read-from-the-path.test.ts": "21b613e24134d3c08631ce29669d04b1951135cfaa3c08a1e2714ee43bc59169",
+    "oracle/core/readings/fixture-files.ts": "f68f4e3de4f6654af6334805ccfa23a7bade8b2ef15bb82012fd251f29bd92f2",
+    "oracle/core/readings/project-snapshot.ts": "4d8a25154a1eebd1422762df0f84b5340230ff36aaba8bc610c20010e3a77a6d",
+    "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
+    "oracle/substrate/compositions/program-fixture.ts": "fac1201b097dc9889c1c5a259b39d4dd5ed8b73e543e2104fd991e5e73343649",
+    "oracle/substrate/compositions/recorded-authority.ts": "423778c69f2e8d39411487c0dc7ecbfb5f08b017344a5f340cd13b481eb14b5d",
+    "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
+    "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
+    "src/core/primitives/compiler-facts.ts": "685cc0836921f5966c01dbc66adb9214b8b6c2e66d3f9cc6ab55b045e0951cf9",
+    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
+    "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
+    "src/core/primitives/import.ts": "c559201b45c7883f5388fd04a1dcaa1a02bf7d91cbad5f55a3e73f46bcc2d763",
+    "src/core/primitives/layer.ts": "a9d4e6643a09e6d7fae2087847217af762cc6b5cbc613dcb49293f91c0d3c9d5",
+    "src/core/primitives/reference.ts": "89e47766ba6114c0b4c99311e8d63156191f7086b7afdc59edcf4dd576b51604",
+    "src/core/primitives/snapshot.ts": "49f32823e0f79f8598730f2ec2a9cc3a977ba8ae502d9193ed40b0933e485b18",
+    "src/core/primitives/term.ts": "4521f00e6ebb6d54477191b58fa0f2bb5b842765ca94c7c34cd327d32b79c139",
+    "src/core/primitives/zones.ts": "f49fc9a4bee55f79aa3ab3a33ef842c7b66e95c529a89c47343a3b0005660a01",
+    "src/core/readings/access-authority.ts": "4c34c3e307c385b3628811a1ae1e441f84cd2bc988451bbbda0b06b2482a6740",
+    "src/core/readings/capability-context.ts": "04198ced6b86d60cc620a63c8a7f62620fc6fcb02be57e11ffdc8100087761c1",
+    "src/core/readings/finding.ts": "9ee2a05d191688605465cb692dc5e85eb9b6c66e5254bd5856e16c1bda411f33",
+    "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9",
+    "src/substrate/adapters/compiler.ts": "2ef6eed3842686db6ce4fa272c79314a4f49249c37e8796eb41d65af83cb783a",
+    "src/substrate/compositions/authority-recorder.ts": "a86300ed1007c31e66a93a7605a31a3508e422601e8ce9a7d2ea7f0d08dce229",
+    "src/substrate/compositions/behaviour-reading.ts": "99ec3216576aecc0f15fa4ad08659c46c3e5253cb31effde24c0eace20f4852f",
+    "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
+    "src/substrate/compositions/fact-walk.ts": "3ac7090d9d2a71561acde1e1b421ac2da1494690739e4cc45016f3db76190873",
+    "src/substrate/compositions/file-scope.ts": "db032e8b829a4f2ae55dda7d1c0f594a005fe7da216ed2c3a1b133c5b93657ee",
+    "src/substrate/compositions/native-reading.ts": "4807754ca71be2f0503f5750bf42dbb40f910f71e648380923f098647e401d60",
+    "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb",
+    "src/substrate/primitives/program-scope.ts": "58bb04ca5efe734416da2456f9e9dcbb87283eacd996873de3cfdefdb6469fad"
+  },
+  "ran": {
+    "oracle/core/readings/fixture-files.ts": [
+      "fixtureFiles@6"
+    ],
+    "oracle/core/readings/project-snapshot.ts": [
+      "projectSnapshot@8"
+    ],
+    "oracle/substrate/adapters/temporary-project.ts": [
+      "dispose@48",
+      "inside@21",
+      "open@19",
+      "write@29"
+    ],
+    "oracle/substrate/compositions/program-fixture.ts": [
+      "local@41",
+      "openProgram@25",
+      "visit@54"
+    ],
+    "oracle/substrate/compositions/recorded-authority.ts": [
+      "recordedAuthority@15"
+    ],
+    "src/core/readings/access-authority.ts": [
+      "accessAuthority@13"
+    ],
+    "src/core/readings/capability-context.ts": [
+      "capabilityContext@159",
+      "capabilityFinding@78",
+      "checkedFiles@146",
+      "debtOf@98",
+      "placed@54"
+    ],
+    "src/core/readings/finding.ts": [
+      "finding@14"
+    ],
+    "src/core/readings/placement-of.ts": [
+      "isZone@22",
+      "placementOf@95",
+      "proofOf@25",
+      "rootOf@67"
+    ],
+    "src/substrate/adapters/compiler.ts": [
+      "digest@67",
+      "environmentReader@109",
+      "getSourceFile@191",
+      "load@177",
+      "recorded@47",
+      "same@69",
+      "sourceOf@141",
+      "systemOf@118",
+      "tracedSystem@74",
+      "useSourceOfProjectReferenceRedirect@205",
+      "workerHost@156"
+    ],
+    "src/substrate/compositions/authority-recorder.ts": [
+      "access@45",
+      "authorityRecorder@14",
+      "visit@44"
+    ],
+    "src/substrate/compositions/behaviour-reading.ts": [
+      "behaviourReading@57"
+    ],
+    "src/substrate/compositions/contract-reading.ts": [
+      "contractReading@6"
+    ],
+    "src/substrate/compositions/fact-walk.ts": [
+      "factWalk@13",
+      "visit@18"
+    ],
+    "src/substrate/compositions/file-scope.ts": [
+      "fileScope@13",
+      "site@26",
+      "syntaxOf@15",
+      "visitToken@17"
+    ],
+    "src/substrate/compositions/native-reading.ts": [
+      "hostValue@32",
+      "nativeAuthorityOf@102",
+      "nativeLibrary@24",
+      "nativeMember@60",
+      "nativeMemberAuthority@175",
+      "nativeReading@22",
+      "nativeType@70",
+      "referenceType@15"
+    ],
+    "src/substrate/compositions/syntax-reading.ts": [
+      "globalName@80",
+      "primitiveOf@35",
+      "rawAccess@43",
+      "syntaxReading@7",
+      "targetOf@8"
+    ]
+  }
+}

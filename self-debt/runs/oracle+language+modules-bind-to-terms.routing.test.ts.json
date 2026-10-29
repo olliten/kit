@@ -1,0 +1,82 @@
+{
+  "test": "oracle/language/modules-bind-to-terms.routing.test.ts",
+  "digests": {
+    "oracle/language/modules-bind-to-terms.routing.test.ts": "07fdb5fbe8fcf0bc47eba118d1699b6fdf9748f59d22ac625988dcc2771d22f6",
+    "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
+    "src/core/readings/check-paths.ts": "af92998ae7e9334360db1a04e2924d1e31f05d38b8d9c3c9548ad67539a75ee0",
+    "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
+    "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
+    "src/core/readings/module-references.ts": "6e4814b98bc6406ac35d3c924b1b654ee2a45dfba1f0e715cfeffc6473b00748",
+    "src/core/readings/name-check.ts": "8aa2a94f88453ab26187f07f2e3cbf1ced612af97d2e4ac5c0b95fb89ed25658",
+    "src/core/readings/term-model.ts": "49774d77dda321813ad08d5765dea71a9f238d971bf30036b7600dae06c66270",
+    "src/core/readings/topic-shape.ts": "35b8ff90033eeffac50b1e4073be62cab9d4ecbf1cd3c039d981542881204b10",
+    "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
+    "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
+    "src/substrate/adapters/stopwatch.ts": "d5e22526fc9c865a262d5df46e174a0f73c52128f8bf24cee018e0ae7dc243a2",
+    "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
+    "src/substrate/compositions/read-config.ts": "107f186f28e520f6b14137f4d0d15c97175dff3aeae7c25a9334e37a56b902d0",
+    "src/substrate/compositions/read-snapshot.ts": "55029f5b3108cc25fd3e8fecf44301979a43124d8bb8d929114ced14c957926f",
+    "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb"
+  },
+  "ran": {
+    "oracle/substrate/adapters/temporary-project.ts": [
+      "dispose@48",
+      "inside@21",
+      "open@19",
+      "write@29"
+    ],
+    "src/core/readings/check-paths.ts": [
+      "at@9",
+      "option@10"
+    ],
+    "src/core/readings/comment-check.ts": [
+      "commentCheck@10"
+    ],
+    "src/core/readings/config-values.ts": [
+      "isTexts@11"
+    ],
+    "src/core/readings/module-references.ts": [
+      "claimsKeptBy@7"
+    ],
+    "src/core/readings/name-check.ts": [
+      "nameCheck@12"
+    ],
+    "src/core/readings/term-model.ts": [
+      "identity@32",
+      "unique@284"
+    ],
+    "src/core/readings/topic-shape.ts": [
+      "add@30",
+      "topicShape@21"
+    ],
+    "src/substrate/adapters/processes.ts": [
+      "node@59",
+      "run@38"
+    ],
+    "src/substrate/adapters/source-loader.mjs": [
+      "fetchModule@33",
+      "isMain@45",
+      "resolveId@34",
+      "run@61",
+      "withKit@16"
+    ],
+    "src/substrate/adapters/stopwatch.ts": [
+      "date@7",
+      "now@7"
+    ],
+    "src/substrate/compositions/contract-reading.ts": [
+      "contractReading@6"
+    ],
+    "src/substrate/compositions/read-config.ts": [
+      "readConfig@8"
+    ],
+    "src/substrate/compositions/read-snapshot.ts": [
+      "scopeOf@185"
+    ],
+    "src/substrate/compositions/syntax-reading.ts": [
+      "syntaxReading@7",
+      "targetOf@8",
+      "typeOnlyOf@14"
+    ]
+  }
+}

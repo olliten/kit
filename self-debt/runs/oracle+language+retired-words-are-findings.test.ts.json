@@ -1,0 +1,43 @@
+{
+  "test": "oracle/language/retired-words-are-findings.test.ts",
+  "digests": {
+    "oracle/core/readings/fixture-snapshot.ts": "acced9cc98154be5a5f7ac91e7cfd96b59b4608633e6b609cc3bb9daed3a7d69",
+    "oracle/language/retired-words-are-findings.test.ts": "d30dfb2107c88ea72b18186233a8d0e4ec1cf0894e9c117fdb17080812975c07",
+    "src/core/primitives/claim.ts": "f31dd025be6254c128f95ad899957fcce7fc663c0570b6e383cebd606f00eed7",
+    "src/core/primitives/comment.ts": "081cfa665702d59e4ccc726fb0fc038b011c94dce642e3addc2e8bd15b5e5bb8",
+    "src/core/primitives/compiler-facts.ts": "685cc0836921f5966c01dbc66adb9214b8b6c2e66d3f9cc6ab55b045e0951cf9",
+    "src/core/primitives/default-config.ts": "fdd498bbd62d3fe3bf3d3842fc2a98292ad52b55e8402aece97a585c60d59fcc",
+    "src/core/primitives/exported-symbol.ts": "e1e043a1df7f5830032533cc7c8673d97b948aad3601cc2c3fc8666c0eba21ac",
+    "src/core/primitives/file.ts": "854639c6464eadafc0be9fd29d28c734a9eb8783ccc9928688821d9f89e2bee0",
+    "src/core/primitives/import.ts": "c559201b45c7883f5388fd04a1dcaa1a02bf7d91cbad5f55a3e73f46bcc2d763",
+    "src/core/primitives/layer.ts": "a9d4e6643a09e6d7fae2087847217af762cc6b5cbc613dcb49293f91c0d3c9d5",
+    "src/core/primitives/reference.ts": "89e47766ba6114c0b4c99311e8d63156191f7086b7afdc59edcf4dd576b51604",
+    "src/core/primitives/snapshot.ts": "49f32823e0f79f8598730f2ec2a9cc3a977ba8ae502d9193ed40b0933e485b18",
+    "src/core/primitives/term.ts": "4521f00e6ebb6d54477191b58fa0f2bb5b842765ca94c7c34cd327d32b79c139",
+    "src/core/primitives/zones.ts": "f49fc9a4bee55f79aa3ab3a33ef842c7b66e95c529a89c47343a3b0005660a01",
+    "src/core/readings/finding.ts": "9ee2a05d191688605465cb692dc5e85eb9b6c66e5254bd5856e16c1bda411f33",
+    "src/core/readings/name-check.ts": "8aa2a94f88453ab26187f07f2e3cbf1ced612af97d2e4ac5c0b95fb89ed25658",
+    "src/core/readings/placement-of.ts": "5c5f1494bd017c36cca782a634859098c1b33546adc1d7e482c01a35282f30f9"
+  },
+  "ran": {
+    "oracle/core/readings/fixture-snapshot.ts": [
+      "snapshotOf@9"
+    ],
+    "src/core/readings/finding.ts": [
+      "byDebtKey@25",
+      "finding@14"
+    ],
+    "src/core/readings/name-check.ts": [
+      "entryOf@33",
+      "nameCheck@12",
+      "scan@42",
+      "wordsOf@79"
+    ],
+    "src/core/readings/placement-of.ts": [
+      "isZone@22",
+      "placementOf@95",
+      "proofOf@25",
+      "rootOf@67"
+    ]
+  }
+}
