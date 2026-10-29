@@ -10,6 +10,7 @@ prerequisites and resource needs, so evidence reuse and execution can be planned
   path's absent, file or directory kind. Resolution follows symbolic links and preserves binary bytes;
   unreadable inputs fail instead of producing a key. Declaration order and checkout location do not change
   the key ({{declared-input}}, {{declared-input-files}}). · {#declared-inputs-determine-the-key}
+  - Proof: {{temporary-project}}
 - A result satisfies a required check only when its identity, inputs and execution contract match, it passed,
   and its strength meets the requirement. Unknown inputs and a policy requiring fresh execution reuse
   nothing ({{verification}}, {{verification-plan}}). · {#evidence-matches-inputs}

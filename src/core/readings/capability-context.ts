@@ -3,13 +3,13 @@ import type { KitConfig } from "../primitives/default-config.js";
 import { LAYERS } from "../primitives/layer.js";
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, finding } from "./finding.js";
-import { type Placed, legacyCodeOf, moduleFileOf, placementOf, rootOf } from "./placement-of.js";
+import { type Placed, entrypointOf, legacyCodeOf, moduleFileOf, placementOf, proofOf, rootOf } from "./placement-of.js";
 
 export interface CapabilityFinding extends Finding {
   readonly status: "violation" | "unresolved" | "review-held";
   readonly blocking: boolean;
   readonly limit: string;
-  readonly category: "legacy-debt" | "checker-limit" | "placed-violation";
+  readonly category: "legacy-debt" | "proof-debt" | "checker-limit" | "placed-violation";
 }
 
 type Project = CompilerFacts["projects"][number];
@@ -73,8 +73,8 @@ export function zoneOf(snapshot: Snapshot, path: string): Zone | undefined {
   )?.zone;
 }
 
-// A violation in placed code or a declared entrypoint can't be waived; one in legacy code is debt. What the
-// checker can't establish is a limit.
+// A violation in placed code or a declared entrypoint can't be waived; one in legacy code or a claim proof is
+// debt. What the checker can't establish is a limit.
 export function capabilityFinding(
   snapshot: Snapshot,
   startups: readonly string[],
@@ -89,8 +89,19 @@ export function capabilityFinding(
     status: "violation",
     blocking: true,
     limit: "",
-    category: placed(snapshot, path) === null && !startups.includes(path) ? "legacy-debt" : "placed-violation",
+    category: debtOf(snapshot, startups, path) ?? "placed-violation",
   };
+}
+
+// The debt a violation in a file is, if any: a claim proof's is the proof's, and outside placed code and the
+// declared entrypoints it is legacy code's.
+export function debtOf(
+  snapshot: Snapshot,
+  startups: readonly string[],
+  path: string,
+): "proof-debt" | "legacy-debt" | undefined {
+  if (proofOf(path, snapshot.config.oracleRoot) !== null) return "proof-debt";
+  return placed(snapshot, path) === null && !startups.includes(path) ? "legacy-debt" : undefined;
 }
 
 export function capabilityLimit(check: string, path: string, limit: string, detail?: string): CapabilityFinding {
@@ -131,13 +142,15 @@ export function layerConfigLimit(snapshot: Snapshot): CapabilityFinding | undefi
   };
 }
 
-// The checked files: sources, and test files declared as entrypoints, in a code root or a legacy location.
+// The checked files: sources, and the test files that are entrypoints, in a code root or a legacy location.
 export function checkedFiles(snapshot: Snapshot): string[] {
   const roots = snapshot.config.srcRoot;
   return snapshot.files
     .filter(
       (file) =>
-        (file.type === "source" || (file.type === "test" && snapshot.config.exceptions?.includes(file.path))) &&
+        (file.type === "source" ||
+          (file.type === "test" &&
+            entrypointOf(file.path, snapshot.config.exceptions ?? [], snapshot.config.oracleRoot))) &&
         (rootOf(file.path, roots) !== undefined || legacyCodeOf(file.path, snapshot.config.layout?.legacy)),
     )
     .map((file) => file.path);

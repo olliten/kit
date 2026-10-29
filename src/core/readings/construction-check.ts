@@ -1,9 +1,9 @@
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { legacyCodeOf, moduleFileOf, placementOf, rootOf } from "./placement-of.js";
+import { legacyCodeOf, moduleFileOf, placementOf, proofOf, rootOf } from "./placement-of.js";
 
 export interface ConstructionFinding extends Finding {
-  readonly category: "legacy-debt" | "placed-violation" | "checker-limit";
+  readonly category: "legacy-debt" | "proof-debt" | "placed-violation" | "checker-limit";
   readonly status: "violation" | "unresolved";
   readonly blocking: true;
   readonly limit: string;
@@ -13,7 +13,7 @@ export interface ConstructionFinding extends Finding {
 // adapter's file shows; a declared core producer its write descriptions, as data. A declared entrypoint, given
 // as `startups`, may build test doubles of a contract.
 export function constructionCheck(snapshot: Snapshot, startups: readonly string[]): ConstructionFinding[] {
-  const { srcRoot, layerNames, layout } = snapshot.config;
+  const { srcRoot, layerNames, layout, oracleRoot } = snapshot.config;
   const adapters = snapshot.config.adapters ?? [];
   const projects = snapshot.compiler?.projects ?? [];
   const pathOf = (module: string): string => moduleFileOf(module, srcRoot, layerNames);
@@ -24,7 +24,12 @@ export function constructionCheck(snapshot: Snapshot, startups: readonly string[
   const add = (rule: "R1" | "R2", check: string, path: string, fix: string, detail: string): void => {
     findings.push({
       ...finding(rule, check, path, fix, detail),
-      category: placed(path).placed || startups.includes(path) ? "placed-violation" : "legacy-debt",
+      category:
+        proofOf(path, oracleRoot) !== null
+          ? "proof-debt"
+          : placed(path).placed || startups.includes(path)
+            ? "placed-violation"
+            : "legacy-debt",
       status: "violation",
       blocking: true,
       limit: "",

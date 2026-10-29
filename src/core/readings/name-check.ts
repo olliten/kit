@@ -1,6 +1,5 @@
-import { proofOf } from "./claim-proof-binder.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { placementOf } from "./placement-of.js";
+import { placementOf, proofOf } from "./placement-of.js";
 
 // What a run of words is: a term, or a retired word and the term that replaced it.
 interface Entry {

@@ -1,19 +1,19 @@
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
-import { legacyCodeOf, placementOf, rootOf } from "./placement-of.js";
+import { legacyCodeOf, placementOf, proofOf, rootOf } from "./placement-of.js";
 
 export interface HandoverFinding extends Finding {
-  readonly category: "legacy-debt" | "placed-violation";
+  readonly category: "legacy-debt" | "proof-debt" | "placed-violation";
   readonly status: "violation";
   readonly blocking: true;
   readonly limit: "";
 }
 
-// Code outside the zones, legacy or a declared entrypoint, hands placed code data or a registered adapter's
+// Code outside the zones, legacy or an entrypoint, hands placed code data or a registered adapter's
 // contract, never other behaviour: a callable from there carries authority no check has established, so what
 // may cross is decided where it imports placed code, not by following each value it hands on.
 export function handoverCheck(snapshot: Snapshot): HandoverFinding[] {
-  const { srcRoot, exceptions = [], layout } = snapshot.config;
+  const { srcRoot, exceptions = [], layout, oracleRoot } = snapshot.config;
   const outside = (file: string): boolean =>
     (rootOf(file, srcRoot) !== undefined || legacyCodeOf(file, layout?.legacy)) &&
     !placementOf(file, srcRoot).placed;
@@ -35,7 +35,11 @@ export function handoverCheck(snapshot: Snapshot): HandoverFinding[] {
           `${target} exports ${name}, which takes behaviour; hand placed code data or an adapter's contract.`,
           `${target}#${name}`,
         ),
-        category: exceptions.includes(edge.file) ? ("placed-violation" as const) : ("legacy-debt" as const),
+        category: proofOf(edge.file, oracleRoot) !== null
+          ? ("proof-debt" as const)
+          : exceptions.includes(edge.file)
+            ? ("placed-violation" as const)
+            : ("legacy-debt" as const),
         status: "violation" as const,
         blocking: true as const,
         limit: "" as const,

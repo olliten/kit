@@ -18,7 +18,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
   and every checker limit reachable through imports from either; a baseline can't waive the last two,
   except as a proof's debt ({{finding}}, {{ratchet}}). · {#ratchet-keeps-architecture-obligations}
   - Implementation: {{startup-check}}, {{capability-context}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{edge-check}}, {{dependency-check}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{placement-of}}, {{read-snapshot}}, {{gate}}
-  - Proof: {{source-fixture}}
+  - Proof: {{source-fixture}}, {{fixture-snapshot}}
 - A legacy zone row may list exact legacy files instead of a prefix: only those files take its zone, a new file
   beside them takes none, and each listed file is debt, so the row may shrink but a file added to it is new debt
   the ratchet rejects; a listed path that is placed or missing is a finding ({{registration-check}}, {{capability-context}}, {{finding}}). · {#legacy-zone-rows-only-shrink}

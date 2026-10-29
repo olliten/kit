@@ -2,7 +2,7 @@ import type { KitConfig } from "../primitives/default-config.js";
 import type { Finding } from "./finding.js";
 
 export interface GateFinding extends Finding {
-  readonly category: "legacy-debt" | "checker-limit" | "placed-violation";
+  readonly category: "legacy-debt" | "proof-debt" | "checker-limit" | "placed-violation";
   readonly status: string;
   readonly blocking: boolean;
   readonly limit: string;
@@ -66,18 +66,11 @@ function sizeFailure(
   };
 }
 
-// What fails: every placed violation, every limit reachable from placed code or an entrypoint, new legacy
-// debt, and a legacy module grown beyond its baseline.
-export function ratchetFindings(
-  findings: readonly GateFinding[],
-  baseline: Baseline,
-  placedPaths: readonly string[],
-  imports: readonly { readonly from: string; readonly to: string | null }[],
-  requiredRoots: readonly string[] = [],
-): GateFinding[] {
-  const entries = recorded(baseline);
-  const keys = new Set(Object.keys(entries));
-  const reachable = new Set([...placedPaths, ...requiredRoots]);
+type Imports = readonly { readonly from: string; readonly to: string | null }[];
+
+// The files reachable through runtime imports from the given roots, the roots among them.
+function reachableFrom(roots: readonly string[], imports: Imports): Set<string> {
+  const reachable = new Set(roots);
   const pending = [...reachable];
   const edges = new Map<string, string[]>();
   for (const { from, to } of imports) if (to !== null) edges.set(from, [...(edges.get(from) ?? []), to]);
@@ -87,6 +80,39 @@ export function ratchetFindings(
         reachable.add(target);
         pending.push(target);
       }
+  return reachable;
+}
+
+// A limit reachable only through claim proofs is the proofs' debt: what placed code or a declared entrypoint
+// also reaches stays a limit, so a proof's debt never covers the code it proves.
+export function withProofDebt(
+  findings: readonly GateFinding[],
+  placedPaths: readonly string[],
+  imports: Imports,
+  requiredRoots: readonly string[],
+  proofs: readonly string[],
+): GateFinding[] {
+  const required = reachableFrom([...placedPaths, ...requiredRoots], imports);
+  const proven = reachableFrom(proofs, imports);
+  return findings.map((item) =>
+    item.category === "checker-limit" && !required.has(item.path) && proven.has(item.path)
+      ? { ...item, category: "proof-debt" }
+      : item,
+  );
+}
+
+// What fails: every placed violation, every limit reachable from placed code or an entrypoint, new legacy
+// or proof debt, and a legacy module grown beyond its baseline.
+export function ratchetFindings(
+  findings: readonly GateFinding[],
+  baseline: Baseline,
+  placedPaths: readonly string[],
+  imports: Imports,
+  requiredRoots: readonly string[] = [],
+): GateFinding[] {
+  const entries = recorded(baseline);
+  const keys = new Set(Object.keys(entries));
+  const reachable = reachableFrom([...placedPaths, ...requiredRoots], imports);
   return findings.flatMap((item) => {
     if (item.category === "checker-limit") return reachable.has(item.path) ? [item] : [];
     if (item.category === "placed-violation") return [item];
@@ -97,12 +123,14 @@ export function ratchetFindings(
   });
 }
 
-// The baseline only shrinks: a key whose debt is paid leaves it, and a legacy module's size entry takes the
+// The baseline only shrinks: a key whose legacy or proof debt is paid leaves it, and a legacy module's size entry takes the
 // smaller of what it records and what the module holds now, for its statements and for those that are not
 // calls into placed code. Nothing is added, so growth is never recorded.
 export function tightenedBaseline(baseline: Baseline, findings: readonly GateFinding[]): Record<string, unknown> {
   const current = new Map(
-    findings.filter((item) => item.category === "legacy-debt").map((item) => [item.debtKey, item]),
+    findings
+      .filter((item) => item.category === "legacy-debt" || item.category === "proof-debt")
+      .map((item) => [item.debtKey, item]),
   );
   return Object.fromEntries(
     Object.entries(recorded(baseline)).flatMap(([key, entry]) => {

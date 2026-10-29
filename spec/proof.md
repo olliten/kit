@@ -49,23 +49,24 @@ a claim depends on are named in it, so each module's claims are found from its n
   ({{claim-inventory}}). A legacy claim with Implementation or Proof rows follows the same module-reference,
   claim-proof and proof-reach rules as a topic claim; other legacy claims remain outside those checks. · {#legacy-claims-keep-their-grammar}
   - Implementation: {{claim-proof-binder}}, {{proof-reach}}, {{finding}}, {{placement-of}}
+  - Proof: {{fixture-snapshot}}, {{temporary-project}}
 - A claim's tests together reach every placed module the claim names through the code they use, followed
   into helpers and modules as a capture is, and the modules of only types that code is written in; a named
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}
-  - Implementation: {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}, {{test-reach}}
+  - Implementation: {{proof-reach}}, {{placement-of}}, {{read-snapshot}}, {{test-reach}}
   - Proof: {{fixture-snapshot}}, {{recorded-reach}}
 - A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. Only
   the modules of only types need no name: a placed oracle module, such as a generator, fixture, driver or
   runner, is named in the claim's Proof like any other, what it reaches counts as the test's, and naming a
   composition names what it composes. A module a claim's tests reach without its name is
   debt: the baseline holds it, it may only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
-  - Implementation: {{proof-scope}}, {{proof-reach}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}
+  - Implementation: {{proof-scope}}, {{proof-reach}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}
 - Two claims that share no code share no module. When the claims naming a placed module fall into groups
   whose tests use disjoint top-level declarations of it, the module is a finding: split it so each group has
   its own. A module of only types links no claims, and a module a test reaches in ways that can't be followed
   counts as used whole. · {#claims-that-share-no-code-share-no-module}
-  - Implementation: {{claim-cohesion}}, {{proof-reach}}, {{claim-proof-binder}}, {{read-snapshot}}, {{test-reach}}
+  - Implementation: {{claim-cohesion}}, {{proof-reach}}, {{placement-of}}, {{read-snapshot}}, {{test-reach}}
   - Proof: {{source-fixture}}
 
 ## Runs
@@ -77,16 +78,17 @@ a claim depends on are named in it, so each module's claims are found from its n
   those files still has its recorded digest; a missing or stale record is a finding until `kit runs` is run
   again. · {#runs-are-recorded-per-test}
   - Implementation: {{runs-run}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{runs-record}}, {{processes}}, {{text-files}}
+  - Proof: {{fixture-snapshot}}, {{temporary-project}}
 - Every named function of a placed module is run by a test of a claim that names the module, so each piece of
   code is governed by a claim that promises something about it. A named function none of those claims runs is
   debt: proved only incidentally by another claim, or by none. A module of only types has no functions, and an
   anonymous function belongs to the named function that holds it. · {#every-function-is-governed}
-  - Implementation: {{function-governance}}, {{claim-runs}}, {{function-recorder}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
+  - Implementation: {{function-governance}}, {{claim-runs}}, {{function-recorder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
   - Proof: {{recorded-functions}}, {{project-snapshot}}
 - Claims that share a module share its code. A named function only one claim's tests run, and that no named
   function other claims run holds, is that claim's excerpt; a module that holds the excerpts of two or more
   claims is several modules, and each excerpt moves to its own. Code that every claim runs is the module's
   shared core and stays. An adapter is defined by its operations, so it is exempt. · {#claims-keep-their-excerpts-apart}
-  - Implementation: {{excerpt-cohesion}}, {{claim-runs}}, {{function-recorder}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
+  - Implementation: {{excerpt-cohesion}}, {{claim-runs}}, {{function-recorder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
   - Proof: {{recorded-functions}}, {{project-snapshot}}
 

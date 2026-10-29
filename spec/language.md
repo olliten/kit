@@ -7,7 +7,7 @@ why the code is built the way it is.
 ## Terms
 
 - A term is defined once; case and repeated spaces don't make a second definition, and punctuation does. · {#terms-are-defined-once}
-  - Implementation: {{name-check}}, {{term-inventory}}, {{term}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}
+  - Implementation: {{name-check}}, {{term-inventory}}, {{term}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}
 
 - Each list in the terms file is in alphabetical order, so agents adding different terms edit different
@@ -21,7 +21,7 @@ why the code is built the way it is.
 
 - A retired word in a name, an exported symbol, spec prose or a placed file's comment is a finding whose fix
   names the term that replaced it. · {#retired-words-are-findings}
-  - Implementation: {{name-check}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}
+  - Implementation: {{name-check}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}
 
 ## Modules
@@ -39,8 +39,7 @@ why the code is built the way it is.
 
 - A supporting exported type needs no term for its ordinary words, and a retired word in it is still a
   finding. · {#supporting-symbols-need-no-terms}
-  - Implementation: {{name-check}}, {{exported-symbol}}, {{term-model}}, {{read-snapshot}}, {{kit-configuration}}, {{claim-proof-binder}},
-    {{finding}}, {{placement-of}}
+  - Implementation: {{name-check}}, {{exported-symbol}}, {{term-model}}, {{read-snapshot}}, {{kit-configuration}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}
 
 ## References
@@ -60,9 +59,9 @@ why the code is built the way it is.
 
 - A comment that says why is free; one that cites a claim anchor, a Markdown file or a module identity is a
   finding whose fix says what to delete. · {#comments-cite-nothing}
-  - Implementation: {{comment-check}}, {{comment}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}
+  - Implementation: {{comment-check}}, {{comment}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}
 
 - A debt marker in a comment, as a whole word in capitals, is a finding whose fix moves it to a debt list. · {#comments-carry-no-debt}
-  - Implementation: {{comment-check}}, {{claim-proof-binder}}, {{finding}}, {{placement-of}}
+  - Implementation: {{comment-check}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}

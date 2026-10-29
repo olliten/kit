@@ -121,10 +121,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim}}
-- **claim-proof-binder** — findings from matching claim declarations and topic-first test names, with the proof-path interpretation they share.
+- **claim-proof-binder** — findings from matching claim declarations and topic-first test names.
   - Role: derived
   - Zone: core
-  - From: {{snapshot}}, {{finding}}
+  - From: {{snapshot}}, {{finding}}, {{placement-of}}
 - **claim-runs** — what each claim's tests ran of each placed module, beside the claims that name it.
   - Role: derived
   - Zone: core
@@ -225,7 +225,7 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
-- **placement-of** — the interpretation of a supplied source path and root as declared placement or legacy code.
+- **placement-of** — the interpretation of a supplied path and root as declared placement, legacy code, a claim proof or an entrypoint.
   - Role: derived
   - Zone: core
   - From: {{layer}}, {{zone}}

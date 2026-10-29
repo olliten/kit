@@ -1,9 +1,10 @@
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type CapabilityFinding, capabilityLimit, checkedFiles, placed, zoneOf } from "./capability-context.js";
 import { finding } from "./finding.js";
-import { legacyCodeOf, rootOf } from "./placement-of.js";
+import { legacyCodeOf, proofOf, rootOf } from "./placement-of.js";
 
-// Which declared exceptions are executable entrypoints: an exact existing file outside every zone. A package
+// Which files are executable entrypoints: every checked claim proof, and each declared exception that is an exact
+// existing file outside every zone. A package
 // that permits selected exports only at entrypoints must declare them as one distinct, named contract.
 export function startupCheck(snapshot: Snapshot): {
   readonly startups: readonly string[];
@@ -57,5 +58,7 @@ export function startupCheck(snapshot: Snapshot): {
       });
     else startups.push(path);
   }
+  for (const path of files)
+    if (proofOf(path, snapshot.config.oracleRoot) !== null && !startups.includes(path)) startups.push(path);
   return { startups, findings };
 }
