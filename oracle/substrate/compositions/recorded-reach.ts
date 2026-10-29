@@ -12,5 +12,5 @@ export function recordedReach(
   const { scope, importTarget } = openProgram(files, config);
   const file = scope.program.getSourceFiles().find((sf) => scope.local(sf.fileName) === test);
   if (file === undefined) throw new Error(`${test} is not in the fixture's program`);
-  return testReach(scope.program, scope.checker, new Set([...scope.source, test]), scope.local, importTarget)(file);
+  return testReach(scope.checker, new Set([...scope.source, test]), scope.local, importTarget)(file);
 }

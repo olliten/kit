@@ -4,7 +4,7 @@ import type { SnapshotComment } from "../../core/primitives/comment.js";
 import type { CompilerFacts } from "../../core/primitives/compiler-facts.js";
 import { DEFAULT_CONFIG, type KitConfig } from "../../core/primitives/default-config.js";
 import type { ExportedSymbol } from "../../core/primitives/exported-symbol.js";
-import type { FileType, SnapshotFile, SpecProse } from "../../core/primitives/file.js";
+import type { FileType, SnapshotFile, SourceSize, SpecProse } from "../../core/primitives/file.js";
 import type { ImportEdge } from "../../core/primitives/import.js";
 import type { Snapshot } from "../../core/primitives/snapshot.js";
 import type { SpecTerm } from "../../core/primitives/term.js";
@@ -118,7 +118,7 @@ export function readSnapshot(
       })),
     });
   }
-  const { facts: compiler, scopes } = readCompiler(appRoot, paths, files, config, ignored, trace.compiler);
+  const { facts: compiler, scopes } = readCompiler(appRoot, paths, files, config, ignored, trace.compiler, sources, known);
   for (const { path, found } of specifiers) {
     const seen = new Set<string>();
     const scope = scopeOf(path, scopes, appRoot);
@@ -136,8 +136,8 @@ export function readSnapshot(
       }
     }
   }
-  const sizes = [...sources].map(([path, text]) =>
-    sourceSize(path, text, scopeOf(path, scopes, appRoot)?.program, appRoot, known),
+  const sizes = [...sources].map(
+    ([path, text]) => scopeOf(path, scopes, appRoot)?.sizes.get(path) ?? sourceSize(path, text, undefined, appRoot, known),
   );
   // The runs records are read like any other input, so a cached snapshot is reused only while they are unchanged.
   const record = config.runs?.record;
@@ -171,12 +171,15 @@ export function readSnapshot(
 
 type Project = CompilerFacts["projects"][number];
 
-// A project's compiler options and program, which decide how its files' non-relative imports resolve.
+// What later steps need of a project once its program is released: its options, the files it compiles and
+// their module formats, which decide how their non-relative imports resolve, and the sizes of the sources it
+// compiles. Holding every project's program until the end held every checker at once.
 interface Scope {
   readonly directory: string;
   readonly file: string;
   readonly options: ts.CompilerOptions;
-  readonly program: ts.Program;
+  readonly compiled: ReadonlyMap<string, ts.ResolutionMode>;
+  readonly sizes: ReadonlyMap<string, SourceSize>;
 }
 
 // A file's imports resolve as the compiler resolves them in the project that compiles it: the one whose
@@ -186,14 +189,7 @@ function scopeOf(path: string, scopes: readonly Scope[], appRoot: string): Scope
   const absolute = join(appRoot, path);
   const depth = (scope: Scope): number => scope.directory.split("/").length;
   return scopes
-    .filter((scope) => {
-      const source = scope.program.getSourceFile(absolute);
-      return (
-        source !== undefined &&
-        !source.isDeclarationFile &&
-        (scope.directory === "." || path.startsWith(`${scope.directory}/`))
-      );
-    })
+    .filter((scope) => scope.compiled.has(absolute) && (scope.directory === "." || path.startsWith(`${scope.directory}/`)))
     .sort(
       (a, b) =>
         depth(b) - depth(a) ||
@@ -217,9 +213,7 @@ function aliasTarget(
 ): string | undefined {
   if (scope === undefined) return undefined;
   const containing = join(appRoot, path);
-  const mode = dynamic
-    ? ts.ModuleKind.ESNext
-    : scope.program.getSourceFile(containing)?.impliedNodeFormat;
+  const mode = dynamic ? ts.ModuleKind.ESNext : scope.compiled.get(containing);
   const resolved = compilerWorkspace.resolve(specifier, containing, scope.options, trace, mode);
   if (resolved === undefined) return undefined;
   const target = relative(appRoot, resolved.resolvedFileName).split(sep).join("/");
@@ -235,6 +229,8 @@ function readCompiler(
   config: KitConfig,
   ignored: (path: string) => boolean,
   trace: CompilerRead[],
+  sources: ReadonlyMap<string, string>,
+  known: ReadonlySet<string>,
 ): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[] } {
   const scopes: Scope[] = [];
   const workerHost = compilerWorkspace.workerHost(trace);
@@ -265,7 +261,12 @@ function readCompiler(
     .map((file): Project => {
       const absolute = join(appRoot, file);
       const { parsed, readError, program } = compilerWorkspace.load(absolute, trace);
-      scopes.push({ directory: posix.dirname(file), file, options: parsed.options, program });
+      const compiled = new Map<string, ts.ResolutionMode>();
+      for (const sf of program.getSourceFiles()) if (!sf.isDeclarationFile) compiled.set(sf.fileName, sf.impliedNodeFormat);
+      const sizes = new Map<string, SourceSize>();
+      for (const [path, text] of sources)
+        if (compiled.has(join(appRoot, path))) sizes.set(path, sourceSize(path, text, program, appRoot, known));
+      scopes.push({ directory: posix.dirname(file), file, options: parsed.options, compiled, sizes });
       const checker = program.getTypeChecker();
       const ambientTargets = new Map<string, { readonly declarationTarget: string }>(
         checker.getAmbientModules().flatMap((symbol) => {
@@ -319,7 +320,6 @@ function readCompiler(
       // A test reaches what its code uses, followed into helpers and modules as a capture is, so a helper that
       // imports many modules lends a test only the ones the code it calls uses.
       const proofOf = testReach(
-        program,
         checker,
         new Set([...source, ...tests]),
         local,

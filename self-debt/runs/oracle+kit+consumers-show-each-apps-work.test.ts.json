@@ -20,7 +20,6 @@
     "src/substrate/compositions/consumers-run.ts": "b06dd9f842db7298f054489fc10dc97a75191d067d5cb7633190b66ecaa6ac1d",
     "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
     "src/substrate/compositions/read-config.ts": "107f186f28e520f6b14137f4d0d15c97175dff3aeae7c25a9334e37a56b902d0",
-    "src/substrate/compositions/read-snapshot.ts": "55029f5b3108cc25fd3e8fecf44301979a43124d8bb8d929114ced14c957926f",
     "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb"
   },
   "ran": {
@@ -85,9 +84,6 @@
     ],
     "src/substrate/compositions/read-config.ts": [
       "readConfig@8"
-    ],
-    "src/substrate/compositions/read-snapshot.ts": [
-      "scopeOf@185"
     ],
     "src/substrate/compositions/syntax-reading.ts": [
       "syntaxReading@7",

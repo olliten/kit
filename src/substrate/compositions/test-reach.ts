@@ -28,7 +28,6 @@ function topLevelNames(node: ts.Node): readonly string[] {
 // there later is held too. What cannot be followed to a declaration is charged as its whole file. Each piece of
 // code is read once; a test's reach is the union over the pieces it leads to.
 export function testReach(
-  program: ts.Program,
   checker: ts.TypeChecker,
   source: ReadonlySet<string>,
   local: (file: string) => string,
@@ -43,29 +42,29 @@ export function testReach(
     ts.isShorthandPropertyAssignment(node.parent) && node.parent.name === node
       ? checker.getShorthandAssignmentValueSymbol(node.parent)
       : checker.getSymbolAtLocation(node);
-  let index: Map<ts.Symbol, ts.Identifier[]> | undefined;
-  const referencesOf = (symbol: ts.Symbol): readonly ts.Identifier[] => {
-    if (index === undefined) {
-      const built = new Map<ts.Symbol, ts.Identifier[]>();
-      index = built;
-      for (const sf of program.getSourceFiles()) {
-        if (sf.isDeclarationFile || !source.has(local(sf.fileName))) continue;
-        const visit = (node: ts.Node): void => {
-          if (ts.isIdentifier(node)) {
-            const raw = rawSymbolOf(node);
-            if (raw !== undefined) {
-              const found = unaliased(raw);
-              const list = built.get(found);
-              if (list === undefined) built.set(found, [node]);
-              else list.push(node);
-            }
-          }
-          ts.forEachChild(node, visit);
-        };
-        visit(sf);
+  // Each file's references by the symbol they name, indexed only when a reach first looks into that file, so a
+  // run holds the files its tests reach rather than every file of the program.
+  const indexes = new Map<ts.SourceFile, Map<ts.Symbol, ts.Identifier[]>>();
+  const referencesIn = (sf: ts.SourceFile): Map<ts.Symbol, ts.Identifier[]> => {
+    const known = indexes.get(sf);
+    if (known !== undefined) return known;
+    const built = new Map<ts.Symbol, ts.Identifier[]>();
+    indexes.set(sf, built);
+    if (sf.isDeclarationFile || !source.has(local(sf.fileName))) return built;
+    const visit = (node: ts.Node): void => {
+      if (ts.isIdentifier(node)) {
+        const raw = rawSymbolOf(node);
+        if (raw !== undefined) {
+          const found = unaliased(raw);
+          const list = built.get(found);
+          if (list === undefined) built.set(found, [node]);
+          else list.push(node);
+        }
       }
-    }
-    return index.get(symbol) ?? [];
+      ts.forEachChild(node, visit);
+    };
+    visit(sf);
+    return built;
   };
   const erased = (node: ts.Node): boolean =>
     ts.isTypeNode(node) ||
@@ -405,10 +404,10 @@ export function testReach(
   // Only references in the binding's own module are followed back: those are the writes that module's
   // importers reach too. Another module that writes into it is checked where it passes a handle or a
   // callable, and what a binding holds from elsewhere is charged by its declared type.
-  const homeReferences = (symbol: ts.Symbol): readonly ts.Identifier[] => {
-    const homes = new Set((symbol.declarations ?? []).map((node) => node.getSourceFile()));
-    return referencesOf(symbol).filter((reference) => homes.has(reference.getSourceFile()));
-  };
+  const homeReferences = (symbol: ts.Symbol): readonly ts.Identifier[] =>
+    [...new Set((symbol.declarations ?? []).map((node) => node.getSourceFile()))].flatMap(
+      (home) => referencesIn(home).get(symbol) ?? [],
+    );
   // A binding that only ever holds primitives can't hold authority, however it is reassigned.
   const inert = (type: ts.Type): boolean =>
     type.isUnionOrIntersection()
