@@ -16,6 +16,8 @@ export interface Processes {
     cwd: string,
   ): Promise<readonly { readonly stdout: string; readonly stderr: string; readonly status: number | null }[]>;
   node(): string;
+  // A variable of the environment this process was given, which the commands it runs inherit.
+  environment(name: string): string | undefined;
 }
 
 const KEPT = 64 * 1024;
@@ -60,4 +62,5 @@ export const processes: Processes = {
     return results;
   },
   node: () => process.execPath,
+  environment: (name) => process.env[name],
 };

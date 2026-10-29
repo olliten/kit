@@ -8,7 +8,7 @@ import { textFiles } from "../adapters/text-files.js";
 // see it.
 export function heldState(root: string, key: string): string {
   const { path, kind, ran } = heldPath(key);
-  const at = `${root}/${path}`;
+  const at = path === "." ? root : `${root}/${path}`;
   if (kind) return filesystem.kind(at);
   if (ran === undefined) return filesystem.state(at);
   if (!textFiles.exists(at)) return "absent";

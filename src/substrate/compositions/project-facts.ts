@@ -196,7 +196,7 @@ function compareDiagnostics(a: Diagnostic, b: Diagnostic): number {
 export function projectFacts(context: AppContext, file: string, reuse?: FactReuse): ProjectRead {
   const { appRoot, config, source, tests, local, ignored } = context;
   const absolute = join(appRoot, file);
-  const { parsed, readError, program } = compilerWorkspace.load(absolute);
+  const { parsed, readError, program, configs } = compilerWorkspace.load(absolute);
   const checker = program.getTypeChecker();
   const programFiles = program.getSourceFiles();
   const own = programFiles.filter((sf) => !sf.isDeclarationFile);
@@ -227,10 +227,12 @@ export function projectFacts(context: AppContext, file: string, reuse?: FactReus
   const adapterFiles = (config.adapters ?? []).flatMap((adapter) =>
     [...closures.keys()].filter((path) => path === adapter.module || path.replace(/\.[^./]+$/, "") === adapter.module),
   );
+  // The gate and the app's name are no input to extraction, so editing a test command reads no fact again.
+  const { verify: _gate, app: _name, ...extracted } = config;
   const project = projectKey({
     engine: context.engine,
     typescript: ts.version,
-    config,
+    config: extracted,
     options: withoutRoot(JSON.stringify(parsed.options), appRoot),
     declarations: programFiles.filter((sf) => sf.isDeclarationFile).map((sf) => [local(sf.fileName), textDigest(sf)]),
     globals: own.filter(declaresGlobals).map((sf) => [local(sf.fileName), digests.get(local(sf.fileName)) ?? ""]),
@@ -273,7 +275,12 @@ export function projectFacts(context: AppContext, file: string, reuse?: FactReus
     const found = holding(kept, digests);
     if (found !== undefined) proofs.set(local(sf.fileName), found.proof);
   }
-  const projectWide = stored<{ readonly diagnostics: Diagnostic[] }>("project", project);
+  // What belongs to no one file also depends on the text of each compiler config, whose errors the options
+  // don't show, and on which files the project compiles.
+  const wideKey = digest(
+    JSON.stringify([project, configs.map(([path, text]) => [local(path), digest(text)]), parsed.fileNames.map(local).sort()]),
+  );
+  const projectWide = stored<{ readonly diagnostics: Diagnostic[] }>("project", wideKey);
 
   const toDiagnostic = (diagnostic: ts.Diagnostic): Diagnostic => ({
     file: diagnostic.file === undefined ? null : local(diagnostic.file.fileName),
@@ -385,7 +392,7 @@ export function projectFacts(context: AppContext, file: string, reuse?: FactReus
           .filter((sf) => sf.isDeclarationFile)
           .flatMap((sf) => [...program.getSyntacticDiagnostics(sf), ...program.getSemanticDiagnostics(sf)]),
       ].map(toDiagnostic);
-      reuse?.write("project", project, withoutRoot(JSON.stringify({ diagnostics: computed }), appRoot));
+      reuse?.write("project", wideKey, withoutRoot(JSON.stringify({ diagnostics: computed }), appRoot));
       return computed;
     })();
   const diagnostics = [...wide, ...[...facts.values()].flatMap((each) => each.diagnostics)]

@@ -329,7 +329,7 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
-- **verdict-reuse** — how a check's processes used each path, the key each path is kept under and what it holds, a stored verdict read back, where a check's passes are kept, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
+- **verdict-reuse** — how a check's processes used each path, the paths a process other than the test's loaded, the key each path is kept under and what it holds, a stored verdict read back, where a check's passes are kept, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
   - Role: derived
   - Zone: core
   - From: {{fact-keys}}, {{runs}}, {{verdict}}
@@ -353,7 +353,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **compiler** — access to project loading, import resolution and a file's outermost functions through a language compiler.
+- **compiler** — access to project loading, with the text of every compiler config it read, import resolution and a file's outermost functions through a language compiler.
   - Role: adapter
   - Zone: substrate
   - Of: {{function-span}}
@@ -361,15 +361,15 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **filesystem** — access to file text, directory entries, the state a path is in, and its kind.
+- **filesystem** — access to file text, directory entries, the state a path is in, its kind, and when it last changed.
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **git-refs** — access to refs on a repository's `origin`: a ref's tip and the files of its tree, and a commit added on a tip pushed without force.
+- **git-refs** — access to refs on a repository's `origin`: a ref's tip and the files of its tree, a commit added on a tip pushed without force, and the clone's copies of other refs forgotten.
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **processes** — access to running another program to completion.
+- **processes** — access to running another program to completion, and to the environment the programs it runs inherit.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -397,7 +397,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **toolchain** — access to the identity of the Kit that reads an app, from its own source, and of the runtime and installed packages a check runs on.
+- **toolchain** — access to the identity of the Kit that reads an app, from its own source, and when it reads the app from outside it, and of the runtime, installed packages and package manifest a check runs on.
   - Role: adapter
   - Zone: substrate
   - Of: []

@@ -140,8 +140,6 @@ test("kit verify runs each test under its group's command, reruns a test that mo
   expect(summary(first.stdout)).toMatchObject({ ran: 2, failed: 0, recorded: 2, unassigned: 1 });
   expect(first.exitCode).toBe(1);
   expect(first.stderr).toContain("other/c.test.mjs: no test group takes it, so it never runs.");
-  expect(first.exitCode).toBe(1);
-  expect(first.stderr).toContain("other/c.test.mjs: no test group takes it, so it never runs.");
   project.write({ "tests/a.test.mjs": reaches("boot") });
   expect((await verify("--plan")).stdout).toContain("run test:tests/a.test.mjs in tests[0]\nreuse test:tests/b.test.mjs in tests[0]\n");
   expect(summary((await verify()).stdout)).toMatchObject({ ran: 1, reused: 1, failed: 0 });

@@ -24,7 +24,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `legacy-areas` | Spec files in an older claim grammar. |
 | `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
 | `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the tests: one group, or a list of groups each taking the tests whose imports reach a module it lists in `reaching` or a module an adapter registers with a capability it lists in `capabilities`, or with neither the tests no earlier group took; a group is the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
-| `verify.share` | A ref prefix on `origin`, such as `refs/heads/kit-passes`, under which `kit verify` shares kept passes with every other clone. |
+| `verify.share` | A ref prefix on `origin`, such as `refs/kit-passes`, under which `kit verify` shares kept passes with every other clone. |
 
 An app's plain-Node scripts read the config the way the commands do through
 `src/substrate/compositions/configuration-runner.mjs`: `await configuration()` answers `kitConfig`,
@@ -164,10 +164,24 @@ verify:
 ```
 
 `kit verify` runs each check, and each test file under `under` alone, in parallel, with a recorder preloaded
-through `NODE_OPTIONS` that notes every path inside the app the run reads, lists or probes, in the run's
-processes, threads and child processes. A pass is kept beside the repository with the state of each of those
-paths, under the command, the Node version and the lockfile; the next `kit verify` reuses it while every path
-is in the same state. A failure is never kept. Worktrees of one repository share what is kept.
+through `NODE_OPTIONS`, added to whatever the caller's environment sets there, that notes every path inside the
+app the run reads, lists, probes or copies, in the run's processes, threads and child processes. The app root's
+own listing is the path `.`; a recursive listing, a glob or a copy of a directory notes every directory under
+it. A pass is kept beside the repository with the state of each of those paths, under the command, the Node
+version, the lockfile and the app's `package.json`, and, when Kit reads the app from outside it, that Kit's own
+source; the next `kit verify` reuses it while every path is in the same state. A failure is never kept, and
+neither is a pass during which a path it used changed. Worktrees of one repository share what is kept.
+
+What the recorder can't see, a reused check must not depend on:
+
+- reads by programs that aren't Node, such as `git`, `grep` or a shell's globbing;
+- reads by a Node process started with an environment that drops `NODE_OPTIONS`, `KIT_READS` or `KIT_ROOT`;
+- what Node's own module loader reads to resolve a module, such as a `package.json` below the app root, and
+  the paths a resolution tried and didn't find. The app root's `package.json` is part of what a pass is kept
+  under, so its `type`, `exports` and `imports` are covered.
+
+Directory listings the test runner makes itself, such as vitest finding its test files, are not noted; a listing
+any other installed package makes, such as `tsc` expanding `include`, is.
 
 The tests may instead be a list of groups, each with its own command, such as a browser tier and a unit tier:
 
@@ -209,7 +223,9 @@ writes coverage.
 A path a run only probed is kept by whether it is absent, a file or a directory. A file a test only loaded, and
 whose functions its coverage lists, is kept as the test ran it: its text with the bodies of the outermost
 functions the test never ran left out, so an edit inside one of those reruns nothing. A file the test also reads
-as text, as a test of a checker reads its sources, is kept whole.
+as text, as a test of a checker reads its sources, is kept whole, and so is a file a process other than the one
+that loaded the test loaded or ran, such as a script the test starts: an in-process runner's coverage, such as
+vitest's, doesn't show what such a process ran.
 
 ## Runs
 
@@ -236,8 +252,11 @@ when a test's pass was not.
 
 ```yaml
 verify:
-  share: refs/heads/kit-passes
+  share: refs/kit-passes
 ```
+
+Any ref prefix under `refs/` works. One outside `refs/heads/` keeps the shared refs from looking like branches
+and from starting the workflows that run on a pushed branch.
 
 With `share`, clones that start with an empty store, such as agents' cloud sessions, reuse each other's passes
 through `origin`. Each runtime and UTC day has one ref, `<share>/<YYYY-MM-DD>-<runtime digest, 16 characters>`,
@@ -252,7 +271,8 @@ passes:` or `Published no passes:`, and the gate goes on with the local store. T
 
 Anyone who can push to `origin` can publish a pass, so a shared pass is as trustworthy as the people with push
 access; a scheduled `kit verify --fresh` checks that every kept pass still passes. The refs only grow within a
-day, and old days' refs are never read again: delete them on `origin` as you like.
+day, and old days' refs are never read again: delete them on `origin` as you like. A clone's own copies of
+them, under `refs/kit-shared/`, are removed by its next reading.
 
 `kit verify --plan` lists what would run, `--fresh` runs everything and keeps nothing, and the exit code is 1
 when a check fails. A check that depends on something no file holds, such as the network, the clock or an

@@ -20,6 +20,7 @@ test("a gate is whole-tree checks, each an id and a command, and the command tha
   expect(read({ checks: [], tests: { command: "vitest run {test}", under: ["spec/", "oracle/", "spec"] } }).verify?.tests?.[0]?.under).toEqual(["oracle", "spec"]);
   expect(read({ checks: [] }).verify).toEqual({ checks: [] });
   expect(read({ checks: [], share: "refs/heads/kit-passes/" }).verify).toEqual({ checks: [], share: "refs/heads/kit-passes" });
+  expect(read({ checks: [], share: "refs/kit-passes" }).verify).toEqual({ checks: [], share: "refs/kit-passes" });
 });
 
 test("the tests may be a list of groups, each a command, its directories and the modules whose reach selects it", () => {
@@ -68,7 +69,7 @@ test.each([
   [{ checks: [], tests: [{ command: "b {test}", under: "oracle", capabilities: ["browser-driving", 7] }] }, /verify\.tests\[0\]\.capabilities: list/],
   [{ checks: [], tests: [{ command: "b {test}", under: "oracle", capabilities: [" "] }] }, /verify\.tests\[0\]\.capabilities: list/],
   [{ checks: [], tests: { command: "b {test}", under: "oracle", capabilities: ["printing"] } }, /verify\.tests\.capabilities\[0\]: no adapter registers the capability printing/],
-  [{ checks: [], share: "kit-passes" }, /verify\.share/],
+  [{ checks: [], share: "kit-passes" }, /verify\.share: .*such as refs\/kit-passes, outside refs\/heads\//],
   [{ checks: [], share: "refs/heads/kit..passes" }, /verify\.share/],
   [{ checks: [], share: "refs/heads/kit.lock" }, /verify\.share/],
   [{ checks: [], share: 7 }, /verify\.share/],

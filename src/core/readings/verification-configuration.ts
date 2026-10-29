@@ -30,7 +30,7 @@ export function verification(declared: unknown, registered: readonly string[]): 
       !/^refs(?:\/[A-Za-z0-9_][A-Za-z0-9._-]*)+$/.test(shareRef) ||
       shareRef.split("/").some((part) => part.endsWith(".lock") || part.endsWith(".") || part.includes("..")))
   )
-    throw new Error("verify.share: declare the ref prefix on origin passes are shared under, such as refs/heads/kit-passes.");
+    throw new Error("verify.share: declare the ref prefix on origin passes are shared under, such as refs/kit-passes, outside refs/heads/ so it is no branch.");
   const shared = shareRef === undefined ? {} : { share: shareRef };
   const tests = declared["tests"];
   if (tests === undefined) return { checks: rows, ...shared };

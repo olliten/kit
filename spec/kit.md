@@ -54,8 +54,9 @@ its config, and its debt in its own baseline.
   test, and is kept with the digest of each file whose code it followed, one entry per set of digests, and
   reused only while each still has its digest. Each key also holds what Kit takes each file for, and
   the project, which is the Kit that read it, the
-  compiler, the config, the project's options, every declaration file the program loads, every file declaring
-  globals or ambient modules, and the registered adapter modules. A read reuses every file and test whose key
+  compiler, the config without its gate and the app's name, the project's options, every declaration file the program loads, every file declaring
+  globals or ambient modules, and the registered adapter modules. What belongs to no one file, such as the config's own errors, is also keyed on
+  the text of every compiler config the project reads and the files it compiles. A read reuses every file and test whose key
   still matches and computes the rest, so a change recomputes exactly the files and tests whose key it
   changes, and worktrees of one repository share the store. · {#facts-are-keyed-on-their-inputs}
   - Implementation: {{fact-keys}}, {{file-facts}}, {{project-facts}}, {{read-snapshot}}, {{evidence-store}}, {{root-token}}, {{fact-walk}}, {{compiler}}, {{verdict-reuse}}
