@@ -6,6 +6,8 @@ import { spawnSync } from "node:child_process";
 export interface GitRefs {
   // The ref's tip, fetched, and each file of its tree with its blob; null when origin has no such ref.
   read(root: string, ref: string): { readonly tip: string; readonly files: readonly { readonly path: string; readonly blob: string }[] } | null;
+  // Removes the clone's copies of every other ref beside these, such as earlier days' refs no reading asks for again.
+  forget(root: string, kept: readonly string[]): void;
   // Each blob's text, in the order asked.
   texts(root: string, blobs: readonly string[]): string[];
   // A commit whose tree is `expected`'s (empty when null) with `files` added, pushed to the ref: the new tip, or
@@ -66,6 +68,13 @@ export const gitRefs: GitRefs = {
         return type === "blob" && blob !== undefined ? [{ path, blob }] : [];
       });
     return { tip, files };
+  },
+  forget(root, kept) {
+    const keep = new Set(kept.map(mirror));
+    const places = new Set(kept.map((ref) => mirror(ref).replace(/\/[^/]+$/, "/")));
+    for (const place of places)
+      for (const name of output(root, ["for-each-ref", "--format=%(refname)", place]).split("\n"))
+        if (name !== "" && !keep.has(name)) output(root, ["update-ref", "-d", name]);
   },
   texts(root, blobs) {
     if (blobs.length === 0) return [];

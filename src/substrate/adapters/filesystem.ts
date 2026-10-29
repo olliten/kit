@@ -23,6 +23,8 @@ export interface Filesystem {
   state(path: string): string;
   // Only whether a path is absent, a file or a directory, for a check that only probed it.
   kind(path: string): string;
+  // When a path's content or listing last changed, in the file system's own clock, or none when it is absent.
+  modified(path: string): number | undefined;
 }
 
 function readText(path: string, trace: FilesystemRead[]): string {
@@ -77,9 +79,18 @@ function kind(path: string): string {
   }
 }
 
+function modified(path: string): number | undefined {
+  try {
+    return statSync(path).mtimeMs;
+  } catch {
+    return undefined;
+  }
+}
+
 export const filesystem: Filesystem = {
   readText,
   entries,
   state,
   kind,
+  modified,
 };

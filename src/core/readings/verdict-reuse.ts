@@ -18,14 +18,44 @@ export function pathUses(recordings: readonly string[]): Map<string, Set<string>
   return uses;
 }
 
+// One process's file among a check's recordings or raw coverage, by its name, which holds the process id: a
+// recording is `<pid>-<thread>.txt`, a raw V8 coverage file `coverage-<pid>-<time>-<n>.json`.
+export interface ProcessFile {
+  readonly name: string;
+  readonly text: string;
+}
+
+const pidOf = (name: string): string | undefined => /^(?:coverage-)?(\d+)-/.exec(name)?.[1];
+
+// The paths a process other than the one that loaded the test loaded or ran, such as a child the test starts: the
+// test's coverage describes the process that loaded it, so what another process ran in a file is not in it, and
+// the file is kept whole. When no process is seen loading the test, every loaded path is.
+export function loadedBeside(recordings: readonly ProcessFile[], coverage: readonly ProcessFile[], test: string, root: string): Set<string> {
+  const lines = recordings.map(({ name, text }) => ({ pid: pidOf(name), lines: text.split("\n") }));
+  const testers = new Set(lines.filter((each) => each.lines.includes(`load ${test}`)).map((each) => each.pid));
+  const beside = new Set<string>();
+  for (const each of lines)
+    if (!testers.has(each.pid)) for (const line of each.lines) if (line.startsWith("load ")) beside.add(line.slice(5));
+  const prefix = `"url":"file://${root}/`;
+  for (const { name, text } of coverage) {
+    if (testers.has(pidOf(name))) continue;
+    for (let at = text.indexOf(prefix); at >= 0; at = text.indexOf(prefix, at + 1)) {
+      const end = text.indexOf('"', at + prefix.length);
+      if (end > at) beside.add(decodeURIComponent(text.slice(at + prefix.length, end)));
+    }
+  }
+  return beside;
+}
+
 // What a pass depends on in each path, as the key its state is kept under: the path alone for its content (read
 // or listed), `#kind` for whether it is absent, a file or a directory (only probed), and `#ran:` with the
-// outermost functions the run ran for a file only the module loader read, when the run's coverage covers it.
+// outermost functions the run ran for a script only the module loader read, when the run's coverage covers it.
 export function heldKeys(uses: ReadonlyMap<string, ReadonlySet<string>>, ran: ReadonlyMap<string, readonly number[]>): string[] {
   return [...uses]
     .map(([path, kinds]) => {
       if (kinds.has("read") || kinds.has("list")) return path;
-      const functions = ran.get(path);
+      // Only a script's text is read as functions; any other file a coverage lists is held whole.
+      const functions = /\.[cm]?[jt]sx?$/.test(path) ? ran.get(path) : undefined;
       if (kinds.has("load")) return functions === undefined ? path : `${path}#ran:${functions.join(",")}`;
       return `${path}#kind`;
     })
@@ -66,9 +96,11 @@ export function verdictOf(text: string): Verdict | null {
   };
 }
 
-// Where one check's passes are kept: by its id, its command and the runtime it ran on, so a pass under another
-// command, Node or set of installed packages is never taken for this one.
-export const verdictKind = (id: string, line: string, runtime: string): string => `verdicts/${digest(JSON.stringify([id, line, runtime]))}`;
+// Where one check's passes are kept: by its id, its command, the runtime it ran on and the Kit it ran under when
+// that Kit is outside the app, so a pass under another command, Node, set of installed packages or Kit is never
+// taken for this one.
+export const verdictKind = (id: string, line: string, runtime: string, kit = ""): string =>
+  `verdicts/${digest(JSON.stringify(kit === "" ? [id, line, runtime] : [id, line, runtime, kit]))}`;
 
 // What each test ran, from its pass that still holds, or the tests that have none, while the rules that read
 // what tests ran wait for them.

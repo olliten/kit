@@ -14,7 +14,7 @@ export interface SmallApp {
   readonly store: string;
   put(path: string, text: string): void;
   remove(path: string): void;
-  stored(engine?: string): { readonly snapshot: Snapshot; readonly receipt: ExtractionReceipt };
+  stored(engine?: string, config?: KitConfig): { readonly snapshot: Snapshot; readonly receipt: ExtractionReceipt };
   fresh(): Snapshot;
   // From now on every entry the store holds reads as text that isn't an entry, as a torn or foreign file would.
   corrupt(): void;
@@ -41,7 +41,7 @@ export function smallApp(files: Readonly<Record<string, string>> = SMALL_APP, sh
     store,
     put: (path, text) => project.write({ [`app/${path}`]: text }),
     remove: (path) => project.remove(`app/${path}`),
-    stored: (engine = "proof") => readStoredSnapshot(app, SMALL_CONFIG, { reuse, engine }),
+    stored: (engine = "proof", config = SMALL_CONFIG) => readStoredSnapshot(app, config, { reuse, engine }),
     fresh: () => readSnapshot(app, SMALL_CONFIG),
     corrupt: () => {
       unreadable = true;

@@ -7,6 +7,8 @@ import { join, relative } from "node:path";
 export interface Toolchain {
   engine(engineRoot: string): string;
   runtime(root: string): string;
+  // The Kit a check runs under, when it reads the app from outside it, or nothing when its files are the app's.
+  kit(engineRoot: string, root: string): string;
 }
 
 const engines = new Map<string, string>();
@@ -14,15 +16,28 @@ const byName = (a: { readonly name: string }, b: { readonly name: string }): num
   a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 
 export const toolchain: Toolchain = {
-  // Installed packages are outside what a check's reads record, so the lockfile stands for them.
+  // Installed packages are outside what a check's reads record, so the lockfile stands for them; and Node's own
+  // loader reads the app's package.json, for its module type, exports and imports, where no recorder sees it.
   runtime(root) {
-    let lock: Buffer | string;
-    try {
-      lock = readFileSync(join(root, "package-lock.json"));
-    } catch {
-      lock = "";
-    }
-    return createHash("sha256").update(JSON.stringify([process.version, process.platform, process.arch])).update(lock).digest("hex");
+    const text = (file: string): Buffer | string => {
+      try {
+        return readFileSync(join(root, file));
+      } catch {
+        return "";
+      }
+    };
+    return createHash("sha256")
+      .update(JSON.stringify([process.version, process.platform, process.arch]))
+      .update(text("package-lock.json"))
+      .update(JSON.stringify(["package.json"]))
+      .update(text("package.json"))
+      .digest("hex");
+  },
+  // A Kit outside the app, or among its installed packages, is outside what a check's reads record, so a pass
+  // kept under one Kit is never taken for another's. A Kit that is the app, or sits in it, is read like the rest.
+  kit(engineRoot, root) {
+    const inside = engineRoot === root || (engineRoot.startsWith(`${root}/`) && !engineRoot.slice(root.length + 1).split("/").includes("node_modules"));
+    return inside ? "" : toolchain.engine(engineRoot);
   },
   // The Kit's own source decides what extraction records, so a change to it reads every fact again.
   engine(engineRoot) {

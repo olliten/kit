@@ -44,6 +44,35 @@ test("a pass holds while the functions its test ran hold, whatever happens in fu
   expect(await planned()).toBe("run test:tests/reads.test.mjs\nrun test:tests/runs.test.mjs\n");
 }, 120_000);
 
+test("a file a process the test starts also loads is kept whole, since the test's coverage doesn't show what that process ran", async () => {
+  const project = temporaryProjects.open("kit-ran-");
+  projects.push(project);
+  // A runner whose coverage, like an in-process runner's, describes only its own process: the test ran `used`.
+  const lcov = (root: string) => `SF:${root}/lib/m.mjs\nFN:1,used\nFN:4,unused\nFNDA:1,used\nFNDA:0,unused\nend_of_record\n`;
+  project.write({
+    ".git/HEAD": "ref: refs/heads/main\n",
+    "package.json": JSON.stringify({ type: "module" }),
+    "kit/config.md": "```yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nverify:\n  checks: []\n  tests:\n    command: node runner.mjs {test} {dir}\n    under: tests/\n```\n",
+    "runner.mjs": [
+      'import { writeFileSync } from "node:fs";',
+      'import { resolve } from "node:path";',
+      "await import(resolve(process.argv[2]));",
+      `writeFileSync(\`\${process.argv[3]}/lcov.info\`, ${JSON.stringify(lcov(project.root))});`,
+      "",
+    ].join("\n"),
+    "lib/m.mjs": module("1", "2"),
+    "child.mjs": 'import { unused } from "./lib/m.mjs";\nif (unused() !== 2) process.exit(1);\n',
+    "tests/spawns.test.mjs": 'import { execSync } from "node:child_process";\nimport { used } from "../lib/m.mjs";\nif (used() !== 1) process.exit(1);\nexecSync("node child.mjs");\n',
+    "tests/alone.test.mjs": 'import { used } from "../lib/m.mjs";\nif (used() !== 1) process.exit(1);\n',
+  });
+  const config = join(project.root, "kit/config.md");
+  const verify = (...flags: string[]) => runVerify({ engineRoot: project.root, args: ["--root", project.root, "--config", config, ...flags], cwd: project.root });
+  expect((await verify()).exitCode).toBe(0);
+  expect((await verify("--plan")).stdout).toBe("reuse test:tests/alone.test.mjs\nreuse test:tests/spawns.test.mjs\n");
+  project.write({ "lib/m.mjs": module("1", "20") });
+  expect((await verify("--plan")).stdout).toBe("reuse test:tests/alone.test.mjs\nrun test:tests/spawns.test.mjs\n");
+}, 120_000);
+
 test("a function counts as run when a function the coverage shows ran starts inside it, and only unrun bodies are left out", () => {
   const text = [
     "export function outer() {",

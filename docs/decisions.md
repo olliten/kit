@@ -670,3 +670,36 @@ without naming the app.
   protocol: anyone with push access may publish, and a nightly `kit verify --fresh` is the honesty check. A
   pass's path names its command, runtime and the states it holds, so racing writers converge. Republishing the
   passes a run reused keeps a day's ref whole, so reading two days is enough.
+
+## 2026-10-29 · What a kept pass depends on is recorded more completely
+
+- **Decision:** after an independent review of `kit verify`'s reuse, the recorder and the keys tighten:
+  - a directory listing is dropped only when the test runner's own frames (vite, vite-node, vitest) make it; any
+    other installed package's listing, such as `tsc` expanding `include`, is recorded. The app root's own
+    listing is recorded as `.`; recursive listings, globs (`fs.glob*`) and copies (`cp*`, `copyFile*`) record
+    every directory under them, copies every file too; `readlink*`, `statfs*`, `realpath.native` and
+    `promises.opendir` are recorded. The caller frame is read from call sites with a stack depth the recorder
+    sets itself, so a check's `Error.stackTraceLimit` no longer turns its reads into loads.
+  - a file a process other than the one that loaded the test loaded, or whose raw V8 coverage another process
+    wrote, is kept whole instead of as the functions the test's LCOV shows ran.
+  - a pass is not kept when a file it used changed after its chunk started, by the file system's own clock,
+    so a cold run catches an edit during the run too. Directories are left to the comparison with earlier
+    passes' states: their time also moves for an entry made and removed again, as Vite does with the
+    `vitest.config.ts.timestamp-*.mjs` it bundles beside the config, which made every check listing the root torn.
+  - a pass's kind holds the Kit's source digest when Kit reads the app from outside it, and the runtime holds
+    the app root's `package.json`. `NODE_OPTIONS` is extended, not replaced.
+  - project-wide diagnostics are keyed also on each compiler config's text and the compiled file list; the
+    project key leaves out `verify` and `app`, which extraction never reads.
+  - the docs recommend `share: refs/kit-passes`, and a reading of shared refs removes the clone's mirrors of
+    other refs under the same prefix.
+- **Recorder format:** lines stay `<use> <path>` in one file per process and thread, `<pid>-<thread>.txt`; the
+  pid in the file name is now read, to tell which process loaded the test. New are the path `.` for the app
+  root, and many more `list` lines, one per directory a recursive listing, glob or copy reaches. A batched
+  runner that runs several tests in one process needs another way to tell a test's process from a child's.
+- **Why:** each of these let a pass be reused after an edit that could change its result: a new file under a
+  `tsc` include, a child process running a function the parent's coverage shows unrun, a file edited while a
+  cold run read it, or a Kit upgrade. Recording more listings means adding a file reruns the checks that list its
+  directory, which is the price of their being right.
+- **Limits:** on a run with no earlier pass, an entry added to a listed directory while the check ran is not
+  caught. Reads by programs that aren't Node, by processes started with an environment that drops the
+  recorder, and Node's own loader reads below the app root and failed resolutions are still unseen.

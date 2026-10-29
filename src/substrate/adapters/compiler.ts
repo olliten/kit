@@ -13,6 +13,8 @@ export interface CompilerWorkspace {
     readonly parsed: ts.ParsedCommandLine;
     readonly readError: ts.Diagnostic | undefined;
     readonly program: ts.Program;
+    // Every compiler config the project read, the one named and each it extends, with its text.
+    readonly configs: readonly (readonly [string, string])[];
   };
   resolve(
     specifier: string,
@@ -92,8 +94,14 @@ export const compilerWorkspace: CompilerWorkspace = {
     return host;
   },
   load(path) {
-    const read = ts.readConfigFile(path, (file) => ts.sys.readFile(file));
-    const parsed = ts.parseJsonConfigFileContent(read.config ?? {}, ts.sys, dirname(path), undefined, path);
+    const configs: [string, string][] = [];
+    const readConfig = (file: string): string | undefined => {
+      const text = ts.sys.readFile(file);
+      configs.push([file, text ?? ""]);
+      return text;
+    };
+    const read = ts.readConfigFile(path, readConfig);
+    const parsed = ts.parseJsonConfigFileContent(read.config ?? {}, { ...ts.sys, readFile: readConfig }, dirname(path), undefined, path);
     // The created host parses every file anew, so its getSourceFile is replaced by one that keeps declarations.
     const host = {
       ...ts.createCompilerHost(parsed.options),
@@ -119,7 +127,7 @@ export const compilerWorkspace: CompilerWorkspace = {
       host,
       ...(parsed.projectReferences === undefined ? {} : { projectReferences: parsed.projectReferences }),
     });
-    return { parsed, readError: read.error, program };
+    return { parsed, readError: read.error, program, configs };
   },
   resolve: (specifier, containingFile, options, mode) =>
     ts.resolveModuleName(specifier, containingFile, options, ts.sys, undefined, undefined, mode)

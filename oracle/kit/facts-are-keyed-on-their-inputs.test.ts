@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "vitest";
-import { type SmallApp, smallApp } from "../substrate/compositions/extraction-proof.js";
+import { SMALL_CONFIG, type SmallApp, smallApp } from "../substrate/compositions/extraction-proof.js";
 
 const apps: SmallApp[] = [];
 afterEach(() => {
@@ -85,4 +85,23 @@ test("an edit nothing read, ignored or never opened, recomputes nothing", () => 
   app.put("evidence/read-cost/2.json", "{}\n");
   app.put("node_modules/a/README.md", "# a, again\n");
   expect(computed(app)).toEqual({ files: 0, proofs: 0 });
+});
+
+test("what belongs to no one file is keyed on the text of every compiler config the project reads, and the files it compiles", () => {
+  const app = open();
+  app.stored();
+  app.put("tsconfig.json", '{"extends":"./config/base.json","compilerOptions":{"notAnOption":true},"include":["src/**/*.ts","oracle/**/*.ts"]}');
+  expect(app.stored().snapshot).toEqual(app.fresh());
+  app.put(
+    "config/base.json",
+    '{"compilerOptions":{"target":"ES2022","module":"NodeNext","moduleResolution":"NodeNext","lib":["ES2022"],"strict":true,"noEmit":true,"skipLibCheck":true,"alsoNotAnOption":1}}',
+  );
+  expect(app.stored().snapshot).toEqual(app.fresh());
+});
+
+test("the config's gate and the app's name, which extraction never reads, recompute nothing", () => {
+  const app = open();
+  app.stored();
+  const gate = { checks: [{ id: "lint", command: "node lint.mjs" }], tests: [{ command: "node {test}", under: ["oracle"] }] };
+  expect(app.stored("proof", { ...SMALL_CONFIG, app: "small", verify: gate }).receipt.files.computed).toBe(0);
 });

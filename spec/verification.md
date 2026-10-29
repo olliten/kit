@@ -22,28 +22,34 @@ so a later gate runs only what an edit can have changed.
   is not run, and `kit verify` names it, counts it and fails. · {#tests-run-in-the-group-their-reach-selects}
   - Implementation: {{test-groups}}, {{verify-run}}, {{check-run}}, {{verification-configuration}}, {{kit-configuration}}, {{read-snapshot}}
   - Proof: {{temporary-project}}
-- A recorder preloaded into a check's processes records every path inside the app the check reads, lists,
-  probes or loads, in its own process, its worker threads and the processes it starts, and nothing under
-  installed packages or the repository's own bookkeeping. A load is a read only the module loader made, Node's
-  own or the test runner's; any other code's read is a read. A directory listing an installed package makes, such
-  as a test runner finding its tests, is the runner's and is not recorded. Loaded without being asked to record,
-  it changes nothing. · {#reads-are-observed}
-  - Implementation: {{read-recorder}}, {{verdict-reuse}}
+- A recorder preloaded into a check's processes, added to the Node options the caller's environment gives, records
+  every path inside the app the check reads, lists, probes, copies or loads, the app root itself as `.`, in its
+  own process, its worker threads and the processes it starts, and nothing under installed packages or the
+  repository's own bookkeeping. A recursive listing, a glob or a copy of a directory lists every directory under
+  it, and a copy reads every file. A load is a read only the module loader made, Node's own or the test runner's;
+  any other code's read is a read, whatever stack trace limit it set. A directory listing the test runner makes,
+  such as finding its tests, is not recorded; one any other installed package makes, such as a compiler expanding
+  its configuration's globs, is. Loaded without being asked to record, it changes nothing. · {#reads-are-observed}
+  - Implementation: {{read-recorder}}, {{verdict-reuse}}, {{verify-run}}, {{processes}}
   - Proof: {{temporary-project}}, {{processes}}
 - `kit verify` keeps a passing check with the state of every path its run used: a file's content or a
   directory's listing for a path it read or listed, and only whether it is absent, a file or a directory for a
   path it only probed. It reuses the check while each path is still in that state, under the same command,
-  runtime and installed packages, and runs the rest together; a failure is never kept, a pass during which a
-  path it read changed is reported and not kept, and runs on different trees each keep theirs. A check declared
+  runtime, installed packages and app package manifest, and the same Kit when Kit reads the app from outside it,
+  and runs the rest together; a failure is never kept, a pass during which a path it read changed, from a state
+  an earlier pass kept, or a file it read since its run started, is reported and not kept, and runs on different trees each keep
+  theirs. A check declared
   `after: tests` runs once the tests' passes are kept, and is not kept itself when a test's pass was not.
   `--fresh` reuses and keeps nothing, `--plan` says what would run, and it exits 1 when a check fails. · {#verdicts-hold-while-their-reads-hold}
   - Implementation: {{verify-run}}, {{verdict-reuse}}, {{verdict}}, {{evidence-store}}, {{filesystem}}, {{toolchain}}, {{processes}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}
   - Proof: {{temporary-project}}
-- A file a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its text with
+- A script a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its text with
   the body of every outermost function the test never ran left out, where a function counts as run when a
   function the coverage shows ran starts inside it. The pass holds while that text is the same, so an edit inside
   a function the test never ran reruns nothing, and an edit to code it ran, to the module's top level, or to
-  which functions the file has reruns it. A file the test also reads as text is kept whole. A test that reads an
+  which functions the file has reruns it. A file the test also reads as text is kept whole, and so is a file another process than the
+  one that loaded the test loaded or ran, such as a child the test starts, whose run the test's coverage need not
+  show. A test that reads an
   unrun function's text through the running code, such as `Function.prototype.toString`, is not seen. · {#a-pass-holds-while-the-code-it-ran-holds}
   - Implementation: {{verify-run}}, {{held-state}}, {{ran-code}}, {{function-span}}, {{coverage-report}}, {{compiler}}, {{read-recorder}}, {{verdict-reuse}}, {{text-files}}, {{filesystem}}
   - Proof: {{temporary-project}}
@@ -55,6 +61,6 @@ so a later gate runs only what an edit can have changed.
   without force. A push refused because the tip moved reads the ref again and adds on top, a few times; a
   pass already at a path stays. No origin, no network, a refused push or a lost race is said in the output and
   the run goes on with its own store, so sharing never fails the gate; the summary counts what was read and
-  published. `--plan` reads and does not publish, and `--fresh` and `--no-share` neither read nor publish. · {#passes-are-shared-through-refs}
+  published. A reading removes the clone's copies of every other ref beside the two it reads. `--plan` reads and does not publish, and `--fresh` and `--no-share` neither read nor publish. · {#passes-are-shared-through-refs}
   - Implementation: {{pass-sharing}}, {{shared-passes}}, {{git-refs}}, {{calendar}}, {{verify-run}}, {{evidence-store}}, {{toolchain}}, {{verification-configuration}}
   - Proof: {{temporary-project}}

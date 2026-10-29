@@ -7,7 +7,7 @@ import { testRuns } from "../../core/readings/test-runs.js";
 import { ranLines } from "../../core/readings/coverage-report.js";
 import { functionsRun } from "../../core/readings/ran-code.js";
 import { sharedPath, sharedRefs } from "../../core/readings/shared-passes.js";
-import { heldKey, heldKeys, holding, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { heldKey, heldKeys, heldPath, holding, loadedBeside, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { calendar } from "../adapters/calendar.js";
 import { compilerWorkspace } from "../adapters/compiler.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
@@ -92,7 +92,8 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   if (!first.some((check) => check.records === true)) read = undefined;
 
   const runtime = toolchain.runtime(root);
-  const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime);
+  const kit = toolchain.kit(engineRoot, root);
+  const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime, kit);
   const stateOf = (key: string): string => heldState(root, key);
   const share = fresh || args.includes("--no-share") ? undefined : policy.share;
   const refs = share === undefined ? undefined : sharedRefs(share, runtime, calendar.now());
@@ -145,13 +146,14 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     reused += planned.filter((item) => item.reused !== undefined).length;
     const due = planned.filter((item) => item.reused === undefined).map((item) => item.check);
     ran += due.length;
-    const filesIn = (directory: string): string[] =>
+    const namedIn = (directory: string): { name: string; text: string }[] =>
       textFiles.exists(directory)
         ? textFiles
             .entries(directory)
             .filter((entry) => entry.file)
-            .map((entry) => textFiles.read(`${directory}/${entry.name}`))
+            .map((entry) => ({ name: entry.name, text: textFiles.read(`${directory}/${entry.name}`) }))
         : [];
+    const filesIn = (directory: string): string[] => namedIn(directory).map((each) => each.text);
     // What each test ran is read against the code it ran, by the named functions extraction finds in it: read
     // once, before the tests, and kept as only what that needs.
     const code = due.some((check) => check.records === true)
@@ -170,6 +172,17 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
       const scratch = `${store}/scratch/${digest(`${root}\u0000${stopwatch.now()}\u0000${from}`)}`;
       const directories = chunk.map((_, index) => `${scratch}/${index}`);
       for (const directory of directories) textFiles.directory(`${directory}/runs`);
+      // The chunk's start in the file system's own clock: a file changed after it changed while a check ran. A
+      // directory's time also moves for an entry made and removed again, as a test runner's bundled config is,
+      // so a directory is judged by its listing alone.
+      textFiles.write(`${scratch}/started`, "");
+      const start = filesystem.modified(`${scratch}/started`) ?? 0;
+      const changedSince = (key: string): boolean => {
+        const { path, kind } = heldPath(key);
+        const at = path === "." ? root : `${root}/${path}`;
+        const modified = filesystem.modified(at);
+        return !kind && modified !== undefined && modified > start && filesystem.kind(at) === "file";
+      };
       // Raw V8 coverage also covers the processes a test starts, such as a launcher it runs.
       const results = await processes.shells(
         chunk.map((check, index) => {
@@ -178,7 +191,8 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
           return {
             line: check.test === undefined ? check.line : check.line.replaceAll("{dir}", coverage),
             env: {
-              NODE_OPTIONS: `--import ${readRecorder.location}`,
+              // Added to the options the caller gives Node, such as its certificates, rather than put in their place.
+              NODE_OPTIONS: [processes.environment("NODE_OPTIONS"), `--import ${readRecorder.location}`].filter((option) => option !== undefined && option !== "").join(" "),
               KIT_READS: directory,
               KIT_ROOT: root,
               ...(check.records === true ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
@@ -199,17 +213,24 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         }
         lines.push(`passed ${check.id}`);
         const lcov = check.records === true ? filesIn(`${directory}/runs`) : [];
-        const after = new Map(heldKeys(pathUses(filesIn(directory)), ranIn(lcov)).map((key) => [key, stateOf(key)]));
+        const recordings = namedIn(directory);
+        const v8 = check.records === true ? namedIn(`${directory}/runs/v8`) : [];
+        // A file another process loaded or ran, such as a child the test starts, ran code the test's coverage
+        // doesn't show, so it is kept whole.
+        const ran = ranIn(lcov);
+        if (check.test !== undefined) for (const path of loadedBeside(recordings, v8, check.test, root)) ran.delete(path);
+        const after = new Map(heldKeys(pathUses(recordings.map((each) => each.text)), ran).map((key) => [key, stateOf(key)]));
         // A path that changed while the check ran was read in one state and is kept in another, so the pass
-        // describes neither: it is reported and not kept.
-        if (!keep || [...after].some(([path, state]) => states.has(path) && states.get(path) !== state)) {
+        // describes neither: it is reported and not kept. That is a state other than the one a pass known before
+        // the run kept, or, whether or not one was, a change since the chunk started.
+        if (!keep || [...after].some(([path, state]) => (states.has(path) && states.get(path) !== state) || changedSince(path))) {
           unrecorded++;
           return;
         }
         const verdict: Verdict = { check: check.id, seconds, states: Object.fromEntries(after) };
         const report =
           check.test !== undefined && check.records === true && code !== undefined
-            ? testRuns([{ test: check.test, lcov, v8: filesIn(`${directory}/runs/v8`) }], code.files, root, loaded.config, code.functions, code.texts)[0]
+            ? testRuns([{ test: check.test, lcov, v8: v8.map((each) => each.text) }], code.files, root, loaded.config, code.functions, code.texts)[0]
             : undefined;
         const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran };
         evidenceStore.write(store, kindOf(check), heldKey(kept), JSON.stringify(kept));

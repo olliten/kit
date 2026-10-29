@@ -11,10 +11,11 @@ export type SharedReading =
   | { readonly read: 0; readonly failure: string };
 
 // Keeps in the store every pass on the refs that the store lacks, the first ref's first, so a pass another clone
-// kept is reused as this clone's own.
+// kept is reused as this clone's own. The clone's copies of other days' refs, which no reading asks for again, go.
 export function readSharedPasses(root: string, store: string, refs: readonly string[]): SharedReading {
   try {
     const tips = refs.map((ref) => gitRefs.read(root, ref));
+    gitRefs.forget(root, refs);
     const wanted = new Map<string, { readonly blob: string; readonly path: string }>();
     for (const tip of tips)
       for (const file of tip?.files ?? []) {

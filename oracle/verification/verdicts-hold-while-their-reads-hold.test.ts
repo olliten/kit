@@ -48,6 +48,32 @@ test("a pass is reused while every path it read holds, and an edit reruns only w
   expect(summary((await verify("--fresh")).stdout)).toMatchObject({ reused: 0, ran: 3 });
 });
 
+test("a pass is kept under the Kit that ran it when that Kit reads the app from outside it", async () => {
+  const { project } = app();
+  const kits = temporaryProjects.open("kit-engines-");
+  projects.push(kits);
+  kits.write({ "one/src/a.ts": "export const a = 1;\n", "two/src/a.ts": "export const a = 2;\n" });
+  const config = join(project.root, "kit/config.md");
+  const verify = (engineRoot: string, ...flags: string[]) =>
+    runVerify({ engineRoot, args: ["--root", project.root, "--config", config, ...flags], cwd: project.root });
+  expect((await verify(join(kits.root, "one"))).exitCode).toBe(0);
+  expect((await verify(join(kits.root, "one"), "--plan")).stdout).toContain("reuse lint\n");
+  expect((await verify(join(kits.root, "two"), "--plan")).stdout).toContain("run lint\n");
+  // A Kit that is the app is read like the rest of it, so its own edits don't set its passes apart.
+  expect((await verify(project.root)).exitCode).toBe(0);
+  project.write({ "src/unread.ts": "export const unread = 1;\n" });
+  expect((await verify(project.root, "--plan")).stdout).toContain("reuse lint\n");
+});
+
+test("the app's package.json, which Node's own loader reads unseen, is part of the runtime a pass is kept under", async () => {
+  const { project, verify } = app();
+  project.write({ "package.json": "{}\n" });
+  expect((await verify()).exitCode).toBe(0);
+  expect((await verify("--plan")).stdout).toContain("reuse lint\n");
+  project.write({ "package.json": '{"imports": {"#data": "./data.txt"}}\n' });
+  expect((await verify("--plan")).stdout).toContain("run lint\n");
+});
+
 test("a path a check only probed holds while it is the same kind, whatever it holds", async () => {
   const { project, verify } = app();
   project.write({ "tests/c.test.mjs": 'import { existsSync } from "node:fs";\nif (!existsSync("flag.txt")) process.exit(1);\n', "flag.txt": "on" });
@@ -73,6 +99,13 @@ test("a pass during which a path it read changed is reported and not kept", asyn
   await verify();
   project.write({ "lint.mjs": 'import { appendFileSync, readFileSync } from "node:fs";\nreadFileSync("data.txt");\nappendFileSync("data.txt", "+");\n' });
   expect(summary((await verify()).stdout)).toMatchObject({ ran: 1, recorded: 0, unrecorded: 1 });
+});
+
+test("a pass during which a path it read changed is not kept on a first run either, with nothing kept before it", async () => {
+  const { project, verify } = app();
+  project.write({ "lint.mjs": 'import { appendFileSync, readFileSync } from "node:fs";\nreadFileSync("data.txt");\nappendFileSync("data.txt", "+");\n' });
+  expect(summary((await verify()).stdout)).toMatchObject({ ran: 3, recorded: 2, unrecorded: 1 });
+  expect((await verify("--plan")).stdout).toContain("run lint\n");
 });
 
 test("runs on different trees each keep theirs, and the one whose paths hold is reused", () => {

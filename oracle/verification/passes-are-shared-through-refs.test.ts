@@ -16,7 +16,7 @@ afterEach(() => {
   for (const project of projects.splice(0)) project.dispose();
 });
 
-const PREFIX = "refs/heads/kit-passes";
+const PREFIX = "refs/kit-passes";
 const APP = {
   "kit/config.md": `\`\`\`yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nverify:\n  share: ${PREFIX}/\n  checks:\n    - {id: lint, command: node lint.mjs}\n  tests:\n    command: node {test}\n    under: tests/\n\`\`\`\n`,
   "lint.mjs": 'import { readFileSync } from "node:fs";\nreadFileSync("data.txt");\n',
@@ -97,8 +97,12 @@ test("a lane publishes its passes and another lane reuses them without running",
 
   const two = lane("two");
   expect((await two.verify("--plan")).stdout).toBe("reuse lint\nreuse test:tests/a.test.mjs\nreuse test:tests/b.test.mjs\n");
+  // The clone's copy of an earlier day's ref is removed by the next reading.
+  const stale = `refs/kit-shared/${PREFIX.slice(5)}/2000-01-01-0123456789abcdef`;
+  git(two.root, "update-ref", stale, tipOf(origin, today));
   const second = await two.verify();
   expect(summary(second.stdout)).toMatchObject({ reused: 3, ran: 0, shared: { read: 0, published: 0 } });
+  expect(git(two.root, "for-each-ref", "--format=%(refname)", "refs/kit-shared/")).toBe(`refs/kit-shared/${today.slice(5)}`);
   two.write({ "data.txt": "2" });
   expect(summary((await two.verify()).stdout)).toMatchObject({ reused: 2, ran: 1, shared: { published: 1 } });
   expect(treeOf(origin, today)).toHaveLength(4);
