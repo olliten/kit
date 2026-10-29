@@ -4,7 +4,7 @@
     "oracle/kit/consumers-show-each-apps-work.test.ts": "a8d1503880df67ecbc519b2ab925690a3c95ea609a9d66d611acdaf4aa405676",
     "src/core/primitives/command.ts": "70f2614f2759a300204092f75a5e20958965cf1e9b00f52110e9d5a246ef775d",
     "src/core/primitives/default-config.ts": "cb1454a30fc08a68a12847675f8f2a8e3e908ece0c5be52da16885e136cb2a33",
-    "src/core/readings/check-paths.ts": "af92998ae7e9334360db1a04e2924d1e31f05d38b8d9c3c9548ad67539a75ee0",
+    "src/core/readings/check-paths.ts": "adea8afa14f4515032bc7526aa022884ba3b0818c96eaf6cf03344be8ca1e6c5",
     "src/core/readings/claim-inventory.ts": "2da2157c11333a89db7da02ed39b4d5798cff6ffbd3bb48f63f37531020bddf2",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
@@ -16,7 +16,7 @@
     "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
     "src/substrate/adapters/source-loader.mjs": "2419968f901bcf5d63f119d75cd42164794f9a49de9adfe16261ea373ef4f416",
     "src/substrate/adapters/text-files.ts": "e659d03ec074befb4f925335619caebc8112e8f0574f2cc6dbf70eddd868a9ec",
-    "src/substrate/compositions/consumers-run.ts": "b06dd9f842db7298f054489fc10dc97a75191d067d5cb7633190b66ecaa6ac1d",
+    "src/substrate/compositions/consumers-run.ts": "08dc76b58b3f57a51e48900d7903ee6b5a724bf13315ed3e868e617d1f2438d8",
     "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
     "src/substrate/compositions/read-config.ts": "107f186f28e520f6b14137f4d0d15c97175dff3aeae7c25a9334e37a56b902d0",
     "src/substrate/compositions/syntax-reading.ts": "a3cbdea3e98d2a678dd07137054ed12be7287f89bbaa0cd9a6c6013cbed4faeb"

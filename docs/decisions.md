@@ -555,3 +555,11 @@ without naming the app.
   33 s; the edit reverted, all reused in 0.08 s.
 - **Not covered:** inputs no file holds (network, clock, environment variables). Each test runs in its own
   process, so a cold run costs more than one vitest run; folding `kit runs` into it is next.
+
+## 2026-10-29 · A baseline is one file per finding path
+
+- **Decision:** `kit check --baseline` may name a directory holding one file per finding path; a `.json` file is
+  read as before. Kit's own baseline is `self-debt/legacy/`, empty.
+- **Why:** Leeloo's single baseline held 3,244 keys in 1.2 MB, so every agent paying down debt edited one shared
+  file, the conflict the runs record had. The baseline is a ledger of accepted debt, so only its storage changes:
+  the ratchet reads the files as one record.

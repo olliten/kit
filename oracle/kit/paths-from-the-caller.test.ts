@@ -26,7 +26,7 @@ test("with no paths the Kit checks itself, wherever it is called from", () => {
   expect(kitCheckPaths([], engine, app)).toEqual({
     root: engine,
     configPath: resolve(engine, "self-config.md"),
-    baselinePath: resolve(engine, "self-debt/legacy.json"),
+    baselinePath: resolve(engine, "self-debt/legacy"),
   });
 });
 

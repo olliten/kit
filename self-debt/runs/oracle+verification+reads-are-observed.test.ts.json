@@ -2,11 +2,11 @@
   "test": "oracle/verification/reads-are-observed.test.ts",
   "digests": {
     "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
-    "oracle/verification/reads-are-observed.test.ts": "5e68a1dc122fac5161ad20682f09fa801bea482407887aa5caa7e38fad620c5d",
+    "oracle/verification/reads-are-observed.test.ts": "2edf78ea9a602b1ec15b1ca1f17b95fb33855f5f6dd39226261f5562b74ab837",
     "src/core/primitives/verdict.ts": "cedce0e4508b10ba44dd6e8f8cae3038e4671faa2a128cbb5539a3bedc3cc3ea",
     "src/core/readings/verdict-reuse.ts": "8b5ebff9682c1233358062ee824e9b8c7787b16a10ca5c6e603961a1b5bf6b05",
     "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
-    "src/substrate/adapters/read-recorder.mjs": "cf90661002461ac74da417bc625c4ea7dc95406c2a53cd8dfdb5f7199d60fadb"
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09"
   },
   "ran": {
     "oracle/substrate/adapters/temporary-project.ts": [
@@ -24,9 +24,10 @@
       "worker@50"
     ],
     "src/substrate/adapters/read-recorder.mjs": [
-      "note@24",
-      "wrap@48",
-      "wrapped@53"
+      "note@33",
+      "runnersListing@26",
+      "wrap@58",
+      "wrapped@63"
     ]
   }
 }

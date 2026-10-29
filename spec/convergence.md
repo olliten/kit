@@ -41,3 +41,9 @@ and its size are debt that may only shrink, and placed code is held to every rul
   that call into placed modules; new code is placed first ({{legacy-size}}, {{source-size}},
   {{finding}}, {{ratchet}}, {{check-run}}, {{command}}). · {#legacy-does-not-grow}
   - Proof: {{source-fixture}}
+- A baseline may be a directory holding one file per finding path, each with the debt keys and sizes of the
+  findings on that path, read together as one record; a baseline file ending `.json` is read whole as before.
+  Tightening rewrites only the files whose keys changed and removes a file left with none, so agents paying down
+  debt on different modules edit different files. · {#baseline-is-one-file-per-path}
+  - Implementation: {{baseline-files}}, {{check-run}}, {{ratchet}}, {{text-files}}, {{check-paths}}
+  - Proof: {{temporary-project}}

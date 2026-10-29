@@ -132,6 +132,11 @@ home, such as Node built-in declarations; several homes retain uncertainty.
   accounting as location debt. Declaring a layout also checks that source, tests and specs sit in their roots.
 - `legacy-zones`: the zone a legacy prefix, or an exact list of legacy files, actually belongs to, so imports
   across placement keep zone boundaries.
+- A baseline is `kit check --baseline <path>`: a file ending `.json` holding every debt key, or a directory such as
+  `kit/debt/legacy/` holding one file per finding path, named by the path with `/` replaced by `+`. A directory
+  lets agents paying down debt on different modules edit different files; `--tighten` rewrites only the files
+  whose keys changed and removes emptied ones. To move a single file into a directory, write each finding path's
+  keys to its own file and delete the old one.
 - `legacy-areas`: spec files in an older format, outside the topic shape until they gain Implementation rows.
 - `legacy-test-roots`: test directories the runner should still discover; read by `testRoots()`, which apps
   load through the configuration runner.

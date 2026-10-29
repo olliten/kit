@@ -26,9 +26,10 @@
     "src/core/primitives/zones.ts": "f49fc9a4bee55f79aa3ab3a33ef842c7b66e95c529a89c47343a3b0005660a01",
     "src/core/readings/access-authority.ts": "4c34c3e307c385b3628811a1ae1e441f84cd2bc988451bbbda0b06b2482a6740",
     "src/core/readings/authority-graph.ts": "9a24b73368689ab23fd8a9df2bb61b4a0788851c5d407370030c53104b304993",
+    "src/core/readings/baseline-files.ts": "a5a509e8a12b8305b0ef9f608c5184bc2a33ddee9211af023c2c7c207df6b0ec",
     "src/core/readings/behaviour-check.ts": "69137f6da5a6462b3a14b914dadc9da1629dd1d28ea34979459bfd679f6399f3",
     "src/core/readings/capability-context.ts": "04198ced6b86d60cc620a63c8a7f62620fc6fcb02be57e11ffdc8100087761c1",
-    "src/core/readings/check-paths.ts": "af92998ae7e9334360db1a04e2924d1e31f05d38b8d9c3c9548ad67539a75ee0",
+    "src/core/readings/check-paths.ts": "adea8afa14f4515032bc7526aa022884ba3b0818c96eaf6cf03344be8ca1e6c5",
     "src/core/readings/claim-cohesion.ts": "d3e07a59e0fac686d98b22c84dcd0c3ef6638e13543807d68182366d116548b2",
     "src/core/readings/claim-inventory.ts": "2da2157c11333a89db7da02ed39b4d5798cff6ffbd3bb48f63f37531020bddf2",
     "src/core/readings/claim-proof-binder.ts": "20a78c68580220d3cedde5c77fef9108bd3e925724893cc1f9d0ddff489f3467",
@@ -82,7 +83,7 @@
     "src/substrate/adapters/toolchain.ts": "d052ac7f3ef10bef3f9d90e580cb1081ce13ba0775ba60f5f91002ab3ac05548",
     "src/substrate/compositions/authority-recorder.ts": "a86300ed1007c31e66a93a7605a31a3508e422601e8ce9a7d2ea7f0d08dce229",
     "src/substrate/compositions/behaviour-reading.ts": "99ec3216576aecc0f15fa4ad08659c46c3e5253cb31effde24c0eace20f4852f",
-    "src/substrate/compositions/check-run.ts": "6dc64c92c778184803ed6faea94fbb0a9b6b8b73ecfdfcc8cba0e80e098dc5ea",
+    "src/substrate/compositions/check-run.ts": "bf53b4a78f554084c3d283304dcafedc0946d083639c9e6bc4ae4af8d7717143",
     "src/substrate/compositions/contract-reading.ts": "3666e64c3d11f8f23d7365b642eac02e15fe8e80f37b78173370a9b329c260cc",
     "src/substrate/compositions/contract-recorder.ts": "e2fcfdb2d50e8eff1b768525764555fb989ea0f68661bcd9a76b4cebf762e6b0",
     "src/substrate/compositions/escape-recorder.ts": "de302d401f665ae162d4cdb0737c15548bd01518e896235b4d949caf59dc44dd",
@@ -375,9 +376,9 @@
       "typeFacts@76"
     ],
     "src/substrate/compositions/check-run.ts": [
-      "read@31",
-      "runCheck@15",
-      "write@32"
+      "read@32",
+      "runCheck@16",
+      "write@33"
     ],
     "src/substrate/compositions/contract-reading.ts": [
       "contractIdentity@38",

@@ -161,7 +161,7 @@ oracle/
   review-an-article/<anchor>.test.ts    one file per claim
 kit/
   config.md                    the app's declarations
-  debt/legacy.json             what isn't placed yet; only shrinks
+  debt/legacy/                 what isn't placed yet, one file per path; only shrinks
 ```
 
 ## Adopt

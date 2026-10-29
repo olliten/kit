@@ -3,7 +3,7 @@
   "digests": {
     "oracle/language/modules-bind-to-terms.routing.test.ts": "07fdb5fbe8fcf0bc47eba118d1699b6fdf9748f59d22ac625988dcc2771d22f6",
     "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
-    "src/core/readings/check-paths.ts": "af92998ae7e9334360db1a04e2924d1e31f05d38b8d9c3c9548ad67539a75ee0",
+    "src/core/readings/check-paths.ts": "adea8afa14f4515032bc7526aa022884ba3b0818c96eaf6cf03344be8ca1e6c5",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
     "src/core/readings/module-references.ts": "6e4814b98bc6406ac35d3c924b1b654ee2a45dfba1f0e715cfeffc6473b00748",

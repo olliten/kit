@@ -20,7 +20,7 @@ export async function runConsumers({ engineRoot, args: apps, cwd }: CommandReque
       "--config",
       `${root}/kit/config.md`,
       "--baseline",
-      `${root}/kit/debt/legacy.json`,
+      textFiles.exists(`${root}/kit/debt/legacy`) ? `${root}/kit/debt/legacy` : `${root}/kit/debt/legacy.json`,
     ]);
     const read = readCheck(run.stdout, run.stderr);
     // A config Kit no longer accepts is work for that app like any finding, so it is reported, not thrown.

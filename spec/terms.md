@@ -109,6 +109,10 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
+- **baseline-files** — a baseline kept as one file per finding path: the file a path's keys live in, the record the files make together, and the files a record is kept as.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **behaviour-check** — the check that the core and readings take data or registered contracts, never other behaviour.
   - Role: derived
   - Zone: core
@@ -419,7 +423,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
   - Role: composition
   - Zone: substrate
-  - Of: {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{text-files}}, {{toolchain}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{text-files}}, {{toolchain}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate

@@ -17,7 +17,7 @@
     "src/substrate/adapters/evidence-store.ts": "7697bcf6de59f8fbcbd8c6bc7890794dfbebd0bd44410b7fe74f63f99d3fa213",
     "src/substrate/adapters/filesystem.ts": "08effc3d3863d17a6eb80e266d24ef677223a3cceac5c6b06e44a281cd290f49",
     "src/substrate/adapters/processes.ts": "da745fa51023de722fef58277188810dc22a42b0088fb08b111b828813bd2f7c",
-    "src/substrate/adapters/read-recorder.mjs": "cf90661002461ac74da417bc625c4ea7dc95406c2a53cd8dfdb5f7199d60fadb",
+    "src/substrate/adapters/read-recorder.mjs": "52811f794386b51ea855e8016e10c02903b1d09ba8d8e2fdc9ef63e2ab1ccb09",
     "src/substrate/adapters/stopwatch.ts": "10e38f59dd52adb2bc2b11b313f092c966308a3032d8365d59bf621ca1191cb5",
     "src/substrate/adapters/text-files.ts": "e659d03ec074befb4f925335619caebc8112e8f0574f2cc6dbf70eddd868a9ec",
     "src/substrate/adapters/toolchain.ts": "d052ac7f3ef10bef3f9d90e580cb1081ce13ba0775ba60f5f91002ab3ac05548",
@@ -85,9 +85,9 @@
       "worker@50"
     ],
     "src/substrate/adapters/read-recorder.mjs": [
-      "note@24",
-      "wrap@48",
-      "wrapped@53"
+      "note@33",
+      "wrap@58",
+      "wrapped@63"
     ],
     "src/substrate/adapters/stopwatch.ts": [
       "now@6"

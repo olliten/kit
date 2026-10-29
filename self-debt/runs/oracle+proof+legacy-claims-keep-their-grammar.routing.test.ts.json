@@ -3,7 +3,7 @@
   "digests": {
     "oracle/proof/legacy-claims-keep-their-grammar.routing.test.ts": "e1c35ff85e9c020b80bb50c13b5c226ecea10ffc356c6055581060d3e78adf81",
     "oracle/substrate/adapters/temporary-project.ts": "ca9f5b771f06c1596b371183eb7c6b40e4f5fd9cfb31e4a2d769f459587f6ea3",
-    "src/core/readings/check-paths.ts": "af92998ae7e9334360db1a04e2924d1e31f05d38b8d9c3c9548ad67539a75ee0",
+    "src/core/readings/check-paths.ts": "adea8afa14f4515032bc7526aa022884ba3b0818c96eaf6cf03344be8ca1e6c5",
     "src/core/readings/claim-inventory.ts": "2da2157c11333a89db7da02ed39b4d5798cff6ffbd3bb48f63f37531020bddf2",
     "src/core/readings/comment-check.ts": "a85fd76c4cbda2cd247e6dc1c1983276285e97c83414a7b4856be356f5f7c078",
     "src/core/readings/config-values.ts": "608bba6c64da18f5b7701965673bbd8e1921a9c00ab77c9e5a21197106d991a6",
