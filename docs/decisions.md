@@ -632,3 +632,16 @@ without naming the app.
   import the legacy workspace file, which imports it. One test goes the other way, through an import Kit's
   snapshot reads from a fixture string. No name-based selection was added: the app can name the module its e2e
   tests use once the workspace file is gone.
+
+## 2026-10-29 · Compiler reads are no longer recorded
+
+- **Decision:** the compiler adapter reads through the compiler's own system and records nothing. Extraction keeps
+  only the filesystem reads it takes file digests from.
+- **Why:** the record served the snapshot cache's trace replay, which is gone, yet every resolution probe was
+  still kept to the end of the run. On Leeloo with its packages installed that was 646,000 entries, 120 MB of
+  heap at the peak. A cold `kit check` now peaks at 2,387 MB of live heap, from at least 2,512 MB (which ran out
+  of memory under a 2,560 MB heap), and takes 225 s instead of 238 s.
+- **Limits:** a cold check of Leeloo still needs about 2.5 GB of heap; with nothing changed it needs under 2 GB.
+  Its main project checked by `tsc` alone holds 1.9 GB, and Kit's walk, diagnostics and test reaches use the
+  same checker on top of what earlier projects left, so fitting 2 GB means reading a project in more than one
+  program.

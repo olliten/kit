@@ -14,7 +14,7 @@ import { entrypointOf, legacyCodeOf, rootOf } from "../../core/readings/placemen
 import { relativeImport } from "../../core/readings/relative-import.js";
 import { semanticReferenceInventory } from "../../core/readings/semantic-references.js";
 import { termInventory } from "../../core/readings/term-inventory.js";
-import { type CompilerRead, compilerWorkspace } from "../adapters/compiler.js";
+import { compilerWorkspace } from "../adapters/compiler.js";
 import { type FilesystemRead, filesystem } from "../adapters/filesystem.js";
 import { type FactReuse, type Scope, projectFacts } from "./project-facts.js";
 import { sourceSize } from "./source-size.js";
@@ -45,19 +45,19 @@ export interface ExtractionReceipt {
 export function readSnapshot(
   appRoot: string,
   config: KitConfig = DEFAULT_CONFIG,
-  trace: { readonly filesystem: FilesystemRead[]; readonly compiler: CompilerRead[] } = { filesystem: [], compiler: [] },
+  trace: { readonly filesystem: FilesystemRead[] } = { filesystem: [] },
 ): Snapshot {
   return readStoredSnapshot(appRoot, config, undefined, trace).snapshot;
 }
 
-// Every read lands in `trace`. An ignored path is neither listed nor read, so an import into it is an error,
-// never a lost edge. With a store, each file's facts and each test's reach are reused while the key of what
-// they depend on still matches, and the rest is computed and stored.
+// Every file read and listing lands in `trace`. An ignored path is neither listed nor read, so an import into
+// it is an error, never a lost edge. With a store, each file's facts and each test's reach are reused while the
+// key of what they depend on still matches, and the rest is computed and stored.
 export function readStoredSnapshot(
   appRoot: string,
   config: KitConfig,
   store: StoredFacts | undefined,
-  trace: { readonly filesystem: FilesystemRead[]; readonly compiler: CompilerRead[] } = { filesystem: [], compiler: [] },
+  trace: { readonly filesystem: FilesystemRead[] } = { filesystem: [] },
 ): { readonly snapshot: Snapshot; readonly receipt: ExtractionReceipt } {
   rootOf("", config.srcRoot);
   const ignored = (path: string): boolean =>
@@ -136,7 +136,6 @@ export function readStoredSnapshot(
     }),
     config,
     ignored,
-    trace.compiler,
     sources,
     known,
     store,
@@ -151,7 +150,7 @@ export function readStoredSnapshot(
       }
       const to = scope === undefined && specifier.startsWith(".")
         ? relativeImport(path, specifier, known)
-        : aliasTarget(appRoot, path, specifier, dynamic, scope, ignored, known, trace.compiler);
+        : aliasTarget(appRoot, path, specifier, dynamic, scope, ignored, known);
       if (to !== undefined && !seen.has(to)) {
         seen.add(to);
         imports.push({ from: path, to });
@@ -210,12 +209,11 @@ function aliasTarget(
   scope: Scope | undefined,
   ignored: (path: string) => boolean,
   known: ReadonlySet<string>,
-  trace: CompilerRead[],
 ): string | undefined {
   if (scope === undefined) return undefined;
   const containing = join(appRoot, path);
   const mode = dynamic ? ts.ModuleKind.ESNext : scope.compiled.get(containing);
-  const resolved = compilerWorkspace.resolve(specifier, containing, scope.options, trace, mode);
+  const resolved = compilerWorkspace.resolve(specifier, containing, scope.options, mode);
   if (resolved === undefined) return undefined;
   const target = relative(appRoot, resolved.resolvedFileName).split(sep).join("/");
   if (target.startsWith("../")) return undefined;
@@ -229,12 +227,11 @@ function readCompiler(
   files: readonly SnapshotFile[],
   config: KitConfig,
   ignored: (path: string) => boolean,
-  trace: CompilerRead[],
   sources: ReadonlyMap<string, string>,
   known: ReadonlySet<string>,
   store: StoredFacts | undefined,
 ): { readonly facts: CompilerFacts; readonly scopes: readonly Scope[]; readonly receipt: ExtractionReceipt } {
-  const workerHost = compilerWorkspace.workerHost(trace);
+  const workerHost = compilerWorkspace.workerHost();
   const source = new Set(
     files
       .filter(
@@ -272,7 +269,7 @@ function readCompiler(
   };
   const reads = paths
     .filter((path) => /^tsconfig(?:\.[\w-]+)*\.json$/.test(basename(path)))
-    .map((file) => projectFacts(context, file, trace, store?.reuse));
+    .map((file) => projectFacts(context, file, store?.reuse));
   const sum = (pick: (read: (typeof reads)[number]) => { readonly reused: number; readonly computed: number }) => ({
     reused: reads.reduce((total, read) => total + pick(read).reused, 0),
     computed: reads.reduce((total, read) => total + pick(read).computed, 0),

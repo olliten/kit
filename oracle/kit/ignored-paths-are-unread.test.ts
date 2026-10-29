@@ -1,5 +1,4 @@
 import { afterEach, expect, test } from "vitest";
-import type { CompilerRead } from "../../src/substrate/adapters/compiler.js";
 import type { FilesystemRead } from "../../src/substrate/adapters/filesystem.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
@@ -22,7 +21,7 @@ const app = (files: Readonly<Record<string, string>>): string => {
 
 test("an ignored path is neither a snapshot file nor listed nor read", () => {
   const root = app(SMALL_APP);
-  const trace: { filesystem: FilesystemRead[]; compiler: CompilerRead[] } = { filesystem: [], compiler: [] };
+  const trace: { filesystem: FilesystemRead[] } = { filesystem: [] };
   const snapshot = readSnapshot(root, CONFIG, trace);
   expect(snapshot.files.map((file) => file.path)).not.toContain("evidence/read-cost/1.json");
   expect(snapshot.files.map((file) => file.path)).toContain("src/core/primitives/value.ts");

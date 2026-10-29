@@ -1,7 +1,7 @@
 import { join, relative, sep } from "node:path";
 import ts, { type CompilerOptions } from "typescript";
 import { DEFAULT_CONFIG, type KitConfig } from "../../../src/core/primitives/default-config.js";
-import { type CompilerRead, compilerWorkspace } from "../../../src/substrate/adapters/compiler.js";
+import { compilerWorkspace } from "../../../src/substrate/adapters/compiler.js";
 import type { ProgramScope } from "../../../src/substrate/primitives/program-scope.js";
 import { fixtureFiles } from "../../core/readings/fixture-files.js";
 import { temporaryProjects } from "../adapters/temporary-project.js";
@@ -32,8 +32,7 @@ export function openProgram(
   const project = temporaryProjects.open("kit-program-");
   try {
     project.write(fixtureFiles(files, config, compilerOptions));
-    const trace: CompilerRead[] = [];
-    const { parsed, program } = compilerWorkspace.load(join(project.root, "tsconfig.json"), trace);
+    const { parsed, program } = compilerWorkspace.load(join(project.root, "tsconfig.json"));
     const errors = ts.getPreEmitDiagnostics(program).filter((item) => item.category === ts.DiagnosticCategory.Error);
     if (errors.length > 0)
       throw new Error(errors.map((item) => ts.flattenDiagnosticMessageText(item.messageText, " ")).join("\n"));
@@ -59,14 +58,14 @@ export function openProgram(
               ? node.arguments[0]
               : undefined;
         if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
-          const target = compilerWorkspace.resolve(specifier.text, sf.fileName, parsed.options, trace);
+          const target = compilerWorkspace.resolve(specifier.text, sf.fileName, parsed.options);
           resolved.set(`${sf.fileName}\n${specifier.text}`, target === undefined ? null : local(target.resolvedFileName));
         }
         ts.forEachChild(node, visit);
       };
       visit(sf);
     }
-    const host = compilerWorkspace.workerHost(trace);
+    const host = compilerWorkspace.workerHost();
     const fixture: ProgramFixture = {
       scope: { appRoot: project.root, config: { ...DEFAULT_CONFIG, ...config }, program, checker, local, source, workerTypes: new Set(host.types) },
       workerGlobals: new Set(host.globals),
