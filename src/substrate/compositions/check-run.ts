@@ -31,11 +31,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
     args.includes("--fresh")
       ? undefined
       : {
-          reuse: {
-            read: (kind, key) => evidenceStore.read(store, kind, key),
-            write: (kind, key, text) => evidenceStore.write(store, kind, key, text),
-            entries: (kind) => evidenceStore.entries(store, kind),
-          },
+          reuse: evidenceStore.at(store),
           engine: toolchain.engine(engineRoot),
         },
   );

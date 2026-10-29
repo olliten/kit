@@ -60,4 +60,13 @@ test("kit check reads a baseline directory, and tightening rewrites only the pat
   expect(existsSync(baselineFileOf(debt, "lib/paid.ts"))).toBe(false);
   expect(readFileSync(baselineFileOf(debt, "lib/old.ts"), "utf8")).toBe(before);
   expect(readdirSync(debt).length).toBeGreaterThan(0);
+
+  // A single-file baseline reads the same, and tightening rewrites it without the paid keys.
+  const single = join(app, "kit/debt/single.json");
+  writeFileSync(single, JSON.stringify(kept, null, 2) + "\n");
+  const tightened = await runCheck({ engineRoot: engine, args: ["--root", app, "--config", config, "--baseline", single, "--tighten"], cwd: app });
+  expect(tightened.exitCode).toBe(0);
+  const left = Object.keys(JSON.parse(readFileSync(single, "utf8")));
+  expect(left.length).toBeGreaterThan(0);
+  expect(left.filter((key) => key.includes(":lib/paid.ts"))).toEqual([]);
 }, 120_000);

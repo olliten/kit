@@ -12,6 +12,12 @@ export interface EvidenceStore {
   // Every entry of one kind, each as its text.
   entries(store: string, kind: string): string[];
   prune(store: string): void;
+  // The store as one reader and writer of its entries, as extraction takes it.
+  at(store: string): {
+    read(kind: string, key: string): string | undefined;
+    write(kind: string, key: string, text: string): void;
+    entries(kind: string): readonly string[];
+  };
 }
 
 const DEFAULT_MAX_BYTES = 2 * 1024 ** 3;
@@ -100,6 +106,13 @@ export const evidenceStore: EvidenceStore = {
         return [];
       }
     });
+  },
+  at(store) {
+    return {
+      read: (kind, key) => evidenceStore.read(store, kind, key),
+      write: (kind, key, text) => evidenceStore.write(store, kind, key, text),
+      entries: (kind) => evidenceStore.entries(store, kind),
+    };
   },
   prune(store) {
     const limit = Number(process.env["KIT_STORE_MAX_BYTES"]) || DEFAULT_MAX_BYTES;

@@ -52,12 +52,6 @@ function testUses(snapshot: Snapshot): { uses: Map<string, Uses>; reach: (test: 
   return { uses, reach };
 }
 
-// The files one test reaches, by the rule a claim's reach merges: what anything else recorded about the test,
-// such as what it ran, can depend on.
-export function testReachOf(snapshot: Snapshot): (test: string) => ReadonlySet<string> {
-  return testUses(snapshot).reach;
-}
-
 export function claimReach(snapshot: Snapshot): Map<string, ClaimReach> {
   const { oracleRoot, specRoot } = snapshot.config;
   const { uses, reach } = testUses(snapshot);

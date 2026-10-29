@@ -153,11 +153,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     const ranBy = new Map<string, Readonly<Record<string, readonly string[]>>>();
     if (reports.length > 0) {
       const { snapshot } = readStoredSnapshot(root, loaded.config, {
-        reuse: {
-          read: (kind, key) => evidenceStore.read(store, kind, key),
-          write: (kind, key, text) => evidenceStore.write(store, kind, key, text),
-          entries: (kind) => evidenceStore.entries(store, kind),
-        },
+        reuse: evidenceStore.at(store),
         engine: toolchain.engine(engineRoot),
       });
       const functions = (snapshot.compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
