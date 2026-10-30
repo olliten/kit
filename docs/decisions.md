@@ -782,3 +782,21 @@ without naming the app.
   largest ordinary body and its smallest offender, so it is that app's number rather than a default for every
   app, and an undeclared limit measures nothing. A legacy function's size is a ratchet like a legacy module's,
   in lines instead of statements, kept apart so each fails with its own fix.
+
+## 2026-10-30 · Paid debt fails until tightened, and an entry may say why it is owed
+
+- **Decision:** a baseline entry whose debt is paid fails `kit check` with the fix "Run `kit check --tighten` to
+  drop paid debt.": a key no legacy or proof debt finding holds, and a `legacy-size` entry recording more than
+  its module now holds. An entry is paid exactly when tightening would change it, so `--tighten` always clears
+  the failure, and a check run with `--tighten` judges the baseline it leaves. Each paid entry is its own line,
+  `<key>: <fix>`, like every other failure: the key says which baseline file to look at, and the consumer report
+  already reads failures that way; the fix is one command however many lines there are. An entry may carry a
+  `reason` beside its value; tightening keeps it and `--report` shows it. A reason is never required.
+- **Why:** a paid key left in the baseline would let the same debt come back unnoticed, and a recorded size
+  larger than the module would let it grow back to that size. Leeloo's own debt lists already fail on a stale
+  entry and make each entry name what drains it. A required reason fits lists kept by hand; a baseline written
+  once from thousands of findings can't carry one per key, so a reason is optional and only checked to be text.
+- **Transition:** an app whose baseline holds paid keys or larger sizes fails on the first check after
+  upgrading, each line naming the key and the command. Running `kit check --tighten` once, and committing the
+  baseline it leaves, makes the check pass; nothing else changes, and baselines without reasons read as before.
+
