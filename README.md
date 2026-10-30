@@ -126,6 +126,7 @@ So a module's imports and the contract types it takes say every effect it can ca
 - Compositions may import all four.
 - Across zones, imports point inward to the core.
 - No cycles.
+- Every module defines something: one that only re-exports is a forwarder, which hides its importers' real edge.
 
 **R3, names and comments.**
 

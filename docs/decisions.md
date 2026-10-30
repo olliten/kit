@@ -732,3 +732,17 @@ without naming the app.
   imports another test file runs alone. The provider extends `@vitest/coverage-v8` through its 1.x provider
   interface and the recorder reads vitest 1.x's worker message, so `{tests}` is tied to vitest 1.x; `{test}`
   works with any runner.
+
+## 2026-10-30 · Every module defines something
+
+- **Decision:** a module whose statements only re-export, beside imports whose every binding it exports again,
+  is a forwarder, and each is the finding `R2:forwarder:<path>`: a violation when placed, legacy debt
+  otherwise, with a fix naming the modules it re-exports. Declaration files and declared entrypoints are
+  exempt, so a package's public index is declared rather than flagged. Whether a file only forwards is
+  recorded with its size during the fact walk, resolved by the compiler, so it is stored and reused with the
+  file's other facts.
+- **Why:** a forwarder hides the real edge, since its importers appear to depend on the shim, and it is the
+  shape a dodge of the dependency rules takes. The first app's own scan for "every module defines something"
+  found one left behind by a module split. The promise belongs in Kit, so every app gets it and that app can
+  retire its own scan. As legacy debt, an adopting app's existing forwarders go in its baseline, and a migration
+  can't add one without the baseline growing.

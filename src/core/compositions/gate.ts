@@ -6,6 +6,7 @@ import { claimProofBinder } from "../readings/claim-proof-binder.js";
 import { commentCheck } from "../readings/comment-check.js";
 import { dependencyExclusions } from "../readings/dependency-exclusions.js";
 import { type Finding, byDebtKey } from "../readings/finding.js";
+import { forwarderCheck } from "../readings/forwarder-check.js";
 import { handoverCheck } from "../readings/handover-check.js";
 import { layoutCheck } from "../readings/layout-check.js";
 import { legacySize } from "../readings/legacy-size.js";
@@ -89,6 +90,7 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
   const findings: GateFinding[] = [
       ...capabilityCheck(snapshot).findings,
       ...legacySize(snapshot),
+      ...forwarderCheck(snapshot),
       ...layoutCheck(snapshot),
       ...handoverCheck(snapshot),
       ...proofScope(topicSnapshot),

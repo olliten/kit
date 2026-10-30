@@ -106,6 +106,24 @@ This is available only in exact declared entrypoints. Aliases and type-only impo
 imports, dynamic imports, re-exports and package subpaths stay unresolved. A package owned by an adapter still
 belongs to that adapter.
 
+## Forwarders
+
+A module whose statements only re-export, through `export … from`, `export * from` or an imported binding
+exported again, beside imports whose every binding it exports again, defines nothing: its importers seem to
+depend on it rather than on the modules that do the work. Each is one finding, `R2:forwarder:<path>`, under
+every code root and legacy location, whose fix names the modules it re-exports:
+
+```text
+R2:forwarder:src/core/readings/sum.ts: Point each importer at the module it uses (src/core/readings/total.ts) and delete this forwarder.
+```
+
+A placed forwarder is a violation no baseline waives. A legacy one is debt: an app adopting Kit baselines the
+forwarders it has, and a forwarder added later, such as one a split leaves behind, has no key there and fails.
+A module that also declares anything, a type included, keeps an imported binding for itself or runs anything,
+a bare `import "./x.js"` included, is not a forwarder, and neither is an empty one. Declaration files are not
+read for it, and a declared entrypoint is exempt, so a package's public `index.ts` barrel stays a forwarder
+only until it is listed under `exceptions`.
+
 ## Dependency exclusions
 
 ```yaml
