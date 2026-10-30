@@ -4,6 +4,7 @@ import { type Declaration, isRecord, isText, isTexts, isZone, normalizedPath, re
 import { configIssues } from "../readings/config-schema.js";
 import { configuredLayout } from "../readings/layout-configuration.js";
 import { legacyZones } from "../readings/legacy-zone-configuration.js";
+import { configuredLimits } from "../readings/limit-configuration.js";
 import { verification } from "../readings/verification-configuration.js";
 
 export function kitConfig(text: string): Declaration {
@@ -58,6 +59,7 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
     legacyAreas: texts(declaration["legacy-areas"], "legacy-areas"),
     legacyZones: legacyZones(declaration["legacy-zones"]),
     exceptions: texts(declaration["exceptions"], "exceptions"),
+    ...(declaration["limits"] === undefined ? {} : { limits: configuredLimits(declaration["limits"]) }),
     dependencyExclusions: dependencyExclusions(declaration["dependency-exclusions"]),
     ignore: ignoredPaths(declaration["ignore"]),
     adapters: registered,

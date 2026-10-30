@@ -130,13 +130,15 @@ export interface CompilerFacts {
       readonly kind: "any" | "assertion" | "non-null" | "ignore" | "nocheck" | "expect-error";
     }[];
     // The named functions of each checked source: the name a runtime reports, the line it starts on, an id
-    // unique in its file, and the id of the named function holding it.
+    // unique in its file, the id of the named function holding it, and how many lines its body spans, from the
+    // line that opens it to the line that closes it, everything it holds included.
     readonly functions?: readonly {
       readonly file: string;
       readonly name: string;
       readonly line: number;
       readonly id: string;
       readonly holder: string | null;
+      readonly lines: number;
     }[];
   }[];
 }

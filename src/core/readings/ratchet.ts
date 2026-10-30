@@ -1,5 +1,6 @@
 import type { KitConfig } from "../primitives/default-config.js";
 import type { Finding } from "./finding.js";
+import { lineFailure, tightenedLines } from "./line-ratchet.js";
 
 export interface GateFinding extends Finding {
   readonly category: "legacy-debt" | "proof-debt" | "checker-limit" | "placed-violation";
@@ -9,6 +10,8 @@ export interface GateFinding extends Finding {
   // A legacy module's size: its statements, and those that only call into placed modules.
   readonly statements?: number;
   readonly calls?: number;
+  // A legacy function's size: the lines its body spans.
+  readonly lines?: number;
 }
 
 // A baseline names each debt key it holds; it is a record, or a plain list of keys in a test.
@@ -102,7 +105,7 @@ export function withProofDebt(
 }
 
 // What fails: every placed violation, every limit reachable from placed code or an entrypoint, new legacy
-// or proof debt, and a legacy module grown beyond its baseline.
+// or proof debt, and a legacy module or function grown beyond its baseline.
 export function ratchetFindings(
   findings: readonly GateFinding[],
   baseline: Baseline,
@@ -116,16 +119,18 @@ export function ratchetFindings(
   return findings.flatMap((item) => {
     if (item.category === "checker-limit") return reachable.has(item.path) ? [item] : [];
     if (item.category === "placed-violation") return [item];
-    const { statements, calls } = item;
+    const { statements, calls, lines } = item;
     if (statements !== undefined && calls !== undefined)
       return sizeFailure({ ...item, statements, calls }, entries) ?? [];
+    if (lines !== undefined) return lineFailure({ ...item, lines }, entries) ?? [];
     return keys.has(item.debtKey) ? [] : [item];
   });
 }
 
 // The baseline only shrinks: a key whose legacy or proof debt is paid leaves it, and a legacy module's size entry takes the
 // smaller of what it records and what the module holds now, for its statements and for those that are not
-// calls into placed code. Nothing is added, so growth is never recorded.
+// calls into placed code, as a legacy function's entry does for its lines. Nothing is added, so growth is never
+// recorded.
 export function tightenedBaseline(baseline: Baseline, findings: readonly GateFinding[]): Record<string, unknown> {
   const current = new Map(
     findings
@@ -136,6 +141,7 @@ export function tightenedBaseline(baseline: Baseline, findings: readonly GateFin
     Object.entries(recorded(baseline)).flatMap(([key, entry]) => {
       const now = current.get(key);
       if (now === undefined) return [];
+      if (now.lines !== undefined) return [[key, tightenedLines(entry, now.lines)]];
       const base = now.statements === undefined ? undefined : recordedSize(entry);
       if (base === undefined || now.statements === undefined || now.calls === undefined) return [[key, entry]];
       const statements = Math.min(base.statements, now.statements);

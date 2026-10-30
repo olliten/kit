@@ -746,3 +746,21 @@ without naming the app.
   found one left behind by a module split. The promise belongs in Kit, so every app gets it and that app can
   retire its own scan. As legacy debt, an adopting app's existing forwarders go in its baseline, and a migration
   can't add one without the baseline growing.
+
+## 2026-10-30 · Function bodies stay within a declared limit
+
+- **Decision:** with `limits.functionLines` declared, each named function whose body spans more lines is the
+  finding `R3:function-size:<path>:<function>`, keyed by the id the function recorder gives it: a violation when
+  placed, legacy debt otherwise, whose baseline entry records its lines so it may shrink but never grow. A body's
+  lines are its physical span, from its opening line to its closing line, blank and comment lines included, and
+  that span holds every function inside it, so an anonymous closure, or a named one, counts toward its holder.
+  Tests are not measured. The span is recorded with the named functions during the fact walk, so it is stored
+  and reused with the file's other facts. Kit declares no default limit.
+- **Why:** a body too long to hold at once is read in pieces, and the first app's own guard held its bodies to
+  120 lines. Kit counts the way that guard does, so its number carries over: the span is what a reader has to
+  hold, and it needs no judgement about which lines are code. A statement count, as legacy size uses, would
+  resist formatting but drift from the app's number; formatting inside one function moves little, and the
+  ratchet only asks that a legacy function not grow. The app chose 120 from a gap in its own code, between its
+  largest ordinary body and its smallest offender, so it is that app's number rather than a default for every
+  app, and an undeclared limit measures nothing. A legacy function's size is a ratchet like a legacy module's,
+  in lines instead of statements, kept apart so each fails with its own fix.

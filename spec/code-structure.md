@@ -57,6 +57,19 @@ compositions wire the others into behaviour.
   - Implementation: {{dependency-check}}, {{placement-of}}, {{finding}}
   - Proof: {{fixture-snapshot}}
 
+## Size
+
+- When the config sets `limits.functionLines`, a named function's body spans at most that many lines, counted
+  from the line that opens it to the line that closes it, blank and comment lines included. Everything the body
+  holds counts toward it, an anonymous function included, so moving code into an inline closure doesn't take it
+  out. Each named function of a source file, a test aside, in a code root or legacy location whose body spans
+  more is one finding keyed by its file and the function, whose fix names the function, its lines and the limit:
+  a violation when placed, and otherwise legacy debt whose recorded lines may shrink but never grow, so a legacy
+  function the baseline records no lines for fails. The limit is a whole number above zero; without one no
+  function is measured. · {#function-bodies-stay-within-the-limit}
+  - Implementation: {{function-size}}, {{line-ratchet}}, {{limit-configuration}}, {{function-recorder}}, {{kit-configuration}}, {{config-schema}}, {{gate}}, {{ratchet}}
+  - Proof: {{source-fixture}}
+
 ## Authority
 
 - Window-only host authority stays in Shell, even if an adapter declaration permits another zone.

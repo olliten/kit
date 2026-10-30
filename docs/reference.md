@@ -16,6 +16,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `claim-separator` | The text that separates a claim's promise from its anchor, such as `·`. |
 | `ignore` | Relative paths the walk never lists or reads; an import into one is an error. |
 | `exceptions` | Exact executable entrypoints outside every zone. |
+| `limits.functionLines` | The most lines a named function's body may span; without it no function is measured. |
 | `packages` | Package contracts: `name`, `capabilities`, and optionally `entrypointExports`. |
 | `adapters` | Adapter registrations: `module`, `export`, `capability`, `kind`, `zones`, and optionally `contract.type`, `primitives`, `globals`, `packages`. |
 | `dependency-exclusions` | Separations of local code: `from`, `to`, `imports`, `reach`. |
@@ -123,6 +124,31 @@ A module that also declares anything, a type included, keeps an imported binding
 a bare `import "./x.js"` included, is not a forwarder, and neither is an empty one. Declaration files are not
 read for it, and a declared entrypoint is exempt, so a package's public `index.ts` barrel stays a forwarder
 only until it is listed under `exceptions`.
+
+## Function size
+
+```yaml
+limits:
+  functionLines: 120
+```
+
+With a limit declared, each named function whose body spans more lines is one finding,
+`R3:function-size:<path>:<function>`, whose fix names the function, its lines and the limit:
+
+```text
+R3:function-size:src/core/readings/plan.ts:plan.step: plan.step spans 140 lines, over the limit of 120: move parts of it into functions declared outside its body.
+```
+
+A body's lines run from the line that opens it to the line that closes it, blank and comment lines included,
+and count everything it holds, anonymous or named, so code moved into an inline closure stays in its holder. A
+function is named as a runtime reports it, by its declaration, the binding or property it is assigned to, or
+its method, after the named functions holding it, such as `plan.step`. Test files are not measured, nor is code
+outside the code roots and legacy locations. The limit is a whole number above zero; Kit sets none, since what
+fits depends on the app.
+
+A placed function over the limit is a violation. A legacy one is debt whose baseline entry records its lines,
+such as `"R3:function-size:src/old/plan.ts:plan": { "lines": 140 }`: it fails when it grows past them or when
+the baseline records none, and `--tighten` lowers the record when it shrinks.
 
 ## Dependency exclusions
 

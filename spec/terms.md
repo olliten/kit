@@ -217,6 +217,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim-runs}}, {{finding}}, {{runs}}, {{snapshot}}
+- **function-size** — findings for each named function whose body spans more lines than the configured limit, carrying its lines.
+  - Role: derived
+  - Zone: core
+  - From: {{compiler-facts}}, {{finding}}, {{placement-of}}, {{snapshot}}
 - **global-authority** — what a module acquires through ambient globals, and which uses need a declared adapter.
   - Role: derived
   - Zone: core
@@ -245,6 +249,14 @@
   - Role: derived
   - Zone: core
   - From: {{config-values}}, {{default-config}}
+- **limit-configuration** — the size limits an app opts into: the most lines a named function's body may span.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}
+- **line-ratchet** — whether a legacy function's lines exceed what its baseline records, and the smaller of the two that the baseline keeps.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}
 - **module-references** — the check that every placed module is named by a claim it keeps, and the claims each module keeps.
   - Role: derived
   - Zone: core
@@ -276,7 +288,7 @@
 - **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, with a proof's findings as its debt, and the baseline left after a change lands.
   - Role: derived
   - Zone: core
-  - From: {{default-config}}, {{finding}}
+  - From: {{default-config}}, {{finding}}, {{line-ratchet}}
 - **refs-description** — the claims that name a module, with their text and tests, and how they are listed.
   - Role: derived
   - Zone: core
@@ -468,14 +480,14 @@
   - Role: composition
   - Zone: substrate
   - Of: []
-- **function-recorder** — the recorder of each source's named functions: the name a runtime reports, its line, a stable id and the function holding it.
+- **function-recorder** — the recorder of each source's named functions: the name a runtime reports, its line, a stable id, the function holding it and the lines its body spans.
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{file-scope}}
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
-  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{function-size}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
 - **held-state** — what a kept key's path in the app holds now: its content, its kind, or its text as the functions a run ran see it.
   - Role: composition
   - Zone: substrate
@@ -487,7 +499,7 @@
 - **kit-configuration** — the config an app declares, read from its YAML fence and validated section by section, and the paths a check is given.
   - Role: composition
   - Zone: core
-  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{verification-configuration}}
+  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{verification-configuration}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate

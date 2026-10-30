@@ -7,6 +7,7 @@ import { commentCheck } from "../readings/comment-check.js";
 import { dependencyExclusions } from "../readings/dependency-exclusions.js";
 import { type Finding, byDebtKey } from "../readings/finding.js";
 import { forwarderCheck } from "../readings/forwarder-check.js";
+import { functionSize } from "../readings/function-size.js";
 import { handoverCheck } from "../readings/handover-check.js";
 import { layoutCheck } from "../readings/layout-check.js";
 import { legacySize } from "../readings/legacy-size.js";
@@ -91,6 +92,7 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
       ...capabilityCheck(snapshot).findings,
       ...legacySize(snapshot),
       ...forwarderCheck(snapshot),
+      ...functionSize(snapshot),
       ...layoutCheck(snapshot),
       ...handoverCheck(snapshot),
       ...proofScope(topicSnapshot),
