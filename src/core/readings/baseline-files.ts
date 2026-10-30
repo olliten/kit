@@ -20,7 +20,13 @@ export function mergedBaseline(files: readonly { readonly path: string; readonly
       throw new Error(`${path}: a baseline file is a record of debt keys.`);
     }
     if (!isRecord(parsed)) throw new Error(`${path}: a baseline file is a record of debt keys.`);
-    for (const [key, entry] of Object.entries(parsed)) merged[key] = entry;
+    for (const [key, entry] of Object.entries(parsed)) {
+      // A reason is for a reader, so one that says nothing is refused rather than shown blank.
+      const reason: unknown = isRecord(entry) && Object.hasOwn(entry, "reason") ? entry["reason"] : undefined;
+      if (reason !== undefined && (typeof reason !== "string" || reason.trim() === ""))
+        throw new Error(`${path}: the reason of ${key} is a nonempty string.`);
+      merged[key] = entry;
+    }
   }
   return merged;
 }

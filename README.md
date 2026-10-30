@@ -174,8 +174,8 @@ git clone <this repo> ../kit && (cd ../kit && npm install)
 ```
 
 Add `kit/config.md` mapping your folders to zones, `spec/terms.md` with your domain's words, and a baseline of
-today's findings and legacy sizes. Run `kit check` in CI, and `kit check --tighten` after a change lands, so paid
-debt and shrunk modules leave the baseline. For the read hook, point a `PostToolUse` hook on `Read` at
+today's findings and legacy sizes. Run `kit check` in CI. It fails on debt the baseline still holds once paid, so a
+change that pays debt or shrinks a module runs `kit check --tighten` and commits the smaller baseline. For the read hook, point a `PostToolUse` hook on `Read` at
 `kit-refs.mjs --hook --root . --config kit/config.md`.
 
 Everything `kit/config.md` can declare, such as several code roots, entrypoints, package contracts, dependency

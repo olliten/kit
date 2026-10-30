@@ -2,7 +2,7 @@ import type { Finding } from "./finding.js";
 
 type Measured = Finding & { readonly lines: number };
 
-function recordedLines(entry: unknown): number | undefined {
+export function recordedLines(entry: unknown): number | undefined {
   if (typeof entry !== "object" || entry === null) return undefined;
   const lines: unknown = Reflect.get(entry, "lines");
   return typeof lines === "number" && Number.isInteger(lines) && lines > 0 ? lines : undefined;
