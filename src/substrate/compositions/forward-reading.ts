@@ -1,32 +1,38 @@
 import ts from "typescript";
 
-// A file forwards when it defines nothing of its own: every statement imports names or re-exports, through
-// `export … from`, `export * from` or an imported binding exported again, and at least one re-exports. A bare
-// `import "./x.js"` runs that module, so like a declaration or a call it is the file's own and the file
-// forwards nothing. The answer is each re-exported module's specifier, which the caller resolves.
+// A file forwards when it defines nothing of its own: every statement re-exports, through `export … from`,
+// `export * from` or an imported binding exported again, or is an import whose every binding the file exports
+// again. An import that keeps a binding for itself, a bare `import "./x.js"` that runs a module, a declaration
+// of any kind, types included, or a call is the file's own, and an empty file forwards nothing. The answer is
+// each re-exported module's specifier, which the caller resolves.
 export function forwardedSpecifiers(source: ts.SourceFile): ts.Expression[] | undefined {
   const bound = new Map<string, ts.Expression>();
+  const bindings = new Map<ts.ImportDeclaration, string[]>();
   for (const statement of source.statements) {
-    if (ts.isImportDeclaration(statement)) {
-      const clause = statement.importClause;
-      if (clause?.name !== undefined) bound.set(clause.name.text, statement.moduleSpecifier);
-      const bindings = clause?.namedBindings;
-      if (bindings !== undefined && ts.isNamespaceImport(bindings)) bound.set(bindings.name.text, statement.moduleSpecifier);
-      if (bindings !== undefined && ts.isNamedImports(bindings))
-        for (const element of bindings.elements) bound.set(element.name.text, statement.moduleSpecifier);
-    }
-    if (ts.isImportEqualsDeclaration(statement) && ts.isExternalModuleReference(statement.moduleReference))
-      bound.set(statement.name.text, statement.moduleReference.expression);
+    if (!ts.isImportDeclaration(statement)) continue;
+    const clause = statement.importClause;
+    const names = [
+      ...(clause?.name === undefined ? [] : [clause.name.text]),
+      ...(clause?.namedBindings === undefined
+        ? []
+        : ts.isNamespaceImport(clause.namedBindings)
+          ? [clause.namedBindings.name.text]
+          : clause.namedBindings.elements.map((element) => element.name.text)),
+    ];
+    for (const name of names) bound.set(name, statement.moduleSpecifier);
+    bindings.set(statement, names);
+  }
+  const exported = new Set<string>();
+  for (const statement of source.statements) {
+    if (ts.isExportDeclaration(statement) && statement.moduleSpecifier === undefined && statement.exportClause !== undefined && ts.isNamedExports(statement.exportClause))
+      for (const element of statement.exportClause.elements) exported.add((element.propertyName ?? element.name).text);
+    if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) exported.add(statement.expression.text);
   }
   const forwarded: ts.Expression[] = [];
   for (const statement of source.statements) {
     if (ts.isImportDeclaration(statement)) {
-      if (statement.importClause === undefined) return undefined;
-      continue;
-    }
-    if (ts.isImportEqualsDeclaration(statement) && ts.isExternalModuleReference(statement.moduleReference)) {
-      const exported = ts.getCombinedModifierFlags(statement) & ts.ModifierFlags.Export;
-      if (exported !== 0) forwarded.push(statement.moduleReference.expression);
+      const names = bindings.get(statement) ?? [];
+      if (names.length === 0 || !names.every((name) => exported.has(name))) return undefined;
       continue;
     }
     if (ts.isExportDeclaration(statement)) {

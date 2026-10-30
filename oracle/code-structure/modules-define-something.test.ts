@@ -45,7 +45,7 @@ test("a star re-export, several re-exports and an import exported again each for
     keys({ [path]: 'import { total } from "./total.js";\nimport { count } from "./count.js";\nexport { total };\nexport default count;\n' }),
   ).toEqual([`R2:forwarder:${path}`]);
   expect(
-    keys({ [path]: 'import type { total as unused } from "./total.js";\nexport { count } from "./count.js";\n' }),
+    keys({ [path]: 'import type { total as shown } from "./total.js";\nexport type { shown };\nexport { count } from "./count.js";\n' }),
   ).toEqual([`R2:forwarder:${path}`]);
 });
 
@@ -59,6 +59,9 @@ test("a module that re-exports and defines or does anything of its own is none",
   ])
     expect(keys({ [path]: `import { count } from "./count.js";\nexport { total } from "./total.js";\n${own}` })).toEqual([]);
   expect(keys({ [path]: 'import "./count.js";\nexport { total } from "./total.js";\n' })).toEqual([]);
+  expect(
+    keys({ [path]: 'import { count, count as kept } from "./count.js";\nexport { count };\nexport { total } from "./total.js";\n' }),
+  ).toEqual([]);
   expect(keys({ [path]: 'import { total } from "./total.js";\n' })).toEqual([]);
   expect(keys({ [path]: "" })).toEqual([]);
 });

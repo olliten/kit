@@ -45,11 +45,12 @@ compositions wire the others into behaviour.
   - Proof: {{recorded-imports}}, {{project-snapshot}}, {{fixture-files}}
 - Every module defines something. A file in a code root or legacy location, a declaration file aside, whose
   statements only re-export, through `export … from`, `export * from` or an imported binding exported again,
-  beside imports that bind names, is a forwarder: its importers seem to depend on it rather than on the modules
-  that do the work. Each forwarder is one finding on its path whose fix names the modules it re-exports, a
-  violation when placed and otherwise legacy debt the baseline holds and that may only shrink, so new legacy
-  forwarders fail. A module that also declares or does anything of its own is none, and a declared entrypoint,
-  such as a package's public index, is exempt. · {#modules-define-something}
+  beside imports whose every binding it exports again, is a forwarder: its importers seem to depend on it rather
+  than on the modules that do the work. Each forwarder is one finding on its path whose fix names the modules it
+  re-exports, a violation when placed and otherwise legacy debt the baseline holds and that may only shrink, so
+  new legacy forwarders fail. A module that also declares, types included, keeps an imported binding or does
+  anything of its own, a bare import included, is none, as is an empty one, and a declared entrypoint, such as a
+  package's public index, is exempt. · {#modules-define-something}
   - Implementation: {{forwarder-check}}, {{forward-reading}}, {{source-size}}, {{gate}}, {{ratchet}}
   - Proof: {{source-fixture}}
 - An adapter is a module like any other: its path is its identity and its imports may not form a cycle. · {#adapters-follow-the-same-rules}
