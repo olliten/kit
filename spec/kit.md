@@ -9,7 +9,7 @@ its config, and its debt in its own baseline.
   accepts only the supported root fields and shapes. `roots.src` accepts one code-root path or a set of
   paths, checked together in one snapshot and graph; extraction, authority, structural checks, references
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
-  - Implementation: {{kit-configuration}}, {{config-values}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{placement-of}}, {{term-model}}, {{legacy-size}}, {{ratchet}}
+  - Implementation: {{kit-configuration}}, {{config-values}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{placement-of}}, {{term-model}}, {{legacy-size}}, {{ratchet}}, {{line-ratchet}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
 - A configuration declares only the keys Kit reads. An unknown key at any level is an error naming its full
@@ -37,7 +37,7 @@ its config, and its debt in its own baseline.
   debt fails the ratchet. Missing or malformed legacy locations fail configuration. Legacy locations
   grant no module placement, capability or executable-entrypoint permission. Without a layout declaration,
   existing configuration keeps its behavior. · {#directory-roles-are-configured}
-  - Implementation: {{layout-check}}, {{kit-configuration}}, {{layout-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{read-snapshot}}
+  - Implementation: {{layout-check}}, {{kit-configuration}}, {{layout-configuration}}, {{legacy-size}}, {{placement-of}}, {{ratchet}}, {{line-ratchet}}, {{read-snapshot}}
   - Proof: {{source-fixture}}
 
 - {{read-snapshot}} reads an app on disk, the tally example with violations planted in a copy, as its files,
