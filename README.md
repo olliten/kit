@@ -132,6 +132,8 @@ So a module's imports and the contract types it takes say every effect it can ca
 
 - Every placed module is a term defined once in `spec/terms.md`, with its role and zone.
 - Every comment says only why.
+- With `limits.functionLines` declared, a named function's body spans at most that many lines, the closures it holds
+  included.
 
 **R4, proof.**
 

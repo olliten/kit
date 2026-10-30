@@ -130,8 +130,8 @@ test("raw V8 coverage, which covers the processes a test starts, counts only whe
     { path: "oracle/sums/total-sums.test.ts", type: "test" as const, digest: "c" },
   ];
   const functions = [
-    { file: "src/core/readings/total.ts", name: "total", line: 1, id: "total", holder: null },
-    { file: "src/core/readings/total.ts", name: "half", line: 4, id: "half", holder: null },
+    { file: "src/core/readings/total.ts", name: "total", line: 1, id: "total", holder: null, lines: 3 },
+    { file: "src/core/readings/total.ts", name: "half", line: 4, id: "half", holder: null, lines: 1 },
   ];
   expect(
     testRuns([{ test: "oracle/sums/total-sums.test.ts", lcov: [], v8: [v8, "not json"] }], files, "/app", { srcRoot: "src" }, functions, new Map([["src/core/readings/total.ts", text]]))[0]?.ran,

@@ -26,6 +26,8 @@ export interface KitConfig {
   // Exact executable entrypoints outside zones, including claim proofs. This grants wiring permission
   // only to each named file; its authority and dependencies remain checked.
   readonly exceptions?: readonly string[];
+  // The size limits an app opts into; a limit it doesn't declare is not checked.
+  readonly limits?: { readonly functionLines: number };
   // Explicit separation of local code. Selectors are exact relative files or directory prefixes.
   readonly dependencyExclusions?: readonly {
     readonly from: string;

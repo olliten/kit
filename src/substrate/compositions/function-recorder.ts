@@ -27,7 +27,8 @@ function nameOf(node: ts.Node): string | null {
 }
 
 // The named functions of each checked source, each with an id unique in its file: the names of the named
-// functions holding it, then its own, numbered when a file repeats it.
+// functions holding it, then its own, numbered when a file repeats it. Its lines are its body's span, so what
+// it holds, anonymous or named, counts toward it.
 export function functionRecorder() {
   const functions: NonNullable<Project["functions"]>[number][] = [];
   let ids = new Map<ts.Node, string>();
@@ -50,7 +51,24 @@ export function functionRecorder() {
       seen.set(base, count);
       const id = count === 1 ? base : `${base}#${count}`;
       ids.set(node, id);
-      functions.push({ file: path, name, line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1, id, holder });
+      const body =
+        (ts.isFunctionDeclaration(node) ||
+        ts.isMethodDeclaration(node) ||
+        ts.isAccessor(node) ||
+        ts.isFunctionExpression(node) ||
+        ts.isArrowFunction(node)
+          ? node.body
+          : undefined) ?? node;
+      const opens = sf.getLineAndCharacterOfPosition(body.getStart(sf)).line;
+      const closes = sf.getLineAndCharacterOfPosition(body.getEnd()).line;
+      functions.push({
+        file: path,
+        name,
+        line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1,
+        id,
+        holder,
+        lines: closes - opens + 1,
+      });
     },
     end(): void {
       ids = new Map();
