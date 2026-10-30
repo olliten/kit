@@ -137,6 +137,23 @@ home, such as Node built-in declarations; several homes retain uncertainty.
   lets agents paying down debt on different modules edit different files; `--tighten` rewrites only the files
   whose keys changed and removes emptied ones. To move a single file into a directory, write each finding path's
   keys to its own file and delete the old one.
+- A baseline entry whose debt is paid fails `kit check`, one line per entry, with the fix "Run
+  `kit check --tighten` to drop paid debt.": a key no legacy or proof debt finding holds any more, and a
+  `legacy-size` entry recording more than its module holds now, since a smaller module tightens its recorded
+  size. `kit check --tighten` drops or shrinks each such entry and the same run passes. A key that also fails
+  for another reason, such as a placed violation, shows that failure alone.
+- An entry may carry a `reason` beside the value it records, never required:
+
+  ```json
+  {
+    "R1:type-escape:lib/old.ts:a": { "reason": "awaits placing the parser" },
+    "R1:legacy-size:lib/old.ts": { "statements": 40, "calls": 3, "reason": "awaits placing the parser" }
+  }
+  ```
+
+  A key with no reason stays `null`, or its size. `--tighten` keeps an entry's reason, and `kit check --report`
+  shows it on the entry's finding (`reason`) and on each paid entry listed under `stale`. A `reason` that isn't a
+  nonempty string makes the baseline unreadable.
 - `legacy-areas`: spec files in an older format, outside the topic shape until they gain Implementation rows.
 - `legacy-test-roots`: test directories the runner should still discover; read by `testRoots()`, which apps
   load through the configuration runner.

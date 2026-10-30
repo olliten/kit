@@ -2,6 +2,7 @@ import { gate } from "../../core/compositions/gate.js";
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
 import { baselineFiles, mergedBaseline } from "../../core/readings/baseline-files.js";
 import { kitCheckPaths } from "../../core/readings/check-paths.js";
+import { paidDebt, reasonOf } from "../../core/readings/paid-debt.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
 import { capabilityModules, testGroups } from "../../core/readings/test-groups.js";
 import { holding, keptRuns, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
@@ -17,7 +18,8 @@ import { readStoredSnapshot } from "./read-snapshot.js";
 // `kit check`: read the governed root, run every rule, and fail on what the baseline doesn't hold. Facts read
 // before are reused while what they depend on is unchanged; `--fresh` reads everything again and stores nothing.
 // What each test ran comes from the passes `kit verify` kept, while each still holds.
-// `--tighten` shrinks the baseline to what is left, and `--report` prints the findings.
+// A baseline entry whose debt is paid fails until `--tighten` shrinks the baseline to what is left. `--report`
+// prints the findings and the paid entries, each with the reason its entry carries.
 export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promise<CommandResponse> {
   let stdout = "";
   let stderr = "";
@@ -70,12 +72,14 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
   const receipt = { ...extraction, seconds: (read - started) / 1000, checkSeconds: (stopwatch.now() - read) / 1000 };
   const checked = { result, receipt };
   const { findings, placedPaths, imports, requiredLimits } = checked.result;
-  if (args.includes("--report"))
-    return { stdout: stdout + JSON.stringify({ findings, receipt: checked.receipt }, null, 2) + "\n", stderr, exitCode: 0 };
-  // A baseline is one file of debt keys, or a directory of one such file per finding path.
+  // A baseline is one file of debt keys, or a directory of one such file per finding path. The report reads it
+  // only for the reasons its entries carry, so a report needs none.
   const single = baselinePath.endsWith(".json");
+  const report = args.includes("--report");
   const kept = single
-    ? [{ path: baselinePath, text: textFiles.read(baselinePath) }]
+    ? report && !textFiles.exists(baselinePath)
+      ? []
+      : [{ path: baselinePath, text: textFiles.read(baselinePath) }]
     : textFiles.exists(baselinePath)
       ? textFiles
           .entries(baselinePath)
@@ -83,10 +87,18 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
           .map((entry) => ({ path: `${baselinePath}/${entry.name}`, text: textFiles.read(`${baselinePath}/${entry.name}`) }))
       : [];
   const recorded = mergedBaseline(kept);
+  if (report) {
+    const reasoned = findings.map((item) => {
+      const reason = reasonOf(recorded, item.debtKey);
+      return reason === undefined ? item : { ...item, reason };
+    });
+    const stale = paidDebt(recorded, findings);
+    return { stdout: stdout + JSON.stringify({ findings: reasoned, stale, receipt: checked.receipt }, null, 2) + "\n", stderr, exitCode: 0 };
+  }
   const ratcheted = ratchetFindings(findings, recorded, placedPaths, imports, startupCheckRoots(config));
   const failures = [...new Map([...ratcheted, ...requiredLimits].map((item) => [item.debtKey, item])).values()];
+  const tightened = tightenedBaseline(recorded, findings);
   if (args.includes("--tighten")) {
-    const tightened = tightenedBaseline(recorded, findings);
     if (single) {
       const text = JSON.stringify(tightened, null, 2) + "\n";
       if (text !== JSON.stringify(recorded, null, 2) + "\n") textFiles.write(baselinePath, text);
@@ -97,6 +109,10 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
       for (const [path, text] of files) if (kept.find((file) => file.path === path)?.text !== text) textFiles.write(path, text);
     }
   }
+  // Paid debt is judged on the baseline as this run leaves it, so tightening clears it. A key that already
+  // fails for another reason shows that failure's fix alone.
+  const failing = new Set(failures.map((item) => item.debtKey));
+  const paid = paidDebt(args.includes("--tighten") ? tightened : recorded, findings).filter((item) => !failing.has(item.debtKey));
   const counts: Record<string, number> = {};
   for (const item of findings) {
     const key = `${item.category}:${item.debtKey.split(":")[1]}`;
@@ -107,6 +123,6 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
     stdout += `Kit runs: the rules that read what tests ran wait for ${waiting.length} tests with no kept pass; run \`kit verify\`.\n`;
   for (const item of findings.filter((item) => item.category === "checker-limit"))
     stdout += "Kit limit " + item.debtKey + ": " + item.limit + "\n";
-  for (const item of failures) stderr += item.debtKey + ": " + item.fix + "\n";
-  return { stdout, stderr, exitCode: failures.length > 0 ? 1 : 0 };
+  for (const item of [...failures, ...paid]) stderr += item.debtKey + ": " + item.fix + "\n";
+  return { stdout, stderr, exitCode: failures.length + paid.length > 0 ? 1 : 0 };
 }

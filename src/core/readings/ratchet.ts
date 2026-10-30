@@ -14,13 +14,13 @@ export interface GateFinding extends Finding {
 // A baseline names each debt key it holds; it is a record, or a plain list of keys in a test.
 export type Baseline = Readonly<Record<string, unknown>> | readonly string[];
 
-type Size = { readonly statements: number; readonly calls: number };
+export type Size = { readonly statements: number; readonly calls: number };
 
 const isKeyList = (baseline: Baseline): baseline is readonly string[] => Array.isArray(baseline);
 const recorded = (baseline: Baseline): Readonly<Record<string, unknown>> =>
   isKeyList(baseline) ? Object.fromEntries(baseline.map((key) => [key, null])) : baseline;
 
-function recordedSize(entry: unknown): Size | undefined {
+export function recordedSize(entry: unknown): Size | undefined {
   if (typeof entry !== "object" || entry === null) return undefined;
   const statements: unknown = Reflect.get(entry, "statements");
   const calls: unknown = Reflect.get(entry, "calls");

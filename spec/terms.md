@@ -249,6 +249,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
+- **paid-debt** — the baseline entries whose debt is paid: keys no legacy or proof debt finding holds and legacy sizes larger than the module now is, each with its fix and the reason its entry carries.
+  - Role: derived
+  - Zone: core
+  - From: {{ratchet}}
 - **placement-of** — the interpretation of a supplied path and root as declared placement, legacy code, a claim proof or an entrypoint.
   - Role: derived
   - Zone: core
@@ -424,10 +428,10 @@
   - Role: composition
   - Zone: core
   - Of: {{access-authority}}, {{authority-graph}}, {{behaviour-check}}, {{capability-context}}, {{compiler-check}}, {{construction-check}}, {{edge-check}}, {{finding}}, {{global-authority}}, {{import-authority}}, {{registration-check}}, {{snapshot}}, {{startup-check}}, {{zone-authority-check}}
-- **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold.
+- **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold and on what it holds that is paid.
   - Role: composition
   - Zone: substrate
-  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}, {{verification-configuration}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{paid-debt}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}, {{verification-configuration}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate
