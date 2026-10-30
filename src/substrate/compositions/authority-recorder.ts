@@ -21,6 +21,21 @@ export function authorityRecorder(
   const parameters = new Map<ts.ParameterDeclaration, Project["parameters"][number]>();
   const accesses: Project["accesses"][number][] = [];
   const globals: Project["globals"][number][] = [];
+  const selectionOf = (node: ts.Expression): string | undefined => {
+    let selected = node;
+    while (ts.isPropertyAccessExpression(selected.parent) && selected.parent.expression === selected)
+      selected = selected.parent;
+    if (ts.isElementAccessExpression(selected.parent) && selected.parent.expression === selected) return undefined;
+    const parts: string[] = [];
+    let root = selected;
+    while (ts.isPropertyAccessExpression(root)) {
+      parts.unshift(root.name.text);
+      root = root.expression;
+    }
+    if (!ts.isIdentifier(root) || parts.length === 0) return undefined;
+    const declaration = checker.getSymbolAtLocation(root)?.declarations?.find((d) => d.getSourceFile().isDeclarationFile);
+    return declaration === undefined ? undefined : [root.text, ...parts].join(".");
+  };
   const recordParameter = (parameter: ts.ParameterDeclaration): void => {
     const sf = parameter.getSourceFile();
     const file = local(sf.fileName);
@@ -153,12 +168,14 @@ export function authorityRecorder(
             ts.isPropertyAccessExpression(node.parent) && node.parent.expression === node ? node.parent.name.text : null;
           const windowAuthority =
             nativeLibrary(declaration) && !workerGlobals.has(node.text) ? [windowRoot(declaration)] : [];
+          const selection = selectionOf(node);
           globals.push({
             file: path,
             name: node.text,
             start: node.getStart(sf),
             declarationFile: local(declaration.getSourceFile().fileName),
             runtime,
+            ...(selection === undefined ? {} : { selection }),
             nativeAuthority: [
               ...new Map(
                 [...nativeAuthorityOf(type), ...returned, ...windowAuthority].map((authority) => [
@@ -176,19 +193,22 @@ export function authorityRecorder(
       if (ts.isPropertyAccessExpression(node)) {
         const symbol = checker.getSymbolAtLocation(node.name);
         const declaration = symbol?.declarations?.find((d) => d.getSourceFile().isDeclarationFile);
-        if (declaration !== undefined)
+        if (declaration !== undefined) {
+          const selection = selectionOf(node);
           globals.push({
             file: path,
             name: node.getText(sf),
             start: node.getStart(sf),
             declarationFile: local(declaration.getSourceFile().fileName),
             runtime,
+            ...(selection === undefined ? {} : { selection }),
             ...(globalName(node.expression) === "globalThis" &&
             nativeLibrary(declaration) &&
             !workerGlobals.has(node.name.text)
               ? { nativeAuthority: [windowRoot(declaration)] }
               : {}),
           });
+        }
       }
     },
   };

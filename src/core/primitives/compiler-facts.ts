@@ -117,6 +117,8 @@ export interface CompilerFacts {
       readonly start: number;
       readonly declarationFile: string | null;
       readonly runtime: boolean;
+      // The maximal direct dot selection rooted in this ambient use; absent for computed access.
+      readonly selection?: string;
       readonly nativeAuthority?: readonly NativeAuthority[];
       // A host value type such as URL, used as a value: it parses or transcodes and reaches no host.
       readonly value?: boolean;
