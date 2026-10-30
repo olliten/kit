@@ -1,11 +1,12 @@
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
 import type { SourceSize } from "../../core/primitives/file.js";
+import { forwardedSpecifiers } from "./forward-reading.js";
 
 // A statement is counted wherever it is nested, except a block and an empty statement, which only group or
 // punctuate. A statement whose every expression is a call, after any `await`, names the file that declares
 // what it calls, as an import or re-export names the file it reaches; the compiler resolves both, so a file no
-// project compiles names none.
+// project compiles names none. A file that only re-exports names what it re-exports, resolved the same way.
 export function sourceSize(
   path: string,
   text: string,
@@ -67,5 +68,12 @@ export function sourceSize(
     ts.forEachChild(node, visit);
   };
   visit(source);
-  return { file: path, statements, calls };
+  const specifiers = forwardedSpecifiers(source);
+  if (specifiers === undefined) return { file: path, statements, calls };
+  const forwards = [
+    ...new Set(
+      specifiers.map((specifier) => fileOf(specifier) ?? (ts.isStringLiteralLike(specifier) ? specifier.text : specifier.getText(source))),
+    ),
+  ].sort();
+  return { file: path, statements, calls, forwards };
 }

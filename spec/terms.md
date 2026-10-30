@@ -209,6 +209,10 @@
   - Role: derived
   - Zone: core
   - From: {{comment}}, {{default-config}}, {{exported-symbol}}, {{file}}, {{import}}, {{snapshot}}, {{term}}
+- **forwarder-check** — findings for each module that only re-exports other modules and defines nothing of its own.
+  - Role: derived
+  - Zone: core
+  - From: {{finding}}, {{placement-of}}, {{snapshot}}
 - **function-governance** — debt from the named functions of a module that no claim naming it runs.
   - Role: derived
   - Zone: core
@@ -460,6 +464,10 @@
   - Role: composition
   - Zone: substrate
   - Of: []
+- **forward-reading** — the reading of the module specifiers a source file only forwards, when it defines nothing of its own.
+  - Role: composition
+  - Zone: substrate
+  - Of: []
 - **function-recorder** — the recorder of each source's named functions: the name a runtime reports, its line, a stable id and the function holding it.
   - Role: composition
   - Zone: substrate
@@ -467,7 +475,7 @@
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
-  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
 - **held-state** — what a kept key's path in the app holds now: its content, its kind, or its text as the functions a run ran see it.
   - Role: composition
   - Zone: substrate
@@ -540,10 +548,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{default-config}}, {{fixture-files}}, {{read-snapshot}}, {{temporary-project}}
-- **source-size** — the reading of a source file's statement count and the files its call statements reach.
+- **source-size** — the reading of a source file's statement count, the files its call statements reach and the modules it only forwards.
   - Role: composition
   - Zone: substrate
-  - Of: {{file}}
+  - Of: {{file}}, {{forward-reading}}
 - **syntax-reading** — the reading of what a node's syntax resolves to: its declaration, a type-only import, a global, a raw primitive, a literal and an annotation's types.
   - Role: composition
   - Zone: substrate

@@ -15,6 +15,9 @@ export interface SourceSize {
   readonly file: string;
   readonly statements: number;
   readonly calls: readonly string[];
+  // Present only when the file defines nothing of its own and only re-exports: each module it re-exports, as
+  // the app file the compiler resolves it to, or as written when it resolves to none.
+  readonly forwards?: readonly string[];
 }
 
 // The text of one spec file; the terms file's own definition lines are left out.
