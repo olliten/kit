@@ -239,9 +239,15 @@ each test's group as `in tests[<index>]`. The rules that read what tests ran app
 writes coverage.
 
 A path a run only probed is kept by whether it is absent, a file or a directory. A file a test only loaded, and
-whose functions its coverage lists, is kept as the test ran it: its text with the bodies of the outermost
-functions the test never ran left out, so an edit inside one of those reruns nothing. A file the test also reads
-as text, as a test of a checker reads its sources, is kept whole, and so is a file a process other than the one
+whose functions its coverage lists, is kept as the test ran it: its code with the bodies of the outermost
+functions the test never ran left out, so an edit inside one of those reruns nothing. Its code is its tokens as
+the TypeScript scanner reads them, with whether a line break comes before each, so an edit that only changes
+whitespace or a comment, even inside a function the test ran, reruns nothing either; a string or template keeps
+every character. A comment a tool reads still counts: one starting with `@`, `#`, `!` or `/` (`@ts-expect-error`,
+`#__PURE__`, `# sourceMappingURL`, a license header, a triple-slash directive), one starting with a coverage hint
+(`node:coverage`, `c8`, `istanbul`, `v8`), and every `/**` comment in a JavaScript file, whose JSDoc types a check
+of JavaScript reads. A file the test also reads
+as text, as a test of a checker reads its sources, is kept whole, comments and all, and so is a file a process other than the one
 that loaded the test loaded or ran, such as a script the test starts: an in-process runner's coverage, such as
 vitest's, doesn't show what such a process ran.
 

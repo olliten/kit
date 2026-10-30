@@ -746,3 +746,21 @@ without naming the app.
   found one left behind by a module split. The promise belongs in Kit, so every app gets it and that app can
   retire its own scan. As legacy debt, an adopting app's existing forwarders go in its baseline, and a migration
   can't add one without the baseline growing.
+
+## 2026-10-30 · A comment a test only loaded doesn't rerun it
+
+- **Decision:** a file a test only loaded, kept by the functions it ran, is kept by its code: the tokens the
+  TypeScript scanner reads, each with whether a line break comes before it, and the comments a tool reads, with
+  unrun bodies left out as before. A comment counts when its text starts with `@`, `#`, `!` or `/`, or with a
+  coverage hint (`node:coverage`, `c8`, `istanbul`, `v8`), and in a JavaScript file every `/**` comment counts.
+  A file a test reads as text is still kept by its content.
+- **Why:** a comment edit inside a function a test ran changed the file's kept text, so explaining code reran
+  every test that ran it. Leeloo plans comment-only source edits as it plans prose edits and wants them as cheap.
+  The parser's tokens, not a pattern, tell a comment from a string or template holding `//`, and a regular
+  expression from a division. Directives, pure annotations, source maps, licenses and coverage hints change what a
+  tool does, so they stay; JSDoc in JavaScript is the types a check of JavaScript reads, and always keeping it
+  saves reading the app's compiler settings. A line break stays because it changes where a semicolon is inserted.
+- **Limits:** a test that reads a comment through the running code, such as `Function.prototype.toString`, isn't
+  seen, as an unrun body never was. Line numbers shift with a removed comment, but coverage lines are read only
+  when a pass is kept, against the text it ran. Whitespace between JSX elements is left out; whitespace inside
+  JSX text counts. Passes kept before this change hold another digest and run once.

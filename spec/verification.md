@@ -44,15 +44,20 @@ so a later gate runs only what an edit can have changed.
   `--fresh` reuses and keeps nothing, `--plan` says what would run, and it exits 1 when a check fails. · {#verdicts-hold-while-their-reads-hold}
   - Implementation: {{verify-run}}, {{verdict-reuse}}, {{verdict}}, {{evidence-store}}, {{filesystem}}, {{toolchain}}, {{processes}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}
   - Proof: {{temporary-project}}
-- A script a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its text with
-  the body of every outermost function the test never ran left out, where a function counts as run when a
-  function the coverage shows ran starts inside it. The pass holds while that text is the same, so an edit inside
-  a function the test never ran reruns nothing, and an edit to code it ran, to the module's top level, or to
-  which functions the file has reruns it. A file the test also reads as text is kept whole, and so is a file another process than the
-  one that loaded the test loaded or ran, such as a child the test starts, whose run the test's coverage need not
-  show. A test that reads an
-  unrun function's text through the running code, such as `Function.prototype.toString`, is not seen. · {#a-pass-holds-while-the-code-it-ran-holds}
-  - Implementation: {{verify-run}}, {{held-state}}, {{ran-code}}, {{function-span}}, {{coverage-report}}, {{compiler}}, {{read-recorder}}, {{verdict-reuse}}, {{text-files}}, {{filesystem}}
+- A script a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its code
+  with the body of every outermost function the test never ran left out, where a function counts as run when a
+  function the coverage shows ran starts inside it. Its code is its tokens as the language's scanner reads them,
+  each with whether a line break comes before it, and the comments a tool reads: one whose text starts with `@`,
+  `#`, `!` or `/`, such as `@ts-expect-error`, `#__PURE__`, `# sourceMappingURL`, a license header or a
+  triple-slash directive, one starting with a coverage hint (`node:coverage`, `c8`, `istanbul`, `v8`), and in a
+  JavaScript file every `/**` comment, whose types a check of JavaScript reads. The pass holds while that code is
+  the same, so an edit inside a function the test never ran, or one that only changes another comment or
+  whitespace, reruns nothing, and an edit to code it ran, to a string, to the module's top level, or to which
+  functions the file has reruns it. A file the test also reads as text is kept whole, comments and all, and so is
+  a file another process than the one that loaded the test loaded or ran, such as a child the test starts, whose
+  run the test's coverage need not show. A test that reads an unrun function's text, or a comment, through the
+  running code, such as `Function.prototype.toString`, is not seen. · {#a-pass-holds-while-the-code-it-ran-holds}
+  - Implementation: {{verify-run}}, {{held-state}}, {{ran-code}}, {{function-span}}, {{code-token}}, {{coverage-report}}, {{compiler}}, {{read-recorder}}, {{verdict-reuse}}, {{text-files}}, {{filesystem}}
   - Proof: {{temporary-project}}
 - A group whose command takes `{tests}` runs a chunk's due tests in one invocation of vitest 1.x, with a fresh
   process per test file and Kit's provider writing each file's result, coverage and executed scripts apart; a
