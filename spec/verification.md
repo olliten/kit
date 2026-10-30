@@ -59,6 +59,14 @@ so a later gate runs only what an edit can have changed.
   running code, such as `Function.prototype.toString`, is not seen. · {#a-pass-holds-while-the-code-it-ran-holds}
   - Implementation: {{verify-run}}, {{held-state}}, {{ran-code}}, {{function-span}}, {{code-token}}, {{coverage-report}}, {{compiler}}, {{read-recorder}}, {{verdict-reuse}}, {{text-files}}, {{filesystem}}
   - Proof: {{temporary-project}}
+- Within one `kit verify`, a kept key's state is read once for each version of its path, however many passes
+  plan to hold or keep it, and a script's functions once for each version, however many tests' coverage lists
+  it. A version is the path's device, inode, size, and modification and change times, trusted only once it
+  changed before the file system's clock last moved past the start of the plan or round reading it, since an
+  edit within the same tick can leave all of them the same; a path changed since is read each time, so an edit
+  during the run is always seen. The summary counts the states read and those reused. · {#a-state-is-read-once-per-version}
+  - Implementation: {{verify-run}}, {{held-state}}, {{filesystem}}
+  - Proof: {{temporary-project}}
 - A group whose command takes `{tests}` runs a chunk's due tests in one invocation of vitest 1.x, with a fresh
   process per test file and Kit's provider writing each file's result, coverage and executed scripts apart; a
   test's pass is kept under the command as it reads for that file alone. A recording is a test's when its process
