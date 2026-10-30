@@ -19,6 +19,7 @@ import { proofScope } from "../readings/proof-scope.js";
 import { excerptCohesion } from "../readings/excerpt-cohesion.js";
 import { functionGovernance } from "../readings/function-governance.js";
 import { type GateFinding, startupCheckRoots, withProofDebt } from "../readings/ratchet.js";
+import { engagedRules } from "../readings/rule-switch.js";
 import { referenceCheck } from "../readings/semantic-references.js";
 import { termModel } from "../readings/term-model.js";
 import { termOrder } from "../readings/term-order.js";
@@ -75,8 +76,15 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
     ...concepts.findings,
   ].map(violation);
   const requiredLimits = exclusions.limits.map(limit);
-  // Which named functions each test ran, from the passes that still hold.
-  const runs = snapshot.runs === undefined ? [] : [...functionGovernance(topicSnapshot, snapshot.runs), ...excerptCohesion(topicSnapshot, snapshot.runs)];
+  // Which named functions each test ran, from the passes that still hold, read by each rule not switched off.
+  const engaged = engagedRules(config);
+  const runs =
+    snapshot.runs === undefined
+      ? []
+      : [
+          ...(engaged.includes("ungoverned-function") ? functionGovernance(topicSnapshot, snapshot.runs) : []),
+          ...(engaged.includes("excerpt-cohesion") ? excerptCohesion(topicSnapshot, snapshot.runs) : []),
+        ];
   const placedPaths = snapshot.files
     .filter((file) => file.type === "source" && placementOf(file.path, config.srcRoot).placed)
     .map((file) => file.path);

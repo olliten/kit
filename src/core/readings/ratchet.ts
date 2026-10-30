@@ -130,8 +130,13 @@ export function ratchetFindings(
 // The baseline only shrinks: a key whose legacy or proof debt is paid leaves it, and a legacy module's size entry takes the
 // smaller of what it records and what the module holds now, for its statements and for those that are not
 // calls into placed code, as a legacy function's entry does for its lines. Nothing is added, so growth is never
-// recorded.
-export function tightenedBaseline(baseline: Baseline, findings: readonly GateFinding[]): Record<string, unknown> {
+// recorded. A key starting with a waiting prefix stays as it is: its rule did not read the tree, so it found
+// nothing paid.
+export function tightenedBaseline(
+  baseline: Baseline,
+  findings: readonly GateFinding[],
+  waiting: readonly string[] = [],
+): Record<string, unknown> {
   const current = new Map(
     findings
       .filter((item) => item.category === "legacy-debt" || item.category === "proof-debt")
@@ -140,7 +145,7 @@ export function tightenedBaseline(baseline: Baseline, findings: readonly GateFin
   return Object.fromEntries(
     Object.entries(recorded(baseline)).flatMap(([key, entry]) => {
       const now = current.get(key);
-      if (now === undefined) return [];
+      if (now === undefined) return waiting.some((prefix) => key.startsWith(prefix)) ? [[key, entry]] : [];
       if (now.lines !== undefined) return [[key, tightenedLines(entry, now.lines)]];
       const base = now.statements === undefined ? undefined : recordedSize(entry);
       if (base === undefined || now.statements === undefined || now.calls === undefined) return [[key, entry]];

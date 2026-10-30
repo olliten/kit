@@ -269,7 +269,7 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
-- **paid-debt** — the baseline entries whose debt is paid: keys no legacy or proof debt finding holds, legacy sizes larger than the module now is and legacy function lines more than the function now spans, each with its fix and the reason its entry carries.
+- **paid-debt** — the baseline entries whose debt is paid: keys no legacy or proof debt finding holds, apart from those of rules that wait, legacy sizes larger than the module now is and legacy function lines more than the function now spans, each with its fix and the reason its entry carries.
   - Role: derived
   - Zone: core
   - From: {{line-ratchet}}, {{ratchet}}
@@ -313,6 +313,10 @@
   - Role: derived
   - Zone: core
   - From: []
+- **rule-switch** — the rules an app switches off, each with its reason, and the rules that read what tests ran left engaged.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}, {{default-config}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
@@ -451,7 +455,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold and on what it holds that is paid.
   - Role: composition
   - Zone: substrate
-  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{paid-debt}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}, {{verification-configuration}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{paid-debt}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{rule-switch}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}, {{verification-configuration}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate
@@ -495,7 +499,7 @@
 - **gate** — the workflow that runs every rule on one snapshot and gathers what the ratchet judges.
   - Role: composition
   - Zone: core
-  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{function-size}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
+  - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{function-size}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{rule-switch}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
 - **held-state** — what a kept key's path in the app holds now: its content, its kind, or its code as the functions a run ran see it, read once per version of the path within one run.
   - Role: composition
   - Zone: substrate
@@ -507,7 +511,7 @@
 - **kit-configuration** — the config an app declares, read from its YAML fence and validated section by section, and the paths a check is given.
   - Role: composition
   - Zone: core
-  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{verification-configuration}}
+  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{rule-switch}}, {{verification-configuration}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate

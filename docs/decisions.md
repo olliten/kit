@@ -800,3 +800,17 @@ without naming the app.
   upgrading, each line naming the key and the command. Running `kit check --tighten` once, and committing the
   baseline it leaves, makes the check pass; nothing else changes, and baselines without reasons read as before.
 
+## 2026-10-30 · A rule is switched off only by declaration, with its reason
+
+- **Decision:** an app may declare `rules: { <rule>: { off: <reason> } }`. Only the rules that read what tests
+  ran, `ungoverned-function` and `excerpt-cohesion`, may be switched off; any other name, another key, or a
+  missing or empty reason is a configuration error naming its key. A switched-off rule reports no finding, so
+  its baseline keys are paid and `--tighten` drops them. Separately, while those rules wait for tests with no
+  kept pass, their baseline keys are neither paid nor dropped by tightening.
+- **Why:** these rules read each test's Node coverage, and an app whose browser tests run code inside the page
+  (Leeloo's shell compositions) records that code as unrun, so the findings change from run to run. The
+  architecture is a declared check: when it must change, the declaration changes, deliberately and with a
+  reason, rather than an ad hoc exception. A waiting rule read nothing, so it found nothing paid; calling its
+  keys paid let a standalone `kit check --tighten` drop debt that failed again once the rules engaged.
+- **Transition:** nothing changes for an app that declares no `rules`, except that a check whose run rules wait
+  no longer reports their keys paid.
