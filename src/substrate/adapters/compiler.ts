@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path";
 import ts from "typescript";
+import type { CodeToken } from "../../core/primitives/code-token.js";
 import type { FunctionSpan } from "../../core/primitives/function-span.js";
 
 interface WorkerHost {
@@ -25,6 +26,17 @@ export interface CompilerWorkspace {
   // The functions of one file no other function holds, in source order: any function, method, accessor or
   // constructor with a body.
   outermostFunctions(path: string, text: string): FunctionSpan[];
+  // The tokens and comments of one file, in source order, with the whitespace between them left out.
+  code(path: string, text: string): CodeToken[];
+}
+
+// A file's functions and its code are read from one parse, so the last one is kept for the other.
+let lastScript: { readonly path: string; readonly text: string; readonly file: ts.SourceFile } | undefined;
+function scriptOf(path: string, text: string): ts.SourceFile {
+  if (lastScript?.path === path && lastScript.text === text) return lastScript.file;
+  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+  lastScript = { path, text, file };
+  return file;
 }
 
 let workerHostCache: { readonly text: string; readonly host: WorkerHost } | undefined;
@@ -49,7 +61,7 @@ function sourceOf(
 
 export const compilerWorkspace: CompilerWorkspace = {
   outermostFunctions(path, text) {
-    const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+    const sf = scriptOf(path, text);
     const spans: FunctionSpan[] = [];
     const line = (offset: number): number => sf.getLineAndCharacterOfPosition(offset).line + 1;
     const visit = (node: ts.Node): void => {
@@ -71,6 +83,45 @@ export const compilerWorkspace: CompilerWorkspace = {
     };
     visit(sf);
     return spans;
+  },
+  code(path, text) {
+    const sf = scriptOf(path, text);
+    const pieces: CodeToken[] = [];
+    let after = 0;
+    let lastToken = 0;
+    const piece = (from: number, to: number, comment: boolean): void => {
+      pieces.push({ at: [from, to], text: text.slice(from, to), comment, line: /[\n\r\u2028\u2029]/.test(text.slice(lastToken, from)) });
+      if (!comment) lastToken = to;
+    };
+    // Between two tokens is only trivia, which the scanner reads the same anywhere, so it is scanned apart.
+    const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, sf.languageVariant);
+    const trivia = (from: number, to: number): void => {
+      if (to <= from) return;
+      scanner.setText(text, from, to - from);
+      for (let kind = scanner.scan(); kind !== ts.SyntaxKind.EndOfFileToken; kind = scanner.scan()) {
+        if (kind === ts.SyntaxKind.WhitespaceTrivia || kind === ts.SyntaxKind.NewLineTrivia) continue;
+        const comment = kind === ts.SyntaxKind.SingleLineCommentTrivia || kind === ts.SyntaxKind.MultiLineCommentTrivia;
+        piece(scanner.getTokenStart(), scanner.getTokenEnd(), comment);
+      }
+    };
+    // The parser's tokens, whose scan depends on where they stand, as a regular expression or a template does.
+    const visit = (node: ts.Node): void => {
+      if (node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode) return;
+      // Whitespace between JSX elements renders nothing.
+      if (ts.isJsxText(node) && node.containsOnlyTriviaWhiteSpaces) return;
+      const children = node.getChildren(sf);
+      if (children.length > 0) {
+        children.forEach(visit);
+        return;
+      }
+      const start = node.getStart(sf);
+      trivia(after, start);
+      if (node.getEnd() > start) piece(start, node.getEnd(), false);
+      after = Math.max(after, node.getEnd());
+    };
+    visit(sf);
+    trivia(after, text.length);
+    return pieces;
   },
   workerHost() {
     const path = join(dirname(ts.getDefaultLibFilePath({})), "lib.webworker.d.ts");
