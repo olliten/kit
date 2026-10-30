@@ -21,9 +21,14 @@ export function reasonOf(baseline: Readonly<Record<string, unknown>>, key: strin
 
 // An entry is paid exactly when tightening would change it: its key left with no legacy or proof debt finding,
 // a legacy size larger than the module now is, or a legacy function's lines more than it now spans. A paid entry left in place would let that debt come back
-// unnoticed, so it fails until the baseline records what is owed now.
-export function paidDebt(baseline: Readonly<Record<string, unknown>>, findings: readonly GateFinding[]): PaidDebt[] {
-  const tightened = tightenedBaseline(baseline, findings);
+// unnoticed, so it fails until the baseline records what is owed now. The keys of a rule that waits, starting with
+// a waiting prefix, are not judged.
+export function paidDebt(
+  baseline: Readonly<Record<string, unknown>>,
+  findings: readonly GateFinding[],
+  waiting: readonly string[] = [],
+): PaidDebt[] {
+  const tightened = tightenedBaseline(baseline, findings, waiting);
   return Object.keys(baseline)
     .sort()
     .flatMap((key) => {

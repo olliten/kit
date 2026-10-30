@@ -23,6 +23,15 @@ its config, and its debt in its own baseline.
   without a build, and reads the values the commands read. · {#apps-load-the-config-from-plain-node}
   - Implementation: {{configuration-runner}}, {{kit-configuration}}, {{test-roots}}, {{source-loader}}
 
+- An app switches a rule off only by declaring it, with its reason: under `rules`, the rule's name maps to
+  `off` and why, as nonempty text. Only the rules that read what tests ran, `ungoverned-function` and
+  `excerpt-cohesion`, may be switched off; another rule's name, another key, or a missing or empty reason is a
+  configuration error naming its key. A rule switched off reports no finding, so its baseline keys are paid.
+  While those rules wait for tests with no kept pass, their baseline keys are left as they are: not paid, and
+  not dropped by tightening. · {#a-rule-is-switched-off-by-declaration}
+  - Implementation: {{rule-switch}}, {{kit-configuration}}, {{config-schema}}, {{gate}}, {{check-run}}, {{paid-debt}}, {{ratchet}}
+  - Proof: {{temporary-project}}, {{recorded-functions}}, {{project-snapshot}}
+
 - Test discovery includes the configured proof root and only explicitly configured
   `legacy-test-roots`, with no application directory names built in. Each is a relative directory
   without patterns or dot segments; invalid declarations fail instead of dropping proofs. Legacy

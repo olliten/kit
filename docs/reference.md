@@ -17,6 +17,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `ignore` | Relative paths the walk never lists or reads; an import into one is an error. |
 | `exceptions` | Exact executable entrypoints outside every zone. |
 | `limits.functionLines` | The most lines a named function's body may span; without it no function is measured. |
+| `rules` | Rules switched off, each the rule's name mapped to `off` and the reason, such as `excerpt-cohesion: {off: <reason>}`; only `ungoverned-function` and `excerpt-cohesion` may be, and a switched-off rule reports no finding. |
 | `packages` | Package contracts: `name`, `capabilities`, and optionally `entrypointExports`. |
 | `adapters` | Adapter registrations: `module`, `export`, `capability`, `kind`, `zones`, and optionally `contract.type`, `primitives`, `globals`, `packages`. |
 | `dependency-exclusions` | Separations of local code: `from`, `to`, `imports`, `reach`. |

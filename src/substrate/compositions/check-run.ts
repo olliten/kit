@@ -4,6 +4,7 @@ import { baselineFiles, mergedBaseline } from "../../core/readings/baseline-file
 import { kitCheckPaths } from "../../core/readings/check-paths.js";
 import { paidDebt, reasonOf } from "../../core/readings/paid-debt.js";
 import { ratchetFindings, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
+import { engagedRules } from "../../core/readings/rule-switch.js";
 import { capabilityModules, testGroups } from "../../core/readings/test-groups.js";
 import { holding, keptRuns, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { testLine } from "../../core/readings/verification-configuration.js";
@@ -68,6 +69,8 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
       : [],
   );
   const { runs, waiting } = records ? keptRuns(passes) : { runs: null, waiting: [] };
+  // While the rules that read what tests ran wait, they read nothing, so the debt they recorded is left alone.
+  const resting = waiting.length > 0 ? engagedRules(config).map((rule) => `R4:${rule}:`) : [];
   const read = stopwatch.now();
   const result = gate(runs === null ? snapshot : { ...snapshot, runs }, config);
   const receipt = { ...extraction, seconds: (read - started) / 1000, checkSeconds: (stopwatch.now() - read) / 1000 };
@@ -93,12 +96,12 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
       const reason = reasonOf(recorded, item.debtKey);
       return reason === undefined ? item : { ...item, reason };
     });
-    const stale = paidDebt(recorded, findings);
+    const stale = paidDebt(recorded, findings, resting);
     return { stdout: stdout + JSON.stringify({ findings: reasoned, stale, receipt: checked.receipt }, null, 2) + "\n", stderr, exitCode: 0 };
   }
   const ratcheted = ratchetFindings(findings, recorded, placedPaths, imports, startupCheckRoots(config));
   const failures = [...new Map([...ratcheted, ...requiredLimits].map((item) => [item.debtKey, item])).values()];
-  const tightened = tightenedBaseline(recorded, findings);
+  const tightened = tightenedBaseline(recorded, findings, resting);
   if (args.includes("--tighten")) {
     if (single) {
       const text = JSON.stringify(tightened, null, 2) + "\n";
@@ -113,7 +116,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
   // Paid debt is judged on the baseline as this run leaves it, so tightening clears it. A key that already
   // fails for another reason shows that failure's fix alone.
   const failing = new Set(failures.map((item) => item.debtKey));
-  const paid = paidDebt(args.includes("--tighten") ? tightened : recorded, findings).filter((item) => !failing.has(item.debtKey));
+  const paid = paidDebt(args.includes("--tighten") ? tightened : recorded, findings, resting).filter((item) => !failing.has(item.debtKey));
   const counts: Record<string, number> = {};
   for (const item of findings) {
     const key = `${item.category}:${item.debtKey.split(":")[1]}`;

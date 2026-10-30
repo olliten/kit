@@ -28,6 +28,8 @@ export interface KitConfig {
   readonly exceptions?: readonly string[];
   // The size limits an app opts into; a limit it doesn't declare is not checked.
   readonly limits?: { readonly functionLines: number };
+  // The rules an app switches off, each with the reason it declares; only the rules that read what tests ran may be.
+  readonly rules?: { readonly [rule in RunRule]?: { readonly off: string } };
   // Explicit separation of local code. Selectors are exact relative files or directory prefixes.
   readonly dependencyExclusions?: readonly {
     readonly from: string;
@@ -98,3 +100,6 @@ export interface TestGroup {
   readonly reaching?: readonly string[];
   readonly capabilities?: readonly string[];
 }
+
+// The rules that read what tests ran from each test's coverage, and so the only ones an app may switch off.
+export type RunRule = "ungoverned-function" | "excerpt-cohesion";
