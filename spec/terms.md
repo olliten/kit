@@ -14,6 +14,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **code-token** — one piece of a file's code, in source order: a token or a comment, with its range in the text and whether a line break comes before it since the last token.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **command** — what a launcher hands a Kit command and what the command answers.
   - Role: fact
   - Zone: core
@@ -269,10 +273,10 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}
-- **ran-code** — the outermost functions a run ran, by where the functions its coverage shows ran start, and a loaded file's text with the bodies of the rest left out, as the state a pass keeps.
+- **ran-code** — the outermost functions a run ran, by where the functions its coverage shows ran start, and a loaded file's code with the bodies of the rest left out, as the state a pass keeps.
   - Role: derived
   - Zone: core
-  - From: {{fact-keys}}, {{function-span}}
+  - From: {{code-token}}, {{fact-keys}}, {{function-span}}
 - **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, with a proof's findings as its debt, and the baseline left after a change lands.
   - Role: derived
   - Zone: core
@@ -361,10 +365,10 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **compiler** — access to project loading, with the text of every compiler config it read, import resolution and a file's outermost functions through a language compiler.
+- **compiler** — access to project loading, with the text of every compiler config it read, import resolution and a file's outermost functions and significant code through a language compiler.
   - Role: adapter
   - Zone: substrate
-  - Of: {{function-span}}
+  - Of: {{code-token}}, {{function-span}}
 - **coverage-provider** — a vitest 1.x coverage provider that writes each test file's result, coverage and executed scripts apart.
   - Role: adapter
   - Zone: substrate
@@ -476,7 +480,7 @@
   - Role: composition
   - Zone: core
   - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
-- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its text as the functions a run ran see it.
+- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its code as the functions a run ran see it.
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{filesystem}}, {{ran-code}}, {{text-files}}, {{verdict-reuse}}
