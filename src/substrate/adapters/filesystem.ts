@@ -25,6 +25,9 @@ export interface Filesystem {
   kind(path: string): string;
   // When a path's content or listing last changed, in the file system's own clock, or none when it is absent.
   modified(path: string): number | undefined;
+  // The version a path is in: its device, inode, size, and modification and change times, which any edit after the
+  // tick it last changed in moves, with that change time in the file system's own clock; none when it is absent.
+  version(path: string): { readonly id: string; readonly changed: number } | undefined;
 }
 
 function readText(path: string, trace: FilesystemRead[]): string {
@@ -87,10 +90,24 @@ function modified(path: string): number | undefined {
   }
 }
 
+function version(path: string): { readonly id: string; readonly changed: number } | undefined {
+  let stat;
+  try {
+    stat = statSync(path, { bigint: true });
+  } catch {
+    return undefined;
+  }
+  return {
+    id: `${stat.isDirectory() ? "directory" : "file"}:${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`,
+    changed: Number(stat.ctimeNs) / 1e6,
+  };
+}
+
 export const filesystem: Filesystem = {
   readText,
   entries,
   state,
   kind,
   modified,
+  version,
 };

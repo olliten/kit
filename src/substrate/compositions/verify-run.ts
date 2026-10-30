@@ -11,7 +11,6 @@ import { sharedPath, sharedRefs } from "../../core/readings/shared-passes.js";
 import { heldKey, heldKeys, heldPath, holding, loadedBeside, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { testLine } from "../../core/readings/verification-configuration.js";
 import { calendar } from "../adapters/calendar.js";
-import { compilerWorkspace } from "../adapters/compiler.js";
 import { coverageProvider } from "../adapters/coverage-provider.mjs";
 import { evidenceStore } from "../adapters/evidence-store.js";
 import { filesystem } from "../adapters/filesystem.js";
@@ -20,7 +19,7 @@ import { readRecorder } from "../adapters/read-recorder.mjs";
 import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
 import { toolchain } from "../adapters/toolchain.js";
-import { heldState } from "./held-state.js";
+import { heldStates } from "./held-state.js";
 import { publishPasses, readSharedPasses } from "./pass-sharing.js";
 import { readConfig } from "./read-config.js";
 import { readStoredSnapshot } from "./read-snapshot.js";
@@ -105,7 +104,18 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const runtime = toolchain.runtime(root);
   const kit = toolchain.kit(engineRoot, root);
   const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime, kit);
-  const stateOf = (key: string): string => heldState(root, key);
+  // Each path's state is read once per version of it, so tests that share files read each once.
+  const held = heldStates(root);
+  const stateOf = (key: string): string => held.state(key);
+  // The file system's own time now, as a marker written and removed again tells it.
+  const fileTime = (): number => {
+    const marker = `${store}/scratch/${digest(`${root}\u0000${stopwatch.now()}\u0000plan`)}`;
+    textFiles.directory(marker);
+    textFiles.write(`${marker}/now`, "");
+    const time = filesystem.version(`${marker}/now`)?.changed ?? -Infinity;
+    textFiles.remove(marker);
+    return time;
+  };
   const share = fresh || args.includes("--no-share") ? undefined : policy.share;
   const refs = share === undefined ? undefined : sharedRefs(share, runtime, calendar.now());
   const shared = refs === undefined ? undefined : readSharedPasses(root, store, refs);
@@ -116,13 +126,14 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     const ran = new Map<string, number[]>();
     for (const { file, lines } of lcov.flatMap(ranLines)) {
       const path = file.startsWith(`${root}/`) ? file.slice(root.length + 1) : file;
-      if (!textFiles.exists(`${root}/${path}`)) continue;
-      ran.set(path, functionsRun(compilerWorkspace.outermostFunctions(path, textFiles.read(`${root}/${path}`)), lines));
+      const spans = held.functions(path);
+      if (spans !== undefined) ran.set(path, functionsRun(spans, lines));
     }
     return ran;
   };
   const plan = (checks: readonly Check[]) => {
     const states = new Map<string, string>();
+    if (!fresh) held.since(fileTime());
     return {
       states,
       planned: checks.map((check) => {
@@ -212,6 +223,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         // so a directory is judged by its listing alone.
         textFiles.write(`${scratch}/started`, "");
         const start = filesystem.modified(`${scratch}/started`) ?? 0;
+        held.since(filesystem.version(`${scratch}/started`)?.changed ?? -Infinity);
         const changedSince = (key: string): boolean => {
           const { path, kind } = heldPath(key);
           const at = path === "." ? root : `${root}/${path}`;
@@ -367,6 +379,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     alone,
     unassigned: unassigned.length,
     shared: { read: shared?.read ?? 0, published: published?.published ?? 0 },
+    states: { ...held.receipt },
     seconds: (stopwatch.now() - started) / 1000,
   };
   return {

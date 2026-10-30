@@ -393,7 +393,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **filesystem** — access to file text, directory entries, the state a path is in, its kind, and when it last changed.
+- **filesystem** — access to file text, directory entries, the state a path is in, its kind, when it last changed, and the version it is in.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -496,10 +496,10 @@
   - Role: composition
   - Zone: core
   - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{function-size}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
-- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its code as the functions a run ran see it.
+- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its code as the functions a run ran see it, read once per version of the path within one run.
   - Role: composition
   - Zone: substrate
-  - Of: {{compiler}}, {{filesystem}}, {{ran-code}}, {{text-files}}, {{verdict-reuse}}
+  - Of: {{compiler}}, {{filesystem}}, {{function-span}}, {{ran-code}}, {{text-files}}, {{verdict-reuse}}
 - **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
   - Role: composition
   - Zone: substrate

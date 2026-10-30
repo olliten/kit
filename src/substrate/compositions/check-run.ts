@@ -11,7 +11,7 @@ import { evidenceStore } from "../adapters/evidence-store.js";
 import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
 import { toolchain } from "../adapters/toolchain.js";
-import { heldState } from "./held-state.js";
+import { heldStates } from "./held-state.js";
 import { readConfig } from "./read-config.js";
 import { readStoredSnapshot } from "./read-snapshot.js";
 
@@ -47,6 +47,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
   const runtime = toolchain.runtime(root);
   const kit = toolchain.kit(engineRoot, root);
   const states = new Map<string, string>();
+  const held = heldStates(root);
   const tests = records ? snapshot.files.filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`)).map((file) => file.path) : [];
   const chosen = testGroups(tests, groups, groups.some((group) => group.reaching !== undefined || group.capabilities !== undefined) ? snapshot.imports : [], capabilityModules(config));
   const passes = new Map(
@@ -61,7 +62,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
                 : evidenceStore.entries(store, verdictKind(`test:${test}`, testLine(command, test), runtime, kit)).flatMap((text) => verdictOf(text) ?? []);
             for (const verdict of verdicts)
               for (const path of Object.keys(verdict.states))
-                if (!states.has(path)) states.set(path, heldState(root, path));
+                if (!states.has(path)) states.set(path, held.state(path));
             return [test, holding(verdicts, states)] as const;
           })
       : [],
