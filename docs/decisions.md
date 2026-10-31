@@ -881,3 +881,13 @@ without naming the app.
   publication it publishes nothing more in that run.
 - **Why:** a long run that was stopped shared nothing, so the next clone ran everything again.
 - **Transition:** none; a run makes more, smaller commits on the day's ref.
+
+## 2026-10-31 · A harness may be one file
+
+- **Decision:** a `harnesses` row names either a directory (`under: <dir>/`) or one file (`file: <path>`), never
+  both, with its reason. A declared file covers proof scope and `migration-zone` exactly as a declared directory
+  does. A file the app doesn't hold is a configuration error, as are patterns and dot segments.
+- **Why:** Leeloo keeps topic harnesses beside their tests (`oracle/<topic>/*.harness.ts`, and two under `spec/`),
+  so declaring them by folder would also declare the tests and other code there. Each is declared by name, so
+  one that is renamed or removed fails rather than silently declaring nothing.
+- **Transition:** nothing changes for `under` rows.

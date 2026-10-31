@@ -22,8 +22,9 @@ export function edgeCheck(
     findings.push(capabilityLimit("migration-zone", path, limit, detail));
   };
   const imports = (snapshot.compiler?.projects ?? []).flatMap((project) => project.imports);
-  const harnesses = (snapshot.config.harnesses ?? []).map((harness) => harness.under);
-  const inHarness = (path: string): boolean => harnesses.some((under) => path.startsWith(under));
+  const harnesses = snapshot.config.harnesses ?? [];
+  const inHarness = (path: string): boolean =>
+    harnesses.some((harness) => ("file" in harness ? path === harness.file : path.startsWith(harness.under)));
   const tests = new Set(snapshot.files.filter((file) => file.type === "test").map((file) => file.path));
   const harnessed = (from: string, to: string): boolean => inHarness(from) || (tests.has(from) && inHarness(to));
   for (const edge of imports) {

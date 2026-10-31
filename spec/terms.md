@@ -233,7 +233,7 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
-- **harness-configuration** — the directories of shared test code an app declares as harnesses, each with its reason, checked as they are read.
+- **harness-configuration** — the directories and files of shared test code an app declares as harnesses, each with its reason, checked as they are read, and the declared files an app doesn't hold.
   - Role: derived
   - Zone: core
   - From: {{config-values}}, {{default-config}}
@@ -536,10 +536,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{compiler-facts}}, {{default-config}}, {{fact-keys}}, {{fact-walk}}, {{file}}, {{file-facts}}, {{ignored-import}}, {{root-token}}, {{source-size}}, {{test-reach}}, {{verdict-reuse}}, {{authority-recorder}}, {{behaviour-reading}}, {{contract-reading}}, {{contract-recorder}}, {{escape-recorder}}, {{function-recorder}}, {{import-recorder}}, {{native-reading}}, {{syntax-reading}}, {{term-recorder}}
-- **read-config** — the workflow that reads a config file and answers the configured Kit, or the command's failure naming each issue.
+- **read-config** — the workflow that reads a config file and answers the configured Kit, or the command's failure naming each issue, a declared harness file the app doesn't hold among them.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{default-config}}, {{kit-configuration}}, {{text-files}}
+  - Of: {{command}}, {{default-config}}, {{filesystem}}, {{harness-configuration}}, {{kit-configuration}}, {{text-files}}
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate

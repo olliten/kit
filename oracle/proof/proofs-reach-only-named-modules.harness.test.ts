@@ -4,8 +4,10 @@ import { configuredKit } from "../../src/core/compositions/kit-configuration.js"
 import { DEFAULT_CONFIG, type Harness } from "../../src/core/primitives/default-config.js";
 import type { Snapshot } from "../../src/core/primitives/snapshot.js";
 import { proofScope } from "../../src/core/readings/proof-scope.js";
+import { readConfig } from "../../src/substrate/compositions/read-config.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
 const claim = { file: "spec/topic.md", anchor: "total-sums", line: 1, terms: ["total"] };
 const proof = "oracle/topic/total-sums.test.ts";
@@ -49,8 +51,15 @@ test("a harness declares a relative directory and a reason, and nothing else", (
   expect(read([{ under: "spec/harness/", reason: " " }])).toThrow(/^harnesses\[0\]\.reason: /);
   for (const under of ["spec/harness", "spec/harness/app.ts", "/spec/harness/", "spec/*/", "../spec/", "./", 3])
     expect(read([{ under, reason }])).toThrow(/^harnesses\[0\]\.under: /);
-  expect(read([{ under: "spec/harness/", reason }, { under: "spec/harness/", reason }])).toThrow(/^harnesses\[1\]\.under: repeats harnesses\[0\]/);
+  expect(read([{ under: "spec/harness/", reason }, { under: "spec/harness/", reason }])).toThrow(/^harnesses\[1\]: repeats harnesses\[0\]/);
   expect(read([{ under: "spec/harness/", reason, files: ["a.ts"] }])).toThrow(/^harnesses\[0\]\.files is not a key Kit reads\./);
+  expect(read([{ file: "oracle/topic/total.harness.ts", reason }])()).toMatchObject({ harnesses: [{ file: "oracle/topic/total.harness.ts", reason }] });
+  expect(read([{ reason }])).toThrow(/^harnesses\[0\]: name under or file, not neither/);
+  expect(read([{ under: "spec/harness/", file: "spec/a.ts", reason }])).toThrow(/^harnesses\[0\]: name under or file, not both/);
+  for (const file of ["spec/harness/", "spec/*.harness.ts", "../a.ts", "./a.ts", "/a.ts", 3])
+    expect(read([{ file, reason }])).toThrow(/^harnesses\[0\]\.file: /);
+  expect(read([{ file: "spec/a.ts" }])).toThrow(/^harnesses\[0\]\.reason: /);
+  expect(read([{ file: "spec/a.ts", reason }, { file: "spec/a.ts", reason }])).toThrow(/^harnesses\[1\]: repeats harnesses\[0\]/);
   expect(read({ under: "spec/harness/", reason })).toThrow(/^harnesses: /);
   expect(read(["spec/harness/"])).toThrow(/^harnesses\[0\]: /);
 });
@@ -82,4 +91,44 @@ test("a harness asks no zone: its imports and a test's import of it are no migra
   expect(undeclared).toContain(`R1:migration-zone:${harness}:oracle/shell/compositions/page.ts`);
   expect(undeclared).toContain(helper);
   expect(migrations([{ under: "spec/harness/", reason }])).toEqual([helper]);
+});
+
+// A topic harness beside its tests, declared by name.
+const topicHarness = "oracle/topic/total.harness.ts";
+const besideTests = [`${proof} > ${topicHarness}`, `${topicHarness} > src/core/readings/total.ts`, `${topicHarness} > src/core/readings/round.ts`];
+
+test("a declared file is a harness as a declared directory is, and only that file", () => {
+  const file = [{ file: topicHarness, reason }];
+  expect(keys(besideTests, file, [topicHarness])).toEqual([]);
+  expect(keys(besideTests, [], [topicHarness])).toEqual([debt]);
+  expect(keys(besideTests, [{ file: "oracle/topic/other.harness.ts", reason }], [topicHarness])).toEqual([debt]);
+  // Direct reach beside a declared file is still the test's.
+  expect(keys([...besideTests, `${proof} > src/core/readings/round.ts`], file, [topicHarness])).toEqual([debt]);
+});
+
+test("a declared file asks no zone, as a declared directory doesn't", () => {
+  const helper = "R1:migration-zone:spec/lib/util.ts:oracle/shell/compositions/page.ts";
+  expect(migrations([{ file: harness, reason }])).toEqual([helper]);
+  expect(migrations([{ file: "spec/harness/other.ts", reason }])).toContain(`R1:migration-zone:${harness}:oracle/shell/compositions/page.ts`);
+});
+
+test("a declared file the app doesn't hold is a configuration error naming its row", () => {
+  const project = temporaryProjects.open("kit-harness-file-");
+  try {
+    const config = (file: string) =>
+      "```yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nharnesses:\n  - {under: spec/harness/, reason: shared}\n" +
+      `  - {file: ${file}, reason: shared}\n\`\`\`\n`;
+    project.write({ "kit/config.md": config(topicHarness), [topicHarness]: "export {};\n" });
+    const path = `${project.root}/kit/config.md`;
+    expect(readConfig(path, project.root)).toMatchObject({ config: { harnesses: [{ under: "spec/harness/" }, { file: topicHarness }] } });
+    project.write({ "kit/config.md": config("oracle/topic/gone.harness.ts") });
+    expect(readConfig(path, project.root)).toEqual({
+      failure: { stdout: "", stderr: `Kit config ${path}: harnesses[1].file: oracle/topic/gone.harness.ts is not a file in the app.\n`, exitCode: 1 },
+    });
+    project.write({ "kit/config.md": config("oracle/topic") });
+    project.directory("oracle/topic");
+    expect(readConfig(path, project.root)).toMatchObject({ failure: { exitCode: 1 } });
+  } finally {
+    project.dispose();
+  }
 });

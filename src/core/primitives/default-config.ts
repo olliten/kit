@@ -34,7 +34,7 @@ export interface KitConfig {
   readonly rules?: { readonly [rule in RunRule]?: { readonly off: string } } & {
     readonly [rule in ScopedRule]?: { readonly tests: "off"; readonly reason: string };
   };
-  // Directories of shared test code: what a test reaches through a module under one is the harness's, not the
+  // Directories and files of shared test code: what a test reaches through a module under one, or that one, is the harness's, not the
   // test's, each declared with its reason.
   readonly harnesses?: readonly Harness[];
   // The claims awaiting their proof and the tests awaiting their claim's new anchor, each declared with its reason.
@@ -117,11 +117,8 @@ export type RunRule = "ungoverned-function" | "excerpt-cohesion";
 // its host's authority by design.
 export type ScopedRule = "native-authority" | "ambient-global";
 
-// A directory of shared test code, `under` a relative directory ending in `/`, and why it is a harness.
-export interface Harness {
-  readonly under: string;
-  readonly reason: string;
-}
+// Shared test code, `under` a relative directory ending in `/` or one `file`, and why it is a harness.
+export type Harness = { readonly under: string; readonly reason: string } | { readonly file: string; readonly reason: string };
 
 // A claim awaiting its proof, named by its topic file and anchor as `<file>:<anchor>`, or a test awaiting its
 // claim's new anchor, named by its path; either with the reason it is pending.

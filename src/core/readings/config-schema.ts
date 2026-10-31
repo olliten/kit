@@ -31,7 +31,7 @@ const CONFIG_KEYS: Keys = {
       "ambient-global": { keys: { tests: null, reason: null } },
     },
   },
-  harnesses: { rows: { under: null, reason: null } },
+  harnesses: { rows: { under: null, file: null, reason: null } },
   pending: { rows: { claim: null, test: null, reason: null } },
   "dependency-exclusions": { rows: { from: null, to: null, imports: null, reach: null } },
   ignore: null,
