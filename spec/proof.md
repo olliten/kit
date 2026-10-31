@@ -29,6 +29,15 @@ a claim depends on are named in it, so each module's claims are found from its n
   contribute to the same reference inventory. · {#claims-have-one-home}
   - Implementation: {{read-snapshot}}, {{module-references}}, {{finding}}
   - Proof: {{binding-findings}}
+- A claim awaiting its proof, or a test awaiting its claim's new anchor, is pending only by declaration, with
+  its reason: each row under `pending` names a `claim` as its topic file and anchor, such as
+  `spec/proof.md:claims-have-one-home`, or a `test` path, and a nonempty `reason`. That claim's missing proof,
+  or that test's unknown claim, is reported as pending, one line each, and never fails; an undeclared one fails
+  as before. A row whose finding is gone, because the proof arrived or the test names its claim again, is paid
+  and fails until it is removed. A row naming neither or both, holding another key, without a nonempty reason
+  or repeating an earlier row is a configuration error naming its key. · {#a-pending-claim-is-declared}
+  - Implementation: {{pending-claims}}, {{kit-configuration}}, {{config-schema}}, {{gate}}, {{ratchet}}, {{check-run}}
+  - Proof: {{temporary-project}}
 - A claim table has a header naming its fields and one claim per data row, with one cell for each header.
   Every row has exactly one closing anchor; its cells together state that claim. Headers and separators declare no claims, and cells
   are not separate claims. References and module names are read from every cell with the same rules as

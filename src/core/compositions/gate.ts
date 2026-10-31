@@ -13,6 +13,7 @@ import { layoutCheck } from "../readings/layout-check.js";
 import { legacySize } from "../readings/legacy-size.js";
 import { moduleReferences } from "../readings/module-references.js";
 import { nameCheck } from "../readings/name-check.js";
+import { withPending } from "../readings/pending-claims.js";
 import { placementOf, proofOf } from "../readings/placement-of.js";
 import { proofReach } from "../readings/proof-reach.js";
 import { proofScope } from "../readings/proof-scope.js";
@@ -48,7 +49,8 @@ const limit = (item: Finding): GateFinding => ({
 });
 
 // Every rule's findings on one snapshot, with what the ratchet needs to judge them: the placed modules and the
-// runtime imports their limits are reached through. A limit only claim proofs reach is already their debt. A legacy claim without module rows stays outside the
+// runtime imports their limits are reached through. A limit only claim proofs reach is already their debt. A
+// finding the app declares pending is reported as pending, and a pending row whose finding is gone fails. A legacy claim without module rows stays outside the
 // claim checks.
 export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
   const exclusions = dependencyExclusions(snapshot);
@@ -110,7 +112,7 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
       ...requiredLimits,
   ];
   return {
-    findings: withProofDebt(findings, placedPaths, imports, startupCheckRoots(config), proofs),
+    findings: withPending(withProofDebt(findings, placedPaths, imports, startupCheckRoots(config), proofs), config),
     placedPaths,
     imports,
     requiredLimits,

@@ -3,7 +3,7 @@ import type { Finding } from "./finding.js";
 import { lineFailure, tightenedLines } from "./line-ratchet.js";
 
 export interface GateFinding extends Finding {
-  readonly category: "legacy-debt" | "proof-debt" | "checker-limit" | "placed-violation";
+  readonly category: "legacy-debt" | "proof-debt" | "checker-limit" | "placed-violation" | "pending";
   readonly status: string;
   readonly blocking: boolean;
   readonly limit: string;
@@ -12,6 +12,8 @@ export interface GateFinding extends Finding {
   readonly calls?: number;
   // A legacy function's size: the lines its body spans.
   readonly lines?: number;
+  // Why a pending finding is pending, as its row declares.
+  readonly reason?: string;
 }
 
 // A baseline names each debt key it holds; it is a record, or a plain list of keys in a test.
@@ -105,7 +107,7 @@ export function withProofDebt(
 }
 
 // What fails: every placed violation, every limit reachable from placed code or an entrypoint, new legacy
-// or proof debt, and a legacy module or function grown beyond its baseline.
+// or proof debt, and a legacy module or function grown beyond its baseline. A pending finding never fails.
 export function ratchetFindings(
   findings: readonly GateFinding[],
   baseline: Baseline,
@@ -118,6 +120,7 @@ export function ratchetFindings(
   const reachable = reachableFrom([...placedPaths, ...requiredRoots], imports);
   return findings.flatMap((item) => {
     if (item.category === "checker-limit") return reachable.has(item.path) ? [item] : [];
+    if (item.category === "pending") return [];
     if (item.category === "placed-violation") return [item];
     const { statements, calls, lines } = item;
     if (statements !== undefined && calls !== undefined)

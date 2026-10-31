@@ -30,6 +30,8 @@ export interface KitConfig {
   readonly limits?: { readonly functionLines: number };
   // The rules an app switches off, each with the reason it declares; only the rules that read what tests ran may be.
   readonly rules?: { readonly [rule in RunRule]?: { readonly off: string } };
+  // The claims awaiting their proof and the tests awaiting their claim's new anchor, each declared with its reason.
+  readonly pending?: readonly Pending[];
   // Explicit separation of local code. Selectors are exact relative files or directory prefixes.
   readonly dependencyExclusions?: readonly {
     readonly from: string;
@@ -103,3 +105,7 @@ export interface TestGroup {
 
 // The rules that read what tests ran from each test's coverage, and so the only ones an app may switch off.
 export type RunRule = "ungoverned-function" | "excerpt-cohesion";
+
+// A claim awaiting its proof, named by its topic file and anchor as `<file>:<anchor>`, or a test awaiting its
+// claim's new anchor, named by its path; either with the reason it is pending.
+export type Pending = { readonly claim: string; readonly reason: string } | { readonly test: string; readonly reason: string };

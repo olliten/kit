@@ -18,6 +18,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `exceptions` | Exact executable entrypoints outside every zone. |
 | `limits.functionLines` | The most lines a named function's body may span; without it no function is measured. |
 | `rules` | Rules switched off, each the rule's name mapped to `off` and the reason, such as `excerpt-cohesion: {off: <reason>}`; only `ungoverned-function` and `excerpt-cohesion` may be, and a switched-off rule reports no finding. |
+| `pending` | Rows each naming a `claim` awaiting its proof, as `<topic file>:<anchor>`, or a `test` awaiting its claim's new anchor, as its path, and a nonempty `reason`, such as `- {claim: spec/proof.md:claims-have-one-home, reason: <reason>}`; its missing proof or unknown claim is reported as `Kit pending <key>: <reason>` and never fails, and a row whose finding is gone fails as `R3:paid-pending` until removed. |
 | `packages` | Package contracts: `name`, `capabilities`, and optionally `entrypointExports`. |
 | `adapters` | Adapter registrations: `module`, `export`, `capability`, `kind`, `zones`, and optionally `contract.type`, `primitives`, `globals`, `packages`. |
 | `dependency-exclusions` | Separations of local code: `from`, `to`, `imports`, `reach`. |

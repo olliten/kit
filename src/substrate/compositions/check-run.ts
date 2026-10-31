@@ -20,7 +20,8 @@ import { readStoredSnapshot } from "./read-snapshot.js";
 // before are reused while what they depend on is unchanged; `--fresh` reads everything again and stores nothing.
 // What each test ran comes from the passes `kit verify` kept, while each still holds.
 // A baseline entry whose debt is paid fails until `--tighten` shrinks the baseline to what is left. `--report`
-// prints the findings and the paid entries, each with the reason its entry carries.
+// prints the findings and the paid entries, each with the reason its entry carries. A pending finding is one
+// stdout line with its declared reason, and never fails.
 export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promise<CommandResponse> {
   let stdout = "";
   let stderr = "";
@@ -125,6 +126,8 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
   stdout += "Kit check " + JSON.stringify({ ...(config.app === undefined ? {} : { app: config.app }), counts, receipt: checked.receipt }) + "\n";
   if (waiting.length > 0)
     stdout += `Kit runs: the rules that read what tests ran wait for ${waiting.length} tests with no kept pass; run \`kit verify\`.\n`;
+  for (const item of findings.filter((item) => item.category === "pending"))
+    stdout += "Kit pending " + item.debtKey + ": " + (item.reason ?? "") + "\n";
   for (const item of findings.filter((item) => item.category === "checker-limit"))
     stdout += "Kit limit " + item.debtKey + ": " + item.limit + "\n";
   for (const item of [...failures, ...paid]) stderr += item.debtKey + ": " + item.fix + "\n";
