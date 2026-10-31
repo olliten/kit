@@ -19,8 +19,9 @@ export interface ProofScopeFinding extends Finding {
 // the test reaches other than through a harness, directly or through other code, is still its own.
 export function proofScope(snapshot: Snapshot): ProofScopeFinding[] {
   const { srcRoot, layerNames, oracleRoot, specRoot } = snapshot.config;
-  const harnesses = (snapshot.config.harnesses ?? []).map((harness) => harness.under);
-  const inHarness = (path: string): boolean => harnesses.some((under) => path.startsWith(under));
+  const harnesses = snapshot.config.harnesses ?? [];
+  const inHarness = (path: string): boolean =>
+    harnesses.some((harness) => ("file" in harness ? path === harness.file : path.startsWith(harness.under)));
   const homes = moduleHomes(snapshot);
   const reached = claimReach(snapshot);
   const facts = new Set(

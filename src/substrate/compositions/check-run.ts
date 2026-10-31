@@ -26,7 +26,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
   let stdout = "";
   let stderr = "";
   const { root, configPath, baselinePath } = kitCheckPaths(args, engineRoot, cwd);
-  const loaded = readConfig(configPath);
+  const loaded = readConfig(configPath, root);
   if ("failure" in loaded) return loaded.failure;
   const { config } = loaded;
   const store = evidenceStore.directory(root);
