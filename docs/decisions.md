@@ -814,3 +814,21 @@ without naming the app.
   keys paid let a standalone `kit check --tighten` drop debt that failed again once the rules engaged.
 - **Transition:** nothing changes for an app that declares no `rules`, except that a check whose run rules wait
   no longer reports their keys paid.
+
+## 2026-10-31 · A claim awaiting its proof is pending only by declaration, with its reason
+
+- **Decision:** an app may declare `pending`, a list of rows each naming a `claim` (`<topic file>:<anchor>`)
+  awaiting its proof or a `test` (its path) awaiting its claim's new anchor, with a nonempty `reason`. That
+  claim's `R3:missing-proof` or that test's `R3:unknown-claim` is reported as pending: category `pending` in
+  `--report`, with the reason, and one `Kit pending <key>: <reason>` line on stdout; it never fails. A row whose
+  finding is gone fails as `R3:paid-pending` until it is removed. A row naming neither or both, holding another
+  key, without a nonempty reason or repeating an earlier row is a configuration error naming its key.
+  Undeclared findings fail as before.
+- **Why:** a prose-first process lands new and renamed claims in one pull request and their tests in a later
+  one, so the state between them failed every landing on placed violations no baseline may hold. The
+  architecture is a declared check: an exception is declared deliberately, with its reason, and is never
+  permanent, so a paid row fails as paid baseline debt does. The rows live in the config, inline like `rules`,
+  rather than in the baseline, since `--tighten` must never add them, and a config is edited by the same pull
+  request that edits the spec. Leeloo's pending-oracle list maps vitest test cases to reasons and inverts their
+  result; it names test cases rather than findings, so Kit reads its own rows.
+- **Transition:** nothing changes for an app that declares no `pending`.
