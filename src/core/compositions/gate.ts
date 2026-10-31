@@ -20,7 +20,7 @@ import { proofScope } from "../readings/proof-scope.js";
 import { excerptCohesion } from "../readings/excerpt-cohesion.js";
 import { functionGovernance } from "../readings/function-governance.js";
 import { type GateFinding, startupCheckRoots, withProofDebt } from "../readings/ratchet.js";
-import { engagedRules } from "../readings/rule-switch.js";
+import { engagedRules, scopedFindings } from "../readings/rule-switch.js";
 import { referenceCheck } from "../readings/semantic-references.js";
 import { termModel } from "../readings/term-model.js";
 import { termOrder } from "../readings/term-order.js";
@@ -98,8 +98,10 @@ export function gate(snapshot: Snapshot, config: KitConfig): GateResult {
   const proofs = snapshot.files
     .filter((file) => file.type === "test" && proofOf(file.path, config.oracleRoot) !== null)
     .map((file) => file.path);
+  // A rule scoped to production code reports nothing on a test file.
+  const tests = new Set(snapshot.files.filter((file) => file.type === "test").map((file) => file.path));
   const findings: GateFinding[] = [
-      ...capabilityCheck(snapshot).findings,
+      ...scopedFindings(capabilityCheck(snapshot).findings, config, tests),
       ...legacySize(snapshot),
       ...forwarderCheck(snapshot),
       ...functionSize(snapshot),

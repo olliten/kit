@@ -17,7 +17,8 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `ignore` | Relative paths the walk never lists or reads; an import into one is an error. |
 | `exceptions` | Exact executable entrypoints outside every zone. |
 | `limits.functionLines` | The most lines a named function's body may span; without it no function is measured. |
-| `rules` | Rules switched off, each the rule's name mapped to `off` and the reason, such as `excerpt-cohesion: {off: <reason>}`; only `ungoverned-function` and `excerpt-cohesion` may be, and a switched-off rule reports no finding. |
+| `rules` | Rules switched off, each the rule's name mapped to `off` and the reason, such as `excerpt-cohesion: {off: <reason>}`; only `ungoverned-function` and `excerpt-cohesion` may be, and a switched-off rule reports no finding. The authority rules `native-authority` and `ambient-global` may instead be scoped to production code, as `native-authority: {tests: off, reason: <reason>}`: the rule then reports nothing on a test file (`<name>.test.<extension>`) and everything else as before. |
+| `harnesses` | Directories of shared test code, each `under` a relative directory ending in `/` and a nonempty `reason`, such as `- {under: spec/harness/, reason: <reason>}`. What a test reaches through a module under one is the harness's, not the test's, for `R4:proof-scope`; a placed module the test reaches other than through a harness is still charged. An import from a module under a harness, or from a test to one, draws no `R1:migration-zone`. |
 | `pending` | Rows each naming a `claim` awaiting its proof, as `<topic file>:<anchor>`, or a `test` awaiting its claim's new anchor, as its path, and a nonempty `reason`, such as `- {claim: spec/proof.md:claims-have-one-home, reason: <reason>}`; its missing proof or unknown claim is reported as `Kit pending <key>: <reason>` and never fails, and a row whose finding is gone fails as `R3:paid-pending` until removed. |
 | `packages` | Package contracts: `name`, `capabilities`, and optionally `entrypointExports`. |
 | `adapters` | Adapter registrations: `module`, `export`, `capability`, `kind`, `zones`, and optionally `contract.type`, `primitives`, `globals`, `packages`. |
@@ -231,8 +232,12 @@ through `NODE_OPTIONS`, added to whatever the caller's environment sets there, t
 app the run reads, lists, probes or copies, in the run's processes, threads and child processes. The app root's
 own listing is the path `.`; a recursive listing, a glob or a copy of a directory notes every directory under
 it. A pass is kept beside the repository with the state of each of those paths, under the command, the Node
-version, the lockfile and the app's `package.json`, and, when Kit reads the app from outside it, that Kit's own
-source; the next `kit verify` reuses it while every path is in the same state. A failure is never kept, and
+version, the lockfile, the app's `package.json` and Kit's recording format, `RECORDING_FORMAT` in
+`src/core/readings/verdict-reuse.ts`, which changes only when how a pass's states are recorded does; the next
+`kit verify` reuses it while every path is in the same state. A Kit release under the same format reuses every
+pass. A Kit outside the app, such as one installed in `node_modules`, is outside what the recorder notes, so a
+run whose processes loaded that Kit's code, other than the recorder and coverage provider it runs under, such
+as a `kit check` check or a test importing Kit, also holds that Kit's source, as the key `#kit`. A failure is never kept, and
 neither is a pass during which a path it used changed. Worktrees of one repository share what is kept.
 
 What the recorder can't see, a reused check must not depend on:
@@ -360,11 +365,13 @@ With `share`, clones that start with an empty store, such as agents' cloud sessi
 through `origin`. Each runtime and UTC day has one ref, `<share>/<YYYY-MM-DD>-<runtime digest, 16 characters>`,
 whose tree holds each pass at `verdicts/<kind>/<key>.json`, the text the local store holds. Before planning,
 `kit verify` fetches today's and yesterday's ref and keeps every pass the local store lacks; a file that is not
-a pass kept under its own key is ignored. After the run it adds every pass it kept or reused that today's ref
-lacks, as one commit on the tip pushed without force, so a day's ref holds the passes still in use. A push the
+a pass kept under its own key is ignored. Once each chunk's passes are kept, it adds every pass it kept or
+reused that today's ref lacks, as one commit on the tip pushed without force, so a run stopped part way has
+still shared what it kept, so a day's ref holds the passes still in use. A push the
 remote refuses because the tip moved reads the ref again and adds on top, up to four times; a path already
 there stays. No `origin`, no network or a push refused for another reason is said on its own line, `Shared no
-passes:` or `Published no passes:`, and the gate goes on with the local store. The summary counts `shared:
+passes:` or `Published no passes:` (`Published no more passes:` after an earlier chunk's were), the run
+publishes nothing more, and the gate goes on with the local store. The summary counts `shared:
 {read, published}`. `--plan` reads and never publishes; `--fresh` and `--no-share` neither read nor publish.
 
 Anyone who can push to `origin` can publish a pass, so a shared pass is as trustworthy as the people with push

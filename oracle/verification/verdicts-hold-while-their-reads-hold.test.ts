@@ -48,7 +48,7 @@ test("a pass is reused while every path it read holds, and an edit reruns only w
   expect(summary((await verify("--fresh")).stdout)).toMatchObject({ reused: 0, ran: 3 });
 });
 
-test("a pass is kept under the Kit that ran it when that Kit reads the app from outside it", async () => {
+test("a pass that loaded no Kit code holds across Kits that read the app from outside it", async () => {
   const { project } = app();
   const kits = temporaryProjects.open("kit-engines-");
   projects.push(kits);
@@ -58,7 +58,8 @@ test("a pass is kept under the Kit that ran it when that Kit reads the app from 
     runVerify({ engineRoot, args: ["--root", project.root, "--config", config, ...flags], cwd: project.root });
   expect((await verify(join(kits.root, "one"))).exitCode).toBe(0);
   expect((await verify(join(kits.root, "one"), "--plan")).stdout).toContain("reuse lint\n");
-  expect((await verify(join(kits.root, "two"), "--plan")).stdout).toContain("run lint\n");
+  // Kit's source decides how a pass is recorded, not whether it passes, so another Kit's release reuses it.
+  expect((await verify(join(kits.root, "two"), "--plan")).stdout).toContain("reuse lint\n");
   // A Kit that is the app is read like the rest of it, so its own edits don't set its passes apart.
   expect((await verify(project.root)).exitCode).toBe(0);
   project.write({ "src/unread.ts": "export const unread = 1;\n" });

@@ -49,7 +49,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
   const runtime = toolchain.runtime(root);
   const kit = toolchain.kit(engineRoot, root);
   const states = new Map<string, string>();
-  const held = heldStates(root);
+  const held = heldStates(root, kit);
   const tests = records ? snapshot.files.filter((file) => file.type === "test" && file.path.startsWith(`${config.oracleRoot}/`)).map((file) => file.path) : [];
   const chosen = testGroups(tests, groups, groups.some((group) => group.reaching !== undefined || group.capabilities !== undefined) ? snapshot.imports : [], capabilityModules(config));
   const passes = new Map(
@@ -61,7 +61,7 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
             const verdicts =
               command === undefined
                 ? []
-                : evidenceStore.entries(store, verdictKind(`test:${test}`, testLine(command, test), runtime, kit)).flatMap((text) => verdictOf(text) ?? []);
+                : evidenceStore.entries(store, verdictKind(`test:${test}`, testLine(command, test), runtime)).flatMap((text) => verdictOf(text) ?? []);
             for (const verdict of verdicts)
               for (const path of Object.keys(verdict.states))
                 if (!states.has(path)) states.set(path, held.state(path));

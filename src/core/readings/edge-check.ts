@@ -5,7 +5,8 @@ import { cycles } from "./dependency-check.js";
 // The import edges among checked code: no module imports an entrypoint, layers depend down or sideways within a
 // zone and inward across zones, an edge between legacy and placed code keeps zone boundaries once the legacy
 // end has a declared zone, and the layered graph has no cycle. Cross-zone failures are kept so the zone check
-// doesn't report them again.
+// doesn't report them again. A declared harness is zone-less test code until it is placed: an edge from a module
+// under one, or from a test to one, asks no zone of it.
 export function edgeCheck(
   snapshot: Snapshot,
   context: CapabilityContext,
@@ -21,12 +22,22 @@ export function edgeCheck(
     findings.push(capabilityLimit("migration-zone", path, limit, detail));
   };
   const imports = (snapshot.compiler?.projects ?? []).flatMap((project) => project.imports);
+  const harnesses = (snapshot.config.harnesses ?? []).map((harness) => harness.under);
+  const inHarness = (path: string): boolean => harnesses.some((under) => path.startsWith(under));
+  const tests = new Set(snapshot.files.filter((file) => file.type === "test").map((file) => file.path));
+  const harnessed = (from: string, to: string): boolean => inHarness(from) || (tests.has(from) && inHarness(to));
   for (const edge of imports) {
     const from = placed(snapshot, edge.file);
     const to = edge.target === null ? null : placed(snapshot, edge.target);
     if (edge.target !== null && startups.includes(edge.target) && checked.has(edge.file))
       add("startup-import", edge.file, "Keep executable entrypoints outside the imported module graph.", edge.target);
-    if (startups.includes(edge.file) && edge.target !== null && checked.has(edge.target) && zoneOf(snapshot, edge.target) === undefined)
+    if (
+      startups.includes(edge.file) &&
+      edge.target !== null &&
+      checked.has(edge.target) &&
+      zoneOf(snapshot, edge.target) === undefined &&
+      !harnessed(edge.file, edge.target)
+    )
       unresolved(edge.file, "Startup wiring does not establish a zone for its dependencies.", edge.target);
     if (
       from !== null &&
@@ -47,13 +58,14 @@ export function edgeCheck(
     ) {
       const fromZone = zoneOf(snapshot, edge.file);
       const toZone = zoneOf(snapshot, edge.target);
-      if (fromZone === undefined || toZone === undefined)
-        unresolved(
-          edge.file,
-          "Declare the legacy prefix's actual zone before establishing this cross-placement boundary.",
-          edge.target,
-        );
-      else if (fromZone !== toZone && (fromZone === "core" || toZone !== "core")) {
+      if (fromZone === undefined || toZone === undefined) {
+        if (!harnessed(edge.file, edge.target))
+          unresolved(
+            edge.file,
+            "Declare the legacy prefix's actual zone before establishing this cross-placement boundary.",
+            edge.target,
+          );
+      } else if (fromZone !== toZone && (fromZone === "core" || toZone !== "core")) {
         crossZoneFailures.add(`${edge.file}:${edge.target}`);
         add(
           "zone-edge",

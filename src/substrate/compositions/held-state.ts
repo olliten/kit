@@ -1,6 +1,6 @@
 import type { FunctionSpan } from "../../core/primitives/function-span.js";
 import { ranState } from "../../core/readings/ran-code.js";
-import { heldPath } from "../../core/readings/verdict-reuse.js";
+import { KIT_KEY, heldPath } from "../../core/readings/verdict-reuse.js";
 import { compilerWorkspace } from "../adapters/compiler.js";
 import { filesystem } from "../adapters/filesystem.js";
 import { textFiles } from "../adapters/text-files.js";
@@ -20,7 +20,8 @@ export interface HeldStates {
 // Each key's state, and each script's functions, are read once per version of its path. A version is trusted only
 // when it changed before the last time `since` gave: a later edit then lands in a later tick and so changes the
 // version, while one in the tick it changed in could leave it the same, so a path changed since is read each time.
-export function heldStates(root: string): HeldStates {
+// A pass that loaded the code of a Kit outside the app holds that Kit's source, given as `kit`, under its own key.
+export function heldStates(root: string, kit = ""): HeldStates {
   let mark = -Infinity;
   const receipt = { read: 0, reused: 0 };
   const states = new Map<string, { readonly id: string; readonly state: string }>();
@@ -45,6 +46,7 @@ export function heldStates(root: string): HeldStates {
   };
   return {
     state(key) {
+      if (key === KIT_KEY) return kit;
       const { path, kind, ran } = heldPath(key);
       if (kind) return filesystem.kind(at(path));
       const id = trusted(path);

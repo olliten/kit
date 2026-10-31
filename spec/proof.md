@@ -68,10 +68,17 @@ a claim depends on are named in it, so each module's claims are found from its n
   the modules of only types need no name: a placed oracle module, such as a generator, fixture, driver or
   runner, is named in the claim's Proof like any other, what it reaches counts as the test's, and naming a
   composition names what it composes. Naming a placed module under the proof root, whatever its layer, names
-  what it reaches, since a Proof name is about the harness, not the design. A module a claim's tests reach without its name is
-  debt: the baseline holds it, it may only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
-  - Implementation: {{proof-scope}}, {{proof-reach}}, {{finding}}, {{placement-of}}
-  - Proof: {{fixture-snapshot}}
+  what it reaches, since a Proof name is about the harness, not the design. An app may declare under `harnesses`
+  directories of shared test code, each `under` a relative directory ending in `/` with a nonempty `reason`: what
+  a test reaches through a module under a declared harness is that harness's, not the test's, as a named module
+  under the proof root covers what it reaches; a placed module the test reaches other than through a harness,
+  directly or through other code, is still charged. A harness is zone-less test code until it is placed, so an
+  import from a module under one, or from a test to one, asks no zone of it and is no `migration-zone` limit;
+  every other edge keeps its zone rules. A row without such a directory or a nonempty reason, holding
+  another key, or repeating a directory is a configuration error naming its key. A module a claim's tests reach
+  without its name is debt: the baseline holds it, it may only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
+  - Implementation: {{proof-scope}}, {{harness-configuration}}, {{edge-check}}, {{capability-check}}, {{proof-reach}}, {{finding}}, {{placement-of}}, {{kit-configuration}}, {{config-schema}}
+  - Proof: {{fixture-snapshot}}, {{project-snapshot}}
 - Two claims that share no code share no module. When the claims naming a placed module fall into groups
   whose tests use disjoint top-level declarations of it, the module is a finding: split it so each group has
   its own. A module of only types links no claims, and a module a test reaches in ways that can't be followed

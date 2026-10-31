@@ -185,7 +185,7 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
-- **edge-check** — findings from import edges among checked code: entrypoint imports, layer and zone direction, legacy edges and cycles.
+- **edge-check** — findings from import edges among checked code: entrypoint imports, layer and zone direction, legacy edges, which ask no zone of a declared harness, and cycles.
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{dependency-check}}, {{snapshot}}
@@ -233,6 +233,10 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
+- **harness-configuration** — the directories of shared test code an app declares as harnesses, each with its reason, checked as they are read.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}, {{default-config}}
 - **import-authority** — what a module acquires by importing outside the checked code: adapter packages, entrypoint packages and declared package rows.
   - Role: derived
   - Zone: core
@@ -289,7 +293,7 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
-- **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them; a named composition, or a named module under the proof root, names what it reaches.
+- **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them; a named composition, or a named module under the proof root, names what it reaches, and what a test reaches through a declared harness is the harness's.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}
@@ -317,7 +321,7 @@
   - Role: derived
   - Zone: core
   - From: []
-- **rule-switch** — the rules an app switches off, each with its reason, and the rules that read what tests ran left engaged.
+- **rule-switch** — the rules an app switches off or scopes to production code, each with its reason, the rules that read what tests ran left engaged, and the findings a rule scoped to production code keeps.
   - Role: derived
   - Zone: core
   - From: {{config-values}}, {{default-config}}
@@ -365,7 +369,7 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
-- **verdict-reuse** — how a check's processes used each path, the paths a process other than the test's loaded, the key each path is kept under and what it holds, a stored verdict read back, where a check's passes are kept, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
+- **verdict-reuse** — how a check's processes used each path, the paths a process other than the test's loaded, the key each path is kept under and what it holds, a stored verdict read back, the recording format a pass is kept under, where a check's passes are kept, the key a Kit's own source is held under, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
   - Role: derived
   - Zone: core
   - From: {{fact-keys}}, {{runs}}, {{verdict}}
@@ -413,7 +417,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **read-recorder** — a preload that records every path inside the app a check's processes read, list, probe or load, with how each was used.
+- **read-recorder** — a preload that records every path inside the app a check's processes read, list, probe or load, with how each was used, and whether they loaded the code of a Kit outside the app.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -504,7 +508,7 @@
   - Role: composition
   - Zone: core
   - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{function-size}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{pending-claims}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{rule-switch}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
-- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its code as the functions a run ran see it, read once per version of the path within one run.
+- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its code as the functions a run ran see it, read once per version of the path within one run, and the Kit outside the app a pass that loaded its code holds.
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{filesystem}}, {{function-span}}, {{ran-code}}, {{text-files}}, {{verdict-reuse}}
@@ -515,12 +519,12 @@
 - **kit-configuration** — the config an app declares, read from its YAML fence and validated section by section, and the paths a check is given.
   - Role: composition
   - Zone: core
-  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{pending-claims}}, {{rule-switch}}, {{verification-configuration}}
+  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{harness-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{pending-claims}}, {{rule-switch}}, {{verification-configuration}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{program-scope}}
-- **pass-sharing** — the workflow that keeps the passes on `origin`'s shared refs in the local store, and adds a run's passes to today's ref, again on a moved tip.
+- **pass-sharing** — the workflow that keeps the passes on `origin`'s shared refs in the local store, and adds a run's passes to today's ref, again on a moved tip, from the tip the last reading or addition left.
   - Role: composition
   - Zone: substrate
   - Of: {{evidence-store}}, {{git-refs}}, {{shared-passes}}

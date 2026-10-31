@@ -23,7 +23,15 @@ const CONFIG_KEYS: Keys = {
   layout: { keys: { legacy: null } },
   exceptions: null,
   limits: { keys: { functionLines: null } },
-  rules: { keys: { "ungoverned-function": { keys: { off: null } }, "excerpt-cohesion": { keys: { off: null } } } },
+  rules: {
+    keys: {
+      "ungoverned-function": { keys: { off: null } },
+      "excerpt-cohesion": { keys: { off: null } },
+      "native-authority": { keys: { tests: null, reason: null } },
+      "ambient-global": { keys: { tests: null, reason: null } },
+    },
+  },
+  harnesses: { rows: { under: null, reason: null } },
   pending: { rows: { claim: null, test: null, reason: null } },
   "dependency-exclusions": { rows: { from: null, to: null, imports: null, reach: null } },
   ignore: null,

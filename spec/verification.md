@@ -36,13 +36,20 @@ so a later gate runs only what an edit can have changed.
 - `kit verify` keeps a passing check with the state of every path its run used: a file's content or a
   directory's listing for a path it read or listed, and only whether it is absent, a file or a directory for a
   path it only probed. It reuses the check while each path is still in that state, under the same command,
-  runtime, installed packages and app package manifest, and the same Kit when Kit reads the app from outside it,
-  and runs the rest together; a failure is never kept, a pass during which a path it read changed, from a state
+  runtime, installed packages, app package manifest and recording format, and runs the rest together; a failure is never kept, a pass during which a path it read changed, from a state
   an earlier pass kept, or a file it read since its run started, is reported and not kept, and runs on different trees each keep
   theirs. A check declared
   `after: tests` runs once the tests' passes are kept, and is not kept itself when a test's pass was not.
   `--fresh` reuses and keeps nothing, `--plan` says what would run, and it exits 1 when a check fails. · {#verdicts-hold-while-their-reads-hold}
   - Implementation: {{verify-run}}, {{verdict-reuse}}, {{verdict}}, {{evidence-store}}, {{filesystem}}, {{toolchain}}, {{processes}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}
+  - Proof: {{temporary-project}}
+- A pass is kept under the recording format, a version Kit declares and changes only when how a pass's states,
+  a script's ran code or their digests are recorded changes, never under Kit's source as a whole: a release of a
+  Kit that reads the app from outside it, under the same format, reuses every pass. A check whose processes
+  loaded that Kit's code, other than the recorder and coverage provider it runs under, such as a check that runs
+  `kit check` or a test importing Kit, holds its pass while that Kit's source is the same, as it would a file it
+  read. · {#passes-are-kept-under-the-recording-format}
+  - Implementation: {{verdict-reuse}}, {{verify-run}}, {{held-state}}, {{read-recorder}}, {{toolchain}}
   - Proof: {{temporary-project}}
 - A script a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its code
   with the body of every outermost function the test never ran left out, where a function counts as run when a
@@ -83,11 +90,11 @@ so a later gate runs only what an edit can have changed.
 - With `share` declared, a pass is shared through `origin`: one ref per runtime and UTC day,
   `<share>/<day>-<runtime>` with the runtime's digest cut to 16 characters, whose tree holds each kept pass at
   `verdicts/<kind>/<key>.json` as the store holds it. Before planning, `kit verify` reads today's and yesterday's
-  ref and keeps each pass there the store lacks, so a pass another clone kept is reused like its own; after the
-  run it adds to today's ref every pass it kept or reused that the ref lacks, as one commit on the tip pushed
-  without force. A push refused because the tip moved reads the ref again and adds on top, a few times; a
-  pass already at a path stays. No origin, no network, a refused push or a lost race is said in the output and
-  the run goes on with its own store, so sharing never fails the gate; the summary counts what was read and
+  ref and keeps each pass there the store lacks, so a pass another clone kept is reused like its own; once each
+  chunk's passes are kept it adds to today's ref every pass it kept or reused that the ref lacks, as one commit on
+  the tip pushed without force, so a run stopped after a chunk has shared what it kept. A push refused because the tip moved reads the ref again and adds on top, a few times; a
+  pass already at a path stays. No origin, no network, a refused push or a lost race is said in the output, the
+  run publishes nothing more and goes on with its own store, so sharing never fails the gate; the summary counts what was read and
   published. A reading removes the clone's copies of every other ref beside the two it reads. `--plan` reads and does not publish, and `--fresh` and `--no-share` neither read nor publish. · {#passes-are-shared-through-refs}
   - Implementation: {{pass-sharing}}, {{shared-passes}}, {{git-refs}}, {{calendar}}, {{verify-run}}, {{evidence-store}}, {{toolchain}}, {{verification-configuration}}
   - Proof: {{temporary-project}}

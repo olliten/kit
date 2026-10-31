@@ -7,7 +7,7 @@ import { join, relative } from "node:path";
 export interface Toolchain {
   engine(engineRoot: string): string;
   runtime(root: string): string;
-  // The Kit a check runs under, when it reads the app from outside it, or nothing when its files are the app's.
+  // The Kit a check's processes may load, when it reads the app from outside it, or nothing when its files are the app's.
   kit(engineRoot: string, root: string): string;
 }
 
@@ -33,8 +33,8 @@ export const toolchain: Toolchain = {
       .update(text("package.json"))
       .digest("hex");
   },
-  // A Kit outside the app, or among its installed packages, is outside what a check's reads record, so a pass
-  // kept under one Kit is never taken for another's. A Kit that is the app, or sits in it, is read like the rest.
+  // A Kit outside the app, or among its installed packages, is outside what a check's reads record, so a pass whose
+  // processes loaded its code holds this identity of it. A Kit that is the app, or sits in it, is read like the rest.
   kit(engineRoot, root) {
     const inside = engineRoot === root || (engineRoot.startsWith(`${root}/`) && !engineRoot.slice(root.length + 1).split("/").includes("node_modules"));
     return inside ? "" : toolchain.engine(engineRoot);

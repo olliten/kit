@@ -27,10 +27,14 @@ its config, and its debt in its own baseline.
   `off` and why, as nonempty text. Only the rules that read what tests ran, `ungoverned-function` and
   `excerpt-cohesion`, may be switched off; another rule's name, another key, or a missing or empty reason is a
   configuration error naming its key. A rule switched off reports no finding, so its baseline keys are paid.
+  The authority rules `native-authority` and `ambient-global` may instead be scoped to production code, as
+  `tests: off` with a nonempty `reason`: the rule then reports nothing on a file Kit reads as a test, one named
+  `<name>.test.<extension>`, and everything it did on every other file; a value other than `off`, a
+  missing key or reason, or another key is a configuration error naming its key.
   While those rules wait for tests with no kept pass, their baseline keys are left as they are: not paid, and
   not dropped by tightening. · {#a-rule-is-switched-off-by-declaration}
   - Implementation: {{rule-switch}}, {{kit-configuration}}, {{config-schema}}, {{gate}}, {{check-run}}, {{paid-debt}}, {{ratchet}}
-  - Proof: {{temporary-project}}, {{recorded-functions}}, {{project-snapshot}}
+  - Proof: {{temporary-project}}, {{recorded-functions}}, {{project-snapshot}}, {{recorded-authority}}
 
 - Test discovery includes the configured proof root and only explicitly configured
   `legacy-test-roots`, with no application directory names built in. Each is a relative directory

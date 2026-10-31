@@ -138,7 +138,7 @@ test("a push that loses the race reads the moved tip and adds on top, keeping bo
   const mine = { path: sharedPath(verdictKind("lint", "node lint.mjs", toolchain.runtime(two.root)), heldKey(pass)), text: JSON.stringify(pass) };
   expect(gitRefs.advance(two.root, today, stale, [mine], "stale\n")).toBeNull();
   if ("failure" in seen) throw new Error(seen.failure);
-  expect(publishPasses(two.root, today, [mine], seen)).toEqual({ published: 1 });
+  expect(publishPasses(two.root, today, [mine], seen)).toMatchObject({ published: 1, tip: tipOf(origin, today) });
   expect(treeOf(origin, today)).toHaveLength(5);
   expect(git(origin, "rev-parse", `${today}^`)).toBe(moved);
 }, 120_000);
