@@ -29,7 +29,14 @@ export interface KitConfig {
   // The size limits an app opts into; a limit it doesn't declare is not checked.
   readonly limits?: { readonly functionLines: number };
   // The rules an app switches off, each with the reason it declares; only the rules that read what tests ran may be.
-  readonly rules?: { readonly [rule in RunRule]?: { readonly off: string } };
+  // The authority rules a test may need, to drive a browser or the runtime, may instead be scoped to production
+  // code, with the reason they are off on tests.
+  readonly rules?: { readonly [rule in RunRule]?: { readonly off: string } } & {
+    readonly [rule in ScopedRule]?: { readonly tests: "off"; readonly reason: string };
+  };
+  // Directories of shared test code: what a test reaches through a module under one is the harness's, not the
+  // test's, each declared with its reason.
+  readonly harnesses?: readonly Harness[];
   // The claims awaiting their proof and the tests awaiting their claim's new anchor, each declared with its reason.
   readonly pending?: readonly Pending[];
   // Explicit separation of local code. Selectors are exact relative files or directory prefixes.
@@ -105,6 +112,16 @@ export interface TestGroup {
 
 // The rules that read what tests ran from each test's coverage, and so the only ones an app may switch off.
 export type RunRule = "ungoverned-function" | "excerpt-cohesion";
+
+// The authority rules an app may scope to production code, since a test that drives a browser or the runtime uses
+// its host's authority by design.
+export type ScopedRule = "native-authority" | "ambient-global";
+
+// A directory of shared test code, `under` a relative directory ending in `/`, and why it is a harness.
+export interface Harness {
+  readonly under: string;
+  readonly reason: string;
+}
 
 // A claim awaiting its proof, named by its topic file and anchor as `<file>:<anchor>`, or a test awaiting its
 // claim's new anchor, named by its path; either with the reason it is pending.

@@ -40,20 +40,24 @@ export function readSharedPasses(root: string, store: string, refs: readonly str
 }
 
 // Adds to the ref every pass its tree lacks, as one commit on the tip pushed without force, starting from the tip
-// a reading saw. A moved tip is read again and added on top, a few times: the count published, or why not.
+// a reading, or the last addition, saw. A moved tip is read again and added on top, a few times: the count
+// published with the tip and paths the ref now holds, which the next addition starts from, or why not.
 export function publishPasses(
   root: string,
   ref: string,
   passes: readonly { readonly path: string; readonly text: string }[],
   seen: { readonly tip: string | null; readonly held: readonly string[] },
-): { readonly published: number } | { readonly published: 0; readonly failure: string } {
+):
+  | { readonly published: number; readonly tip: string | null; readonly held: readonly string[] }
+  | { readonly published: 0; readonly failure: string } {
   let tip = seen.tip;
   let held = seen.held;
   try {
     for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
       const add = unshared(held, passes);
-      if (add.length === 0) return { published: 0 };
-      if (gitRefs.advance(root, ref, tip, add, `kit verify: ${add.length} passes\n`) !== null) return { published: add.length };
+      if (add.length === 0) return { published: 0, tip, held };
+      const advanced = gitRefs.advance(root, ref, tip, add, `kit verify: ${add.length} passes\n`);
+      if (advanced !== null) return { published: add.length, tip: advanced, held: [...held, ...add.map((pass) => pass.path)] };
       const again = gitRefs.read(root, ref);
       tip = again?.tip ?? null;
       held = again?.files.map((file) => file.path) ?? [];

@@ -35,8 +35,8 @@ const SKIP = /^(?:node_modules|\..*)$/;
 // keeps what the test ran with its pass; one whose command takes several tests `{tests}` runs a chunk's tests of
 // that group in one invocation. A test no group takes fails the gate, since it would never run.
 // `--fresh` reuses and keeps nothing, and `--plan` says what would run without running it. With `share` declared,
-// passes on `origin`'s refs for this runtime join the store before planning, and the run's own are added after;
-// sharing that can't happen is said and never fails the gate.
+// passes on `origin`'s refs for this runtime join the store before planning, and the run's own are added once each
+// chunk's are kept; sharing that can't happen is said and never fails the gate.
 export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Promise<CommandResponse> {
   const option = (name: string): string | undefined => {
     const index = args.indexOf(`--${name}`);
@@ -103,9 +103,10 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
 
   const runtime = toolchain.runtime(root);
   const kit = toolchain.kit(engineRoot, root);
-  const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime, kit);
-  // Each path's state is read once per version of it, so tests that share files read each once.
-  const held = heldStates(root);
+  const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime);
+  // Each path's state is read once per version of it, so tests that share files read each once. A pass that loaded
+  // the code of a Kit outside the app also holds that Kit's source.
+  const held = heldStates(root, kit);
   const stateOf = (key: string): string => held.state(key);
   // The file system's own time now, as a marker written and removed again tells it.
   const fileTime = (): number => {
@@ -121,6 +122,21 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const shared = refs === undefined ? undefined : readSharedPasses(root, store, refs);
   // The passes this run kept or reused, as today's shared ref would hold them.
   const passes: { readonly path: string; readonly text: string }[] = [];
+  // Today's ref as the last reading or addition left it, how many passes were added to it, and why the run stopped
+  // adding, if it did. The passes kept so far are added once each chunk's are kept, so a run stopped later has
+  // still shared them; after a failure the run adds nothing more.
+  let seen = shared === undefined || "failure" in shared ? undefined : { tip: shared.tip, held: shared.held };
+  let published = 0;
+  let unpublished: string | undefined;
+  const publish = (): void => {
+    if (refs === undefined || seen === undefined || unpublished !== undefined) return;
+    const result = publishPasses(root, refs[0], passes, seen);
+    if ("failure" in result) unpublished = result.failure;
+    else {
+      published += result.published;
+      seen = { tip: result.tip, held: result.held };
+    }
+  };
   // The outermost functions a test ran in each file its coverage lists.
   const ranIn = (lcov: readonly string[]): Map<string, number[]> => {
     const ran = new Map<string, number[]>();
@@ -283,6 +299,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
                 NODE_OPTIONS: [processes.environment("NODE_OPTIONS"), `--import ${readRecorder.location}`].filter((option) => option !== undefined && option !== "").join(" "),
                 KIT_READS: directory,
                 KIT_ROOT: root,
+                KIT_ENGINE: kit === "" ? "" : engineRoot,
                 KIT_TESTS: batch ? `${scratch}/${index}.tests` : "",
                 KIT_TEST: "",
                 ...(check?.records === true ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
@@ -345,6 +362,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         alone += again.length;
         jobs = again.map((check) => ({ checks: [check], batch: true }));
       }
+      publish();
     }
   };
 
@@ -362,13 +380,13 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   await run(first, true);
   // A check declared after the tests, such as one reading what each test ran, runs once their passes are kept.
   await run(last, failures.size === 0 && unrecorded === 0);
-  const published =
-    refs === undefined || shared === undefined || "failure" in shared ? undefined : publishPasses(root, refs[0], passes, shared);
+  // What reuse alone kept, with no chunk run after it, is added now.
+  publish();
   evidenceStore.prune(store);
   const failed = lines.filter((line) => line.startsWith("failed ")).length;
   const notes = [
     ...(shared !== undefined && "failure" in shared ? [`Shared no passes: ${shared.failure}\n`] : []),
-    ...(published !== undefined && "failure" in published ? [`Published no passes: ${published.failure}\n`] : []),
+    ...(unpublished === undefined ? [] : [`Published no ${published > 0 ? "more " : ""}passes: ${unpublished}\n`]),
   ];
   const summary = {
     reused,
@@ -378,7 +396,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     unrecorded,
     alone,
     unassigned: unassigned.length,
-    shared: { read: shared?.read ?? 0, published: published?.published ?? 0 },
+    shared: { read: shared?.read ?? 0, published },
     states: { ...held.receipt },
     seconds: (stopwatch.now() - started) / 1000,
   };

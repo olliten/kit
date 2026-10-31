@@ -96,11 +96,19 @@ export function verdictOf(text: string): Verdict | null {
   };
 }
 
-// Where one check's passes are kept: by its id, its command, the runtime it ran on and the Kit it ran under when
-// that Kit is outside the app, so a pass under another command, Node, set of installed packages or Kit is never
-// taken for this one.
-export const verdictKind = (id: string, line: string, runtime: string, kit = ""): string =>
-  `verdicts/${digest(JSON.stringify(kit === "" ? [id, line, runtime] : [id, line, runtime, kit]))}`;
+// How a pass is recorded: the keys its states are kept under, a state's text, a script's ran code and their
+// digests, here and in what records them. A pass is kept under this version, not under Kit's source, so a Kit
+// release reuses every pass; it changes only when a pass recorded before could be misread after.
+export const RECORDING_FORMAT = 1;
+
+// The key a pass holds the source of a Kit outside the app under, when its processes loaded that Kit's code: no
+// path in the app is written so.
+export const KIT_KEY = "#kit";
+
+// Where one check's passes are kept: by its id, its command, the runtime it ran on and the recording format, so a
+// pass under another command, Node, set of installed packages or format is never taken for this one.
+export const verdictKind = (id: string, line: string, runtime: string, format: number = RECORDING_FORMAT): string =>
+  `verdicts/${digest(JSON.stringify([id, line, runtime, format]))}`;
 
 // What each test ran, from its pass that still holds, or the tests that have none, while the rules that read
 // what tests ran wait for them.

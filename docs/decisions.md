@@ -832,3 +832,52 @@ without naming the app.
   request that edits the spec. Leeloo's pending-oracle list maps vitest test cases to reasons and inverts their
   result; it names test cases rather than findings, so Kit reads its own rows.
 - **Transition:** nothing changes for an app that declares no `pending`.
+
+## 2026-10-31 · Shared test code is declared as a harness
+
+- **Decision:** an app may declare `harnesses`, rows of `under` (a relative directory ending in `/`) and a
+  nonempty `reason`. For `R4:proof-scope`, what a claim's tests reach through a module under a declared harness
+  is the harness's, as a named module under the proof root covers what it reaches: the closure of each harness
+  module the tests enter, less what they reach by imports that never enter a harness. A placed module a test
+  reaches directly, or through other unplaced code, is still charged. An import from a module under a harness,
+  or from a test to one, draws no `R1:migration-zone`; every other edge keeps its zone rules. A row without such
+  a directory or reason, with another key, or repeating a directory is a configuration error.
+- **Why:** Leeloo's tests reach hundreds of placed modules through unplaced legacy helpers (`spec/harness/`,
+  `spec/lib/`), so each new test drew about 1,900 proof-scope findings and no session could add one; the same
+  helpers drew about 2,700 migration-zone limits, and no single legacy zone fits a harness that spans zones. A
+  harness's reach is a property of the harness, not the test's design. The architecture is a declared check, so
+  the exception is declared with its reason in the config, never inferred from a directory name.
+- **Transition:** nothing changes for an app that declares no `harnesses`.
+
+## 2026-10-31 · An authority rule may be scoped to production code
+
+- **Decision:** `rules` also takes `native-authority` and `ambient-global` as `{tests: off, reason: <reason>}`.
+  Such a rule reports nothing on a file Kit reads as a test, `<name>.test.<extension>`, and everything else as
+  before. The `{off: <reason>}` form of the rules that read what tests ran is unchanged. A value other than
+  `off`, a missing reason, another key or another rule is a configuration error naming its key.
+- **Why:** tests that drive a browser or the Node runtime use the host's DOM and runtime types and globals by
+  design; Leeloo's report carried 500 or more findings for each such type on test files. Production code keeps
+  the rule whole.
+- **Transition:** nothing changes for an app that declares neither; an app that scopes one has the keys of its
+  test files' findings paid, and `--tighten` drops them.
+
+## 2026-10-31 · Passes are kept under a recording format, not Kit's source
+
+- **Decision:** a pass is kept under its check's id and command, the runtime and `RECORDING_FORMAT`, a version
+  in `src/core/readings/verdict-reuse.ts` raised only when the keys a pass's states are kept under, a state's
+  text, a script's ran code or their digests change. A run whose processes load the code of a Kit outside the
+  app, other than the recorder and coverage provider, is marked by the recorder (`load #kit`), and its pass
+  holds that Kit's source identity under the key `#kit`. Facts `kit check` extracts stay keyed on Kit's source.
+- **Why:** keying every pass on Kit's whole source made each Kit release rerun every check and test of every app,
+  though Kit decides only how a pass is recorded, not whether a test passes. Where Kit's code does decide, in a
+  `kit check` check or a test importing Kit, the run loaded that code, and the pass depends on it as on a file
+  it read.
+- **Transition:** every pass kept before is under the old key and runs once more.
+
+## 2026-10-31 · Shared passes are published per chunk
+
+- **Decision:** `kit verify` adds the passes kept so far to today's shared ref once each chunk's passes are kept,
+  continuing from the tip its last addition left, rather than once after the whole run. After a failed
+  publication it publishes nothing more in that run.
+- **Why:** a long run that was stopped shared nothing, so the next clone ran everything again.
+- **Transition:** none; a run makes more, smaller commits on the day's ref.

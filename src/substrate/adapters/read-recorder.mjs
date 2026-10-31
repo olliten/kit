@@ -11,7 +11,8 @@ import { threadId } from "node:worker_threads";
 // to find its path changes nothing. When the run is given several test files, a process the runner starts for
 // one of them learns which from the first message it is sent that names one among the files it runs; its
 // recording, and those of the processes it starts, name that test, and their raw coverage goes to a directory of
-// the test's own.
+// the test's own. Given a Kit outside the app, a process that reads that Kit's code, other than this recorder and
+// the coverage provider a test runs under, is marked as having loaded it, once, as `load #kit`.
 export const readRecorder = {
   location: fileURLToPath(import.meta.url),
 };
@@ -38,6 +39,32 @@ if (directory && root) {
   );
   /** @type {Set<string>} */
   const seen = new Set();
+  // The Kit outside the app, as given and as its real path, which a loader that resolves links reads it at.
+  const engine = process.env["KIT_ENGINE"];
+  /** @type {string[]} */
+  const engines = [];
+  if (engine) {
+    engines.push(`${resolve(engine)}/`);
+    try {
+      engines.push(`${fs.realpathSync(engine)}/`);
+    } catch {
+      // A Kit that can't be resolved is only known by the path given.
+    }
+  }
+  const MACHINERY = new Set(["src/substrate/adapters/read-recorder.mjs", "src/substrate/adapters/coverage-provider.mjs"]);
+  let loadedKit = false;
+  /** @param {string} text */
+  const noteKit = (text) => {
+    if (loadedKit) return;
+    for (const at of engines) {
+      if (!text.startsWith(at)) continue;
+      const inside = text.slice(at.length);
+      if (MACHINERY.has(inside) || inside.split("/").includes("node_modules") || !/\.[cm]?[jt]sx?$/.test(inside)) return;
+      loadedKit = true;
+      append(out, "load #kit\n");
+      return;
+    }
+  };
   // The file of the frame that asked: the first outside this recorder, Node's own modules and built-in functions,
   // or none when Node itself did. The stack is taken deep enough whatever limit the check set.
   const caller = () => {
@@ -74,7 +101,7 @@ if (directory && root) {
     return frame === undefined ? "load" : "read";
   };
   /** @param {unknown} path @returns {string | undefined} */
-  const absolute = (path) => {
+  const resolved = (path) => {
     const given =
       typeof path === "string"
         ? path
@@ -85,8 +112,12 @@ if (directory && root) {
             : undefined;
     if (given === undefined) return undefined;
     // A relative path is read from the process's working directory, which a check may change as it runs.
-    const text = isAbsolute(given) ? resolve(given) : resolve(process.cwd(), given);
-    return text === root || text.startsWith(prefix) ? text : undefined;
+    return isAbsolute(given) ? resolve(given) : resolve(process.cwd(), given);
+  };
+  /** @param {unknown} path @returns {string | undefined} */
+  const absolute = (path) => {
+    const text = resolved(path);
+    return text !== undefined && (text === root || text.startsWith(prefix)) ? text : undefined;
   };
   /** @param {string} use @param {string} text */
   const record = (use, text) => {
@@ -150,6 +181,10 @@ if (directory && root) {
     if (GLOBS.has(operation)) {
       if (useOf(operation) !== undefined) noteGlob(path, rest[0]);
       return;
+    }
+    if (engines.length > 0 && !PROBES.has(operation) && !LISTINGS.has(operation) && !operation.startsWith("readlink")) {
+      const full = resolved(path);
+      if (full !== undefined) noteKit(full);
     }
     const text = absolute(path);
     if (text === undefined) return;

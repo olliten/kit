@@ -64,7 +64,7 @@ function app() {
   // The paths a test's kept pass holds by content or by the functions it ran, under a group's command.
   const kept = (command: string, name: string): string[] => {
     const store = evidenceStore.directory(project.root);
-    const kind = verdictKind(`test:tests/${name}.test.ts`, testLine(command, `tests/${name}.test.ts`), toolchain.runtime(project.root), toolchain.kit(project.root, project.root));
+    const kind = verdictKind(`test:tests/${name}.test.ts`, testLine(command, `tests/${name}.test.ts`), toolchain.runtime(project.root));
     const [pass] = evidenceStore.entries(store, kind).flatMap((text) => verdictOf(text) ?? []);
     return Object.keys(pass?.states ?? {}).filter((path) => !path.endsWith("#kind")).sort();
   };
