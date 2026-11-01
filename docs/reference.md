@@ -27,6 +27,7 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `legacy-areas` | Spec files in an older claim grammar. |
 | `legacy-test-roots` | Test directories discovery still includes beside the proof root. |
 | `verify.checks`, `verify.tests` | The gate `kit verify` runs: whole-tree checks, each an `id` and a `command`, and the tests: one group, or a list of groups each taking the tests whose imports reach a module it lists in `reaching` or a module an adapter registers with a capability it lists in `capabilities`, or with neither the tests no earlier group took; a group is the `command` that runs one test file `{test}`, optionally writing its coverage into `{dir}`, for every test `under` a directory or a list of them. |
+| `verify.capacity`, `verify.tests[].capacity`, `verify.checks[].needs` | How much `kit verify` runs at once (a positive whole number, the machine's parallelism by default; a check or a test run alone takes one, a `{tests}` chunk half), how many of one group's commands run at once, and the checks a check waits to see pass first. |
 | `verify.share` | A ref prefix on `origin`, such as `refs/kit-passes`, under which `kit verify` shares kept passes with every other clone. |
 
 An app's plain-Node scripts read the config the way the commands do through
@@ -233,7 +234,7 @@ verify:
     under: oracle/
 ```
 
-`kit verify` runs each check, and each test file under `under` alone, in parallel, with a recorder preloaded
+`kit verify` runs each check, and each test file under `under` alone, in parallel within its capacity, with a recorder preloaded
 through `NODE_OPTIONS`, added to whatever the caller's environment sets there, that notes every path inside the
 app the run reads, lists, probes or copies, in the run's processes, threads and child processes. The app root's
 own listing is the path `.`; a recursive listing, a glob or a copy of a directory notes every directory under
@@ -356,6 +357,46 @@ does when it failed without a test failing or with unhandled errors; the summary
 
 The provider uses vitest 1.x's coverage provider interface and its worker message, so it is tied to that
 version; `{test}` works with any runner.
+
+## Capacity and order
+
+```yaml
+verify:
+  capacity: 4
+  checks:
+    - id: build
+      command: npm run -s build
+    - id: e2e-smoke
+      command: npm run -s smoke
+      needs: [build]
+  tests:
+    - command: npx vitest run --poolOptions.forks.maxForks=2 {tests} ...
+      under: oracle/
+      reaching: [spec/harness/shared-browser.ts]
+      capacity: 1
+```
+
+`kit verify` keeps as much running as `capacity` allows, the machine's parallelism (`os.availableParallelism()`)
+when undeclared. A whole-tree check, a test of a `{test}` group and a test run again alone each take one; a
+chunk, up to 64 of a group's due tests run in one `{tests}` invocation, takes half the capacity (all of a
+capacity of one), since the runner spreads it over several processes. So two chunks run at once: when one is down
+to its last slow files, the next has already started, and a check fills what one chunk leaves. A runner whose
+invocation uses every core by itself, as vitest's forks do by default, is best limited to about half of them
+(`--poolOptions.forks.maxForks`), so two chunks fill the machine without crowding it.
+
+A group's `capacity` bounds how many of its commands run at once, whatever the gate's capacity leaves: `1` for
+tests that share one browser or one port, so its chunks run one after another while other groups' run beside
+them.
+
+Commands start in order as soon as they fit: the first chunk, then the checks, then the remaining chunks, taking
+the groups in turn; a test run again alone goes before them all, so its chunk ends soon. A check that `needs`
+others starts once each has passed or was reused. When one failed, the check fails without running, `not run:
+it needs <id>, which failed.`, unless its own pass still holds and is reused. A need is a declared check; a check
+run with the tests can't need one declared `after: tests`; needs can't form a cycle.
+
+Each command records into a scratch directory of its own, so which reads are which test's is decided as before,
+whatever overlaps it. A chunk's passes are kept as soon as it ends, and shared once it and the tests it runs again
+alone have ended. A failing command fails alone. The output lines, the summary and `--plan` are unchanged.
 
 ## Runs
 

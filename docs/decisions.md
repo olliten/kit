@@ -933,3 +933,24 @@ without naming the app.
   seen; nor is a package first installed where an import that found nothing looked. Node's version, platform and
   architecture stay in the runtime.
 - **Transition:** every pass kept before is under the old format and runs once more.
+
+## 2026-11-01 · Commands run within a capacity, and chunks overlap
+
+- **Decision:** `kit verify` no longer runs its due commands a chunk of 64 at a time, each chunk waiting for the
+  slowest command in it. It keeps a queue of commands, a whole-tree check, a `{test}` test, a test run again alone
+  or a chunk of up to 64 of one group's tests in one `{tests}` invocation, and starts each as soon as it fits the
+  declared `verify.capacity` (default: the machine's parallelism). A chunk takes half the capacity, so two run at
+  once and the next starts while one finishes; anything else takes one. A group's `capacity` bounds its own
+  commands, and a check may name the checks it `needs`. Chunks are per group, the groups' taken in turn. A
+  chunk's passes are shared once it and its reruns end.
+- **Why:** in Leeloo, about 1,900 test files on four cores, each chunk's last few slow browser tests held the
+  whole gate while the other cores idled, and a chunk mixing both groups and the static checks waited for the
+  slowest of them, typecheck included. A queue keeps the cores busy without raising the peak: two chunk
+  invocations at once is what a mixed chunk already ran.
+- **Limits:** a chunk weighs half the capacity whatever its runner spreads it over; a runner that uses every core
+  per invocation is oversubscribed while two chunks overlap, so such a group should cap its own workers. A
+  `{tests}` command that can't run twice at once, such as one holding a fixed port, declares `capacity: 1`.
+  Attribution is unchanged: each command records into its own directory, as before.
+- **Transition:** no config change is needed. A config may add `capacity` and `needs`. The recording format is
+  unchanged, so every kept pass still holds. A run stopped part way may have shared a later chunk before an
+  earlier one.

@@ -16,6 +16,8 @@ export interface Processes {
     cwd: string,
   ): Promise<readonly { readonly stdout: string; readonly stderr: string; readonly status: number | null }[]>;
   node(): string;
+  // How many programs the machine runs in parallel.
+  parallelism(): number;
   // A variable of the environment this process was given, which the commands it runs inherit.
   environment(name: string): string | undefined;
 }
@@ -62,5 +64,6 @@ export const processes: Processes = {
     return results;
   },
   node: () => process.execPath,
+  parallelism: () => availableParallelism(),
   environment: (name) => process.env[name],
 };

@@ -48,12 +48,20 @@ export interface KitConfig {
   readonly ignore?: readonly string[];
   // The words that mark debt in a comment, where debt never lives (R3, comments).
   readonly debtMarkers: readonly string[];
-  // What `kit verify` requires: whole-tree checks, each one command, run with the tests or after them, and the
-  // groups of tests, in declared order. A test command that writes the test's LCOV report into the directory
-  // `{dir}` keeps what each test ran, and when every group's does, turns on the rules that read it.
+  // What `kit verify` requires: whole-tree checks, each one command, run with the tests or after them, once the
+  // checks it needs have passed, and the groups of tests, in declared order. A test command that writes the test's
+  // LCOV report into the directory `{dir}` keeps what each test ran, and when every group's does, turns on the
+  // rules that read it.
   readonly verify?: {
-    readonly checks: readonly { readonly id: string; readonly command: string; readonly after?: "tests" }[];
+    readonly checks: readonly {
+      readonly id: string;
+      readonly command: string;
+      readonly after?: "tests";
+      readonly needs?: readonly string[];
+    }[];
     readonly tests?: readonly TestGroup[];
+    // How much runs at once: a check or a test run alone takes one, a chunk run in one invocation half.
+    readonly capacity?: number;
     // The ref prefix on `origin` under which kept passes are shared with every other clone, one ref per runtime
     // and day.
     readonly share?: string;
@@ -105,6 +113,8 @@ export interface TestGroup {
   readonly under: readonly string[];
   readonly reaching?: readonly string[];
   readonly capabilities?: readonly string[];
+  // How many of the group's commands run at once, such as one for tests that share a browser.
+  readonly capacity?: number;
 }
 
 // The rules that read what tests ran from each test's coverage, and so the only ones an app may switch off.
