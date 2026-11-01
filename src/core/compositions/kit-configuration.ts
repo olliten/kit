@@ -2,7 +2,6 @@ import { JSON_SCHEMA, load } from "js-yaml";
 import type { KitConfig } from "../primitives/default-config.js";
 import { type Declaration, isRecord, isText, isTexts, isZone, normalizedPath, relativeLocation, texts } from "../readings/config-values.js";
 import { configIssues } from "../readings/config-schema.js";
-import { configuredHarnesses } from "../readings/harness-configuration.js";
 import { configuredLayout } from "../readings/layout-configuration.js";
 import { legacyZones } from "../readings/legacy-zone-configuration.js";
 import { configuredLimits } from "../readings/limit-configuration.js";
@@ -65,7 +64,6 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
     ...(declaration["limits"] === undefined ? {} : { limits: configuredLimits(declaration["limits"]) }),
     ...(declaration["rules"] === undefined ? {} : { rules: configuredRules(declaration["rules"]) }),
     ...(declaration["pending"] === undefined ? {} : { pending: configuredPending(declaration["pending"]) }),
-    ...(declaration["harnesses"] === undefined ? {} : { harnesses: configuredHarnesses(declaration["harnesses"]) }),
     dependencyExclusions: dependencyExclusions(declaration["dependency-exclusions"]),
     ignore: ignoredPaths(declaration["ignore"]),
     adapters: registered,

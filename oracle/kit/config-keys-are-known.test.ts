@@ -62,14 +62,14 @@ test("a config error answers the command with the file and its issues, never a s
     "kit/legacy.json": "{}\n",
   });
   const bad = join(project.root, "kit/bad.md");
-  expect(readConfig(join(project.root, "kit/missing.md"), project.root)).toMatchObject({ failure: { stdout: "", exitCode: 1 } });
-  expect(readConfig(bad, project.root)).toEqual({
+  expect(readConfig(join(project.root, "kit/missing.md"))).toMatchObject({ failure: { stdout: "", exitCode: 1 } });
+  expect(readConfig(bad)).toEqual({
     failure: { stdout: "", stderr: expect.stringMatching(/^Kit config .*bad\.md: adapters\[0\]\.globalz is not a key Kit reads\./), exitCode: 1 },
   });
-  expect(readConfig(join(project.root, "kit/broken.md"), project.root)).toMatchObject({
+  expect(readConfig(join(project.root, "kit/broken.md"))).toMatchObject({
     failure: { stderr: expect.stringMatching(/broken\.md: .*\(\d+:\d+\)/), exitCode: 1 },
   });
-  expect(readConfig(join(project.root, "kit/good.md"), project.root)).toMatchObject({ config: { app: "shop", srcRoot: "src" } });
+  expect(readConfig(join(project.root, "kit/good.md"))).toMatchObject({ config: { app: "shop", srcRoot: "src" } });
   const checked = await runCheck({
     engineRoot: KIT,
     args: ["--root", project.root, "--config", bad, "--baseline", join(project.root, "kit/legacy.json")],

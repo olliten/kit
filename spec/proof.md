@@ -68,18 +68,17 @@ a claim depends on are named in it, so each module's claims are found from its n
   the modules of only types need no name: a placed oracle module, such as a generator, fixture, driver or
   runner, is named in the claim's Proof like any other, what it reaches counts as the test's, and naming a
   composition names what it composes. Naming a placed module under the proof root, whatever its layer, names
-  what it reaches, since a Proof name is about the harness, not the design. An app may declare under `harnesses`
-  shared test code, each row `under` a relative directory ending in `/` or one relative `file`, with a nonempty
-  `reason`: what a test reaches through a module under a declared directory, or the declared file, is that harness's, not the test's, as a named module
-  under the proof root covers what it reaches; a placed module the test reaches other than through a harness,
-  directly or through other code, is still charged. A harness is zone-less test code until it is placed, so an
-  import from a module under one, or from a test to one, asks no zone of it and is no `migration-zone` limit;
-  every other edge keeps its zone rules. A row naming neither or both, a directory or file with a pattern or dot
-  segment, a file the app doesn't hold, a missing or empty reason, another key, or a repeated directory or file is
-  a configuration error naming its key. A module a claim's tests reach
-  without its name is debt: the baseline holds it, it may only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
-  - Implementation: {{proof-scope}}, {{harness-configuration}}, {{edge-check}}, {{capability-check}}, {{proof-reach}}, {{finding}}, {{placement-of}}, {{kit-configuration}}, {{config-schema}}, {{read-config}}
-  - Proof: {{fixture-snapshot}}, {{project-snapshot}}, {{temporary-project}}
+  what it reaches, since a Proof name is about the harness, not the design. Unplaced code is debt counted
+  against itself, by its location or its size, so the tests' reach stops at an unplaced module so counted: one
+  in a code root or a legacy location, or anywhere once a layout is declared, and never a declared entrypoint. A
+  placed module the tests reach only through such a module is that module's debt, not the test's; one they
+  reach directly, or through other placed code, is still charged. For the same reason an import from a test, or
+  from a placed module under the proof root, into unplaced code is no `migration-zone` limit; every other edge
+  keeps its zone rules. No key declares shared test code instead: a new unplaced module is new debt and fails
+  as any new debt does. A module a claim's tests reach without its name is debt: the baseline holds it, it may
+  only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
+  - Implementation: {{proof-scope}}, {{edge-check}}, {{capability-check}}, {{proof-reach}}, {{finding}}, {{placement-of}}, {{kit-configuration}}, {{config-schema}}, {{layout-check}}, {{legacy-size}}, {{ratchet}}
+  - Proof: {{fixture-snapshot}}, {{project-snapshot}}, {{source-fixture}}
 - Two claims that share no code share no module. When the claims naming a placed module fall into groups
   whose tests use disjoint top-level declarations of it, the module is a finding: split it so each group has
   its own. A module of only types links no claims, and a module a test reaches in ways that can't be followed
