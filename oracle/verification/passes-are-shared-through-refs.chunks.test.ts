@@ -32,13 +32,14 @@ test("a run stopped after a chunk has already shared that chunk's passes", async
     Array.from({ length: CHUNK }, (_, index) => [`lane/tests/a${String(index).padStart(2, "0")}.test.mjs`, "export {};\n"]),
   );
   project.write({
-    "lane/kit/config.md": `\`\`\`yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nverify:\n  share: ${PREFIX}/\n  checks: []\n  tests:\n    command: node {test}\n    under: tests/\n\`\`\`\n`,
+    "lane/kit/config.md": `\`\`\`yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nverify:\n  share: ${PREFIX}/\n  capacity: 1\n  checks: []\n  tests:\n    command: node {test}\n    under: tests/\n\`\`\`\n`,
     ...firsts,
   });
   git(root, "init", "--quiet");
   git(root, "remote", "add", "origin", origin);
   const [today] = sharedRefs(PREFIX, toolchain.runtime(root), calendar.now());
-  // The last test runs in the second chunk: it fails unless today's ref on origin already holds the first chunk's
+  // With one command at a time, the last test starts once the first chunk has ended. It runs in the second chunk:
+  // it fails unless today's ref on origin already holds the first chunk's
   // passes, as it would show to another clone if the run were stopped here.
   project.write({
     "lane/tests/z.test.mjs":

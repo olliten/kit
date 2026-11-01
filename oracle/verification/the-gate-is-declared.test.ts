@@ -50,7 +50,37 @@ test("a group may name the capabilities of registered adapters whose reach selec
   ]);
 });
 
+test("a gate may declare how much runs at once, a group its own capacity, and a check the checks it needs", () => {
+  const checks = [
+    { id: "build", command: "b" },
+    { id: "lint", command: "l", needs: ["build", "build"] },
+    { id: "report", command: "r", after: "tests", needs: ["lint", "late"] },
+    { id: "late", command: "x", after: "tests" },
+  ];
+  expect(read({ checks, capacity: 3, tests: { command: "unit {test}", under: "oracle", capacity: 1 } }).verify).toEqual({
+    checks: [
+      { id: "build", command: "b" },
+      { id: "lint", command: "l", needs: ["build"] },
+      { id: "report", command: "r", after: "tests", needs: ["lint", "late"] },
+      { id: "late", command: "x", after: "tests" },
+    ],
+    tests: [{ command: "unit {test}", under: ["oracle"], capacity: 1 }],
+    capacity: 3,
+  });
+});
+
 test.each([
+  [{ checks: [], capacity: 0 }, /verify\.capacity: declare how many run at once/],
+  [{ checks: [], capacity: 1.5 }, /verify\.capacity/],
+  [{ checks: [], capacity: "2" }, /verify\.capacity/],
+  [{ checks: [], tests: [{ command: "b {test}", under: "oracle", capacity: -1 }] }, /verify\.tests\[0\]\.capacity/],
+  [{ checks: [{ id: "a", command: "x", needs: "b" }] }, /verify\.checks\[0\]\.needs: list/],
+  [{ checks: [{ id: "a", command: "x", needs: ["b"] }] }, /verify\.checks\[0\]\.needs: no check is declared as b/],
+  [{ checks: [{ id: "a", command: "x", needs: ["b"] }, { id: "b", command: "y", after: "tests" }] }, /a runs with the tests, so it can't need b/],
+  [
+    { checks: [{ id: "a", command: "x", needs: ["b"] }, { id: "b", command: "y", needs: ["c"] }, { id: "c", command: "z", needs: ["a"] }] },
+    /the needs of a -> b -> c -> a form a cycle/,
+  ],
   [{ checks: [{ id: "a" }] }, /verify\.checks\[0\]/],
   [{ checks: [{ id: "a", command: "x" }, { id: "a", command: "y" }] }, /declared twice/],
   [{ checks: [{ id: "test:a", command: "x" }] }, /test:/],

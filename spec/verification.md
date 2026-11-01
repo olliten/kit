@@ -10,9 +10,11 @@ so a later gate runs only what an edit can have changed.
   which may also write the test's coverage into `{dir}`, or several test files `{tests}` with Kit's coverage
   provider `{provider}` writing into `{dir}`, for every test under one or more relative directories, and
   optionally the modules inside the app and the capabilities of registered adapters whose reach selects it, and
-  optionally `share`, the ref prefix on `origin` its passes are shared under. A malformed declaration, or group,
-  or a capability no adapter registers fails configuration naming where, and `kit verify` without one says what
-  to declare. · {#the-gate-is-declared}
+  optionally `share`, the ref prefix on `origin` its passes are shared under, and `capacity`, how much runs at
+  once. A check may name the checks it `needs`, and a group its own `capacity`. A malformed declaration, or group,
+  a capacity that is no positive whole number, a need no declared check meets, one of a check run with the tests
+  on a check run after them, or needs in a cycle, or a capability no adapter registers fails configuration naming
+  where, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
   - Implementation: {{verification-configuration}}, {{kit-configuration}}, {{config-schema}}, {{verify-run}}
   - Proof: {{temporary-project}}
 - A test runs under the command of the first group, in declared order, whose directories hold it and whose
@@ -105,6 +107,19 @@ so a later gate runs only what an edit can have changed.
   provider depends on vitest 1.x's coverage provider interface and worker message; `{test}` serves any
   runner. · {#a-group-runs-its-tests-in-one-runner}
   - Implementation: {{verify-run}}, {{batch-attribution}}, {{coverage-provider}}, {{read-recorder}}
+  - Proof: {{temporary-project}}
+- `kit verify` runs its commands within a capacity, the machine's parallelism unless `verify` declares one: a
+  whole-tree check or a test its group runs alone takes one of it, and a chunk, up to 64 of a group's due tests
+  that its `{tests}` command runs in one invocation over several processes, takes half of it, or all of a capacity
+  of one, so a chunk starts while another finishes and no more than two run at once. A group's `capacity` bounds
+  how many of its commands run at once, such as one for tests that share a browser. A command starts as soon as it
+  fits, in order: a chunk, the checks, then the other chunks, the groups' in turn; a test run again alone starts
+  before them, and a check that `needs` others once each has passed or was reused, and, unless its own pass is
+  reused, fails without running when one failed. Each command records into a directory of its own, so its reads
+  are attributed as if nothing else ran; a chunk's passes are kept, and shared, once it and the tests it runs
+  again alone have ended, whatever else runs, and a failing command loses no other's pass. The output, the summary
+  and `--plan` are the same however the commands overlapped. · {#commands-run-within-a-capacity}
+  - Implementation: {{verify-run}}, {{command-schedule}}, {{verification-configuration}}, {{processes}}
   - Proof: {{temporary-project}}
 - With `share` declared, a pass is shared through `origin`: one ref per runtime and UTC day,
   `<share>/<day>-<runtime>` with the runtime's digest cut to 16 characters, whose tree holds each kept pass at

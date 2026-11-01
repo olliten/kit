@@ -149,6 +149,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{compiler-facts}}, {{placement-of}}, {{proof-reach}}, {{runs}}, {{snapshot}}
+- **command-schedule** — which of `kit verify`'s waiting commands start now: each, in order, whose needed checks have passed and that fits the capacity left and its group's, and how much of the capacity a chunk takes.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **comment-check** — the check that comments cite nothing and carry no debt.
   - Role: derived
   - Zone: core
@@ -409,7 +413,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **processes** — access to running another program to completion, and to the environment the programs it runs inherit.
+- **processes** — access to running another program to completion, how many the machine runs in parallel, and the environment the programs it runs inherit.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -595,7 +599,7 @@
 - **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
   - Role: composition
   - Zone: substrate
-  - Of: {{batch-attribution}}, {{calendar}}, {{command}}, {{compiler}}, {{config-values}}, {{coverage-provider}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{pass-sharing}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{shared-passes}}, {{stopwatch}}, {{test-groups}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
+  - Of: {{batch-attribution}}, {{calendar}}, {{command}}, {{command-schedule}}, {{compiler}}, {{config-values}}, {{coverage-provider}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{pass-sharing}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{shared-passes}}, {{stopwatch}}, {{test-groups}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
 
 ## Supporting vocabulary and roles
 
