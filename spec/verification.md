@@ -25,18 +25,19 @@ so a later gate runs only what an edit can have changed.
   - Proof: {{temporary-project}}
 - A recorder preloaded into a check's processes, added to the Node options the caller's environment gives, records
   every path inside the app the check reads, lists, probes, copies or loads, the app root itself as `.`, in its
-  own process, its worker threads and the processes it starts, and nothing under installed packages or the
-  repository's own bookkeeping. A recursive listing, a glob or a copy of a directory lists every directory under
-  it, and a copy reads every file. A load is a read only the module loader made, Node's own or the test runner's;
-  any other code's read is a read, whatever stack trace limit it set. A directory listing the test runner makes,
-  such as finding its tests, is not recorded; one any other installed package makes, such as a compiler expanding
-  its configuration's globs, is. Loaded without being asked to record, it changes nothing. · {#reads-are-observed}
+  own process, its worker threads and the processes it starts, nothing of the repository's own bookkeeping, and
+  of installed packages only the package each path under `node_modules` falls in, except a Kit installed among
+  them, whose files it records as the app's. A recursive listing, a glob or a copy of a directory lists every
+  directory under it, and a copy reads every file. A load is a read only the module loader made, Node's own or the
+  test runner's, or npm's own of a package manifest; any other code's read is a read, whatever stack trace limit
+  it set. A directory listing the test runner makes, such as finding its tests, is not recorded; one any other
+  installed package makes, such as a compiler expanding its configuration's globs, is. Loaded without being asked to record, it changes nothing. · {#reads-are-observed}
   - Implementation: {{read-recorder}}, {{verdict-reuse}}, {{verify-run}}, {{processes}}
   - Proof: {{temporary-project}}, {{processes}}
 - `kit verify` keeps a passing check with the state of every path its run used: a file's content or a
   directory's listing for a path it read or listed, and only whether it is absent, a file or a directory for a
   path it only probed. It reuses the check while each path is still in that state, under the same command,
-  runtime, installed packages, app package manifest and recording format, and runs the rest together; a failure is never kept, a pass during which a path it read changed, from a state
+  runtime and recording format, and runs the rest together; a failure is never kept, a pass during which a path it read changed, from a state
   an earlier pass kept, or a file it read since its run started, is reported and not kept, and runs on different trees each keep
   theirs. A check declared
   `after: tests` runs once the tests' passes are kept, and is not kept itself when a test's pass was not.
@@ -45,11 +46,29 @@ so a later gate runs only what an edit can have changed.
   - Proof: {{temporary-project}}
 - A pass is kept under the recording format, a version Kit declares and changes only when how a pass's states,
   a script's ran code or their digests are recorded changes, never under Kit's source as a whole: a release of a
-  Kit that reads the app from outside it, under the same format, reuses every pass. A check whose processes
-  loaded that Kit's code, other than the recorder and coverage provider it runs under, such as a check that runs
-  `kit check` or a test importing Kit, holds its pass while that Kit's source is the same, as it would a file it
-  read. · {#passes-are-kept-under-the-recording-format}
+  Kit, under the same format, reuses every pass that used none of its files. A Kit installed among the app's
+  packages is recorded as the app's own files are, so a check whose processes read or loaded one of its files,
+  other than the recorder and coverage provider it runs under, such as a check that runs `kit check` or a test
+  whose configuration imports Kit, holds that file's state, and a release reruns only the passes whose runs used a
+  file it changed. A Kit outside the app, whose files no recording names, is held whole instead: a check whose
+  processes loaded its code holds its pass while that Kit's source is the same. · {#passes-are-kept-under-the-recording-format}
   - Implementation: {{verdict-reuse}}, {{verify-run}}, {{held-state}}, {{read-recorder}}, {{toolchain}}
+  - Proof: {{temporary-project}}
+- A pass holds the installed packages its run used, not the lockfile whole: a path under `node_modules` is
+  recorded as the package it falls in, the path up to the name after its last `node_modules`, with the scope of a
+  scoped one, and the pass holds that package's entry in `package-lock.json`, its version, resolved source,
+  integrity and link, or that it has none, and every path the lockfile installs that name at, so installing it
+  nearer an importer is seen. An install that changes a package the run used reruns it, and one that changes only
+  others reuses it; a lockfile only the module loader read, as Vite does to key its own cache, is held through
+  those packages alone. A check is kept under the runtime: Node's version, platform and architecture, and the
+  app's `package.json` without its `scripts`, which a check whose command runs package scripts through `npm`,
+  `yarn`, `pnpm`, `bun` or `node --run` is kept under besides, so a script edit reruns only those. A `package.json`
+  only the module loader or npm itself read is held without its scripts, and one other code read is held whole.
+  With no lockfile, or one without a `packages` map, the runtime holds the lockfile whole instead. A package
+  changed without a read the recorder sees, such as a native library a binding opens, a file it fetched outside
+  the app, a package linked from outside the app, a name first installed where an import that found nothing
+  looked, or files installed otherwise than their lockfile entry says, is not seen. · {#passes-hold-the-packages-they-read}
+  - Implementation: {{read-recorder}}, {{verdict-reuse}}, {{held-state}}, {{toolchain}}, {{verify-run}}
   - Proof: {{temporary-project}}
 - A script a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its code
   with the body of every outermost function the test never ran left out, where a function counts as run when a

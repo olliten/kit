@@ -61,12 +61,13 @@ function app() {
       .filter(Boolean)
       .map((line) => line.replace(/ test:tests\/(.)\.test\.ts$/, " $1"))
       .join(" ");
-  // The paths a test's kept pass holds by content or by the functions it ran, under a group's command.
+  // The paths a test's kept pass holds by content or by the functions it ran, under a group's command, beside the
+  // installed packages its run used.
   const kept = (command: string, name: string): string[] => {
     const store = evidenceStore.directory(project.root);
     const kind = verdictKind(`test:tests/${name}.test.ts`, testLine(command, `tests/${name}.test.ts`), toolchain.runtime(project.root));
     const [pass] = evidenceStore.entries(store, kind).flatMap((text) => verdictOf(text) ?? []);
-    return Object.keys(pass?.states ?? {}).filter((path) => !path.endsWith("#kind")).sort();
+    return Object.keys(pass?.states ?? {}).filter((path) => !path.endsWith("#kind") && !path.startsWith("#package:")).sort();
   };
   return { project, verify, planned, kept };
 }
@@ -80,8 +81,8 @@ test("a batch keeps each test's pass with only its own reads and the code it ran
   // The test whose coverage holds another test's ran again alone.
   expect(summary(first.stdout)).toMatchObject({ ran: 5, failed: 1, recorded: 4, alone: 1 });
   expect(await planned()).toBe("reuse a reuse b run c reuse d reuse e");
-  expect(kept(BATCHED, "a")).toEqual(["data/a.txt", "lib/m.ts#ran:0", "package.json", "tests/a.test.ts"]);
-  expect(kept(BATCHED, "b")).toEqual(["data/b.txt", "lib/m.ts#ran:1", "package.json", "tests/b.test.ts"]);
+  expect(kept(BATCHED, "a")).toEqual(["data/a.txt", "lib/m.ts#ran:0", "package.json#manifest", "tests/a.test.ts"]);
+  expect(kept(BATCHED, "b")).toEqual(["data/b.txt", "lib/m.ts#ran:1", "package.json#manifest", "tests/b.test.ts"]);
 
   project.write({ "data/b.txt": "b!" });
   expect(await planned()).toBe("reuse a run b run c reuse d reuse e");

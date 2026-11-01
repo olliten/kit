@@ -365,7 +365,7 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
-- **verdict-reuse** — how a check's processes used each path, the paths a process other than the test's loaded, the key each path is kept under and what it holds, a stored verdict read back, the recording format a pass is kept under, where a check's passes are kept, the key a Kit's own source is held under, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
+- **verdict-reuse** — how a check's processes used each path, the paths a process other than the test's loaded, the key each path is kept under and what it holds, the key an installed package is held under, a stored verdict read back, the recording format a pass is kept under, whether a check's command runs package scripts and the runtime it is kept under, where a check's passes are kept, the key a Kit's own source is held under, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
   - Role: derived
   - Zone: core
   - From: {{fact-keys}}, {{runs}}, {{verdict}}
@@ -413,7 +413,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **read-recorder** — a preload that records every path inside the app a check's processes read, list, probe or load, with how each was used, and whether they loaded the code of a Kit outside the app.
+- **read-recorder** — a preload that records every path inside the app a check's processes read, list, probe or load, with how each was used, the installed package each path under `node_modules` falls in, the files of a Kit installed among them, and whether they loaded the code of a Kit outside the app.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -437,7 +437,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **toolchain** — access to the identity of the Kit that reads an app, from its own source, and when it reads the app from outside it, and of the runtime, installed packages and package manifest a check runs on.
+- **toolchain** — access to the identity of the Kit that reads an app, from its own source, and when it reads the app from outside it, and of the runtime a check runs on, the app manifest's scripts, a package manifest without its scripts, and each installed package's lockfile entry.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -504,10 +504,10 @@
   - Role: composition
   - Zone: core
   - Of: {{capability-check}}, {{claim-cohesion}}, {{claim-proof-binder}}, {{comment-check}}, {{default-config}}, {{dependency-exclusions}}, {{finding}}, {{forwarder-check}}, {{function-size}}, {{handover-check}}, {{layout-check}}, {{legacy-size}}, {{module-references}}, {{name-check}}, {{pending-claims}}, {{placement-of}}, {{proof-reach}}, {{proof-scope}}, {{excerpt-cohesion}}, {{function-governance}}, {{ratchet}}, {{rule-switch}}, {{semantic-references}}, {{snapshot}}, {{term-model}}, {{term-order}}, {{topic-shape}}
-- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its code as the functions a run ran see it, read once per version of the path within one run, and the Kit outside the app a pass that loaded its code holds.
+- **held-state** — what a kept key's path in the app holds now: its content, its kind, or its code as the functions a run ran see it, read once per version of the path within one run, a package manifest without its scripts, an installed package's lockfile entry, and the Kit outside the app a pass that loaded its code holds.
   - Role: composition
   - Zone: substrate
-  - Of: {{compiler}}, {{filesystem}}, {{function-span}}, {{ran-code}}, {{text-files}}, {{verdict-reuse}}
+  - Of: {{compiler}}, {{filesystem}}, {{function-span}}, {{ran-code}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}
 - **import-recorder** — the recorder of where a file's imports lead and what each of its exports is.
   - Role: composition
   - Zone: substrate

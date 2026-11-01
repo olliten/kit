@@ -11,8 +11,10 @@ import { threadId } from "node:worker_threads";
 // to find its path changes nothing. When the run is given several test files, a process the runner starts for
 // one of them learns which from the first message it is sent that names one among the files it runs; its
 // recording, and those of the processes it starts, name that test, and their raw coverage goes to a directory of
-// the test's own. Given a Kit outside the app, a process that reads that Kit's code, other than this recorder and
-// the coverage provider a test runs under, is marked as having loaded it, once, as `load #kit`.
+// the test's own. A path under installed packages is recorded as the package it falls in, `package <path>`, by
+// its path in the lockfile, except a file of the Kit running the gate when it is installed among them, which is
+// recorded as the app's files are. Given a Kit outside the app, a process that reads that Kit's code is marked as
+// having loaded it, once, as `load #kit`. This recorder and the coverage provider a test runs under are neither.
 export const readRecorder = {
   location: fileURLToPath(import.meta.url),
 };
@@ -42,15 +44,24 @@ if (directory && root) {
   // The Kit outside the app, as given and as its real path, which a loader that resolves links reads it at.
   const engine = process.env["KIT_ENGINE"];
   /** @type {string[]} */
-  const engines = [];
+  const given = [];
   if (engine) {
-    engines.push(`${resolve(engine)}/`);
+    given.push(`${resolve(engine)}/`);
     try {
-      engines.push(`${fs.realpathSync(engine)}/`);
+      given.push(`${fs.realpathSync(engine)}/`);
     } catch {
       // A Kit that can't be resolved is only known by the path given.
     }
   }
+  // A Kit outside the app is marked when loaded; one among the app's installed packages is recorded file by file,
+  // by its path inside the app; one that is the app, or sits in it otherwise, is the app's files.
+  const engines = given.filter((at) => !at.startsWith(prefix));
+  const installed = new Set(
+    given
+      .filter((at) => at.startsWith(prefix))
+      .map((at) => at.slice(prefix.length, -1))
+      .filter((local) => local.split("/").includes("node_modules")),
+  );
   const MACHINERY = new Set(["src/substrate/adapters/read-recorder.mjs", "src/substrate/adapters/coverage-provider.mjs"]);
   let loadedKit = false;
   /** @param {string} text */
@@ -89,10 +100,13 @@ if (directory && root) {
   const LISTINGS = new Set(["readdirSync", "opendirSync", "opendir", "readdir"]);
   const COPIES = new Set(["copyFileSync", "copyFile", "cpSync", "cp"]);
   const GLOBS = new Set(["globSync", "glob"]);
-  /** @param {string} operation @returns {string | undefined} */
-  const useOf = (operation) => {
+  // npm's own code, which reads a package manifest's scripts only to run one, when the check's command does.
+  const NPM = /\/node_modules\/npm\//;
+  /** @param {string} operation @param {string | undefined} path @returns {string | undefined} */
+  const useOf = (operation, path = undefined) => {
     if (PROBES.has(operation)) return "probe";
     const frame = caller();
+    if (frame !== undefined && path !== undefined && NPM.test(frame) && /(?:^|\/)package\.json$/.test(path) && !LISTINGS.has(operation)) return "load";
     // The test runner's own listings, such as finding its test files, are not the check's: recording them would
     // make adding any file under a listed directory rerun every test. Any other package's listing, such as a
     // compiler expanding its configuration's globs, is the check's.
@@ -119,16 +133,39 @@ if (directory && root) {
     const text = resolved(path);
     return text !== undefined && (text === root || text.startsWith(prefix)) ? text : undefined;
   };
+  // The installed package a path under `node_modules` falls in, by its path in the lockfile: up to the name after
+  // the last `node_modules`, with its scope; none for `node_modules` or a scope itself, or for npm's and tools'
+  // own entries there, such as `.bin`, `.package-lock.json` or a cache, whose names start with a dot.
+  /** @param {string[]} parts @returns {string | undefined} */
+  const packageOf = (parts) => {
+    const last = parts.lastIndexOf("node_modules");
+    const name = parts[last + 1];
+    if (name === undefined || name.startsWith(".")) return undefined;
+    const end = name.startsWith("@") ? last + 3 : last + 2;
+    return parts.length < end ? undefined : parts.slice(0, end).join("/");
+  };
+  /** @param {string} line */
+  const once = (line) => {
+    if (seen.has(line)) return;
+    seen.add(line);
+    // Written whole as each path is first seen, since a worker thread can end without a chance to flush.
+    append(out, `${line}\n`);
+  };
   /** @param {string} use @param {string} text */
   const record = (use, text) => {
     // The app root itself is `.`.
     const local = text === root ? "." : text.slice(prefix.length);
-    // Installed packages are the lockfile's, and the repository's own bookkeeping is no input.
+    // The repository's own bookkeeping is no input.
     const parts = local.split("/");
-    if (parts.includes("node_modules") || parts[0] === ".git" || seen.has(`${use} ${local}`)) return;
-    seen.add(`${use} ${local}`);
-    // Written whole as each path is first seen, since a worker thread can end without a chance to flush.
-    append(out, `${use} ${local}\n`);
+    if (parts[0] === ".git") return;
+    if (parts.includes("node_modules")) {
+      const at = packageOf(parts);
+      if (at === undefined) return;
+      // A file of the Kit installed among the packages is the app's, but for the machinery a check runs under.
+      if (!installed.has(at)) return once(`package ${at}`);
+      if (MACHINERY.has(local.slice(at.length + 1))) return;
+    }
+    once(`${use} ${local}`);
   };
   // Every directory under one, as listed, and with `files` every file in it as used, for an operation that
   // reaches into the whole tree: a recursive listing, a glob, or a copy of a directory.
@@ -188,7 +225,7 @@ if (directory && root) {
     }
     const text = absolute(path);
     if (text === undefined) return;
-    const use = useOf(operation);
+    const use = useOf(operation, text);
     if (use === undefined) return;
     // Copying a directory lists it and reads every file under it.
     if (COPIES.has(operation) && isDirectory(text)) {

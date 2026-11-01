@@ -4,9 +4,11 @@ import { KIT_KEY, heldPath } from "../../core/readings/verdict-reuse.js";
 import { compilerWorkspace } from "../adapters/compiler.js";
 import { filesystem } from "../adapters/filesystem.js";
 import { textFiles } from "../adapters/text-files.js";
+import { toolchain } from "../adapters/toolchain.js";
 
-// What kept keys' paths in the app hold now, for one run: a path's content, its kind, or its code as the functions
-// a run ran see it, and a script's outermost functions.
+// What kept keys' paths in the app hold now, for one run: a path's content, its kind, a manifest without its
+// scripts, its code as the functions a run ran see it, or an installed package's lockfile entry, and a script's
+// outermost functions.
 export interface HeldStates {
   state(key: string): string;
   // A script's outermost functions, or none when it is absent.
@@ -21,7 +23,10 @@ export interface HeldStates {
 // when it changed before the last time `since` gave: a later edit then lands in a later tick and so changes the
 // version, while one in the tick it changed in could leave it the same, so a path changed since is read each time.
 // A pass that loaded the code of a Kit outside the app holds that Kit's source, given as `kit`, under its own key.
+// An installed package is held by its lockfile entry and where its name is installed, read once per run; with no
+// lockfile that holds each package, the runtime holds the lockfile whole and a package is `unlocked`.
 export function heldStates(root: string, kit = ""): HeldStates {
+  let packages: ((path: string) => string) | undefined | null = null;
   let mark = -Infinity;
   const receipt = { read: 0, reused: 0 };
   const states = new Map<string, { readonly id: string; readonly state: string }>();
@@ -47,7 +52,11 @@ export function heldStates(root: string, kit = ""): HeldStates {
   return {
     state(key) {
       if (key === KIT_KEY) return kit;
-      const { path, kind, ran } = heldPath(key);
+      const { path, kind, ran, manifest, package: installed } = heldPath(key);
+      if (installed !== undefined) {
+        if (packages === null) packages = toolchain.packages(root);
+        return packages === undefined ? "unlocked" : packages(installed);
+      }
       if (kind) return filesystem.kind(at(path));
       const id = trusted(path);
       const known = id === undefined ? undefined : states.get(key);
@@ -56,7 +65,7 @@ export function heldStates(root: string, kit = ""): HeldStates {
         return known.state;
       }
       receipt.read++;
-      const state = ran === undefined ? filesystem.state(at(path)) : code(path, id, ran);
+      const state = manifest ? toolchain.manifest(at(path)) : ran === undefined ? filesystem.state(at(path)) : code(path, id, ran);
       if (id !== undefined) states.set(key, { id, state });
       return state;
     },

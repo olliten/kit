@@ -47,26 +47,49 @@ export function loadedBeside(recordings: readonly ProcessFile[], coverage: reado
   return beside;
 }
 
+// The key a pass holds an installed package under, by its path in the lockfile, such as `node_modules/@a/b`: no
+// path in the app is written so.
+export const PACKAGE_KEY = "#package:";
+
+const MANIFEST = /(?:^|\/)package\.json$/;
+
 // What a pass depends on in each path, as the key its state is kept under: the path alone for its content (read
-// or listed), `#kind` for whether it is absent, a file or a directory (only probed), and `#ran:` with the
-// outermost functions the run ran for a script only the module loader read, when the run's coverage covers it.
+// or listed), `#kind` for whether it is absent, a file or a directory (only probed), `#ran:` with the outermost
+// functions the run ran for a script only the module loader read, when the run's coverage covers it, and
+// `#manifest` for a `package.json` only the module loader or npm read, which read no scripts. An installed
+// package the run used is held under `#package:` and its lockfile path. The app's lockfile only the module loader
+// read, as Vite does to key its own cache, is held through the packages the run used.
 export function heldKeys(uses: ReadonlyMap<string, ReadonlySet<string>>, ran: ReadonlyMap<string, readonly number[]>): string[] {
   return [...uses]
-    .map(([path, kinds]) => {
-      if (kinds.has("read") || kinds.has("list")) return path;
+    .flatMap(([path, kinds]) => {
+      if (kinds.has("package")) return [`${PACKAGE_KEY}${path}`];
+      if (kinds.has("read") || kinds.has("list")) return [path];
       // Only a script's text is read as functions; any other file a coverage lists is held whole.
       const functions = /\.[cm]?[jt]sx?$/.test(path) ? ran.get(path) : undefined;
-      if (kinds.has("load")) return functions === undefined ? path : `${path}#ran:${functions.join(",")}`;
-      return `${path}#kind`;
+      if (kinds.has("load")) {
+        if (path === "package-lock.json") return [];
+        if (MANIFEST.test(path)) return [`${path}#manifest`];
+        return [functions === undefined ? path : `${path}#ran:${functions.join(",")}`];
+      }
+      return [`${path}#kind`];
     })
     .sort();
 }
 
-// A kept key's path, and how the path is held: its content, its kind, or the functions a run ran in it.
-export function heldPath(key: string): { readonly path: string; readonly kind: boolean; readonly ran?: readonly number[] } {
+// A kept key's path, and how the path is held: its content, its kind, its content without its scripts, the
+// functions a run ran in it, or the installed package it names.
+export function heldPath(key: string): {
+  readonly path: string;
+  readonly kind: boolean;
+  readonly ran?: readonly number[];
+  readonly manifest?: true;
+  readonly package?: string;
+} {
+  if (key.startsWith(PACKAGE_KEY)) return { path: key, kind: false, package: key.slice(PACKAGE_KEY.length) };
   const mark = key.lastIndexOf("#");
   const mode = mark < 0 ? "" : key.slice(mark + 1);
   if (mode === "kind") return { path: key.slice(0, mark), kind: true };
+  if (mode === "manifest") return { path: key.slice(0, mark), kind: false, manifest: true };
   if (mode.startsWith("ran:")) {
     const listed = mode.slice(4);
     return { path: key.slice(0, mark), kind: false, ran: listed === "" ? [] : listed.split(",").map(Number) };
@@ -99,11 +122,19 @@ export function verdictOf(text: string): Verdict | null {
 // How a pass is recorded: the keys its states are kept under, a state's text, a script's ran code and their
 // digests, here and in what records them. A pass is kept under this version, not under Kit's source, so a Kit
 // release reuses every pass; it changes only when a pass recorded before could be misread after.
-export const RECORDING_FORMAT = 1;
+export const RECORDING_FORMAT = 2;
 
 // The key a pass holds the source of a Kit outside the app under, when its processes loaded that Kit's code: no
 // path in the app is written so.
 export const KIT_KEY = "#kit";
+
+// Whether a check's command runs the app's package scripts: through a package manager, which may run a script
+// whatever its subcommand, or `node --run`. `npx` runs a package's binary, not a script.
+export const runsScripts = (line: string): boolean => /(?:^|[\s;&|(])(?:npm|yarn|pnpm|bun)(?=[\s;&|)]|$)|(?:^|[\s;&|(])node\s[^;&|]*--run\b/.test(line);
+
+// The runtime a check is kept under: the runtime, and the app manifest's scripts for a check that runs them.
+export const runtimeOf = (line: string, runtime: string, scripts: string): string =>
+  runsScripts(line) ? digest(JSON.stringify([runtime, scripts])) : runtime;
 
 // Where one check's passes are kept: by its id, its command, the runtime it ran on and the recording format, so a
 // pass under another command, Node, set of installed packages or format is never taken for this one.
