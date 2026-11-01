@@ -88,3 +88,40 @@ test("a pass is kept under the recording format, so a pass kept under another fo
   project.remove(relative(root, join(store, kind)));
   expect(lines((await verify(one)).stdout)).toEqual(["passed lint", "reused kit-check", "reused test:tests/a.test.mjs"]);
 }, 120_000);
+
+test("a Kit installed among the app's packages is held by the files a run used, not by its release", async () => {
+  const project = open("kit-installed-");
+  const lock = (version: string) =>
+    JSON.stringify({ name: "app", lockfileVersion: 3, packages: { "": { name: "app" }, "node_modules/kit": { version, resolved: `https://registry.example/kit-${version}.tgz` } } });
+  project.write({
+    ".git/HEAD": "ref: refs/heads/main\n",
+    "kit/config.md":
+      "```yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nverify:\n  checks:\n    - {id: lint, command: node lint.mjs}\n" +
+      "    - {id: kit-check, command: node check.mjs}\n  tests:\n    command: node {test}\n    under: tests/\n```\n",
+    "package.json": JSON.stringify({ name: "app", type: "module" }),
+    "package-lock.json": lock("1.0.0"),
+    "lint.mjs": 'import { readFileSync } from "node:fs";\nreadFileSync("data.txt");\n',
+    "check.mjs": 'import { tool } from "kit/src/tool.mjs";\nif (tool !== 1) process.exit(1);\n',
+    "data.txt": "1",
+    "tests/a.test.mjs": 'import { readFileSync } from "node:fs";\nreadFileSync("a.txt");\n',
+    "a.txt": "a",
+    // The Kit running the gate, installed in the app: a file the check loads, and one nothing loads.
+    "node_modules/kit/package.json": JSON.stringify({ name: "kit", type: "module" }),
+    "node_modules/kit/src/tool.mjs": "export const tool = 1;\n",
+    "node_modules/kit/src/other.mjs": "export const other = 1;\n",
+  });
+  const root = project.root;
+  const engineRoot = join(root, "node_modules/kit");
+  const verify = (...flags: string[]) => runVerify({ engineRoot, args: ["--root", root, "--config", join(root, "kit/config.md"), ...flags], cwd: root });
+  expect(toolchain.kit(engineRoot, root)).toBe("");
+  expect((await verify()).exitCode).toBe(0);
+  const [pass] = evidenceStore.entries(evidenceStore.directory(root), verdictKind("kit-check", "node check.mjs", toolchain.runtime(root))).map((text) => JSON.parse(text));
+  expect(Object.keys(pass.states)).toContain("node_modules/kit/src/tool.mjs");
+  expect(Object.keys(pass.states).filter((key) => key === "#kit" || key.startsWith("#package:node_modules/kit"))).toEqual([]);
+  // A release that changes only a file no run used, and the lockfile's entry for Kit, reuses every pass.
+  project.write({ "node_modules/kit/src/other.mjs": "export const other = 2;\n", "package-lock.json": lock("1.1.0") });
+  expect((await verify("--plan")).stdout).toBe("reuse lint\nreuse kit-check\nreuse test:tests/a.test.mjs\n");
+  // One that changes a file a check loaded reruns that check alone.
+  project.write({ "node_modules/kit/src/tool.mjs": "export const tool = 1; // 1.2.0\n" });
+  expect((await verify("--plan")).stdout).toBe("reuse lint\nrun kit-check\nreuse test:tests/a.test.mjs\n");
+}, 120_000);

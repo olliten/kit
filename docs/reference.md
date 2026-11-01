@@ -237,22 +237,43 @@ verify:
 through `NODE_OPTIONS`, added to whatever the caller's environment sets there, that notes every path inside the
 app the run reads, lists, probes or copies, in the run's processes, threads and child processes. The app root's
 own listing is the path `.`; a recursive listing, a glob or a copy of a directory notes every directory under
-it. A pass is kept beside the repository with the state of each of those paths, under the command, the Node
-version, the lockfile, the app's `package.json` and Kit's recording format, `RECORDING_FORMAT` in
-`src/core/readings/verdict-reuse.ts`, which changes only when how a pass's states are recorded does; the next
-`kit verify` reuses it while every path is in the same state. A Kit release under the same format reuses every
-pass. A Kit outside the app, such as one installed in `node_modules`, is outside what the recorder notes, so a
-run whose processes loaded that Kit's code, other than the recorder and coverage provider it runs under, such
-as a `kit check` check or a test importing Kit, also holds that Kit's source, as the key `#kit`. A failure is never kept, and
-neither is a pass during which a path it used changed. Worktrees of one repository share what is kept.
+it. A pass is kept beside the repository with the state of each of those paths, under the command, the runtime
+and Kit's recording format, `RECORDING_FORMAT` in `src/core/readings/verdict-reuse.ts`, which changes only when
+how a pass's states are recorded does; the next `kit verify` reuses it while every path is in the same state.
+
+The runtime is the Node version, platform and architecture and the app's `package.json` without its `scripts`.
+A check whose command runs package scripts (`npm …`, `yarn …`, `pnpm …`, `bun …`, `node --run …`; not `npx`) is
+kept under the `scripts` object besides, so a script edit reruns those checks only. A `package.json` that only the
+module loader, the test runner's loader or npm itself read is held without its scripts (key `<path>#manifest`);
+one other code read is held whole.
+
+Installed packages are held per package, not through the whole lockfile. A path under `node_modules` is noted as
+the package it falls in, by its path in the lockfile (`node_modules/@scope/name`,
+`node_modules/a/node_modules/b`), and the pass holds the key `#package:<that path>`, whose state is the package's
+`package-lock.json` entry (version, resolved, integrity, link) and every path the lockfile installs that name at.
+Reads by the runner's own process in a batch are every test's. The lockfile itself, when only a loader read it, as
+Vite does to key its dependency cache, is held through those packages. With no `package-lock.json`, or one without
+a `packages` map, the runtime holds the lockfile whole, as before.
+
+A Kit release under the same format reuses every pass that used none of its files. A Kit installed among the
+app's packages is noted file by file, like the app's own files, so a pass whose run loaded a Kit file (a
+`kit check` check, a test or test config importing Kit) holds that file, and a release reruns only passes whose
+runs used a file it changed. A Kit outside the app is outside what the recorder notes, so a run whose processes
+loaded its code, other than the recorder and coverage provider it runs under, holds that Kit's source as the key
+`#kit`. A failure is never kept, and neither is a pass during which a path it used changed. Worktrees of one
+repository share what is kept.
 
 What the recorder can't see, a reused check must not depend on:
 
 - reads by programs that aren't Node, such as `git`, `grep` or a shell's globbing;
 - reads by a Node process started with an environment that drops `NODE_OPTIONS`, `KIT_READS` or `KIT_ROOT`;
 - what Node's own module loader reads to resolve a module, such as a `package.json` below the app root, and
-  the paths a resolution tried and didn't find. The app root's `package.json` is part of what a pass is kept
-  under, so its `type`, `exports` and `imports` are covered.
+  the paths a resolution tried and didn't find. The app root's `package.json` is part of the runtime, so its
+  `type`, `exports` and `imports` are covered, and a package installed where an import of a held package looked
+  changes that package's state;
+- a package changed without a read the recorder notes: a native library loaded through `dlopen`, files a package
+  fetched outside the app (such as browser downloads), a package linked from outside the app, a package first
+  installed where an import that found nothing looked, or `node_modules` that no longer matches the lockfile.
 
 Directory listings the test runner makes itself, such as vitest finding its test files, are not noted; a listing
 any other installed package makes, such as `tsc` expanding `include`, is.

@@ -911,3 +911,25 @@ without naming the app.
   `R1:migration-zone` as they did before the list, so an app whose baseline dropped those limits under a declared
   harness has them back as limits. The recording format is unchanged: this alters findings, not how passes are
   recorded.
+
+## 2026-11-01 · Passes hold the packages they used, and an installed Kit file by file
+
+- **Decision:** the runtime a pass is kept under is Node's version, platform and architecture and the app's
+  `package.json` without `scripts`; a check whose command runs package scripts is kept under `scripts` besides.
+  The lockfile leaves the runtime: the recorder notes each path under `node_modules` as its package's lockfile path,
+  and a pass holds `#package:<path>`, the package's `package-lock.json` entry and where its name is installed. The
+  runner's own reads in a batch stay every test's. A `package.json` only a loader or npm read is held as
+  `#manifest`, without scripts; a lockfile only a loader read (Vite's cache key) is held through the packages. A
+  Kit installed among the app's packages is noted file by file, as the app's own files are; `#kit` stays only for a
+  Kit outside the app, whose files no recording names. With no lockfile or no `packages` map, the runtime holds
+  the lockfile whole. `RECORDING_FORMAT` is 2.
+- **Why:** in Leeloo, about 1,900 test files and three hours of gate, editing one npm script or bumping one
+  dependency, Kit's own pin included, reran every pass; and since its vitest config imports Kit, every test held
+  `#kit`. A test depends on the packages it loaded and the Kit files it ran, not on the rest. npm and Vite read
+  `package.json` (and Vite the lockfile) in every run, so without the `#manifest` and lockfile rules the finer
+  runtime alone would change nothing.
+- **Limits:** a package changed without a read the recorder notes (a native library opened through `dlopen`, files
+  fetched outside the app, a package linked from outside it, `node_modules` out of step with the lockfile) is not
+  seen; nor is a package first installed where an import that found nothing looked. Node's version, platform and
+  architecture stay in the runtime.
+- **Transition:** every pass kept before is under the old format and runs once more.

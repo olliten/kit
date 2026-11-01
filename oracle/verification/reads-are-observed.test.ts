@@ -73,8 +73,11 @@ test("a check's reads, listings, probes and loads are recorded in its process, i
     "main.mjs": expect.arrayContaining(["load"]),
     "worker.mjs": expect.arrayContaining(["load"]),
     "child.mjs": expect.arrayContaining(["load"]),
+    // An installed package's files are recorded as the package they fall in.
+    "node_modules/pkg": ["package"],
+    "node_modules/vitest": ["package"],
   });
-  expect([...uses.keys()].filter((path) => path.includes("node_modules") || path.includes("outside") || path === "runner-listed")).toEqual([]);
+  expect([...uses.keys()].filter((path) => path.includes("node_modules/") ? uses.get(path)?.has("package") !== true : path.includes("outside") || path === "runner-listed")).toEqual([]);
 });
 
 test("the app root's own listing, recursive listings, copies, links, globs and native probes are recorded, whatever the stack trace limit", async () => {
@@ -206,4 +209,13 @@ test("recordings are read as each path's uses, and each path is kept by what it 
   expect(heldPath("m.mjs#ran:")).toEqual({ path: "m.mjs", kind: false, ran: [] });
   expect(heldPath("a.txt#kind")).toEqual({ path: "a.txt", kind: true });
   expect(heldPath("odd#name.txt")).toEqual({ path: "odd#name.txt", kind: false });
+  // An installed package is kept by its lockfile path; a manifest only a loader read, without its scripts; and the
+  // lockfile only a loader read, through the packages alone.
+  expect(heldKeys(pathUses(["package node_modules/@a/b\nload package.json\nload package-lock.json\nload lib/package.json\nread lib/package.json"]), new Map())).toEqual([
+    "#package:node_modules/@a/b",
+    "lib/package.json",
+    "package.json#manifest",
+  ]);
+  expect(heldPath("#package:node_modules/a/node_modules/b")).toEqual({ path: "#package:node_modules/a/node_modules/b", kind: false, package: "node_modules/a/node_modules/b" });
+  expect(heldPath("package.json#manifest")).toEqual({ path: "package.json", kind: false, manifest: true });
 });

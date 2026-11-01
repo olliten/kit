@@ -8,7 +8,7 @@ import { testRuns } from "../../core/readings/test-runs.js";
 import { ranLines } from "../../core/readings/coverage-report.js";
 import { functionsRun } from "../../core/readings/ran-code.js";
 import { sharedPath, sharedRefs } from "../../core/readings/shared-passes.js";
-import { heldKey, heldKeys, heldPath, holding, loadedBeside, pathUses, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { heldKey, heldKeys, heldPath, holding, loadedBeside, pathUses, runtimeOf, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { testLine } from "../../core/readings/verification-configuration.js";
 import { calendar } from "../adapters/calendar.js";
 import { coverageProvider } from "../adapters/coverage-provider.mjs";
@@ -103,7 +103,9 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
 
   const runtime = toolchain.runtime(root);
   const kit = toolchain.kit(engineRoot, root);
-  const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtime);
+  // A check whose command runs package scripts is kept under them besides.
+  const scripts = toolchain.scripts(root);
+  const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtimeOf(check.line, runtime, scripts));
   // Each path's state is read once per version of it, so tests that share files read each once. A pass that loaded
   // the code of a Kit outside the app also holds that Kit's source.
   const held = heldStates(root, kit);
@@ -240,8 +242,10 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         textFiles.write(`${scratch}/started`, "");
         const start = filesystem.modified(`${scratch}/started`) ?? 0;
         held.since(filesystem.version(`${scratch}/started`)?.changed ?? -Infinity);
+        // An installed package is held by its lockfile entry, so it changed when the lockfile did.
         const changedSince = (key: string): boolean => {
-          const { path, kind } = heldPath(key);
+          const { path: named, kind, package: installed } = heldPath(key);
+          const path = installed === undefined ? named : "package-lock.json";
           const at = path === "." ? root : `${root}/${path}`;
           const modified = filesystem.modified(at);
           return !kind && modified !== undefined && modified > start && filesystem.kind(at) === "file";
@@ -299,7 +303,9 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
                 NODE_OPTIONS: [processes.environment("NODE_OPTIONS"), `--import ${readRecorder.location}`].filter((option) => option !== undefined && option !== "").join(" "),
                 KIT_READS: directory,
                 KIT_ROOT: root,
-                KIT_ENGINE: kit === "" ? "" : engineRoot,
+                // The Kit running the gate: its files are recorded as the app's when it is installed among the
+                // app's packages, and its loaded code is marked when it is outside the app.
+                KIT_ENGINE: engineRoot,
                 KIT_TESTS: batch ? `${scratch}/${index}.tests` : "",
                 KIT_TEST: "",
                 ...(check?.records === true ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
