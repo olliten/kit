@@ -18,7 +18,6 @@ A config's YAML fence declares only these keys. Any other key, at any level, is 
 | `exceptions` | Exact executable entrypoints outside every zone. |
 | `limits.functionLines` | The most lines a named function's body may span; without it no function is measured. |
 | `rules` | Rules switched off, each the rule's name mapped to `off` and the reason, such as `excerpt-cohesion: {off: <reason>}`; only `ungoverned-function` and `excerpt-cohesion` may be, and a switched-off rule reports no finding. The authority rules `native-authority` and `ambient-global` may instead be scoped to production code, as `native-authority: {tests: off, reason: <reason>}`: the rule then reports nothing on a test file (`<name>.test.<extension>`) and everything else as before. |
-| `harnesses` | Shared test code, each row `under` a relative directory ending in `/` or one `file` the app holds, and a nonempty `reason`, such as `- {under: spec/harness/, reason: <reason>}` or `- {file: oracle/commands/command-bar.harness.ts, reason: <reason>}`; no patterns. What a test reaches through a module under one, or the file, is the harness's, not the test's, for `R4:proof-scope`; a placed module the test reaches other than through a harness is still charged. An import from a module under a harness, or from a test to one, draws no `R1:migration-zone`. |
 | `pending` | Rows each naming a `claim` awaiting its proof, as `<topic file>:<anchor>`, or a `test` awaiting its claim's new anchor, as its path, and a nonempty `reason`, such as `- {claim: spec/proof.md:claims-have-one-home, reason: <reason>}`; its missing proof or unknown claim is reported as `Kit pending <key>: <reason>` and never fails, and a row whose finding is gone fails as `R3:paid-pending` until removed. |
 | `packages` | Package contracts: `name`, `capabilities`, and optionally `entrypointExports`. |
 | `adapters` | Adapter registrations: `module`, `export`, `capability`, `kind`, `zones`, and optionally `contract.type`, `primitives`, `globals`, `packages`. |
@@ -179,6 +178,13 @@ home, such as Node built-in declarations; several homes retain uncertainty.
   accounting as location debt. Declaring a layout also checks that source, tests and specs sit in their roots.
 - `legacy-zones`: the zone a legacy prefix, or an exact list of legacy files, actually belongs to, so imports
   across placement keep zone boundaries.
+- Unplaced code is debt counted against itself: `R1:file-role` for its location and `R1:legacy-size` for its size,
+  so a new unplaced file fails as new debt. Its reach is its own. For `R4:proof-scope`, a claim's tests' imports
+  stop at an unplaced module in a code root or legacy location (anywhere once a layout is declared; never a
+  declared entrypoint): a placed module they reach only through it is not charged, while one they reach directly,
+  or through other placed code, is. An import from a test, or from a placed module under the proof root, into
+  unplaced code draws no `R1:migration-zone`; every other edge keeps its zone rules. No key declares shared test
+  code; a config holding `harnesses` fails as any unknown key does.
 - A baseline is `kit check --baseline <path>`: a file ending `.json` holding every debt key, or a directory such as
   `kit/debt/legacy/` holding one file per finding path, named by the path with `/` replaced by `+`. A directory
   lets agents paying down debt on different modules edit different files; `--tighten` rewrites only the files

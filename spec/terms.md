@@ -185,7 +185,7 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
-- **edge-check** — findings from import edges among checked code: entrypoint imports, layer and zone direction, legacy edges, which ask no zone of a declared harness, and cycles.
+- **edge-check** — findings from import edges among checked code: entrypoint imports, layer and zone direction, legacy edges, which ask no zone of unplaced code a test or placed proof code imports, and cycles.
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{dependency-check}}, {{snapshot}}
@@ -233,10 +233,6 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{snapshot}}
-- **harness-configuration** — the directories and files of shared test code an app declares as harnesses, each with its reason, checked as they are read, and the declared files an app doesn't hold.
-  - Role: derived
-  - Zone: core
-  - From: {{config-values}}, {{default-config}}
 - **import-authority** — what a module acquires by importing outside the checked code: adapter packages, entrypoint packages and declared package rows.
   - Role: derived
   - Zone: core
@@ -293,7 +289,7 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
-- **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them; a named composition, or a named module under the proof root, names what it reaches, and what a test reaches through a declared harness is the harness's.
+- **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them; a named composition, or a named module under the proof root, names what it reaches, and reach stops at unplaced code counted as debt.
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{placement-of}}, {{proof-reach}}, {{snapshot}}
@@ -519,7 +515,7 @@
 - **kit-configuration** — the config an app declares, read from its YAML fence and validated section by section, and the paths a check is given.
   - Role: composition
   - Zone: core
-  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{harness-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{pending-claims}}, {{rule-switch}}, {{verification-configuration}}
+  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{pending-claims}}, {{rule-switch}}, {{verification-configuration}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate
@@ -536,10 +532,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{compiler-facts}}, {{default-config}}, {{fact-keys}}, {{fact-walk}}, {{file}}, {{file-facts}}, {{ignored-import}}, {{root-token}}, {{source-size}}, {{test-reach}}, {{verdict-reuse}}, {{authority-recorder}}, {{behaviour-reading}}, {{contract-reading}}, {{contract-recorder}}, {{escape-recorder}}, {{function-recorder}}, {{import-recorder}}, {{native-reading}}, {{syntax-reading}}, {{term-recorder}}
-- **read-config** — the workflow that reads a config file and answers the configured Kit, or the command's failure naming each issue, a declared harness file the app doesn't hold among them.
+- **read-config** — the workflow that reads a config file and answers the configured Kit, or the command's failure naming each issue.
   - Role: composition
   - Zone: substrate
-  - Of: {{command}}, {{default-config}}, {{filesystem}}, {{harness-configuration}}, {{kit-configuration}}, {{text-files}}
+  - Of: {{command}}, {{default-config}}, {{kit-configuration}}, {{text-files}}
 - **read-snapshot** — the workflow that acquires codebase and compiler facts, connects their interpretations and assembles one snapshot.
   - Role: composition
   - Zone: substrate

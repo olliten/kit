@@ -20,7 +20,7 @@ function markdown(root: string, folder: string): string[] {
 // The claims a module keeps, for a governed root. As a read hook it takes the opened path from its input and
 // answers in the hook's format, so an agent sees a module's promises when it opens the file.
 export async function moduleClaims(root: string, configPath: string, target: string) {
-  const loaded = readConfig(configPath, root);
+  const loaded = readConfig(configPath);
   if ("failure" in loaded) throw new Error(loaded.failure.stderr.trim());
   const { config } = loaded;
   const relative = target.startsWith(`${root}/`) ? target.slice(root.length + 1) : target;
@@ -56,7 +56,7 @@ export async function runRefs(
   const event: unknown = hook ? JSON.parse(input.read()) : undefined;
   const toolInput: unknown = typeof event === "object" && event !== null ? Reflect.get(event, "tool_input") : undefined;
   const opened: unknown = typeof toolInput === "object" && toolInput !== null ? Reflect.get(toolInput, "file_path") : undefined;
-  const loaded = readConfig(configPath, root);
+  const loaded = readConfig(configPath);
   if ("failure" in loaded) return loaded.failure;
   const target = hook ? opened : args[0];
   if (typeof target !== "string" || !target)

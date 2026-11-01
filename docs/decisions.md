@@ -891,3 +891,23 @@ without naming the app.
   so declaring them by folder would also declare the tests and other code there. Each is declared by name, so
   one that is renamed or removed fails rather than silently declaring nothing.
 - **Transition:** nothing changes for `under` rows.
+
+## 2026-11-01 · Unplaced code carries its own reach
+
+- **Decision:** everything not yet Kit-governed is debt, and what a test reaches through it is that code's debt,
+  not the test's. For `R4:proof-scope`, a claim's tests' imports stop at an unplaced module the check counts as
+  debt: one in a code root or legacy location, or anywhere once a layout is declared, and never a declared
+  entrypoint. A placed module reached only through one is not charged; one reached directly, or through other
+  placed unnamed code, still is. An import from a test, or from a placed module under the proof root, into
+  unplaced code draws no `R1:migration-zone`; production code's edges keep their rules. This replaces the declared
+  `harnesses` list of the two 2026-10-31 entries above: the key and its reader are gone, and a config that still
+  declares it fails with the unknown-key error naming `harnesses`.
+- **Why:** a new test that used an old helper inherited all the helper reaches as fresh proof-scope keys, and a
+  new test can't add debt, so it failed. A declared list fixed this one directory or file at a time, though the
+  reach is a property of every unplaced module, not of the ones someone listed. That code's debt is already
+  counted where it lives (`R1:file-role`, `R1:legacy-size`), so a new unplaced helper still fails as new debt, and
+  no list is needed to keep new harnesses out.
+- **Transition:** an app removes its `harnesses` rows. Edges from unplaced code into placed code draw
+  `R1:migration-zone` as they did before the list, so an app whose baseline dropped those limits under a declared
+  harness has them back as limits. The recording format is unchanged: this alters findings, not how passes are
+  recorded.

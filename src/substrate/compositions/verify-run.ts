@@ -47,7 +47,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const given = option("root");
   const root = given === undefined ? engineRoot : at(given);
   const configPath = option("config") === undefined ? `${engineRoot}/self-config.md` : at(option("config") ?? "");
-  const loaded = readConfig(configPath, root);
+  const loaded = readConfig(configPath);
   if ("failure" in loaded) return loaded.failure;
   const policy = loaded.config.verify;
   if (policy === undefined)
