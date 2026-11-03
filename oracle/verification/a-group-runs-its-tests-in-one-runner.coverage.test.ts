@@ -37,7 +37,7 @@ const runner = [
   'const lcov = (file, functions) => {',
   '  readFileSync(file, "utf8");',
   '  return ["TN:", `SF:${file}`, ...functions.map(([name, line]) => `FN:${line},${name}`),',
-  '    ...functions.map(([name, , count]) => `FNDA:${count},${name}`), "end_of_record", ""].join("\n");',
+  '    ...functions.map(([name, , count]) => `FNDA:${count},${name}`), "end_of_record", ""].join("\\n");',
   '};',
   'if (mode === "multiple") {',
   '  for (const test of tests) {',
@@ -90,7 +90,7 @@ function app() {
 test("a batch combines each test's LCOV reports without borrowing sibling or chunk-wide execution", async () => {
   const { project, verify, ran } = app();
   const result = await verify();
-  expect(result.exitCode).toBe(0);
+  expect(result.exitCode, result.stdout + result.stderr).toBe(0);
   expect(ran("multiple", "tests/a.test.ts")).toEqual({ [primary]: ["alpha@1"], [extraA]: ["extraAlpha@1"] });
   expect(ran("multiple", "tests/b.test.ts")).toEqual({ [primary]: ["beta@4"], [extraB]: ["extraBeta@1"] });
   const initial = await verify("--plan");
@@ -104,7 +104,8 @@ test("a batch combines each test's LCOV reports without borrowing sibling or chu
 test("ordinary single-report batch evidence remains unchanged", async () => {
   const { project, verify, ran } = app();
   project.write({ "kit/config.md": config("single") });
-  expect((await verify()).exitCode).toBe(0);
+  const result = await verify();
+  expect(result.exitCode, result.stdout + result.stderr).toBe(0);
   expect(ran("single", "tests/a.test.ts")).toEqual({ [primary]: ["alpha@1"] });
   expect(ran("single", "tests/b.test.ts")).toEqual({ [primary]: ["beta@4"] });
 }, 180_000);
