@@ -93,14 +93,18 @@ a claim depends on are named in it, so each module's claims are found from its n
   a function's reported name and line match the source. `kit check` reads them from each test's pass while it
   still holds. While a test under the proof root has none, the rules that read what tests ran wait, and the check
   says how many tests they wait for. A placed module no test ran is not missing: its functions are simply
-  unrun. · {#runs-are-kept-with-each-pass}
+  unrun. When no test command records runs, the check says execution obligations are not established and
+  asks for a recording test command and `kit verify`. · {#runs-are-kept-with-each-pass}
   - Implementation: {{verify-run}}, {{check-run}}, {{held-state}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{verdict}}, {{verdict-reuse}}, {{evidence-store}}, {{filesystem}}, {{processes}}, {{text-files}}
   - Proof: {{temporary-project}}
 - Every named function of a placed module is run by a test of a claim that names the module, so each piece of
-  code is governed by a claim that promises something about it. A named function none of those claims runs is
+  code is governed by a claim that promises something about it. For this obligation, a test qualifies only
+  when its transitive runtime imports reach no declared application entrypoint. Helpers, side-effect imports
+  and legacy modules keep their runtime edges; erased imports do not count. Claim proofs are proof entrypoints,
+  not application entrypoints. Other tests retain their integration evidence. A named function none of those qualified tests runs is
   debt: proved only incidentally by another claim, or by none. A module of only types has no functions, and an
   anonymous function belongs to the named function that holds it. · {#every-function-is-governed}
-  - Implementation: {{function-governance}}, {{claim-runs}}, {{function-recorder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
+  - Implementation: {{function-governance}}, {{independent-runs}}, {{claim-runs}}, {{function-recorder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
   - Proof: {{recorded-functions}}, {{project-snapshot}}
 - Claims that share a module share its code. A named function only one claim's tests run, and that no named
   function other claims run holds, is that claim's excerpt; a module that holds the excerpts of two or more

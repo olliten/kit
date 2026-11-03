@@ -224,7 +224,7 @@
 - **function-governance** — debt from the named functions of a module that no claim naming it runs.
   - Role: derived
   - Zone: core
-  - From: {{claim-runs}}, {{finding}}, {{runs}}, {{snapshot}}
+  - From: {{claim-runs}}, {{finding}}, {{independent-runs}}, {{runs}}, {{snapshot}}
 - **function-size** — findings for each named function whose body spans more lines than the configured limit, carrying its lines.
   - Role: derived
   - Zone: core
@@ -241,6 +241,10 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
+- **independent-runs** — recorded runs whose proof's runtime imports reach no declared application entrypoint.
+  - Role: derived
+  - Zone: core
+  - From: {{placement-of}}, {{runs}}, {{snapshot}}
 - **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
   - Role: derived
   - Zone: core
