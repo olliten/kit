@@ -97,7 +97,9 @@ so a later gate runs only what an edit can have changed.
   - Proof: {{temporary-project}}
 - A group whose command takes `{tests}` runs a chunk's due tests in one invocation of vitest 1.x, with a fresh
   process per test file and Kit's provider writing each file's result, coverage and executed scripts apart; a
-  test's pass is kept under the command as it reads for that file alone. A recording is a test's when its process
+  test's pass is kept under the command as it reads for that file alone. Each test's encoded-path directory
+  under `{dir}` may contain several LCOV reports, whose execution evidence is combined only for that test;
+  sibling directories and chunk-wide reports grant it no execution credit. A recording is a test's when its process
   learned from the runner's first message naming it among the files that process runs that it runs that test
   alone, or was started by such a process; the runner's own reads, listings and probes are every test's but
   those it made of another test of the invocation, and a file it loaded is each test's that executed it, or every

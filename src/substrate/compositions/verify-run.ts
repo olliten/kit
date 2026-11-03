@@ -386,10 +386,10 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
           const each = checks.find((item) => item.test === outcome.test);
           if (each === undefined) continue;
           if (outcome.outcome === "passed") {
-            const lcov = own(outcome.test, "lcov.info");
+            const lcov = filesIn(`${coverage}/${encodeURIComponent(outcome.test)}`);
             const children = namedIn(`${coverage}/v8/${encodeURIComponent(outcome.test)}`);
             const beside = loadedBeside([], children, outcome.test, root);
-            settle(each, seconds, outcome.uses, beside, lcov === undefined ? [] : [lcov], [...runner, ...children.map((child) => child.text)]);
+            settle(each, seconds, outcome.uses, beside, lcov, [...runner, ...children.map((child) => child.text)]);
           } else if (outcome.outcome === "failed") fail(each, result);
           else again.push(each);
         }
