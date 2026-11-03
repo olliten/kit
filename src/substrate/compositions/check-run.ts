@@ -125,6 +125,12 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
     counts[key] = (counts[key] ?? 0) + 1;
   }
   stdout += "Kit check " + JSON.stringify({ ...(config.app === undefined ? {} : { app: config.app }), counts, receipt: checked.receipt }) + "\n";
+  for (const rule of ["ungoverned-function", "excerpt-cohesion"] as const) {
+    const disabled = config.rules?.[rule];
+    if (disabled !== undefined) stdout += `Kit runs: ${rule} is switched off: ${disabled.off}\n`;
+  }
+  if (!records && engagedRules(config).length > 0)
+    stdout += "Kit runs: execution obligations are not established; configure a recording test command with {dir} and run `kit verify`.\n";
   if (waiting.length > 0)
     stdout += `Kit runs: the rules that read what tests ran wait for ${waiting.length} tests with no kept pass; run \`kit verify\`.\n`;
   for (const item of findings.filter((item) => item.category === "pending"))

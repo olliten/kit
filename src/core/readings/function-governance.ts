@@ -2,6 +2,7 @@ import type { Runs } from "../primitives/runs.js";
 import type { Snapshot } from "../primitives/snapshot.js";
 import { claimRuns } from "./claim-runs.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
+import { independentRuns } from "./independent-runs.js";
 
 export interface GovernanceFinding extends Finding {
   readonly category: "legacy-debt";
@@ -10,11 +11,10 @@ export interface GovernanceFinding extends Finding {
   readonly limit: "";
 }
 
-// Every named function of a placed module is run by a test of a claim that names the module. One none of
-// them runs is governed by no claim that promises anything about it: proved only incidentally, or not at all.
+// Application journeys retain integration evidence but cannot establish that a module works independently.
 export function functionGovernance(snapshot: Snapshot, runs: Runs): GovernanceFinding[] {
   const findings: GovernanceFinding[] = [];
-  for (const { module, functions, naming, ran } of claimRuns(snapshot, runs)) {
+  for (const { module, functions, naming, ran } of claimRuns(snapshot, independentRuns(snapshot, runs))) {
     const governed = new Set([...ran].filter(([claim]) => naming.has(claim)).flatMap(([, ids]) => [...ids]));
     const incidental = new Set([...ran].filter(([claim]) => !naming.has(claim)).flatMap(([, ids]) => [...ids]));
     for (const fact of functions)
@@ -25,8 +25,8 @@ export function functionGovernance(snapshot: Snapshot, runs: Runs): GovernanceFi
             "ungoverned-function",
             module,
             incidental.has(fact.id)
-              ? `Only claims that don't name this module run ${fact.name}: prove it from a claim that names the module.`
-              : `No test runs ${fact.name}: prove it from a claim that names this module, or delete it.`,
+              ? `Only independent proofs of claims that don't name this module run ${fact.name}: prove it from a claim that names the module.`
+              : `No independent claim proof runs ${fact.name}: prove it from a claim that names this module, or delete it.`,
             fact.id,
           ),
           category: "legacy-debt",

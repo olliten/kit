@@ -58,6 +58,43 @@ const roundsTest =
   "import { test } from 'node:test';\nimport assert from 'node:assert';\nimport { round } from '../../src/core/readings/round.ts';\n" +
   "test('rounds', () => { assert.equal(round(1.4), 1); });\n";
 
+for (const { name, verification } of [
+  { name: "no test command is configured", verification: "" },
+  {
+    name: "the test command does not record runs",
+    verification: "verify:\n  checks: []\n  tests:\n    under: oracle/\n    command: node --test {test}\n",
+  },
+])
+  test(`kit check reports execution obligations as not established when ${name}`, async () => {
+    const project = temporaryProjects.open("kit-no-runs-");
+    try {
+      project.write({
+        ".git/HEAD": "ref: refs/heads/main\n",
+        "package.json": JSON.stringify({ type: "module" }),
+        "tsconfig.json": JSON.stringify({
+          compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true, noEmit: true, types: [] },
+          include: ["oracle/**/*.ts"],
+        }),
+        "oracle/sums/total-sums.test.ts": "export {};\n",
+        "spec/terms.md": "# Terms\n",
+        "spec/sums.md": "# Sums\n\nSums.\n\n## Totals\n\n- A total sums its values. · {#total-sums}\n",
+        "kit/config.md":
+          "```yaml\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\n" + verification + "```\n",
+      });
+      const result = await runCheck({
+        engineRoot: project.root,
+        args: ["--root", project.root, "--config", join(project.root, "kit/config.md")],
+        cwd: project.root,
+      });
+      expect(result.stdout).toContain("execution obligations are not established");
+      expect(result.stdout).toMatch(/record/i);
+      expect(result.stdout).toContain("kit verify");
+      expect(result.stdout).not.toContain("wait for");
+    } finally {
+      project.dispose();
+    }
+  });
+
 test("kit verify keeps what each test ran with its pass, and kit check reads it while every test has a pass that holds", async () => {
   const project = temporaryProjects.open("kit-runs-");
   const config = join(project.root, "kit/config.md");
@@ -85,12 +122,16 @@ test("kit verify keeps what each test ran with its pass, and kit check reads it 
         "    command: node --experimental-strip-types --no-warnings --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}\n```\n",
     });
     // Before any pass is kept, the rules that read what tests ran wait, and the check says so.
-    expect((await runCheck(request())).stdout).toContain("wait for 1 tests");
+    const awaiting = (await runCheck(request())).stdout;
+    expect(awaiting).toContain("wait for 1 tests");
+    expect(awaiting).not.toContain("execution obligations are not established");
     expect(await ungoverned()).toEqual([]);
 
     expect((await runVerify(request())).exitCode).toBe(0);
     expect(await ungoverned()).toEqual([expect.stringContaining("src/core/readings/total.ts")]);
-    expect((await runCheck(request())).stdout).not.toContain("wait for");
+    const recorded = (await runCheck(request())).stdout;
+    expect(recorded).not.toContain("wait for");
+    expect(recorded).not.toContain("execution obligations are not established");
 
     // A new test has no kept pass, so the rules wait again until it runs.
     project.write({

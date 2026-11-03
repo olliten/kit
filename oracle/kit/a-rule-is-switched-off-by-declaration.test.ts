@@ -74,6 +74,7 @@ function app(rules: string) {
   const project = temporaryProjects.open("kit-rule-switch-");
   projects.push(project);
   project.write({
+    ".git/HEAD": "ref: refs/heads/main\n",
     "src/legacy/kept.ts": "export const kept = 1;\n",
     "oracle/text/sums.test.ts": "export {};\n",
     "tsconfig.json": JSON.stringify({
@@ -132,6 +133,10 @@ test("a rule switched off has its baseline keys paid, and tightening drops them"
   const { project, check, debt } = app(`rules:\n  ungoverned-function: {off: "${reason}"}\n`);
   const keys = await recorded(check, project);
   const failed = await check();
+  const disabled = failed.stdout.split("\n").find((line) => line.includes("ungoverned-function") && line.includes(reason));
+  expect(disabled).toBeDefined();
+  expect(disabled).toMatch(/\boff\b/);
+  expect(failed.stdout.split("\n").some((line) => line.includes("excerpt-cohesion") && /\boff\b/.test(line))).toBe(false);
   expect(failed.exitCode).toBe(1);
   expect(failed.stderr).toBe(`${governed}: No finding has this debt key any more. Run \`kit check --tighten\` to drop paid debt.\n`);
   expect((await check("--tighten")).exitCode).toBe(0);

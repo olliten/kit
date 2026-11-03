@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, expect, test } from "vitest";
-import { verdictKind, verdictOf } from "../../src/core/readings/verdict-reuse.js";
+import { heldKeys, pathUses, verdictKind, verdictOf } from "../../src/core/readings/verdict-reuse.js";
 import { testLine } from "../../src/core/readings/verification-configuration.js";
 import { coverageProvider } from "../../src/substrate/adapters/coverage-provider.mjs";
 import { evidenceStore } from "../../src/substrate/adapters/evidence-store.js";
@@ -208,10 +208,26 @@ test("a process the runner starts names the one test it was sent, and a process 
     expect(result?.status).toBe(0);
     return textFiles
       .entries(reads)
-      .map((entry) => textFiles.read(join(reads, entry.name)).split("\n").filter(Boolean).sort().join(" "))
-      .sort();
+      .map((entry) => {
+        const lines = textFiles.read(join(reads, entry.name)).split("\n").filter(Boolean);
+        const provenance = lines.filter((line) => line.startsWith("test ") || line.startsWith("under ")).sort();
+        const uses = pathUses([lines.filter((line) => !provenance.includes(line)).join("\n")]);
+        return {
+          provenance,
+          loaded: [...uses].filter(([, kinds]) => kinds.has("load")).map(([path]) => path).sort(),
+          read: [...uses].filter(([, kinds]) => kinds.has("read")).map(([path]) => path).sort(),
+          dependencies: heldKeys(uses, new Map<string, readonly number[]>()),
+        };
+      })
+      .sort((left, right) => left.dependencies.join("\n").localeCompare(right.dependencies.join("\n")));
   };
-  expect(await recorded("tests/a.test.mjs")).toEqual(["load worker.mjs read data.txt test tests/a.test.mjs", "read more.txt under tests/a.test.mjs"]);
+  expect(await recorded("tests/a.test.mjs")).toEqual([
+    { provenance: ["test tests/a.test.mjs"], loaded: ["worker.mjs"], read: ["data.txt"], dependencies: ["data.txt", "worker.mjs"] },
+    { provenance: ["under tests/a.test.mjs"], loaded: [], read: ["more.txt"], dependencies: ["more.txt"] },
+  ]);
   // A process sent two tests names both, so neither keeps its reads.
-  expect((await recorded("tests/a.test.mjs", "tests/b.test.mjs"))[0]).toBe("load worker.mjs read data.txt test tests/a.test.mjs test tests/b.test.mjs");
+  expect(await recorded("tests/a.test.mjs", "tests/b.test.mjs")).toEqual([
+    { provenance: ["test tests/a.test.mjs", "test tests/b.test.mjs"], loaded: ["worker.mjs"], read: ["data.txt"], dependencies: ["data.txt", "worker.mjs"] },
+    { provenance: [], loaded: [], read: ["more.txt"], dependencies: ["more.txt"] },
+  ]);
 });

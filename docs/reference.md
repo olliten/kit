@@ -412,9 +412,22 @@ committed. While any such test has no pass that holds, the two rules that read w
 check says how many tests they wait for; `kit verify` runs `kit check` after the tests, so the gate always has
 them. Their findings are debt that may only shrink:
 
-- `ungoverned-function`: a named function no test of a claim naming its module runs.
+- `ungoverned-function`: a named function no independent test of a claim naming its module runs. A proof
+  qualifies only if its transitive runtime imports reach no declared application entrypoint. The graph
+  follows helpers, side effects and legacy modules without stopping at declaration-sensitive proof reach;
+  compiler-established erased imports do not count. Each test qualifies separately, before claim variants
+  combine their execution evidence. Claim proofs are proof entrypoints, not application entrypoints.
 - `excerpt-cohesion`: a module holding, for two or more claims, code that only that claim runs and that no
   code other claims run holds. Adapters are exempt.
+
+Independence here is a structural import check. It does not establish public-interface invocation or detect
+application startup hidden behind an opaque child process, dynamic load or remote service. Existing compiler
+and capability checks still apply. Browser-page execution requires browser evidence; Node coverage alone
+does not establish it.
+
+When no test command records runs, `kit check` explicitly reports execution obligations as not established.
+It also prints each switched-off execution rule and its declared reason. Neither state establishes execution
+compliance; configure recording and use `kit verify` for the execution evidence.
 
 A check with `after: tests`, such as `kit check`, runs once the tests' passes are kept, and is not kept itself
 when a test's pass was not.
