@@ -54,8 +54,125 @@ test("a function only claims that don't name the module run is debt, and so is o
       },
     }),
   ).toEqual([
-    `R4:ungoverned-function:${module}:average No test runs average: prove it from a claim that names this module, or delete it.`,
-    `R4:ungoverned-function:${module}:half Only claims that don't name this module run half: prove it from a claim that names the module.`,
+    `R4:ungoverned-function:${module}:average No independent claim proof runs average: prove it from a claim that names this module, or delete it.`,
+    `R4:ungoverned-function:${module}:half Only independent proofs of claims that don't name this module run half: prove it from a claim that names the module.`,
   ]);
   expect(functionGovernance(snapshot(), { tests: {} }).every((item) => item.category === "legacy-debt")).toBe(true);
+});
+
+const proof = "oracle/sums/total-sums.test.ts";
+const integrated = "oracle/sums/total-sums.browser.test.ts";
+const startup = "src/start.ts";
+const allFunctions = ["total@1", "average@4", "half@5"];
+type Edge = { readonly from: string; readonly to: string; readonly typeOnly?: boolean };
+
+// Both projections contain erased edges, so only compiler-established runtime imports exclude a proof.
+function graph(edges: readonly Edge[], fallback = false, declared: readonly string[] = [startup]): Snapshot {
+  const base = snapshot();
+  const project = base.compiler?.projects[0];
+  if (project === undefined) throw new Error("The fixture must retain its recorded functions.");
+  const paths = [...new Set([module, proof, integrated, ...edges.flatMap(({ from, to }) => [from, to])])];
+  return {
+    ...base,
+    config: { ...base.config, exceptions: declared },
+    files: paths.map((path) => ({ path, type: path.endsWith(".test.ts") ? "test" : "source" })),
+    imports: edges.map(({ from, to }) => ({ from, to })),
+    compiler: {
+      version: "",
+      projects: [{
+        ...project,
+        files: fallback ? [module] : paths,
+        imports: fallback ? [] : edges.map(({ from, to, typeOnly }) => ({
+          file: from,
+          specifier: to,
+          target: to,
+          typeOnly: typeOnly ?? false,
+        })),
+      }],
+    },
+  };
+}
+
+test("execution through a declared application entrypoint cannot govern a module", () => {
+  const result = functionGovernance(graph([{ from: proof, to: startup }]), {
+    tests: { [proof]: { [module]: allFunctions } },
+  });
+  expect(result.map(({ debtKey }) => debtKey)).toEqual([
+    `R4:ungoverned-function:${module}:average`,
+    `R4:ungoverned-function:${module}:half`,
+    `R4:ungoverned-function:${module}:total`,
+  ]);
+  expect(result.every(({ fix }) => /independent/i.test(fix))).toBe(true);
+});
+
+test("runtime imports follow side effects and legacy helpers without stopping at a cycle", () => {
+  const helper = "oracle/legacy/driver.ts";
+  const legacy = "src/legacy/bootstrap.ts";
+  const result = functionGovernance(graph([
+    { from: proof, to: helper },
+    { from: helper, to: legacy },
+    { from: legacy, to: helper },
+    { from: legacy, to: startup },
+  ]), { tests: { [proof]: { [module]: allFunctions } } });
+  expect(result).toHaveLength(3);
+  expect(result.every(({ fix }) => /independent/i.test(fix))).toBe(true);
+});
+
+test("independent and integration variants of one claim cannot merge their execution credit", () => {
+  const result = functionGovernance(graph([{ from: integrated, to: startup }]), {
+    tests: {
+      [proof]: { [module]: ["total@1"] },
+      [integrated]: { [module]: ["average@4", "half@5"] },
+    },
+  });
+  expect(result.map(({ debtKey }) => debtKey)).toEqual([
+    `R4:ungoverned-function:${module}:average`,
+    `R4:ungoverned-function:${module}:half`,
+  ]);
+  expect(result.every(({ fix }) => /independent/i.test(fix))).toBe(true);
+});
+
+test("an independent variant may supply all execution while the application journey stays recorded", () => {
+  const runs: Runs = { tests: {
+    [proof]: { [module]: allFunctions },
+    [integrated]: { [module]: allFunctions },
+  } };
+  const before = JSON.stringify(runs);
+  expect(functionGovernance(graph([{ from: integrated, to: startup }]), runs)).toEqual([]);
+  expect(JSON.stringify(runs)).toBe(before);
+});
+
+test("a compiler-established erased edge to startup does not disqualify a proof", () => {
+  expect(functionGovernance(graph([{ from: proof, to: startup, typeOnly: true }]), {
+    tests: { [proof]: { [module]: allFunctions } },
+  })).toEqual([]);
+});
+
+test("a disconnected application graph does not disqualify an independent proof", () => {
+  expect(functionGovernance(graph([
+    { from: proof, to: module },
+    { from: "src/unrelated.ts", to: startup },
+  ]), { tests: { [proof]: { [module]: allFunctions } } })).toEqual([]);
+});
+
+test("declaring a claim proof as an entrypoint does not make it application startup", () => {
+  expect(functionGovernance(graph([{ from: proof, to: module }], false, [startup, proof]), {
+    tests: { [proof]: { [module]: allFunctions } },
+  })).toEqual([]);
+});
+
+test("uncompiled helpers retain fallback import edges into application startup", () => {
+  const result = functionGovernance(graph([
+    { from: proof, to: "src/legacy/driver.ts" },
+    { from: "src/legacy/driver.ts", to: startup },
+  ], true), { tests: { [proof]: { [module]: allFunctions } } });
+  expect(result).toHaveLength(3);
+});
+
+test("an unrelated runtime cycle remains independently provable", () => {
+  expect(functionGovernance(graph([
+    { from: proof, to: "oracle/legacy/driver.ts" },
+    { from: "oracle/legacy/driver.ts", to: "src/legacy/cycle.ts" },
+    { from: "src/legacy/cycle.ts", to: "oracle/legacy/driver.ts" },
+  ]), { tests: { [proof]: { [module]: allFunctions } } })).toEqual([]);
 });
