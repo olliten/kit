@@ -128,4 +128,4 @@ its config, and its debt in its own baseline.
   and an empty `kit/debt/legacy.json`, and `kit check` passes on it, so an example can't drift from the rules
   it shows. A deliberate violation lives in the proof that needs it, never in an example. · {#examples-pass-their-check}
   - Implementation: {{check-run}}
-  - Proof: {{authored-example}}, {{text-files}}, {{verify-run}}
+  - Proof: {{temporary-project}}, {{authored-example}}, {{text-files}}, {{verify-run}}
