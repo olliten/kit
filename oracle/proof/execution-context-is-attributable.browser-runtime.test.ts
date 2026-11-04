@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
-import { chromium, type Browser, type BrowserServer, type LaunchServerOptions } from "playwright-core";
+import { chromium, type Browser, type BrowserServer } from "playwright-core";
 import { afterEach, expect, test } from "vitest";
 import { moduleDoubles } from "../substrate/adapters/module-doubles.js";
+
+type LaunchServerOptions = Parameters<typeof chromium.launchServer>[0];
 
 const servers: BrowserServer[] = [];
 afterEach(async () => {
