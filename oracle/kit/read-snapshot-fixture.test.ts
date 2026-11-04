@@ -3,21 +3,10 @@ import { afterAll, expect, test } from "vitest";
 import { commentCheck } from "../../src/core/readings/comment-check.js";
 import { dependencyCheck } from "../../src/core/readings/dependency-check.js";
 import { nameCheck } from "../../src/core/readings/name-check.js";
-import { textFiles } from "../../src/substrate/adapters/text-files.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { bindingFindings } from "../core/readings/binding-findings.js";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
-
-// The clean tally example's files, keyed by their path inside the app.
-function example(from: string, below = ""): Record<string, string> {
-  const files: Record<string, string> = {};
-  for (const entry of textFiles.entries(from)) {
-    const path = `${below}${entry.name}`;
-    if (entry.directory) Object.assign(files, example(join(from, entry.name), `${path}/`));
-    else if (entry.file) files[path] = textFiles.read(join(from, entry.name));
-  }
-  return files;
-}
+import { authoredExample } from "../substrate/compositions/authored-example.js";
 
 // The violations an example never holds, planted over a copy of it: an edge outward, a cycle, a retired word, a
 // citation, a debt marker and a module no claim names.
@@ -110,7 +99,7 @@ export const firstScreen = screen(EMPTY_TALLY);
 };
 
 const app = temporaryProjects.open("kit-seeded-tally-");
-app.write({ ...example(join(import.meta.dirname, "../../examples/tally")), ...SEEDED });
+app.write(authoredExample(join(import.meta.dirname, "../../examples/tally"), SEEDED));
 afterAll(() => app.dispose());
 const FIXTURE = app.root;
 

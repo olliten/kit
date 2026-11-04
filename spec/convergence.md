@@ -46,7 +46,7 @@ and its size are debt that may only shrink, and placed code is held to every rul
   Tightening rewrites only the files whose keys changed and removes a file left with none, so agents paying down
   debt on different modules edit different files. · {#baseline-is-one-file-per-path}
   - Implementation: {{baseline-files}}, {{check-run}}, {{ratchet}}, {{text-files}}, {{check-paths}}
-  - Proof: {{temporary-project}}
+  - Proof: {{authored-example}}, {{temporary-project}}
 - A baseline entry whose debt is paid fails the check until tightening drops it: a key no legacy or proof debt
   finding holds, a legacy module's size larger than the module now is, and a legacy function's lines more than
   it now spans, each fails with the fix to run `kit check --tighten`, one line per entry, in either baseline

@@ -1,9 +1,10 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { baselineFileOf, baselineFiles, mergedBaseline } from "../../src/core/readings/baseline-files.js";
 import { runCheck } from "../../src/substrate/compositions/check-run.js";
 import { type TemporaryProject, temporaryProjects } from "../substrate/adapters/temporary-project.js";
+import { authoredExample } from "../substrate/compositions/authored-example.js";
 
 const engine = new URL("../..", import.meta.url).pathname.replace(/\/$/, "");
 const projects: TemporaryProject[] = [];
@@ -28,7 +29,8 @@ test("kit check reads a baseline directory, and tightening rewrites only the pat
   const project = temporaryProjects.open("kit-baseline-");
   projects.push(project);
   const app = join(project.root, "app");
-  cpSync(join(engine, "examples/tally"), app, { recursive: true });
+  project.write(Object.fromEntries(Object.entries(authoredExample(join(engine, "examples/tally")))
+    .map(([path, text]) => [`app/${path}`, text])));
   const config = join(app, "kit/config.md");
   writeFileSync(config, readFileSync(config, "utf8").replace("```yaml\n", "```yaml\nlayout: {legacy: [lib/]}\n").replace("  src: src/\n", "  src: [src/, oracle/]\n"));
   mkdirSync(join(app, "lib"));
