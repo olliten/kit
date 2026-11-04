@@ -205,6 +205,10 @@
   - Role: derived
   - Zone: core
   - From: {{debt-policy}}, {{finding}}, {{line-ratchet}}, {{ratchet}}
+- **deferred-group-fixture** — the grouped test identities, configuration and source texts supplied to group-deferral proofs.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **dependency-check** — findings from import direction and cycles between placed modules.
   - Role: derived
   - Zone: core

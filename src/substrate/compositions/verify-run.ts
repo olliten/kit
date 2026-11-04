@@ -94,7 +94,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
       ? [args[index + 1]]
       : argument.startsWith("--defer-group=") ? [argument.slice("--defer-group=".length)] : []);
     const [id] = groupOptions;
-    if (groupOptions.length > 1 || (groupOptions.length === 1 && (id === undefined || !id.trim() || id.startsWith("--"))))
+    if (groupOptions.length > 1 || (groupOptions.length === 1 && (id === undefined || !id.trim())))
       throw new Error("defer-group: supply one declared group id, once.");
     deferredGroup = id;
     if (deferredGroup !== undefined && args.some((argument) => argument === "--selection" || argument.startsWith("--selection=")))

@@ -123,7 +123,7 @@ so a later gate runs only what an edit can have changed.
   explicit selection policy cannot supply those fields. With no selector, verification remains exhaustive.
   · {#a-selection-names-what-it-defers}
   - Implementation: {{selection}}, {{verification-selection}}, {{verify-run}}, {{test-groups}}, {{fact-keys}}
-  - Proof: {{temporary-project}}, {{processes}}, {{text-files}}
+  - Proof: {{deferred-group-fixture}}, {{temporary-project}}, {{processes}}, {{text-files}}
 - A script a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its code
   with the body of every outermost function the test never ran left out, where a function counts as run when a
   function the coverage shows ran starts inside it. Its code is its tokens as the language's scanner reads them,
