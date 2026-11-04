@@ -55,3 +55,21 @@ test("an exact package row cannot hide its declaration home in the forbidden roo
     debtKey: `R2:dependency-exclusion:${origin}:all:direct:${forbidden}`,
   }));
 });
+
+test.each(["direct", "transitive"] as const)("exact adapter classification retains %s separation requirements", (reach) => {
+  const adapter = "src/substrate/adapters/reader.ts";
+  const result = dependencyExclusions(projectSnapshot({
+    files: [origin, forbidden, adapter],
+    imports: [{ file: adapter, specifier: contract.name, target: null, typeOnly: false, namedImports: ["read"] }],
+  }, {
+    srcRoot: ["src", "oracle"],
+    adapters: [{ module: "src/substrate/adapters/reader", export: "reader", capability: "sdk",
+      kind: "external", zones: ["substrate"], packages: [contract.name] }],
+    dependencyExclusions: [{ from: adapter, to: forbidden, imports: "runtime", reach }],
+  }));
+  expect(result.findings).toEqual([]);
+  if (reach === "direct") expect(result.limits).toEqual([]);
+  else expect(result.limits).toContainEqual(expect.objectContaining({
+    debtKey: `R2:dependency-boundary:${adapter}:${adapter}:${contract.name}`,
+  }));
+});
