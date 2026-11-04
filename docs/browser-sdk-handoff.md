@@ -1,8 +1,9 @@
 # Browser SDK checkpoint — 4 November 2026
 
 Kit #89 owns pure mapping; #90 scopes the symlink CLI fixture to immutable example inputs.
-Draft #91 owns only native browser runtime identity and cleanup. Source and oracle commits remain
-independent. Types and three real native cases pass; exact full verification after #90 remains pending.
+Kit #91 owns only native browser runtime identity and cleanup. Source and oracle commits remain
+independent. Types, three real native cases and full normal verification after #90 pass. Its pull request
+records the exact qualified head and verification receipt.
 No capture, writer, application adoption or execution-rule activation is included.
 
 Before adoption, the SDK needs an exact public-subpath package-contract boundary. The current global
