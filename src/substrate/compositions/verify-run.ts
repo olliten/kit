@@ -2,7 +2,7 @@ import type { CommandRequest, CommandResponse } from "../../core/primitives/comm
 import type { Verdict } from "../../core/primitives/verdict.js";
 import type { InvocationEvidence } from "../../core/primitives/invocation-evidence.js";
 import type { ExecutionContext } from "../../core/primitives/runs.js";
-import { verificationSelection } from "../../core/readings/verification-selection.js";
+import { deferredGroupSelection, verificationSelection } from "../../core/readings/verification-selection.js";
 import { executionContext, executionContextOf } from "../../core/readings/execution-context.js";
 import { invocationText } from "../../core/readings/invocation-passes.js";
 import { batchAttribution } from "../../core/readings/batch-attribution.js";
@@ -87,14 +87,27 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     (read ??= readStoredSnapshot(root, loaded.config, { reuse: evidenceStore.at(store), engine: toolchain.extraction(engineRoot) }).snapshot);
   const found = [...new Set(tests)].sort();
   let selection: ReturnType<typeof verificationSelection>;
+  let deferredGroup: string | undefined;
   try {
     const path = option("selection");
+    const groupOptions = args.flatMap((argument, index) => argument === "--defer-group"
+      ? [args[index + 1]]
+      : argument.startsWith("--defer-group=") ? [argument.slice("--defer-group=".length)] : []);
+    const [id] = groupOptions;
+    if (groupOptions.length > 1 || (groupOptions.length === 1 && (id === undefined || !id.trim() || id.startsWith("--"))))
+      throw new Error("defer-group: supply one declared group id, once.");
+    deferredGroup = id;
+    if (deferredGroup !== undefined && args.some((argument) => argument === "--selection" || argument.startsWith("--selection=")))
+      throw new Error("defer-group: cannot combine group deferral with an explicit selection.");
+    if (deferredGroup !== undefined && !groups.some((group) => group.id === deferredGroup))
+      throw new Error(`defer-group: no declared group has id ${deferredGroup}.`);
     if (args.includes("--selection") && (path === undefined || path.startsWith("--"))) throw new Error("selection: supply its JSON file.");
     selection = verificationSelection(path === undefined ? undefined : JSON.parse(textFiles.read(at(path))), found);
   } catch (error) {
     return { stdout: "", stderr: `${String(error)}\n`, exitCode: 2 };
   }
   const chosen = testGroups(found, groups, groups.some((group) => group.reaching !== undefined || group.capabilities !== undefined) ? snapshot().imports : [], capabilityModules(loaded.config));
+  if (deferredGroup !== undefined) selection = deferredGroupSelection(deferredGroup, found, groups, chosen);
   const unassigned = found.filter((test) => !chosen.has(test));
   type Check = {
     readonly id: string;
@@ -532,6 +545,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   ];
   const summary = {
     scope: selection.scope,
+    ...(deferredGroup === undefined ? {} : { selectionKind: "deferred-groups", deferredGroups: [deferredGroup] }),
     discovery: selection.discovery,
     policy: selection.policy,
     discovered: found.length,

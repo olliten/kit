@@ -27,3 +27,20 @@ export function verificationSelection(input: unknown, discovered: readonly strin
   const chosen = new Set(selection.tests);
   return { scope: "selected", selected: [...chosen].sort(), deferred: inventory.filter((test) => !chosen.has(test)), discovery, policy: selection.policy };
 }
+
+// Group classification is supplied by the same complete inventory used for ordinary verification.
+export function deferredGroupSelection(
+  id: string,
+  discovered: readonly string[],
+  groups: readonly { readonly id?: string }[],
+  classified: ReadonlyMap<string, number>,
+): ReturnType<typeof verificationSelection> {
+  const index = groups.findIndex((group) => group.id === id);
+  if (index < 0) throw new Error(`defer-group: no declared group has id ${id}.`);
+  return verificationSelection({
+    version: 1,
+    discovery: discoveryIdentity(discovered),
+    policy: `deferred-group/${encodeURIComponent(id)}/1`,
+    tests: discovered.filter((test) => classified.get(test) !== index),
+  }, discovered);
+}

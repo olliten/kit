@@ -112,6 +112,7 @@ export const DEFAULT_CONFIG: KitConfig = {
 // takes the tests whose imports reach one of those modules or a module an adapter registers with one of those
 // capabilities; one naming neither takes the tests no earlier group took.
 export interface TestGroup {
+  readonly id?: string;
   readonly contexts?: readonly string[];
   readonly command: string;
   readonly under: readonly string[];
