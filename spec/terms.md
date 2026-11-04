@@ -2,6 +2,10 @@
 
 ## Primitive contracts
 
+- **browser-execution** — Supplied generated-script ranges, mapped original positions, compiler function spans and their attributable execution evidence.
+  - Role: fact
+  - Zone: core
+  - Of: {{compiler-facts}}
 - **capability-app** — the capability case app's source inputs, as data a proof writes into a temporary project.
   - Role: fact
   - Zone: core
@@ -137,6 +141,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{module-references}}, {{snapshot}}
+- **browser-function-evidence** — Decodes supplied source maps and attributes invoked browser functions to the compiler's original function spans, retaining incomplete mappings.
+  - Role: derived
+  - Zone: core
+  - From: {{browser-execution}}
 - **capability-context** — what every capability check reads: checked files, declared entrypoints, adapter contracts and native roots, and how a capability finding is categorised.
   - Role: derived
   - Zone: core
