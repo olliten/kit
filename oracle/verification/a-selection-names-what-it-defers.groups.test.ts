@@ -140,16 +140,19 @@ test("an empty deferred membership still reports selected verification, never an
   } finally { project.dispose(); }
 }, 120_000);
 
-test("group deferral is generic and does not implicitly suppress browser execution", async () => {
+test.each([
+  { id: "io/slow", flags: ["--defer-group", "io/slow"], policy: "deferred-group/io%2Fslow/1" },
+  { id: "--slow", flags: ["--defer-group=--slow"], policy: "deferred-group/--slow/1" },
+])("group deferral $id is literal and does not implicitly suppress browser execution", async ({ id, flags, policy }) => {
   const project = temporaryProjects.open("kit-deferred-another-group-");
   try {
-    project.write({ ...files(), "kit/config.md": config.replace("id: third", "id: io/slow"),
+    project.write({ ...files(), "kit/config.md": config.replace("id: third", `id: ${id}`),
       [browser]: "import '../lib/relay.mjs'; process.exit(0);\n" });
     const result = await runVerify({ engineRoot: project.root, cwd: project.root,
-      args: ["--root", project.root, "--config", join(project.root, "kit/config.md"), "--defer-group", "io/slow"] });
+      args: ["--root", project.root, "--config", join(project.root, "kit/config.md"), ...flags] });
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout.split("Kit selection ")[1] ?? "null")).toMatchObject({
-      selectionKind: "deferred-groups", deferredGroups: ["io/slow"], policy: "deferred-group/io%2Fslow/1",
+      selectionKind: "deferred-groups", deferredGroups: [id], policy,
       selected: initial.filter((path) => path !== "extra/third.test.mjs"), deferred: ["extra/third.test.mjs"],
     });
     expect(textFiles.read(join(project.root, "browser-executed.txt"))).toBe("yes");
