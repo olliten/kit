@@ -205,6 +205,10 @@
   - Role: derived
   - Zone: core
   - From: {{debt-policy}}, {{finding}}, {{line-ratchet}}, {{ratchet}}
+- **deferred-group-fixture** — the grouped test identities, configuration and source texts supplied to group-deferral proofs.
+  - Role: derived
+  - Zone: core
+  - From: []
 - **dependency-check** — findings from import direction and cycles between placed modules.
   - Role: derived
   - Zone: core
@@ -417,7 +421,7 @@
   - Role: derived
   - Zone: core
   - From: {{config-values}}, {{default-config}}
-- **verification-selection** — the selected and deferred identities from validating a supplied selection against complete test discovery.
+- **verification-selection** — the selected and deferred identities of an explicit selection or declared-group deferral against complete test discovery.
   - Role: derived
   - Zone: core
   - From: {{config-values}}, {{fact-keys}}, {{selection}}

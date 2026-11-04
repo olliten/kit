@@ -35,7 +35,8 @@ so a later gate runs only what an edit can have changed.
   once. A check may name the checks it `needs`, and a group its own `capacity`. A malformed declaration, or group,
   a capacity that is no positive whole number, a need no declared check meets, one of a check run with the tests
   on a check run after them, or needs in a cycle, or a capability no adapter registers fails configuration naming
-  where, and `kit verify` without one says what to declare. · {#the-gate-is-declared}
+  where, and `kit verify` without one says what to declare. Groups may have distinct nonblank `id` values;
+  unnamed groups retain their ordinary classification. · {#the-gate-is-declared}
   - Implementation: {{verification-configuration}}, {{kit-configuration}}, {{config-schema}}, {{verify-run}}
   - Proof: {{temporary-project}}
 - A test runs under the command of the first group, in declared order, whose directories hold it and whose
@@ -113,9 +114,16 @@ so a later gate runs only what an edit can have changed.
   `Kit verify null` before its `Kit selection` result. The null clears any earlier exhaustive summary a nested
   command printed for an older consumer; it is no full verification evidence. Selected counts never occupy
   the exhaustive summary, so an exhaustive consumer cannot mistake partial evidence for a full pass.
+  `kit verify --defer-group <id>` selects the complete complement of one declared group using the same
+  discovery and import-based classification. Every other group's tests, including unnamed groups, and all
+  whole-tree and after-test checks remain required. Unknown group IDs, repeated selectors or combining
+  group deferral with an explicit selection fail. Its partial result declares SDK-derived
+  `selectionKind: deferred-groups`, `deferredGroups`, policy `deferred-group/<encoded-id>/1` with the ID
+  URI-encoded, and the selected/deferred identities; a caller's
+  explicit selection policy cannot supply those fields. With no selector, verification remains exhaustive.
   · {#a-selection-names-what-it-defers}
   - Implementation: {{selection}}, {{verification-selection}}, {{verify-run}}, {{test-groups}}, {{fact-keys}}
-  - Proof: {{temporary-project}}
+  - Proof: {{deferred-group-fixture}}, {{temporary-project}}, {{processes}}, {{text-files}}
 - A script a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its code
   with the body of every outermost function the test never ran left out, where a function counts as run when a
   function the coverage shows ran starts inside it. Its code is its tokens as the language's scanner reads them,

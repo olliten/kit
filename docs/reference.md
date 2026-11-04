@@ -283,16 +283,26 @@ The tests may instead be a list of groups, each with its own command, such as a 
 
 ```yaml
   tests:
-    - command: npx vitest run --config browser.config.ts {test}
+    - id: browser
+      command: npx vitest run --config browser.config.ts {test}
       under: [oracle/, spec/]
       reaching: [spec/harness/full-stack.ts]
-    - command: npx vitest run {test}
+    - id: headless
+      command: npx vitest run {test}
       under: [oracle/, spec/]
 ```
 
 A test runs in the first group whose `under` holds it and whose `reaching` lists a module its imports reach,
 directly or through the files they import, and otherwise in the first group whose `under` holds it that lists
 none. A module is named by its path inside the app, with or without its extension.
+
+Group IDs are optional, nonblank and unique. `kit verify --defer-group browser` uses this same classification
+to defer exactly that group's tests. Every other group, including unnamed groups, and every whole-tree and
+after-test check remain required. Unknown IDs, repeated selectors, an unassigned discovered test, or combining
+group deferral with `--selection` fail. The output clears the exhaustive summary with `Kit verify null`, then
+prints `Kit selection` with `scope: selected`, `selectionKind: deferred-groups`, `deferredGroups: [browser]`,
+policy `deferred-group/browser/1`, and the complete selected/deferred inventory. It is never full verification
+evidence, even when that group currently has no tests. Omitting the selector verifies every group.
 
 A group may instead, or as well, list `capabilities`: it then also takes the tests whose imports reach the module
 of any `adapters` row registered with one of them, so a new test that drives the browser adapter lands in the
@@ -460,6 +470,7 @@ access; a scheduled `kit verify --fresh` checks that every kept pass still passe
 day, and old days' refs are never read again: delete them on `origin` as you like. A clone's own copies of
 them, under `refs/kit-shared/`, are removed by its next reading.
 
-`kit verify --plan` lists what would run, `--fresh` runs everything and keeps nothing, and the exit code is 1
+`kit verify --plan` lists what would run. `--fresh` reuses and keeps nothing; without a selector it runs
+every group. Its exit code is 1
 when a check fails. A check that depends on something no file holds, such as the network, the clock or an
 environment variable, should not be a reused check.

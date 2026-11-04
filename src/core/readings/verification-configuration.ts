@@ -44,7 +44,14 @@ export function verification(declared: unknown, registered: readonly string[]): 
   if (tests === undefined) return { checks: rows, ...shared };
   if (Array.isArray(tests)) {
     if (tests.length === 0) throw new Error("verify.tests: list at least one group of tests.");
-    return { checks: rows, tests: tests.map((row: unknown, index) => group(row, `verify.tests[${index}]`, registered)), ...shared };
+    const groups = tests.map((row: unknown, index) => group(row, `verify.tests[${index}]`, registered));
+    const ids = new Set<string>();
+    for (const [index, row] of groups.entries()) {
+      if (row.id === undefined) continue;
+      if (ids.has(row.id)) throw new Error(`verify.tests[${index}].id: ${row.id} is declared twice.`);
+      ids.add(row.id);
+    }
+    return { checks: rows, tests: groups, ...shared };
   }
   return { checks: rows, tests: [group(tests, "verify.tests", registered)], ...shared };
 }
@@ -81,6 +88,9 @@ function needsHold(rows: readonly { readonly id: string; readonly after?: "tests
 const inside = (path: unknown): path is string => isText(path) && relativeLocation(path) && !normalizedPath(path).split("/").includes("..");
 
 function group(declared: unknown, at: string, registered: readonly string[]): TestGroup {
+  const id = isRecord(declared) ? declared["id"] : undefined;
+  if (id !== undefined && (!isText(id) || !id.trim()))
+    throw new Error(`${at}.id: declare a nonblank group identity.`);
   const command = isRecord(declared) ? declared["command"] : undefined;
   const declaredUnder = isRecord(declared) ? declared["under"] : undefined;
   const under = isText(declaredUnder) ? [declaredUnder] : declaredUnder;
@@ -104,6 +114,7 @@ function group(declared: unknown, at: string, registered: readonly string[]): Te
   if (contexts !== undefined && (!Array.isArray(contexts) || !contexts.every((name) => typeof name === "string" && /^[a-z][a-z0-9-]*$/.test(name)) || new Set(contexts).size !== contexts.length))
     throw new Error(`${at}.contexts: list distinct runtime context names using lowercase letters, digits and hyphens.`);
   return {
+    ...(typeof id === "string" ? { id } : {}),
     command,
     under: directories,
     ...(capacity === undefined ? {} : { capacity: counted(capacity, `${at}.capacity`) }),
