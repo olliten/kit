@@ -1,17 +1,19 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { afterAll, expect, test } from "vitest";
 import { runConsumers } from "../../src/substrate/compositions/consumers-run.js";
+import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
+import { authoredExample } from "../substrate/compositions/authored-example.js";
 
 const engine = resolve(import.meta.dirname, "../..");
-const scratch = mkdtempSync(join(tmpdir(), "kit-consumers-integration-"));
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+const scratch = temporaryProjects.open("kit-consumers-integration-");
+afterAll(() => scratch.dispose());
 const lock = (resolved: string) => JSON.stringify({ packages: { "node_modules/kit": { resolved } } });
 
 test("the real run checks an app checkout against this Kit and does not fail on the app's findings", async () => {
-  const app = join(scratch, "tally");
-  cpSync(join(engine, "examples/tally"), app, { recursive: true });
+  const app = join(scratch.root, "tally");
+  scratch.write(Object.fromEntries(Object.entries(authoredExample(join(engine, "examples/tally")))
+    .map(([path, text]) => [`tally/${path}`, text])));
   // The known violation: a module no claim names, planted in the copy of the clean example.
   mkdirSync(join(app, "src/substrate/compositions"), { recursive: true });
   writeFileSync(join(app, "src/substrate/compositions/save.ts"), "export function save(text: string): string {\n  return text;\n}\n");
@@ -23,8 +25,9 @@ test("the real run checks an app checkout against this Kit and does not fail on 
 }, 120_000);
 
 test("an app whose config this Kit does not accept is reported with the config error", async () => {
-  const app = join(scratch, "stale");
-  cpSync(join(engine, "examples/tally"), app, { recursive: true });
+  const app = join(scratch.root, "stale");
+  scratch.write(Object.fromEntries(Object.entries(authoredExample(join(engine, "examples/tally")))
+    .map(([path, text]) => [`stale/${path}`, text])));
   const config = join(app, "kit/config.md");
   writeFileSync(config, readFileSync(config, "utf8").replace("```yaml\n", "```yaml\nzones: {core: src/core/}\n"));
   const { stdout: output, exitCode } = await runConsumers({ engineRoot: engine, args: [app], cwd: engine });

@@ -3,32 +3,17 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, expect, test } from "vitest";
 import { processes } from "../../src/substrate/adapters/processes.js";
-import { textFiles } from "../../src/substrate/adapters/text-files.js";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
+import { authoredExample } from "../substrate/compositions/authored-example.js";
 
 const engine = resolve(import.meta.dirname, "../..");
 const scratch = temporaryProjects.open("kit-symlink-cli-");
 afterAll(() => scratch.dispose());
 
-// The example's text files under one folder, keyed by their path inside the app.
-function copied(from: string, to: string): Record<string, string> {
-  const files: Record<string, string> = {};
-  for (const entry of textFiles.entries(from)) {
-    if (entry.directory) Object.assign(files, copied(join(from, entry.name), `${to}/${entry.name}`));
-    else if (entry.file) files[`${to}/${entry.name}`] = textFiles.read(join(from, entry.name));
-  }
-  return files;
-}
 // Copy authored inputs without reading the example root's changing runtime-output inventory.
 const example = join(engine, "examples/tally");
-scratch.write({
-  "tally/package.json": textFiles.read(join(example, "package.json")),
-  "tally/tsconfig.json": textFiles.read(join(example, "tsconfig.json")),
-  ...copied(join(example, "src"), "tally/src"),
-  ...copied(join(example, "spec"), "tally/spec"),
-  ...copied(join(example, "oracle"), "tally/oracle"),
-  ...copied(join(example, "kit"), "tally/kit"),
-});
+scratch.write(Object.fromEntries(Object.entries(authoredExample(example))
+  .map(([path, text]) => [`tally/${path}`, text])));
 // The known violation: a module no claim names, planted in the copy of the clean example.
 scratch.write({
   "tally/src/substrate/compositions/save.ts": "export function save(text: string): string {\n  return text;\n}\n",
