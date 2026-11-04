@@ -36,8 +36,8 @@ Proposed replacement wording for the restricted-entrypoint claim:
 > A subpath with its own global contract follows that contract; a restricted root contract alone permits
 > no subpath. Permission does not extend to helpers, and adapter package ownership takes precedence.
 
-For direct dependency exclusions, an exact global contract establishes a classified external boundary
-on the same basis as an existing root contract. Classification does not itself grant authority: ownership,
+For direct dependency exclusions, the same exact global/root fallback and existing exact-or-root adapter
+declarations establish classified external boundaries. Classification does not itself grant authority: ownership,
 export restrictions, zones and native-handle checks still run. Transitive exclusions still require
 checked import evidence throughout; no external row supplies a missing transitive graph.
 
