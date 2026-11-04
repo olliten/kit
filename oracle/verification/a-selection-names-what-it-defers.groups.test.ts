@@ -3,35 +3,11 @@ import { expect, test } from "vitest";
 import { discoveryIdentity } from "../../src/core/readings/verification-selection.js";
 import { runVerify } from "../../src/substrate/compositions/verify-run.js";
 import { textFiles } from "../../src/substrate/adapters/text-files.js";
-import { processes } from "../../src/substrate/adapters/processes.js";
 import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
-
-const initial = ["extra/third.test.mjs", "tests/browser.test.mjs", "tests/headless.test.mjs", "unnamed/another.test.mjs"];
-const browser = "tests/browser.test.mjs";
-const selected = initial.filter((path) => path !== browser);
-const config = "```yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nverify:\n" +
-  "  checks:\n    - {id: integrity, command: node static.mjs front}\n" +
-  "    - {id: after, command: 'node static.mjs after {evidence}', after: tests, needs: [integrity]}\n" +
-  "  tests:\n    - {id: browser, command: 'node {test}', under: tests/, reaching: [lib/browser]}\n" +
-  "    - {id: headless, command: 'node {test}', under: tests/}\n" +
-  "    - {id: third, command: 'node {test}', under: extra/}\n" +
-  "    - {command: 'node {test}', under: unnamed/}\n```\n";
-
-function files() {
-  return {
-    ".git/HEAD": "ref: refs/heads/main\n", "package.json": '{"type":"module"}',
-    "kit/config.md": config, "integrity.txt": "good",
-    "static.mjs": "import {readFileSync,writeFileSync} from 'node:fs';\n" +
-      "if(readFileSync('integrity.txt','utf8')!=='good') process.exit(9);\n" +
-      "if(process.argv[2]==='after') writeFileSync('after-evidence.json',JSON.stringify(Object.keys(JSON.parse(readFileSync(process.argv[3],'utf8')).tests).sort()));\n",
-    "lib/browser.mjs": "import {writeFileSync} from 'node:fs'; writeFileSync('browser-executed.txt','yes');\n",
-    "lib/relay.mjs": "import './browser.mjs';\n",
-    [browser]: "import '../lib/relay.mjs'; process.exit(17);\n",
-    "tests/headless.test.mjs": "import {writeFileSync} from 'node:fs'; writeFileSync('headless-executed.txt','yes');\n",
-    "extra/third.test.mjs": "import {writeFileSync} from 'node:fs'; writeFileSync('third-executed.txt','yes');\n",
-    "unnamed/another.test.mjs": "import {writeFileSync} from 'node:fs'; writeFileSync('unnamed-executed.txt','yes');\n",
-  };
-}
+import {
+  DEFERRED_TESTS as initial, DEFERRED_BROWSER as browser, DEFERRED_SELECTED as selected,
+  DEFERRED_CONFIG as config, deferredGroupFixture as files,
+} from "../core/readings/deferred-group-fixture.js";
 
 test.each([["--defer-group", "browser"], ["--defer-group=browser"]])(
   "group deferral %j runs all other groups and every static check, while fresh full verification still finds the browser failure",
@@ -161,25 +137,6 @@ test("an empty deferred membership still reports selected verification, never an
     expect(JSON.parse(result.stdout.split("Kit selection ")[1] ?? "null")).toMatchObject({
       scope: "selected", selectionKind: "deferred-groups", deferredGroups: ["browser"], selected, deferred: [],
     });
-  } finally { project.dispose(); }
-}, 120_000);
-
-test("the real public launcher defers the browser group and its unchanged fresh full command still fails", () => {
-  const project = temporaryProjects.open("kit-deferred-cli-");
-  try {
-    project.write(files());
-    const command = join(import.meta.dirname, "../../scripts/kit-verify.mjs");
-    const args = [command, "--root", project.root, "--config", join(project.root, "kit/config.md"), "--fresh"];
-    const staging = processes.run(processes.node(), [...args, "--defer-group", "browser"], project.root);
-    expect(staging.status).toBe(0);
-    expect(staging.stdout).toContain("Kit verify null\nKit selection ");
-    expect(JSON.parse(staging.stdout.split("Kit selection ")[1] ?? "null")).toMatchObject({
-      selectionKind: "deferred-groups", deferredGroups: ["browser"], selected, deferred: [browser],
-    });
-    const full = processes.run(processes.node(), args, project.root);
-    expect(full.status).toBe(1);
-    expect(full.stdout).toContain(`failed test:${browser}`);
-    expect(full.stdout).not.toContain("Kit selection ");
   } finally { project.dispose(); }
 }, 120_000);
 
