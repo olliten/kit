@@ -2,7 +2,7 @@
 
 ## Primitive contracts
 
-- **browser-execution** — Supplied generated-script ranges, mapped original positions, compiler function spans and their attributable execution evidence.
+- **browser-execution** — Supplied browser launch and runtime identities, generated-script ranges, mapped original positions, compiler function spans and their attributable execution evidence.
   - Role: fact
   - Zone: core
   - Of: {{compiler-facts}}
@@ -429,6 +429,10 @@
 
 ## Adapter contracts
 
+- **browser-runtime** — Launches an owned browser server, observes its actual executable digest and browser version, and closes only that server.
+  - Role: adapter
+  - Zone: substrate
+  - Of: {{browser-execution}}
 - **calendar** — access to the wall-clock time, which names the day a shared pass is published under.
   - Role: adapter
   - Zone: substrate

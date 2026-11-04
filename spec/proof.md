@@ -124,6 +124,6 @@ a claim depends on are named in it, so each module's claims are found from its n
   named functions use the compiler's source inventory, and relevant process, page and frame lifecycles were
   captured. Missing or ambiguous mapping makes the context incomplete, never an exemption or an independent
   pass. · {#execution-context-is-attributable}
-  - Implementation: {{browser-execution}}, {{browser-function-evidence}}, {{execution-context}}, {{independent-runs}}, {{runs}}, {{verdict}}, {{test-runs}}, {{function-recorder}}, {{compiler-facts}}, {{verify-run}}, {{read-recorder}}, {{coverage-provider}}
+  - Implementation: {{browser-execution}}, {{browser-function-evidence}}, {{browser-runtime}}, {{execution-context}}, {{independent-runs}}, {{runs}}, {{verdict}}, {{test-runs}}, {{function-recorder}}, {{compiler-facts}}, {{verify-run}}, {{read-recorder}}, {{coverage-provider}}
   - Proof: {{temporary-project}}, {{recorded-functions}}, {{proof-runner}}
 
