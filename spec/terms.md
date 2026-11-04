@@ -212,7 +212,7 @@
 - **dependency-exclusions** — findings and limits from the explicit separations an app declares between selected code.
   - Role: derived
   - Zone: core
-  - From: {{finding}}, {{placement-of}}, {{snapshot}}
+  - From: {{finding}}, {{package-contract}}, {{placement-of}}, {{snapshot}}
 - **edge-check** — findings from import edges among checked code: entrypoint imports, layer and zone direction, legacy edges, which ask no zone of unplaced code a test or placed proof code imports, and cycles.
   - Role: derived
   - Zone: core
@@ -268,7 +268,7 @@
 - **import-authority** — what a module acquires by importing outside the checked code: adapter packages, entrypoint packages and declared package rows.
   - Role: derived
   - Zone: core
-  - From: {{capability-context}}, {{snapshot}}
+  - From: {{capability-context}}, {{package-contract}}, {{snapshot}}
 - **independent-runs** — complete attributable runs whose proof's runtime imports and observed loaded sources reach no declared application bootstrap.
   - Role: derived
   - Zone: core
@@ -309,6 +309,10 @@
   - Role: derived
   - Zone: core
   - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
+- **package-contract** — The literal external import's package root and its selected exact or fallback global contract.
+  - Role: derived
+  - Zone: core
+  - From: {{default-config}}
 - **paid-debt** — the baseline entries whose debt is paid: keys no legacy or proof debt finding holds, apart from those of rules that wait, legacy sizes larger than the module now is and legacy function lines more than the function now spans, each with its fix and the reason its entry carries.
   - Role: derived
   - Zone: core

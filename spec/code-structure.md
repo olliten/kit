@@ -41,7 +41,7 @@ compositions wire the others into behaviour.
   use classified package contracts; transitive separation requires checked import evidence throughout,
   including through helpers. Missing evidence remains a blocking limit, and a baseline cannot waive an
   explicit exclusion or its limits ({{dependency-exclusions}}, {{default-config}}). · {#dependency-exclusions-are-checked}
-  - Implementation: {{import-recorder}}, {{fact-walk}}, {{compiler}}, {{finding}}
+  - Implementation: {{package-contract}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}, {{finding}}
   - Proof: {{recorded-imports}}, {{project-snapshot}}, {{fixture-files}}
 - Every module defines something. A file in a code root or legacy location, a declaration file aside, whose
   statements only re-export, through `export … from`, `export * from` or an imported binding exported again,
@@ -101,6 +101,12 @@ compositions wire the others into behaviour.
   `globalThis.<name>` or through a cast of `globalThis`, it is a limit ({{global-authority}}, {{syntax-reading}}). · {#host-globals-need-an-adapter}
   - Implementation: {{access-authority}}, {{capability-context}}, {{finding}}, {{authority-recorder}}, {{fact-walk}}, {{compiler}}
   - Proof: {{recorded-authority}}, {{project-snapshot}}
+- A global package contract whose name equals the full import specifier is selected before the existing
+  package-root contract. Names match literally, never by prefix or normalization. An exact subpath contract
+  grants nothing to the root, siblings or descendants. Adapter package ownership takes precedence over
+  either global contract. · {#global-package-contracts-select-exact-subpaths}
+  - Implementation: {{package-contract}}, {{import-authority}}, {{capability-context}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{startup-check}}, {{placement-of}}, {{finding}}
+  - Proof: {{project-snapshot}}, {{recorded-imports}}
 - An exact package subpath an adapter declares in its `packages` belongs to that adapter alone; declaring
   the package root owns every subpath. Other imports keep their own package contracts. A package an adapter
   declares in its `packages` is that adapter's to import: there the import grants the
@@ -108,10 +114,11 @@ compositions wire the others into behaviour.
   package row declares it; a package no row declares stays a limit ({{import-authority}}). · {#declared-packages-stay-in-their-adapter}
   - Implementation: {{access-authority}}, {{global-authority}}, {{capability-context}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{finding}}, {{authority-recorder}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}
   - Proof: {{recorded-authority}}, {{recorded-imports}}, {{project-snapshot}}
-- An effectful package contract may restrict runtime imports to selected named exports in exact declared
-  entrypoints. Aliases retain the original export name and erased imports grant no authority; other access
-  forms, subpaths and missing import evidence stay limits. The permission does not extend to helpers, and
-  adapter package ownership takes precedence
+- An effectful package contract may restrict runtime imports to selected named exports in actual declared
+  entrypoints at that contract's exact specifier. Aliases retain the original export name and erased imports
+  grant no authority; other access forms and missing import evidence stay limits. A subpath with its own
+  global contract follows that contract; a restricted root contract alone permits no subpath. Permission
+  does not extend to helpers, and adapter package ownership takes precedence
   ({{import-authority}}, {{startup-check}}, {{zone-permission}}, {{compiler-facts}}, {{default-config}}, {{import-recorder}}). · {#entrypoint-package-exports-are-checked}
   - Implementation: {{access-authority}}, {{global-authority}}, {{capability-context}}, {{authority-graph}}, {{zone-authority-check}}, {{behaviour-check}}, {{finding}}, {{authority-recorder}}, {{fact-walk}}, {{compiler}}
   - Proof: {{fixture-files}}, {{recorded-authority}}, {{recorded-imports}}, {{project-snapshot}}

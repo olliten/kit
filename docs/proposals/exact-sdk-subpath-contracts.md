@@ -1,7 +1,7 @@
 # Proposal: exact public SDK subpath contracts
 
-Status: **UNAPPROVED — Olli's model decision required.** This document proposes wording and proofs;
-it changes no authoritative spec, implementation, configuration, permission or baseline.
+Status: **D1 approved by Olli; D2 explicitly deferred — 4 November 2026.** This document preserves the
+decision. The implementation follows D1 only; duplicate-name validation and semantics remain unchanged.
 
 ## Why this is needed
 
@@ -11,24 +11,24 @@ A namespace alias would not establish that ownership. A declared SDK subpath mus
 package entry, established by resolution/integration proof; this proposal does not invent one.
 
 The existing `packages.name` string can express that boundary; no new configuration key is proposed.
-Global lookup currently uses only the parsed package root in `import-authority.ts`. Direct dependency
-exclusions independently use the same root-only classification. Adapter package ownership already
+Before D1, global lookup used only the parsed package root in `import-authority.ts`. Direct dependency
+exclusions independently used the same root-only classification. Adapter package ownership already
 supports exact subpaths and must keep precedence.
 
-## Current authority and proposed wording
+## Authority and approved D1 wording
 
-`spec/code-structure.md#entrypoint-package-exports-are-checked` currently says that other
+Before D1, `spec/code-structure.md#entrypoint-package-exports-are-checked` said that other
 "access forms, subpaths and missing import evidence stay limits." Allowing a separately declared global
 subpath therefore needs a normative amendment, rather than a checker precision fix.
 
-Proposed new claim, alongside the existing package claims:
+Approved new claim, alongside the existing package claims:
 
 > A global package contract whose name equals the full import specifier is selected before the existing
 > package-root contract. Names match literally, never by prefix or normalization. An exact subpath
 > contract grants nothing to the root, siblings or descendants. Adapter package ownership takes
 > precedence over either global contract.
 
-Proposed replacement wording for the restricted-entrypoint claim:
+Approved replacement wording for the restricted-entrypoint claim:
 
 > An effectful package contract may restrict runtime imports to selected named exports in actual
 > declared entrypoints at that contract's exact specifier. Aliases retain the original export name and
@@ -83,14 +83,15 @@ an effectful `@example/sdk` root contract if the actual public formatter is pure
 Existing package-root, ownership, native-handle and dependency-exclusion proofs must remain green.
 Evidence producer/dependency identity is unchanged by this proposal.
 
-## Decisions to ratify
+## Decisions received
 
-1. Approve the exact-before-root model and the wording above, including explicit exact narrowing and
-   consistent direct-boundary classification. This is the proposed minimum SDK adoption prerequisite.
-2. Decide duplicate names explicitly. Restricted contracts already require unique names; unrestricted
+1. **D1 approved:** exact-before-root selection, the wording above, explicit exact narrowing and
+   consistent direct-boundary classification. This is the SDK adoption prerequisite being implemented.
+2. **D2 deferred:** duplicate-name changes are not part of this implementation. Restricted contracts already
+   require unique names; unrestricted
    duplicates currently follow first-row lookup. The recommendation is one general unique-name rule for
    package contracts, rather than a new order-dependent exact-row policy. That additional validation
-   change needs explicit approval and compatibility proofs; it must not be silently included.
+   change still needs explicit approval and compatibility proofs; it is not included.
 
-Only after ratification should an independent oracle pin the approved semantics and source converge to
-them. Browser capture/writer implementation and application adoption remain separate slices.
+An independent oracle pins D1 while source converges to it. Browser capture/writer implementation,
+duplicate-name changes and application adoption remain separate slices.

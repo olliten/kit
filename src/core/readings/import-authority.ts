@@ -6,6 +6,7 @@ import {
   capabilityFinding,
   capabilityLimit,
 } from "./capability-context.js";
+import { packageContract } from "./package-contract.js";
 
 // What a module acquires by importing outside the checked code. A package an adapter declares is that adapter's
 // raw operation, whatever a package row says; an entrypoint package grants its capabilities only for selected
@@ -21,10 +22,7 @@ export function importAuthority(snapshot: Snapshot, context: CapabilityContext):
   };
   for (const edge of (snapshot.compiler?.projects ?? []).flatMap((project) => project.imports)) {
     if (edge.typeOnly || !checked.has(edge.file) || (edge.target !== null && checked.has(edge.target))) continue;
-    const packageName = edge.specifier.startsWith("@")
-      ? edge.specifier.split("/").slice(0, 2).join("/")
-      : edge.specifier.split("/")[0];
-    const declaration = snapshot.config.packages?.find((row) => row.name === packageName);
+    const { root: packageName, declaration } = packageContract(edge.specifier, snapshot.config.packages);
     const bound = context.adapters.filter(
       ({ adapter }) => adapter.kind === "external" && packageName !== undefined &&
         (adapter.packages?.includes(edge.specifier) === true || adapter.packages?.includes(packageName) === true),
