@@ -78,6 +78,8 @@ export const coverageProvider = {
         const single = more.length === 0 ? meta : undefined;
         fs.writeFileSync(join(directory, "run.json"), JSON.stringify({ test, state: state ?? null, scripts: single === undefined ? null : scriptsOf(single.coverage) }));
         if (single === undefined) continue;
+        // Preserve the test worker's own context; the runner's coverage is shared by sibling tests.
+        fs.writeFileSync(join(directory, "execution.json"), JSON.stringify(single.coverage));
         // The installed provider reports the coverage it was given since it last reported, into its reports
         // directory, so each file's is given alone with the file's own directory.
         provider.coverageFiles = new Map();

@@ -2,6 +2,7 @@ import type { Runs } from "../primitives/runs.js";
 import type { Snapshot } from "../primitives/snapshot.js";
 import { claimRuns } from "./claim-runs.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
+import { independentRuns } from "./independent-runs.js";
 import { placementOf } from "./placement-of.js";
 
 export interface ExcerptFinding extends Finding {
@@ -17,7 +18,7 @@ export interface ExcerptFinding extends Finding {
 export function excerptCohesion(snapshot: Snapshot, runs: Runs): ExcerptFinding[] {
   const { srcRoot, layerNames } = snapshot.config;
   const findings: ExcerptFinding[] = [];
-  for (const { module, functions, ran } of claimRuns(snapshot, runs)) {
+  for (const { module, functions, ran } of claimRuns(snapshot, independentRuns(snapshot, runs))) {
     const at = placementOf(module, srcRoot, layerNames);
     if (at.placed && at.layer === "adapters") continue;
     const owners = new Map<string, string[]>();
@@ -35,21 +36,21 @@ export function excerptCohesion(snapshot: Snapshot, runs: Runs): ExcerptFinding[
       excerpts.set(claim, [...(excerpts.get(claim) ?? []), id]);
     }
     if (excerpts.size < 2) continue;
-    const described = [...excerpts]
-      .map(([claim, ids]) => `${claim.slice(claim.lastIndexOf(":") + 1)} (${ids.sort().join(", ")})`)
-      .sort();
-    findings.push({
-      ...finding(
-        "R4",
-        "excerpt-cohesion",
-        module,
-        `These claims each run code of this module no other claim runs: ${described.join("; ")}. Move each claim's excerpt into its own module.`,
-      ),
-      category: "legacy-debt",
-      status: "violation",
-      blocking: true,
-      limit: "",
-    });
+    for (const [claim, ids] of excerpts)
+      for (const id of ids)
+        findings.push({
+          ...finding(
+            "R4",
+            "excerpt-cohesion",
+            module,
+            `Only ${claim} runs ${id}, while another claim owns another excerpt of this module. Move this claim's excerpt into its own module.`,
+            `${encodeURIComponent(claim)}:${id}`,
+          ),
+          category: "legacy-debt",
+          status: "violation",
+          blocking: true,
+          limit: "",
+        });
   }
   return findings.sort(byDebtKey);
 }

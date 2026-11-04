@@ -5,6 +5,27 @@ so a later gate runs only what an edit can have changed.
 
 ## The gate
 
+- The bounded proof runner executes the supplied Vitest test filters, execution and coverage options in one
+  run, with the governed root given by the caller. It loads no application configuration, discovered workspace,
+  environment file or PostCSS configuration: its workspace and PostCSS plugins are explicitly empty. Requests
+  to load configuration or a workspace, watch, or start a browser or UI are rejected; application journeys keep
+  their declared runner. Its exit status reports the actual run, including failures and unhandled errors.
+  · {#the-proof-runner-has-bounded-inputs}
+  - Implementation: {{proof-runner}}, {{proof-run}}
+  - Proof: {{temporary-project}}, {{processes}}, {{module-doubles}}
+
+- A test group may declare the runtime `contexts` its proofs require, as distinct lowercase names using
+  letters, digits and hyphens. The command identity includes those names. Each required context is captured
+  for that test in `<name>-context.json`; missing or incomplete capture grants no independent execution
+  credit even when the Node test process completed. `KIT_CONTEXTS` gives the command those names separated
+  by commas, and `KIT_COVERAGE`, `KIT_RUNTIME` and `KIT_TEST` identify its report directory, runtime and proof.
+  Each test's encoded report directory exists before execution. `KIT_FUNCTIONS` names the supplied original
+  named-function facts, including source offsets; mapped proof machinery reads the corresponding original
+  source bytes so its evidence holds the sources that establish those identities.
+  · {#required-runtime-contexts-are-captured}
+  - Implementation: {{verification-configuration}}, {{verify-run}}, {{check-run}}, {{execution-context}}
+  - Proof: {{temporary-project}}
+
 - An app declares its gate under `verify`: whole-tree checks, each an id and one command, optionally run after
   the tests, and its tests as one group or a list of groups, each the command that runs one test file `{test}`,
   which may also write the test's coverage into `{dir}`, or several test files `{tests}` with Kit's coverage
@@ -42,9 +63,18 @@ so a later gate runs only what an edit can have changed.
   runtime and recording format, and runs the rest together; a failure is never kept, a pass during which a path it read changed, from a state
   an earlier pass kept, or a file it read since its run started, is reported and not kept, and runs on different trees each keep
   theirs. A check declared
-  `after: tests` runs once the tests' passes are kept, and is not kept itself when a test's pass was not.
-  `--fresh` reuses and keeps nothing, `--plan` says what would run, and it exits 1 when a check fails. · {#verdicts-hold-while-their-reads-hold}
-  - Implementation: {{verify-run}}, {{verdict-reuse}}, {{verdict}}, {{evidence-store}}, {{filesystem}}, {{toolchain}}, {{processes}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}
+  `after: tests` runs once the tests' passes are kept, and is not kept itself when a test's pass was not. Its
+  reuse also holds the exact invocation evidence input: explicit root, runtime and scripts, and each test's
+  command, held states, named functions and attributable execution context. That input omits elapsed time;
+  durations remain diagnostic data in the persistent passes. Serialization orders its identities and offers
+  only those fields. `--plan` can reuse an after-test check only when every selected test already has a valid
+  pass establishing that same input; otherwise it plans to run the check.
+  `--fresh` reuses and keeps nothing persistently, but supplies its own passing test evidence to checks run
+  after tests. Their command may use `{evidence}` for this invocation's evidence file; `kit check --evidence`
+  validates its format, governed root, runtime, expected test commands and held states before granting credit.
+  A changed input invalidates evidence and is counted separately from intentionally unpersisted evidence.
+  `--plan` says what would run, and it exits 1 when a check fails. · {#verdicts-hold-while-their-reads-hold}
+  - Implementation: {{verify-run}}, {{check-run}}, {{invocation-evidence}}, {{invocation-passes}}, {{verdict-reuse}}, {{verdict}}, {{evidence-store}}, {{filesystem}}, {{toolchain}}, {{processes}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}
   - Proof: {{temporary-project}}
 - A pass is kept under the recording format, a version Kit declares and changes only when how a pass's states,
   a script's ran code or their digests are recorded changes, never under Kit's source as a whole: a release of a
@@ -63,14 +93,28 @@ so a later gate runs only what an edit can have changed.
   nearer an importer is seen. An install that changes a package the run used reruns it, and one that changes only
   others reuses it; a lockfile only the module loader read, as Vite does to key its own cache, is held through
   those packages alone. A check is kept under the runtime: Node's version, platform and architecture, and the
-  app's `package.json` without its `scripts`, which a check whose command runs package scripts through `npm`,
-  `yarn`, `pnpm`, `bun` or `node --run` is kept under besides, so a script edit reruns only those. A `package.json`
-  only the module loader or npm itself read is held without its scripts, and one other code read is held whole.
+  app's Node loader fields (`name`, `main`, `type`, `imports`, `exports`), including their order where the
+  resolver uses it. A command running package scripts through `npm`, `yarn`, `pnpm`, `bun` or `node --run` also
+  holds the scripts, so a script edit reruns only those. A manifest read as resolver metadata retains its
+  non-script metadata and dependency names and categories. When the resolved package graph is tracked,
+  changing only dependency version declarations does not invalidate a pass whose used packages stayed the
+  same. An explicit manifest read or JSON import as data holds its whole content; an unknown role does too.
   With no lockfile, or one without a `packages` map, the runtime holds the lockfile whole instead. A package
   changed without a read the recorder sees, such as a native library a binding opens, a file it fetched outside
   the app, a package linked from outside the app, a name first installed where an import that found nothing
   looked, or files installed otherwise than their lockfile entry says, is not seen. · {#passes-hold-the-packages-they-read}
   - Implementation: {{read-recorder}}, {{verdict-reuse}}, {{held-state}}, {{toolchain}}, {{verify-run}}
+  - Proof: {{temporary-project}}
+- `kit verify --selection <file>` validates a versioned selection against the digest of every discovered test
+  identity before running it. Unknown or duplicate selected tests, a stale inventory, an empty policy identity,
+  or a discovered test no group takes fail even when the test is deferred. Whole-tree checks still run. The
+  result names the discovered, selected and deferred tests, selection policy and verification scope; a deferred
+  test receives no pass. Without a selection, all discovered tests are selected. Selected verification prints
+  `Kit verify null` before its `Kit selection` result. The null clears any earlier exhaustive summary a nested
+  command printed for an older consumer; it is no full verification evidence. Selected counts never occupy
+  the exhaustive summary, so an exhaustive consumer cannot mistake partial evidence for a full pass.
+  · {#a-selection-names-what-it-defers}
+  - Implementation: {{selection}}, {{verification-selection}}, {{verify-run}}, {{test-groups}}, {{fact-keys}}
   - Proof: {{temporary-project}}
 - A script a test only loaded, whose functions the test's coverage lists, is kept as the test ran it: its code
   with the body of every outermost function the test never ran left out, where a function counts as run when a

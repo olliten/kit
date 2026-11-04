@@ -101,7 +101,9 @@ compositions wire the others into behaviour.
   `globalThis.<name>` or through a cast of `globalThis`, it is a limit ({{global-authority}}, {{syntax-reading}}). · {#host-globals-need-an-adapter}
   - Implementation: {{access-authority}}, {{capability-context}}, {{finding}}, {{authority-recorder}}, {{fact-walk}}, {{compiler}}
   - Proof: {{recorded-authority}}, {{project-snapshot}}
-- A package an adapter declares in its `packages` is that adapter's to import: there the import grants the
+- An exact package subpath an adapter declares in its `packages` belongs to that adapter alone; declaring
+  the package root owns every subpath. Other imports keep their own package contracts. A package an adapter
+  declares in its `packages` is that adapter's to import: there the import grants the
   adapter's capability, and anywhere else, the core included, a runtime import of it is a finding even where a
   package row declares it; a package no row declares stays a limit ({{import-authority}}). · {#declared-packages-stay-in-their-adapter}
   - Implementation: {{access-authority}}, {{global-authority}}, {{capability-context}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{finding}}, {{authority-recorder}}, {{import-recorder}}, {{fact-walk}}, {{compiler}}

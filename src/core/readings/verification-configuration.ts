@@ -100,10 +100,14 @@ function group(declared: unknown, at: string, registered: readonly string[]): Te
   if (unknown >= 0)
     throw new Error(`${at}.capabilities[${unknown}]: no adapter registers the capability ${named[unknown] ?? ""}; register one under adapters, or name a registered one.`);
   const capacity = isRecord(declared) ? declared["capacity"] : undefined;
+  const contexts = isRecord(declared) ? declared["contexts"] : undefined;
+  if (contexts !== undefined && (!Array.isArray(contexts) || !contexts.every((name) => typeof name === "string" && /^[a-z][a-z0-9-]*$/.test(name)) || new Set(contexts).size !== contexts.length))
+    throw new Error(`${at}.contexts: list distinct runtime context names using lowercase letters, digits and hyphens.`);
   return {
     command,
     under: directories,
     ...(capacity === undefined ? {} : { capacity: counted(capacity, `${at}.capacity`) }),
+    ...(Array.isArray(contexts) ? { contexts } : {}),
     ...(Array.isArray(reaching) ? { reaching: [...new Set(reaching.filter(isText).map((path) => normalizedPath(path)))].sort() } : {}),
     ...(named.length > 0 ? { capabilities: [...new Set(named)].sort() } : {}),
   };
@@ -111,4 +115,5 @@ function group(declared: unknown, at: string, registered: readonly string[]): Te
 
 // The command line a test's pass is kept under: its group's command for that test file alone, whether it runs
 // alone or among others.
-export const testLine = (command: string, test: string): string => command.replaceAll("{tests}", test).replaceAll("{test}", test);
+export const testLine = (command: string, test: string, contexts: readonly string[] = []): string =>
+  `${contexts.length === 0 ? "" : `KIT_CONTEXTS=${[...contexts].sort().join(",")} `}${command.replaceAll("{tests}", test).replaceAll("{test}", test)}`;

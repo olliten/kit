@@ -68,6 +68,8 @@ export function functionRecorder() {
         id,
         holder,
         lines: closes - opens + 1,
+        start: node.getStart(sf),
+        end: node.getEnd(),
       });
     },
     end(): void {

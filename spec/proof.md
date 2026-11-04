@@ -37,7 +37,7 @@ a claim depends on are named in it, so each module's claims are found from its n
   and fails until it is removed. A row naming neither or both, holding another key, without a nonempty reason
   or repeating an earlier row is a configuration error naming its key. · {#a-pending-claim-is-declared}
   - Implementation: {{pending-claims}}, {{kit-configuration}}, {{config-schema}}, {{gate}}, {{ratchet}}, {{check-run}}
-  - Proof: {{temporary-project}}
+  - Proof: {{temporary-project}}, {{verify-run}}
 - A claim table has a header naming its fields and one claim per data row, with one cell for each header.
   Every row has exactly one closing anchor; its cells together state that claim. Headers and separators declare no claims, and cells
   are not separate claims. References and module names are read from every cell with the same rules as
@@ -91,25 +91,39 @@ a claim depends on are named in it, so each module's claims are found from its n
 - `kit verify`, given a test command that writes the test's LCOV report into `{dir}`, keeps with each test's pass
   the named functions of each placed module the test ran; raw V8 coverage adds the processes a test starts, where
   a function's reported name and line match the source. `kit check` reads them from each test's pass while it
-  still holds. While a test under the proof root has none, the rules that read what tests ran wait, and the check
-  says how many tests they wait for. A placed module no test ran is not missing: its functions are simply
-  unrun. When no test command records runs, the check says execution obligations are not established and
-  asks for a recording test command and `kit verify`. · {#runs-are-kept-with-each-pass}
-  - Implementation: {{verify-run}}, {{check-run}}, {{held-state}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{verdict}}, {{verdict-reuse}}, {{evidence-store}}, {{filesystem}}, {{processes}}, {{text-files}}
+  still holds, or validates the invocation-local evidence explicitly supplied with `--evidence`. A missing or
+  deferred test grants no execution credit without disabling the rules for other tests. A placed module no
+  test ran has unrun functions. When no test command records runs, the check says execution obligations are
+  not established and asks for a recording test command and `kit verify`. · {#runs-are-kept-with-each-pass}
+  - Implementation: {{verify-run}}, {{check-run}}, {{invocation-evidence}}, {{held-state}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{verdict}}, {{verdict-reuse}}, {{evidence-store}}, {{filesystem}}, {{processes}}, {{text-files}}
   - Proof: {{temporary-project}}
 - Every named function of a placed module is run by a test of a claim that names the module, so each piece of
   code is governed by a claim that promises something about it. For this obligation, a test qualifies only
-  when its transitive runtime imports reach no declared application entrypoint. Helpers, side-effect imports
-  and legacy modules keep their runtime edges; erased imports do not count. Claim proofs are proof entrypoints,
-  not application entrypoints. Other tests retain their integration evidence. A named function none of those qualified tests runs is
+  when its transitive runtime imports and observed loaded sources reach no declared application bootstrap and
+  its supported execution context is complete and attributable. Helpers, side-effect imports and legacy
+  modules keep their runtime edges; erased imports do not count. An explicit `bootstraps` inventory identifies
+  application startup and grants no authority or placement exemption; when it is omitted, non-proof entrypoint
+  exceptions retain their historical startup meaning. Claim proofs are proof
+  entrypoints, not application bootstraps. Missing or incomplete context grants no independent credit. Other
+  tests retain their integration evidence. A named function none of those qualified tests runs is
   debt: proved only incidentally by another claim, or by none. A module of only types has no functions, and an
   anonymous function belongs to the named function that holds it. · {#every-function-is-governed}
-  - Implementation: {{function-governance}}, {{independent-runs}}, {{claim-runs}}, {{function-recorder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
+  - Implementation: {{function-governance}}, {{independent-runs}}, {{execution-context}}, {{runs}}, {{claim-runs}}, {{function-recorder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
   - Proof: {{recorded-functions}}, {{project-snapshot}}
 - Claims that share a module share its code. A named function only one claim's tests run, and that no named
   function other claims run holds, is that claim's excerpt; a module that holds the excerpts of two or more
   claims is several modules, and each excerpt moves to its own. Code that every claim runs is the module's
-  shared core and stays. An adapter is defined by its operations, so it is exempt. · {#claims-keep-their-excerpts-apart}
-  - Implementation: {{excerpt-cohesion}}, {{claim-runs}}, {{function-recorder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
+  shared core and stays. Only qualifying independent runs establish ownership. Each exclusive function is an
+  obligation keyed by its module, claim and stable function identity, so existing debt cannot hide an added
+  excerpt and individual removals can pay it down. An adapter is defined by its operations, so it is exempt.
+  · {#claims-keep-their-excerpts-apart}
+  - Implementation: {{excerpt-cohesion}}, {{independent-runs}}, {{claim-runs}}, {{function-recorder}}, {{finding}}, {{placement-of}}, {{proof-reach}}, {{fact-walk}}, {{compiler}}
   - Proof: {{recorded-functions}}, {{project-snapshot}}
+- Execution context records normalized loaded original-source identities and runtime identity for each test.
+  Browser execution is attributable only when its served code, source maps and original sources correspond,
+  named functions use the compiler's source inventory, and relevant process, page and frame lifecycles were
+  captured. Missing or ambiguous mapping makes the context incomplete, never an exemption or an independent
+  pass. · {#execution-context-is-attributable}
+  - Implementation: {{execution-context}}, {{independent-runs}}, {{runs}}, {{verdict}}, {{test-runs}}, {{function-recorder}}, {{compiler-facts}}, {{verify-run}}, {{read-recorder}}, {{coverage-provider}}
+  - Proof: {{temporary-project}}, {{recorded-functions}}, {{proof-runner}}
 

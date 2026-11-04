@@ -26,6 +26,9 @@ export interface KitConfig {
   // Exact executable entrypoints outside zones, including claim proofs. This grants wiring permission
   // only to each named file; its authority and dependencies remain checked.
   readonly exceptions?: readonly string[];
+  // Exact application bootstrap sources used to qualify independent proofs. These grant no wiring or
+  // authority exemption and may live in checked legacy or placed code.
+  readonly bootstraps?: readonly string[];
   // The size limits an app opts into; a limit it doesn't declare is not checked.
   readonly limits?: { readonly functionLines: number };
   // The rules an app switches off, each with the reason it declares; only the rules that read what tests ran may be.
@@ -109,6 +112,7 @@ export const DEFAULT_CONFIG: KitConfig = {
 // takes the tests whose imports reach one of those modules or a module an adapter registers with one of those
 // capabilities; one naming neither takes the tests no earlier group took.
 export interface TestGroup {
+  readonly contexts?: readonly string[];
   readonly command: string;
   readonly under: readonly string[];
   readonly reaching?: readonly string[];

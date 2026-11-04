@@ -3,6 +3,7 @@ import { afterEach, expect, test } from "vitest";
 import { configuredKit } from "../../src/core/compositions/kit-configuration.js";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import { runCheck } from "../../src/substrate/compositions/check-run.js";
+import { runVerify } from "../../src/substrate/compositions/verify-run.js";
 import { type TemporaryProject, temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
 const engine = new URL("../..", import.meta.url).pathname.replace(/\/$/, "");
@@ -19,16 +20,18 @@ function app(pending: string) {
   const project = temporaryProjects.open("kit-pending-");
   projects.push(project);
   project.write({
+    ".git/HEAD": "ref: refs/heads/main\n",
     "src/core/readings/count.ts": "export const count = (text: string): number => text.length;\n",
-    "oracle/text/sums.test.ts": 'import { count } from "../../src/core/readings/count.js";\nexport const counted = count("a");\n',
+    "oracle/text/sums.test.ts": 'import { count } from "../../src/core/readings/count.ts";\nif (count("a") !== 1) throw new Error("A character is counted.");\n',
     "oracle/text/adds.test.ts": "export {};\n",
     "tsconfig.json": JSON.stringify({
-      compilerOptions: { strict: true, target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", types: [], skipLibCheck: true },
+      compilerOptions: { strict: true, target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", types: [], skipLibCheck: true, noEmit: true, allowImportingTsExtensions: true },
       include: ["src/**/*.ts", "oracle/**/*.ts"],
     }),
     "package.json": JSON.stringify({ type: "module" }),
     "kit/config.md":
       "```yaml\nroots:\n  src: [src/, oracle/]\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\nlegacy-areas: []\nadapters: []\npackages: []\n" +
+      "verify:\n  checks: []\n  tests:\n    under: oracle/\n    command: node --experimental-strip-types --no-warnings --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}\n" +
       pending +
       "```\n",
     "kit/debt.json": "{}\n",
@@ -37,12 +40,20 @@ function app(pending: string) {
       "# Text\n\nA text is counted.\n\n## Counting\n\n- A text's characters are counted. · {#sums}\n  - Implementation: {{count}}\n\n" +
       "- A text's words are counted. · {#words}\n",
   });
-  return (...flags: string[]) =>
-    runCheck({
+  const request = (...flags: string[]) => ({
       engineRoot: engine,
       args: ["--root", project.root, "--config", join(project.root, "kit/config.md"), "--baseline", join(project.root, "kit/debt.json"), ...flags],
       cwd: project.root,
     });
+  let qualified = false;
+  return async (...flags: string[]) => {
+    if (!qualified) {
+      const proof = await runVerify(request());
+      expect(proof.exitCode, proof.stderr).toBe(0);
+      qualified = true;
+    }
+    return runCheck(request(...flags));
+  };
 }
 
 const missing = "R3:missing-proof:spec/text.md:words";

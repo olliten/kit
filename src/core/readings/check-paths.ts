@@ -5,7 +5,14 @@ export function kitCheckPaths(
   args: readonly string[],
   engineRoot: string,
   cwd: string,
-): { readonly root: string; readonly configPath: string; readonly baselinePath: string } {
+): {
+  readonly root: string;
+  readonly configPath: string;
+  readonly baselinePath: string;
+  readonly referencePath?: string;
+  readonly footprintPath?: string;
+  readonly evidencePath?: string;
+} {
   const at = (base: string, path: string): string => normalizedPath(path.startsWith("/") ? path : `${base}/${path}`);
   const option = (name: string): string | undefined => {
     const values: (string | undefined)[] = [];
@@ -21,11 +28,17 @@ export function kitCheckPaths(
   const root = given === undefined ? engineRoot : at(cwd, given);
   const config = option("config");
   const baseline = option("baseline");
+  const reference = option("baseline-reference");
+  const footprint = option("footprint");
+  const evidence = option("evidence");
   if (root !== engineRoot && (!config || !baseline))
     throw new Error("A different governed root requires its --config and --baseline paths.");
   return {
     root,
     configPath: config === undefined ? at(engineRoot, "self-config.md") : at(cwd, config),
     baselinePath: baseline === undefined ? at(engineRoot, "self-debt/legacy") : at(cwd, baseline),
+    ...(reference === undefined ? {} : { referencePath: at(cwd, reference) }),
+    ...(footprint === undefined ? {} : { footprintPath: at(cwd, footprint) }),
+    ...(evidence === undefined ? {} : { evidencePath: at(cwd, evidence) }),
   };
 }

@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "vitest";
+import type { KitConfig } from "../../src/core/primitives/default-config.js";
 import { SMALL_CONFIG, type SmallApp, smallApp } from "../substrate/compositions/extraction-proof.js";
 
 const apps: SmallApp[] = [];
@@ -104,4 +105,32 @@ test("the config's gate and the app's name, which extraction never reads, recomp
   app.stored();
   const gate = { checks: [{ id: "lint", command: "node lint.mjs" }], tests: [{ command: "node {test}", under: ["oracle"] }] };
   expect(app.stored("proof", { ...SMALL_CONFIG, app: "small", verify: gate }).receipt.files.computed).toBe(0);
+});
+
+test("checker-only rules, ceilings and claim policy preserve extracted facts", () => {
+  const app = open();
+  app.stored();
+  const changes: readonly KitConfig[] = [
+    { ...SMALL_CONFIG, limits: { functionLines: 100 } },
+    { ...SMALL_CONFIG, rules: { "ungoverned-function": { off: "adoption" } } },
+    { ...SMALL_CONFIG, pending: [{ claim: "spec/sums.md:sums", reason: "proof follows" }] },
+    { ...SMALL_CONFIG, bootstraps: ["src/start.ts"] },
+    { ...SMALL_CONFIG, connectors: [...SMALL_CONFIG.connectors, "via"] },
+    { ...SMALL_CONFIG, debtMarkers: [...SMALL_CONFIG.debtMarkers, "LATER"] },
+  ];
+  for (const config of changes) {
+    const receipt = app.stored("proof", config).receipt;
+    expect(receipt.files.computed).toBe(0);
+    expect(receipt.proofs.computed).toBe(0);
+  }
+});
+
+test("changing a registered contract still invalidates extraction", () => {
+  const app = open();
+  const all = app.stored().receipt.files.computed;
+  const config: KitConfig = { ...SMALL_CONFIG, adapters: [{
+    module: "substrate/adapters/clock", export: "clock", capability: "time", kind: "external",
+    zones: ["substrate"], contract: { type: "Clock" },
+  }] };
+  expect(app.stored("proof", config).receipt.files.computed).toBe(all);
 });

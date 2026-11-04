@@ -109,3 +109,27 @@ test("ordinary single-report batch evidence remains unchanged", async () => {
   expect(ran("single", "tests/a.test.ts")).toEqual({ [primary]: ["alpha@1"] });
   expect(ran("single", "tests/b.test.ts")).toEqual({ [primary]: ["beta@4"] });
 }, 180_000);
+
+test("shared host execution grants no test credit while its dependencies and each test's own children remain attributable", async () => {
+  const { project, verify, ran } = app();
+  const host = "src/core/readings/host.mjs";
+  const child = "src/core/readings/child.mjs";
+  const hostSource = "export function hostOnly() {\n  return 7;\n}\n";
+  project.write({
+    "kit/config.md": config("single"),
+    [host]: hostSource,
+    [child]: "export function childOnly() {\n  return 11;\n}\nexport function unusedChild() {\n  return 99;\n}\n",
+    "runner.mjs": `import { hostOnly } from './${host}';\nif (hostOnly() !== 7) throw new Error('The host must execute.');\n` + runner,
+    "child.mjs": `import { childOnly } from './${child}';\nif (childOnly() !== 11) throw new Error('The child must execute.');\n`,
+    "tests/a.test.ts": 'import { execFileSync } from "node:child_process";\nimport { expect, test } from "vitest";\n' +
+      'import { alpha } from "../src/core/readings/primary.mjs";\ntest("alpha", () => { expect(alpha()).toBe(1); execFileSync(process.execPath, ["child.mjs"]); });\n',
+  });
+  const result = await verify();
+  expect(result.exitCode, result.stdout + result.stderr).toBe(0);
+  expect(ran("single", "tests/a.test.ts")).toEqual({ [primary]: ["alpha@1"], [child]: ["childOnly@1"] });
+  expect(ran("single", "tests/b.test.ts")).toEqual({ [primary]: ["beta@4"] });
+  // The host's function ran, but neither proof ran it. Both still depend on the host source used by their runner.
+  project.write({ [host]: hostSource.replace("return 7", "return 6 + 1") });
+  const changed = await verify("--plan");
+  expect(changed.stdout).toBe("run test:tests/a.test.ts\nrun test:tests/b.test.ts\n");
+}, 180_000);

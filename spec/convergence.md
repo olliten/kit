@@ -58,3 +58,17 @@ and its size are debt that may only shrink, and placed code is held to every rul
   entry it is left on; a reason that isn't a nonempty string is an error. · {#debt-may-carry-a-reason}
   - Implementation: {{paid-debt}}, {{ratchet}}, {{baseline-files}}, {{check-run}}
   - Proof: {{temporary-project}}
+- `kit check --baseline-reference <path>` compares the candidate baseline with the approved reference file or
+  directory as well as checking the actual findings. New keys and larger existing budgets fail; paying one
+  obligation cannot buy a new one. The caller supplies the approved reference; Kit does not infer Git history.
+  · {#a-baseline-cannot-approve-its-own-growth}
+  - Implementation: {{debt-policy}}, {{debt-comparison}}, {{baseline-files}}, {{ratchet}}, {{check-run}}, {{text-files}}
+  - Proof: {{temporary-project}}
+- Debt mode is `ratchet` by default. `--debt-mode paydown` additionally requires at least one resolved approved
+  obligation or reduced existing size budget associated with the source, claim or proof-dependency paths in
+  `--footprint <file>`, a JSON list supplied by the caller. Paydown requires an approved baseline reference and
+  nonempty footprint. Deleting an entry alone, renaming, formatting, or reducing unrelated debt does not count;
+  the actual findings must establish the reduction. Neither mode permits new debt or weaker checks.
+  · {#paydown-requires-a-real-reduction}
+  - Implementation: {{debt-policy}}, {{debt-comparison}}, {{ratchet}}, {{check-run}}, {{paid-debt}}
+  - Proof: {{temporary-project}}

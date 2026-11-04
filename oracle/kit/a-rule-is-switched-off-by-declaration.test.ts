@@ -43,6 +43,9 @@ function ran(config: Partial<KitConfig>): string[] {
         "oracle/text/sums.test.ts": { [module]: ["parse@1", "sum@2"] },
         "oracle/text/formats.test.ts": { [module]: ["parse@1", "format@3"] },
       },
+      contexts: Object.fromEntries(["oracle/text/sums.test.ts", "oracle/text/formats.test.ts"].map((test) => [test, {
+        complete: true, runtime: "fixture", loaded: [test, module],
+      }])),
     },
   };
   const rules = new Set(gate(snapshot, snapshot.config).findings.map((item) => item.debtKey.split(":").slice(0, 2).join(":")));
@@ -69,14 +72,15 @@ test("a missing or empty reason, another rule's name or another key is a configu
   expect(read(["excerpt-cohesion"])).toThrow(/^rules: /);
 });
 
-// An app whose gate records what tests ran, with a test that has no kept pass, so the rules that read it wait.
+// A real placed module with missing execution: its functions remain debt and old cohesion is uncertain.
 function app(rules: string) {
   const project = temporaryProjects.open("kit-rule-switch-");
   projects.push(project);
   project.write({
     ".git/HEAD": "ref: refs/heads/main\n",
     "src/legacy/kept.ts": "export const kept = 1;\n",
-    "oracle/text/sums.test.ts": "export {};\n",
+    [module]: source,
+    "oracle/text/sums.test.ts": 'import { sum } from "../../src/core/readings/text.js";\nexport const counted = sum("a");\n',
     "tsconfig.json": JSON.stringify({
       compilerOptions: { strict: true, target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", types: [], skipLibCheck: true },
       include: ["src/**/*.ts"],
@@ -87,8 +91,8 @@ function app(rules: string) {
       "verify:\n  checks: []\n  tests:\n    command: run {test} {dir}\n    under: [oracle/]\n" +
       rules +
       "```\n",
-    "spec/terms.md": "# Terms\n",
-    "spec/text.md": "# Text\n\n- A text's parts are counted. · {#sums}\n",
+    "spec/terms.md": "# Terms\n\n- **text** — text transformations.\n  - Role: derived\n  - Zone: core\n  - From: []\n",
+    "spec/text.md": "# Text\n\nTransforms text.\n\n## Counting\n\n- A text's parts are counted ({{text}}). · {#sums}\n",
   });
   const check = (...flags: string[]) =>
     runCheck({
@@ -100,7 +104,7 @@ function app(rules: string) {
 }
 
 const governed = "R4:ungoverned-function:src/core/readings/text.ts:sum";
-const cohesive = "R4:excerpt-cohesion:src/core/readings/text.ts";
+const cohesive = "R4:excerpt-cohesion:src/core/readings/text.ts:spec%2Ftext.md%3Asums:sum";
 
 // The baseline an app keeps: what the check reports owed now, and a key of each rule that reads what tests ran.
 async function recorded(check: ReturnType<typeof app>["check"], project: TemporaryProject): Promise<string[]> {
@@ -113,14 +117,15 @@ async function recorded(check: ReturnType<typeof app>["check"], project: Tempora
     .map((item) => [item.debtKey, item.statements === undefined ? null : { statements: item.statements, calls: item.calls }] as const);
   const entries = [...owed, [governed, null] as const, [cohesive, null] as const];
   project.write({ "kit/debt.json": JSON.stringify(Object.fromEntries(entries), null, 2) + "\n" });
-  return entries.map(([key]) => key).sort();
+  return [...new Set(entries.map(([key]) => key))].sort();
 }
 
-test("while the rules wait, their baseline keys are neither paid nor dropped by tightening", async () => {
+test("missing proof leaves functions unproved and preserves uncertain cohesion through tightening", async () => {
   const { project, check, debt } = app("");
   const keys = await recorded(check, project);
   const waiting = await check();
-  expect(waiting.stdout).toMatch(/wait for 1 tests/);
+  expect(waiting.stdout).toContain("1 tests have no current execution evidence");
+  expect(waiting.stdout).toContain("ungoverned-function");
   expect(waiting.stderr).toBe("");
   expect(waiting.exitCode).toBe(0);
   const report: { stale: unknown[] } = JSON.parse((await check("--report")).stdout);
@@ -129,7 +134,7 @@ test("while the rules wait, their baseline keys are neither paid nor dropped by 
   expect(debt()).toEqual(keys);
 }, 120_000);
 
-test("a rule switched off has its baseline keys paid, and tightening drops them", async () => {
+test("switching a rule off reports its reason and preserves its baseline without manufacturing paydown", async () => {
   const { project, check, debt } = app(`rules:\n  ungoverned-function: {off: "${reason}"}\n`);
   const keys = await recorded(check, project);
   const failed = await check();
@@ -137,9 +142,9 @@ test("a rule switched off has its baseline keys paid, and tightening drops them"
   expect(disabled).toBeDefined();
   expect(disabled).toMatch(/\boff\b/);
   expect(failed.stdout.split("\n").some((line) => line.includes("excerpt-cohesion") && /\boff\b/.test(line))).toBe(false);
-  expect(failed.exitCode).toBe(1);
-  expect(failed.stderr).toBe(`${governed}: No finding has this debt key any more. Run \`kit check --tighten\` to drop paid debt.\n`);
+  expect(failed.exitCode).toBe(0);
+  expect(failed.stderr).toBe("");
   expect((await check("--tighten")).exitCode).toBe(0);
-  expect(debt()).toEqual(keys.filter((key) => key !== governed));
+  expect(debt()).toEqual(keys);
   expect((await check()).exitCode).toBe(0);
 }, 120_000);

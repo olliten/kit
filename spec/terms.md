@@ -30,6 +30,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **debt-policy** — the ratchet or paydown mode and the changed source, claim and proof-dependency paths a caller supplies.
+  - Role: fact
+  - Zone: core
+  - Of: []
 - **default-config** — the target layout, as the config an app starts from.
   - Role: fact
   - Zone: core
@@ -58,6 +62,10 @@
   - Role: fact
   - Zone: core
   - Of: []
+- **invocation-evidence** — passing test verdicts belonging to one verification invocation, with its root, runtime, scripts and expected test commands.
+  - Role: fact
+  - Zone: core
+  - Of: {{verdict}}
 - **layer** — a declared dependency position and its permitted import relationships.
   - Role: fact
   - Zone: core
@@ -70,7 +78,11 @@
   - Role: fact
   - Zone: core
   - Of: []
-- **runs** — what each test ran, from the passes `kit verify` kept that still hold: the named functions of each placed module it ran.
+- **runs** — what each test ran from valid evidence: named functions of each placed module, with its attributable loaded-source context and runtime.
+  - Role: fact
+  - Zone: core
+  - Of: []
+- **selection** — the versioned tests selected for verification, the complete discovery digest and the caller's selection policy identity.
   - Role: fact
   - Zone: core
   - Of: []
@@ -93,7 +105,7 @@
 - **verdict** — a check that passed, with the state of every path inside the app its run read, how long it took, and for a test, what it ran.
   - Role: fact
   - Zone: core
-  - Of: []
+  - Of: {{runs}}
 - **zone** — what code may do: core, shell or substrate.
   - Role: fact
   - Zone: core
@@ -181,6 +193,10 @@
   - Role: derived
   - Zone: core
   - From: []
+- **debt-comparison** — the findings from comparing actual obligations and the candidate baseline with an approved reference under ratchet or bounded paydown mode.
+  - Role: derived
+  - Zone: core
+  - From: {{debt-policy}}, {{finding}}, {{line-ratchet}}, {{ratchet}}
 - **dependency-check** — findings from import direction and cycles between placed modules.
   - Role: derived
   - Zone: core
@@ -196,7 +212,11 @@
 - **excerpt-cohesion** — debt from a module holding the excerpts of two or more claims: code only one claim runs, held by no code others run.
   - Role: derived
   - Zone: core
-  - From: {{claim-runs}}, {{finding}}, {{placement-of}}, {{runs}}, {{snapshot}}
+  - From: {{claim-runs}}, {{finding}}, {{independent-runs}}, {{placement-of}}, {{runs}}, {{snapshot}}
+- **execution-context** — whether one proof's observed loaded sources and runtime form complete attributable execution evidence.
+  - Role: derived
+  - Zone: core
+  - From: {{runs}}
 - **fact-keys** — the key one project's facts answer to, and for each file the files its imports reach and the key of all of them.
   - Role: derived
   - Zone: core
@@ -241,10 +261,14 @@
   - Role: derived
   - Zone: core
   - From: {{capability-context}}, {{snapshot}}
-- **independent-runs** — recorded runs whose proof's runtime imports reach no declared application entrypoint.
+- **independent-runs** — complete attributable runs whose proof's runtime imports and observed loaded sources reach no declared application bootstrap.
   - Role: derived
   - Zone: core
   - From: {{placement-of}}, {{runs}}, {{snapshot}}
+- **invocation-passes** — serialization of timing-free invocation input and passing test verdicts from its validated envelope whose root, runtime, commands and held states match the check.
+  - Role: derived
+  - Zone: core
+  - From: {{invocation-evidence}}, {{verdict}}, {{verdict-reuse}}
 - **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
   - Role: derived
   - Zone: core
@@ -376,11 +400,15 @@
 - **verdict-reuse** — how a check's processes used each path, the paths a process other than the test's loaded, the key each path is kept under and what it holds, the key an installed package is held under, a stored verdict read back, the recording format a pass is kept under, whether a check's command runs package scripts and the runtime it is kept under, where a check's passes are kept, the key a Kit's own source is held under, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
   - Role: derived
   - Zone: core
-  - From: {{fact-keys}}, {{runs}}, {{verdict}}
+  - From: {{execution-context}}, {{fact-keys}}, {{runs}}, {{verdict}}
 - **verification-configuration** — the gate an app declares under `verify`, checked as it is read.
   - Role: derived
   - Zone: core
   - From: {{config-values}}, {{default-config}}
+- **verification-selection** — the selected and deferred identities from validating a supplied selection against complete test discovery.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}, {{fact-keys}}, {{selection}}
 - **zone-authority-check** — the check that what each module, entrypoint and legacy edge holds is permitted where it is.
   - Role: derived
   - Zone: core
@@ -417,7 +445,15 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
+- **module-doubles** — test-runner access to SDK module replacements and restored process fixtures, exposing observations without native runner handles.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
 - **processes** — access to running another program to completion, how many the machine runs in parallel, and the environment the programs it runs inherit.
+  - Role: adapter
+  - Zone: substrate
+  - Of: []
+- **proof-runner** — access to one bounded Vitest run with explicit arguments and root, without application configuration or discovered workspaces and PostCSS plugins.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -445,7 +481,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **toolchain** — access to the identity of the Kit that reads an app, from its own source, and when it reads the app from outside it, and of the runtime a check runs on, the app manifest's scripts, a package manifest without its scripts, and each installed package's lockfile entry.
+- **toolchain** — access to the Kit's whole-source and extraction-producer identities, the runtime's loader metadata, script commands, observed resolver metadata and the installed packages each pass used.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -467,7 +503,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold and on what it holds that is paid.
   - Role: composition
   - Zone: substrate
-  - Of: {{baseline-files}}, {{check-paths}}, {{command}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{paid-debt}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{rule-switch}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict-reuse}}, {{verification-configuration}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{claim-runs}}, {{command}}, {{debt-comparison}}, {{debt-policy}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{independent-runs}}, {{invocation-passes}}, {{paid-debt}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{rule-switch}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate
@@ -540,6 +576,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler}}, {{compiler-facts}}, {{default-config}}, {{fact-keys}}, {{fact-walk}}, {{file}}, {{file-facts}}, {{ignored-import}}, {{root-token}}, {{source-size}}, {{test-reach}}, {{verdict-reuse}}, {{authority-recorder}}, {{behaviour-reading}}, {{contract-reading}}, {{contract-recorder}}, {{escape-recorder}}, {{function-recorder}}, {{import-recorder}}, {{native-reading}}, {{syntax-reading}}, {{term-recorder}}
+- **proof-run** — the command that runs bounded contract proofs through the declared runner and returns their exit status.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{command}}, {{proof-runner}}
 - **read-config** — the workflow that reads a config file and answers the configured Kit, or the command's failure naming each issue.
   - Role: composition
   - Zone: substrate
@@ -603,7 +643,7 @@
 - **verify-run** — the `kit verify` workflow: run each declared check and test whose last pass read paths that changed since, and keep each pass with the state of what it read.
   - Role: composition
   - Zone: substrate
-  - Of: {{batch-attribution}}, {{calendar}}, {{command}}, {{command-schedule}}, {{compiler}}, {{config-values}}, {{coverage-provider}}, {{coverage-report}}, {{evidence-store}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{pass-sharing}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{shared-passes}}, {{stopwatch}}, {{test-groups}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
+  - Of: {{batch-attribution}}, {{calendar}}, {{command}}, {{command-schedule}}, {{compiler}}, {{config-values}}, {{coverage-provider}}, {{coverage-report}}, {{evidence-store}}, {{execution-context}}, {{fact-keys}}, {{filesystem}}, {{held-state}}, {{invocation-evidence}}, {{invocation-passes}}, {{pass-sharing}}, {{processes}}, {{ran-code}}, {{read-config}}, {{read-recorder}}, {{read-snapshot}}, {{runs}}, {{selection}}, {{shared-passes}}, {{stopwatch}}, {{test-groups}}, {{test-runs}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}, {{verification-selection}}
 
 ## Supporting vocabulary and roles
 

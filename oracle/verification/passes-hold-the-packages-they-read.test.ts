@@ -137,3 +137,59 @@ test("with no lockfile, or one without a packages map, the runtime holds the loc
   project.write({ "package-lock.json": old("2.0.0") });
   expect(await plan()).toEqual(running("lint", "kit-check", "test:tests/plain.test.mjs", "test:tests/used.test.mjs"));
 }, 120_000);
+
+test("changing an unused declaration's version does not invalidate unrelated passes", async () => {
+  const { project, verify, plan } = app();
+  const declared = (version: string) => JSON.stringify({
+    name: "app", type: "module", scripts: { lint: "node lint.mjs" }, dependencies: { unused: version },
+  });
+  project.write({ "package.json": declared("1.0.0") });
+  expect((await verify()).exitCode).toBe(0);
+  project.write({ "package.json": declared("2.0.0"), "package-lock.json": lockfile({ ...PACKAGES, "node_modules/unused": entry("unused", "2.0.0") }) });
+  expect(await plan()).toEqual(ALL);
+  project.write({ "package-lock.json": lockfile({ ...PACKAGES, "node_modules/used": entry("used", "2.0.0") }) });
+  expect(await plan()).toEqual(running("test:tests/used.test.mjs"));
+}, 120_000);
+
+test("manifest reads as data remain whole even though loader metadata has narrower semantics", async () => {
+  const { project, verify, plan } = app();
+  const declared = (version: string) => JSON.stringify({
+    name: "app", version, type: "module", scripts: { lint: "node lint.mjs" }, dependencies: { unused: "1.0.0" },
+  });
+  project.write({
+    "package.json": declared("1.0.0"),
+    "tests/manifest-fs.test.mjs": 'import { readFileSync } from "node:fs";\nconst metadata = JSON.parse(readFileSync("package.json", "utf8"));\nif (!metadata.version) process.exit(1);\n',
+    "tests/manifest-json.test.mjs": 'import metadata from "../package.json" with { type: "json" };\nif (!metadata.version) process.exit(1);\n',
+  });
+  expect((await verify()).exitCode).toBe(0);
+  project.write({ "package.json": declared("2.0.0") });
+  const changed = await plan();
+  expect(changed).toContain("run test:tests/manifest-fs.test.mjs");
+  expect(changed).toContain("run test:tests/manifest-json.test.mjs");
+  expect(changed).toContain("reuse test:tests/plain.test.mjs");
+  expect(changed).toContain("reuse test:tests/used.test.mjs");
+}, 120_000);
+
+test("resolver metadata retains dependency names and categories and browser resolution fields", () => {
+  const { project, root } = app();
+  const path = join(root, "package.json");
+  const base = { name: "app", type: "module", dependencies: { unused: "1.0.0" }, browser: "./browser-a.js" };
+  project.write({ "package.json": JSON.stringify(base) });
+  const original = toolchain.manifest(path, root);
+  project.write({ "package.json": JSON.stringify({ ...base, dependencies: { unused: "2.0.0" } }) });
+  expect(toolchain.manifest(path, root)).toBe(original);
+  for (const changed of [
+    { ...base, dependencies: { added: "1.0.0" } },
+    { name: "app", type: "module", devDependencies: base.dependencies, browser: base.browser },
+    { ...base, browser: "./browser-b.js" },
+    { ...base, exports: { ".": "./index.js" } },
+  ]) {
+    project.write({ "package.json": JSON.stringify(changed) });
+    expect(toolchain.manifest(path, root)).not.toBe(original);
+  }
+  project.remove("package-lock.json");
+  project.write({ "package.json": JSON.stringify(base) });
+  const unlocked = toolchain.manifest(path, root);
+  project.write({ "package.json": JSON.stringify({ ...base, dependencies: { unused: "2.0.0" } }) });
+  expect(toolchain.manifest(path, root)).not.toBe(unlocked);
+});

@@ -1,5 +1,10 @@
 import type { CommandRequest, CommandResponse } from "../../core/primitives/command.js";
 import type { Verdict } from "../../core/primitives/verdict.js";
+import type { InvocationEvidence } from "../../core/primitives/invocation-evidence.js";
+import type { ExecutionContext } from "../../core/primitives/runs.js";
+import { verificationSelection } from "../../core/readings/verification-selection.js";
+import { executionContext, executionContextOf } from "../../core/readings/execution-context.js";
+import { invocationText } from "../../core/readings/invocation-passes.js";
 import { batchAttribution } from "../../core/readings/batch-attribution.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { digest } from "../../core/readings/fact-keys.js";
@@ -79,8 +84,16 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   // read against the code it ran; it is let go once neither needs it, so the tests run without it held.
   let read: ReturnType<typeof readStoredSnapshot>["snapshot"] | undefined;
   const snapshot = () =>
-    (read ??= readStoredSnapshot(root, loaded.config, { reuse: evidenceStore.at(store), engine: toolchain.engine(engineRoot) }).snapshot);
+    (read ??= readStoredSnapshot(root, loaded.config, { reuse: evidenceStore.at(store), engine: toolchain.extraction(engineRoot) }).snapshot);
   const found = [...new Set(tests)].sort();
+  let selection: ReturnType<typeof verificationSelection>;
+  try {
+    const path = option("selection");
+    if (args.includes("--selection") && (path === undefined || path.startsWith("--"))) throw new Error("selection: supply its JSON file.");
+    selection = verificationSelection(path === undefined ? undefined : JSON.parse(textFiles.read(at(path))), found);
+  } catch (error) {
+    return { stdout: "", stderr: `${String(error)}\n`, exitCode: 2 };
+  }
   const chosen = testGroups(found, groups, groups.some((group) => group.reaching !== undefined || group.capabilities !== undefined) ? snapshot().imports : [], capabilityModules(loaded.config));
   const unassigned = found.filter((test) => !chosen.has(test));
   type Check = {
@@ -90,25 +103,32 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     readonly records?: boolean;
     readonly group?: number;
     readonly batch?: boolean;
+    readonly afterTests?: true;
   };
   const first: Check[] = [
     ...policy.checks.filter((check) => check.after === undefined).map((check) => ({ id: check.id, line: check.command })),
-    ...found.flatMap((test) => {
+    ...selection.selected.flatMap((test) => {
       const group = chosen.get(test);
       const command = group === undefined ? undefined : groups[group]?.command;
       return group === undefined || command === undefined
         ? []
-        : [{ id: `test:${test}`, line: testLine(command, test), test, records: command.includes("{dir}"), group, batch: command.includes("{tests}") }];
+        : [{ id: `test:${test}`, line: testLine(command, test, groups[group]?.contexts), test, records: command.includes("{dir}"), group, batch: command.includes("{tests}") }];
     }),
   ];
-  const last: Check[] = policy.checks.filter((check) => check.after === "tests").map((check) => ({ id: check.id, line: check.command }));
+  const last: Check[] = policy.checks.filter((check) => check.after === "tests").map((check) => ({ id: check.id, line: check.command, afterTests: true }));
   if (!first.some((check) => check.records === true)) read = undefined;
 
   const runtime = toolchain.runtime(root);
   const kit = toolchain.kit(engineRoot, root);
   // A check whose command runs package scripts is kept under them besides.
   const scripts = toolchain.scripts(root);
-  const kindOf = (check: Check): string => verdictKind(check.id, check.line, runtimeOf(check.line, runtime, scripts));
+  const invocation: Record<string, InvocationEvidence["tests"][string]> = {};
+  const invocationDirectory = `${store}/scratch/invocation-${digest(`${root}\u0000${started}\u0000${processes.parallelism()}`)}`;
+  const invocationPath = `${invocationDirectory}/evidence.json`;
+  let invocationInput: string | undefined;
+  const kindOf = (check: Check): string => verdictKind(check.id, check.line, check.afterTests === true
+    ? digest(JSON.stringify(["after-tests/1", runtimeOf(check.line, runtime, scripts), invocationInput]))
+    : runtimeOf(check.line, runtime, scripts));
   // Each path's state is read once per version of it, so tests that share files read each once. A pass that loaded
   // the code of a Kit outside the app also holds that Kit's source.
   const held = heldStates(root, kit);
@@ -158,7 +178,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     return {
       states,
       planned: checks.map((check) => {
-        if (fresh) return { check, reused: undefined };
+        if (fresh || (check.afterTests === true && invocationInput === undefined)) return { check, reused: undefined };
         const verdicts = evidenceStore
           .entries(store, kindOf(check))
           .map(verdictOf)
@@ -176,6 +196,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   let reused = 0;
   let recorded = 0;
   let unrecorded = 0;
+  let invalidated = 0;
   let alone = 0;
   // The checks that passed, or were reused, and those that failed, which a check that needs them waits for.
   const passed = new Set<string>();
@@ -191,6 +212,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     const { planned, states } = plan(checks);
     for (const { check, reused: kept } of planned) {
       if (kept === undefined) continue;
+      if (check.test !== undefined) invocation[check.test] = { command: check.line, verdict: kept };
       lines.push(`reused ${check.id}`);
       passed.add(check.id);
       const text = evidenceStore.read(store, kindOf(check), heldKey(kept));
@@ -214,7 +236,10 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
           const { files, compiler } = snapshot();
           read = undefined;
           const functions = (compiler?.projects ?? []).flatMap((project) => project.functions ?? []);
-          const texts = new Map([...new Set(functions.map((fn) => fn.file))].map((file) => [file, textFiles.read(`${root}/${file}`)]));
+          const texts = new Map(files.filter((file) => file.type === "source" || file.type === "test")
+            .map(({ path }) => [path, textFiles.read(`${root}/${path}`)]));
+          textFiles.directory(invocationDirectory);
+          textFiles.write(`${invocationDirectory}/functions.json`, JSON.stringify({ version: 1, functions, sourceHashes: Object.fromEntries([...texts].map(([file, text]) => [file, digest(text)])) }));
           return { files, functions, texts };
         })()
       : undefined;
@@ -291,7 +316,8 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         uses: ReadonlyMap<string, ReadonlySet<string>>,
         beside: ReadonlySet<string>,
         lcov: readonly string[],
-        v8: readonly string[],
+        ownV8: readonly string[],
+        supplemental: readonly ExecutionContext[],
       ): void => {
         lines.push(`passed ${check.id}`);
         passed.add(check.id);
@@ -301,16 +327,23 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         // A path that changed while the check ran was read in one state and is kept in another, so the pass
         // describes neither: it is reported and not kept. That is a state other than the one a pass known before
         // the run kept, or, whether or not one was, a change since the command started.
-        if (!keep || [...after].some(([path, state]) => (states.has(path) && states.get(path) !== state) || changedSince(path))) {
+        if ([...after].some(([path, state]) => (states.has(path) && states.get(path) !== state) || changedSince(path))) {
+          invalidated++;
           unrecorded++;
           return;
         }
         const verdict: Verdict = { check: check.id, seconds, states: Object.fromEntries(after) };
         const report =
           check.test !== undefined && check.records === true && code !== undefined
-            ? testRuns([{ test: check.test, lcov, v8 }], code.files, root, loaded.config, code.functions, code.texts)[0]
+            ? testRuns([{ test: check.test, lcov, v8: ownV8 }], code.files, root, loaded.config, code.functions, code.texts)[0]
             : undefined;
-        const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran };
+        const kept: Verdict = report === undefined ? verdict : { ...verdict, ran: report.ran, execution: executionContext(uses, ownV8, root, runtimeOf(check.line, runtime, scripts), supplemental) };
+        if (check.test !== undefined) invocation[check.test] = { command: check.line, verdict: kept };
+        if (!keep) {
+          if (!fresh) unrecorded++;
+          return;
+        }
+        if (fresh) return;
         evidenceStore.write(store, kindOf(check), heldKey(kept), JSON.stringify(kept));
         passes.push({ path: sharedPath(kindOf(check), heldKey(kept)), text: JSON.stringify(kept) });
         recorded++;
@@ -320,6 +353,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
       const [check] = checks;
       const tests = checks.flatMap((each) => (each.test === undefined ? [] : [each.test]));
       const command = check?.group === undefined ? undefined : groups[check.group]?.command;
+      for (const test of tests) textFiles.directory(`${coverage}/${encodeURIComponent(test)}`);
       if (batch) textFiles.write(`${scratch}/0.tests`, tests.map((test) => `${test}\n`).join(""));
       // Raw V8 coverage also covers the processes a test starts, such as a launcher it runs.
       const [result] = await processes.shells(
@@ -329,7 +363,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
               batch && command !== undefined
                 ? command.replaceAll("{tests}", tests.join(" ")).replaceAll("{dir}", coverage).replaceAll("{provider}", coverageProvider.location)
                 : check === undefined || check.test === undefined
-                  ? (check?.line ?? "")
+                  ? (check?.line ?? "").replaceAll("{evidence}", invocationPath)
                   : check.line.replaceAll("{dir}", coverage),
             env: {
               // Added to the options the caller gives Node, such as its certificates, rather than put in their place.
@@ -340,7 +374,11 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
               // app's packages, and its loaded code is marked when it is outside the app.
               KIT_ENGINE: engineRoot,
               KIT_TESTS: batch ? `${scratch}/0.tests` : "",
-              KIT_TEST: "",
+              KIT_TEST: batch ? "" : check?.test ?? "",
+              KIT_COVERAGE: coverage,
+              KIT_FUNCTIONS: `${invocationDirectory}/functions.json`,
+              KIT_RUNTIME: check === undefined ? "" : runtimeOf(check.line, runtime, scripts),
+              KIT_CONTEXTS: check?.group === undefined ? "" : [...(groups[check.group]?.contexts ?? [])].sort().join(","),
               ...(check?.records === true ? { NODE_V8_COVERAGE: `${coverage}/v8` } : {}),
             },
           },
@@ -348,6 +386,19 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
         root,
       );
       const seconds = (stopwatch.now() - started) / 1000;
+      const supplementalContexts = (directory: string, check: Check): ExecutionContext[] => {
+        const required = check.group === undefined ? [] : groups[check.group]?.contexts ?? [];
+        const names = new Set([...required, ...namedIn(directory).flatMap(({ name }) => /^([a-z][a-z0-9-]*)-context\.json$/.exec(name)?.[1] ?? [])]);
+        return [...names].map((name) => {
+          try {
+            const context = executionContextOf(JSON.parse(textFiles.read(`${directory}/${name}-context.json`)));
+            if (context !== undefined) return context;
+          } catch {
+            // Missing required or malformed capture must not turn browser execution into Node-only proof.
+          }
+          return { complete: false, loaded: [], runtime };
+        });
+      };
       const again: Check[] = [];
       if (!batch) {
         if (check !== undefined) {
@@ -357,7 +408,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
             const recordings = namedIn(directory);
             const v8 = check.records === true ? namedIn(`${coverage}/v8`) : [];
             const beside = check.test === undefined ? new Set<string>() : loadedBeside(recordings, v8, check.test, root);
-            settle(check, seconds, pathUses(recordings.map((each) => each.text)), beside, lcov, v8.map((each) => each.text));
+            settle(check, seconds, pathUses(recordings.map((each) => each.text)), beside, lcov, v8.map((each) => each.text), supplementalContexts(`${coverage}/${encodeURIComponent(check.test ?? "")}`, check));
           }
         }
       } else {
@@ -380,8 +431,8 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
           },
           root,
         );
-        // The runner's own raw coverage is every test's; a test's process's children write theirs apart.
-        const runner = filesIn(`${coverage}/v8`);
+        // The worker and its children supply a test's execution credit. Shared runner coverage describes
+        // no individual proof; the runner's observed inputs remain in the outcome's uses for cache validity.
         for (const outcome of outcomes) {
           const each = checks.find((item) => item.test === outcome.test);
           if (each === undefined) continue;
@@ -389,7 +440,8 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
             const lcov = filesIn(`${coverage}/${encodeURIComponent(outcome.test)}`);
             const children = namedIn(`${coverage}/v8/${encodeURIComponent(outcome.test)}`);
             const beside = loadedBeside([], children, outcome.test, root);
-            settle(each, seconds, outcome.uses, beside, lcov, [...runner, ...children.map((child) => child.text)]);
+            const ownRun = own(outcome.test, "execution.json");
+            settle(each, seconds, outcome.uses, beside, lcov, [...children.map((child) => child.text), ...(ownRun === undefined ? [] : [ownRun])], supplementalContexts(`${coverage}/${encodeURIComponent(outcome.test)}`, each));
           } else if (outcome.outcome === "failed") fail(each, result);
           else again.push(each);
         }
@@ -446,16 +498,30 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const named = (check: Check): string => (check.group !== undefined && groups.length > 1 ? `${check.id} in tests[${check.group}]` : check.id);
   const left = unassigned.map((test) => `unassigned test:${test}`);
   if (args.includes("--plan")) {
-    const planned = [...plan(first).planned, ...plan(last).planned];
+    const opening = plan(first).planned;
+    for (const { check, reused } of opening)
+      if (check.test !== undefined && reused !== undefined) invocation[check.test] = { command: check.line, verdict: reused };
+    if (opening.every(({ check, reused }) => check.test === undefined || reused !== undefined))
+      invocationInput = digest(invocationText({ version: 1, root, runtime, scripts, tests: invocation }));
+    const planned = [...opening, ...plan(last).planned];
     return {
       stdout: [...planned.map(({ check, reused: kept }) => `${kept === undefined ? "run" : "reuse"} ${named(check)}`), ...left].map((line) => `${line}\n`).join(""),
       stderr: "",
-      exitCode: 0,
+      exitCode: unassigned.length > 0 ? 1 : 0,
     };
   }
   await run(first, true);
   // A check declared after the tests, such as one reading what each test ran, runs once their passes are kept.
-  await run(last, failures.size === 0 && unrecorded === 0);
+  textFiles.directory(invocationDirectory);
+  const evidence: InvocationEvidence = { version: 1, root, runtime, scripts, tests: invocation };
+  const input = invocationText(evidence);
+  invocationInput = digest(input);
+  textFiles.write(invocationPath, input);
+  try {
+    await run(last, failures.size === 0 && unrecorded === 0);
+  } finally {
+    textFiles.remove(invocationDirectory);
+  }
   // What reuse alone kept, with no chunk run after it, is added now.
   publish();
   evidenceStore.prune(store);
@@ -465,11 +531,18 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     ...(unpublished === undefined ? [] : [`Published no ${published > 0 ? "more " : ""}passes: ${unpublished}\n`]),
   ];
   const summary = {
+    scope: selection.scope,
+    discovery: selection.discovery,
+    policy: selection.policy,
+    discovered: found.length,
+    selected: selection.selected,
+    deferred: selection.deferred,
     reused,
     ran,
     failed,
     recorded,
     unrecorded,
+    invalidated,
     alone,
     unassigned: unassigned.length,
     shared: { read: shared?.read ?? 0, published },
@@ -477,8 +550,8 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     seconds: (stopwatch.now() - started) / 1000,
   };
   return {
-    stdout: `${[...lines, ...left].sort().join("\n")}\n${notes.join("")}Kit verify ${JSON.stringify(summary)}\n`,
+    stdout: `${[...lines, ...left].sort().join("\n")}\n${notes.join("")}${selection.scope === "all" ? "" : "Kit verify null\n"}${selection.scope === "all" ? "Kit verify" : "Kit selection"} ${JSON.stringify(summary)}\n`,
     stderr: [...failures.values(), ...unassigned.map((test) => `${test}: no test group takes it, so it never runs.\n`)].join(""),
-    exitCode: failed > 0 || unassigned.length > 0 ? 1 : 0,
+    exitCode: failed > 0 || unassigned.length > 0 || invalidated > 0 ? 1 : 0,
   };
 }

@@ -1,18 +1,22 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import ts from "typescript";
 
 // The identities a stored fact or verdict depends on besides the app: the Kit that read it, the runtime a check
 // runs on, and the app's manifest and installed packages as a pass holds them.
 export interface Toolchain {
   engine(engineRoot: string): string;
-  // Node's version, platform and architecture and the app manifest without its scripts; and the whole lockfile when
+  // The extraction producer's source closure and installed dependencies, independently of checker policy.
+  extraction(engineRoot: string): string;
+  // Node's version, platform and architecture and the app manifest's loader fields; and the whole lockfile when
   // it has no `packages` map to hold each installed package by.
   runtime(root: string): string;
   // The app manifest's scripts, which a check that runs them is kept under.
   scripts(root: string): string;
-  // A package manifest's state without its scripts, or its whole content when it is no JSON object.
-  manifest(path: string): string;
+  // Resolver metadata without scripts. With a resolved graph, dependency declaration names and categories stay,
+  // while the graph holds versions. Explicit reads of manifest data never use this projection.
+  manifest(path: string, root?: string): string;
   // The state of an installed package by its path in the lockfile, such as `node_modules/@a/b`: its entry, and every
   // path its name is installed at, since installing it nearer an importer changes what the import finds; or nothing
   // when the app has no lockfile with a `packages` map.
@@ -21,7 +25,6 @@ export interface Toolchain {
   kit(engineRoot: string, root: string): string;
 }
 
-const engines = new Map<string, string>();
 const byName = (a: { readonly name: string }, b: { readonly name: string }): number =>
   a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 const sha = (text: Buffer | string): string => createHash("sha256").update(text).digest("hex");
@@ -42,6 +45,108 @@ const parsed = (text: string | undefined): unknown => {
   }
 };
 
+const loaderManifest = (path: string): string => {
+  const text = contentOf(path);
+  if (text === undefined) return "absent";
+  const manifest = parsed(text);
+  return isRecord(manifest)
+    ? sha(JSON.stringify(["name", "main", "type", "imports", "exports"].map((key) => [key, Object.hasOwn(manifest, key), manifest[key] ?? null])))
+    : `file:${sha(text)}`;
+};
+
+// The installed dependency closure of the producer, including nearer installs and absent optional packages.
+// If a lockfile cannot describe that graph, its whole content remains a runtime dependency instead.
+function extractionPackages(root: string, names: ReadonlySet<string>): readonly (readonly [string, string])[] {
+  const identity = toolchain.packages(root);
+  if (identity === undefined) return [];
+  const lock = parsed(contentOf(join(root, "package-lock.json")));
+  const packages = isRecord(lock) && isRecord(lock["packages"]) ? lock["packages"] : {};
+  const pending = [...names].map((name) => `node_modules/${name}`);
+  const found = new Map<string, string>();
+  for (let path = pending.pop(); path !== undefined; path = pending.pop()) {
+    if (found.has(path)) continue;
+    found.set(path, identity(path));
+    const entry = packages[path];
+    if (!isRecord(entry)) continue;
+    const dependencies = new Set(["dependencies", "optionalDependencies", "peerDependencies"].flatMap((key) => {
+      const entries = entry[key];
+      return isRecord(entries) ? Object.keys(entries) : [];
+    }));
+    for (const name of dependencies) {
+      let directory = join(root, path);
+      let selected = `node_modules/${name}`;
+      while (directory.startsWith(root)) {
+        const candidate = relative(root, join(directory, "node_modules", name));
+        if (basename(directory) !== "node_modules" && isRecord(packages[candidate])) {
+          selected = candidate;
+          break;
+        }
+        if (directory === root) break;
+        directory = dirname(directory);
+      }
+      pending.push(selected);
+    }
+  }
+  return [...found].sort(([a], [b]) => a.localeCompare(b));
+}
+
+// The source graph is read from syntax, including type imports. An opaque dynamic load or an unresolved local
+// source falls back to the whole engine rather than guessing which code can produce a fact.
+function extractionIdentity(engineRoot: string): string {
+  const pending = ["src/substrate/compositions/read-snapshot.ts", "src/substrate/adapters/source-loader.mjs"];
+  const sources = new Map<string, string>();
+  const external = new Set<string>();
+  let complete = true;
+  const include = (specifier: string, file: string): void => {
+    if (specifier.startsWith("node:")) return;
+    // Aliases and absolute paths need the host resolver; the whole producer remains held until those edges
+    // can be attributed, rather than treating them as installed package names.
+    if (specifier.startsWith("#") || specifier.startsWith("/")) {
+      complete = false;
+      return;
+    }
+    if (!specifier.startsWith(".")) {
+      external.add(specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0] ?? specifier);
+      return;
+    }
+    const target = resolve(dirname(file), specifier);
+    const found = [target, target.replace(/\.js$/, ".ts"), `${target}.ts`, `${target}.mjs`, join(target, "index.ts")]
+      .find((path) => contentOf(path) !== undefined);
+    if (found === undefined || !found.startsWith(`${engineRoot}/`)) complete = false;
+    else pending.push(relative(engineRoot, found));
+  };
+  for (let path = pending.pop(); path !== undefined; path = pending.pop()) {
+    if (sources.has(path)) continue;
+    const file = join(engineRoot, path);
+    const text = contentOf(file);
+    if (text === undefined) return toolchain.engine(engineRoot);
+    sources.set(path, text);
+    const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+    const visit = (node: ts.Node): void => {
+      if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier !== undefined) {
+        if (ts.isStringLiteralLike(node.moduleSpecifier)) include(node.moduleSpecifier.text, file);
+        else complete = false;
+      } else if (ts.isExternalModuleReference(node)) {
+        if (ts.isStringLiteralLike(node.expression)) include(node.expression.text, file);
+        else complete = false;
+      } else if (ts.isCallExpression(node) &&
+        (node.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(node.expression) && node.expression.text === "require"))) {
+        const first = node.arguments[0];
+        if (first !== undefined && ts.isStringLiteralLike(first)) include(first.text, file);
+        else complete = false;
+      } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument) && ts.isStringLiteralLike(node.argument.literal)) {
+        include(node.argument.literal.text, file);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  if (!complete) return toolchain.engine(engineRoot);
+  return sha(JSON.stringify([
+    "extraction/1", toolchain.runtime(engineRoot), [...sources].sort(([a], [b]) => a.localeCompare(b)), extractionPackages(engineRoot, external),
+  ]));
+}
+
 export const toolchain: Toolchain = {
   // Node's own loader reads the app's package.json, for its module type, exports and imports, where no recorder
   // sees it; no loader reads its scripts. Installed packages are held by the passes that used them, by their
@@ -50,7 +155,7 @@ export const toolchain: Toolchain = {
     const lockfile = contentOf(join(root, "package-lock.json"));
     return createHash("sha256")
       .update(JSON.stringify([process.version, process.platform, process.arch]))
-      .update(JSON.stringify(["package.json", toolchain.manifest(join(root, "package.json"))]))
+      .update(JSON.stringify(["package.json", loaderManifest(join(root, "package.json"))]))
       .update(JSON.stringify(["package-lock.json", toolchain.packages(root) === undefined ? (lockfile ?? null) : "packages"]))
       .digest("hex");
   },
@@ -59,13 +164,21 @@ export const toolchain: Toolchain = {
     const manifest = parsed(text);
     return isRecord(manifest) ? JSON.stringify(manifest["scripts"] ?? null) : `file:${sha(text ?? "")}`;
   },
-  manifest(path) {
+  manifest(path, root) {
     const text = contentOf(path);
     if (text === undefined) return "absent";
     const manifest = parsed(text);
     if (!isRecord(manifest)) return `file:${sha(text)}`;
     const { scripts: _scripts, ...rest } = manifest;
+    if (root !== undefined && toolchain.packages(root) !== undefined)
+      for (const key of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+        const entries = rest[key];
+        if (isRecord(entries)) rest[key] = Object.fromEntries(Object.entries(entries).map(([name, version]) => [name, typeof version === "string" ? "resolved" : version]));
+      }
     return `manifest:${sha(JSON.stringify(rest))}`;
+  },
+  extraction(engineRoot) {
+    return extractionIdentity(engineRoot);
   },
   packages(root) {
     const lock = parsed(contentOf(join(root, "package-lock.json")));
@@ -91,10 +204,9 @@ export const toolchain: Toolchain = {
   kit(engineRoot, root) {
     return engineRoot === root || engineRoot.startsWith(`${root}/`) ? "" : toolchain.engine(engineRoot);
   },
-  // The Kit's own source decides what extraction records, so a change to it reads every fact again.
+  // A check loading Kit outside the app holds the whole source identity; extraction uses its narrower
+  // producer identity above. This is also the conservative fallback for an opaque producer dependency.
   engine(engineRoot) {
-    const known = engines.get(engineRoot);
-    if (known !== undefined) return known;
     const hash = createHash("sha256");
     const visit = (path: string): void => {
       let entries;
@@ -117,8 +229,6 @@ export const toolchain: Toolchain = {
       } catch {
         hash.update(JSON.stringify([file, null]));
       }
-    const value = hash.digest("hex");
-    engines.set(engineRoot, value);
-    return value;
+    return hash.digest("hex");
   },
 };

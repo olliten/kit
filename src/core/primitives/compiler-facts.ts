@@ -139,6 +139,9 @@ export interface CompilerFacts {
       readonly id: string;
       readonly holder: string | null;
       readonly lines: number;
+      // Original source offsets, when supplied by the recorder, for attribution of transformed execution.
+      readonly start?: number;
+      readonly end?: number;
     }[];
   }[];
 }

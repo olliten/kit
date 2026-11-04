@@ -32,13 +32,21 @@ export function claimRuns(snapshot: Snapshot, runs: Runs): ModuleRuns[] {
     .map(({ path: module }) => {
       const own = functions.get(module) ?? [];
       const ran = new Map<string, Set<string>>();
+      const identities = new Map<string, number>();
+      for (const fact of own) {
+        const key = `${fact.name}@${fact.line}`;
+        identities.set(key, (identities.get(key) ?? 0) + 1);
+      }
       for (const [test, modules] of Object.entries(runs.tests)) {
         const proof = proofOf(test, oracleRoot);
         const names = new Set(modules[module] ?? []);
         if (proof === null || names.size === 0) continue;
         const claim = `${specRoot}/${proof.topic}.md:${proof.anchor}`;
         const ids = ran.get(claim) ?? new Set<string>();
-        for (const fact of own) if (names.has(`${fact.name}@${fact.line}`)) ids.add(fact.id);
+        for (const fact of own) {
+          const key = `${fact.name}@${fact.line}`;
+          if (names.has(key) && identities.get(key) === 1) ids.add(fact.id);
+        }
         ran.set(claim, ids);
       }
       return { module, functions: own, naming: naming.get(module) ?? new Set<string>(), ran };

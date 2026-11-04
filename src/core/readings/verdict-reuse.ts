@@ -1,6 +1,7 @@
 import type { Runs } from "../primitives/runs.js";
 import type { Verdict } from "../primitives/verdict.js";
 import { digest } from "./fact-keys.js";
+import { executionContextOf } from "./execution-context.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -111,18 +112,21 @@ export function verdictOf(text: string): Verdict | null {
   const ran = parsed["ran"];
   const listed = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string");
   if (ran !== undefined && !(isRecord(ran) && Object.values(ran).every(listed))) return null;
+  const execution = parsed["execution"] === undefined ? undefined : executionContextOf(parsed["execution"]);
+  if (parsed["execution"] !== undefined && execution === undefined) return null;
   return {
     check: parsed["check"],
     seconds: parsed["seconds"],
     states: Object.fromEntries(Object.entries(states).map(([path, state]) => [path, String(state)])),
     ...(isRecord(ran) ? { ran: Object.fromEntries(Object.entries(ran).flatMap(([module, keys]) => (listed(keys) ? [[module, keys]] : []))) } : {}),
+    ...(execution === undefined ? {} : { execution }),
   };
 }
 
 // How a pass is recorded: the keys its states are kept under, a state's text, a script's ran code and their
 // digests, here and in what records them. A pass is kept under this version, not under Kit's source, so a Kit
 // release reuses every pass; it changes only when a pass recorded before could be misread after.
-export const RECORDING_FORMAT = 2;
+export const RECORDING_FORMAT = 5;
 
 // The key a pass holds the source of a Kit outside the app under, when its processes loaded that Kit's code: no
 // path in the app is written so.
@@ -141,12 +145,17 @@ export const runtimeOf = (line: string, runtime: string, scripts: string): strin
 export const verdictKind = (id: string, line: string, runtime: string, format: number = RECORDING_FORMAT): string =>
   `verdicts/${digest(JSON.stringify([id, line, runtime, format]))}`;
 
-// What each test ran, from its pass that still holds, or the tests that have none, while the rules that read
-// what tests ran wait for them.
-export function keptRuns(passes: ReadonlyMap<string, Verdict | undefined>): { readonly runs: Runs | null; readonly waiting: readonly string[] } {
+// What each test with a valid pass ran. Missing evidence is reported separately and never suppresses the
+// execution obligations of unrelated modules.
+export function keptRuns(passes: ReadonlyMap<string, Verdict | undefined>): { readonly runs: Runs; readonly waiting: readonly string[] } {
   const waiting = [...passes].filter(([, pass]) => pass?.ran === undefined).map(([test]) => test).sort();
-  if (waiting.length > 0) return { runs: null, waiting };
-  return { runs: { tests: Object.fromEntries([...passes].map(([test, pass]) => [test, pass?.ran ?? {}])) }, waiting };
+  return {
+    runs: {
+      tests: Object.fromEntries([...passes].flatMap(([test, pass]) => pass?.ran === undefined ? [] : [[test, pass.ran]])),
+      contexts: Object.fromEntries([...passes].flatMap(([test, pass]) => pass?.execution === undefined ? [] : [[test, pass.execution]])),
+    },
+    waiting,
+  };
 }
 
 // What Kit keeps is kept with the state of every path it was read from: a check's pass, or a test's reach.
