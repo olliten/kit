@@ -24,7 +24,7 @@ test.each(apps)("the %s example declares an empty baseline and passes its check"
     cwd: engine,
   };
   const qualified = await runVerify(request);
-  expect(qualified.exitCode, qualified.stderr).toBe(0);
+  expect(qualified.exitCode, qualified.stdout + qualified.stderr).toBe(0);
   const result = await runCheck(request);
   expect(result.exitCode, result.stderr).toBe(0);
   expect(result.stdout).toContain('"counts":{}');

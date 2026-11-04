@@ -191,3 +191,8 @@ launchers in `scripts/` are declared entrypoints of a few lines each, and everyt
 `spec/`. Reasons: `docs/decisions.md`. `npm test`,
 `npm run check`, `npm run refs -- <module>`, and `npm run consumers -- ../app …` to see what a change to Kit means
 for each app that uses it.
+
+The optional browser-runtime contract proofs use Chromium for the pinned `playwright-core` development
+dependency. Install it explicitly with `npm exec -- playwright-core install chromium`, or set
+`PLAYWRIGHT_BROWSERS_PATH` to an existing matching cache. Installing Kit does not download a browser;
+ordinary CLI commands do not load the browser runtime.

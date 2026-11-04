@@ -69,7 +69,21 @@ packages:
     capabilities: []
   - name: node:buffer
     capabilities: []
+  - name: playwright-core
+    capabilities: [browser-driving]
 adapters:
+  - module: src/substrate/adapters/browser-runtime
+    export: browserRuntime
+    capability: browser-driving
+    kind: external
+    zones: [substrate]
+    contract: {type: BrowserRuntime}
+  - module: src/substrate/adapters/browser-runtime
+    export: browserRuntime
+    capability: filesystem
+    kind: external
+    zones: [substrate]
+    contract: {type: BrowserRuntime}
   - module: oracle/substrate/adapters/module-doubles
     export: moduleDoubles
     capability: test-runner

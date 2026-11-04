@@ -1,5 +1,15 @@
 import type { CompilerFacts } from "./compiler-facts.js";
 
+export interface BrowserLaunch {
+  readonly headless: boolean;
+  readonly args: readonly string[];
+}
+
+export interface BrowserRuntimeIdentity {
+  readonly browserVersion: string;
+  readonly executableDigest: string;
+}
+
 export interface BrowserRange {
   readonly startOffset: number;
   readonly endOffset: number;
