@@ -19,7 +19,16 @@ function copied(from: string, to: string): Record<string, string> {
   }
   return files;
 }
-scratch.write(copied(join(engine, "examples/tally"), "tally"));
+// Copy authored inputs without reading the example root's changing runtime-output inventory.
+const example = join(engine, "examples/tally");
+scratch.write({
+  "tally/package.json": textFiles.read(join(example, "package.json")),
+  "tally/tsconfig.json": textFiles.read(join(example, "tsconfig.json")),
+  ...copied(join(example, "src"), "tally/src"),
+  ...copied(join(example, "spec"), "tally/spec"),
+  ...copied(join(example, "oracle"), "tally/oracle"),
+  ...copied(join(example, "kit"), "tally/kit"),
+});
 // The known violation: a module no claim names, planted in the copy of the clean example.
 scratch.write({
   "tally/src/substrate/compositions/save.ts": "export function save(text: string): string {\n  return text;\n}\n",
