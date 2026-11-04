@@ -95,7 +95,7 @@ for (const { name, verification } of [
     }
   });
 
-test("kit verify keeps what each test ran with its pass, and kit check reads it while every test has a pass that holds", async () => {
+test("kit check retains valid per-test execution credit while missing or changed tests remain unproved", async () => {
   const project = temporaryProjects.open("kit-runs-");
   const config = join(project.root, "kit/config.md");
   const request = (...args: string[]) => ({ engineRoot: project.root, args: ["--root", project.root, "--config", config, ...args], cwd: project.root });
@@ -121,11 +121,15 @@ test("kit verify keeps what each test ran with its pass, and kit check reads it 
         "```yaml\napp: sums\nroots:\n  src: src/\n  spec: spec/\n  oracle: oracle/\nterms: spec/terms.md\nverify:\n  checks: []\n  tests:\n    under: oracle/\n" +
         "    command: node --experimental-strip-types --no-warnings --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination={dir}/lcov.info {test}\n```\n",
     });
-    // Before any pass is kept, the rules that read what tests ran wait, and the check says so.
+    // Missing execution is explicit debt, never permission to suspend the execution rules.
     const awaiting = (await runCheck(request())).stdout;
-    expect(awaiting).toContain("wait for 1 tests");
+    expect(awaiting).toContain("1 tests have no current execution evidence");
+    expect(awaiting).not.toContain("wait for");
     expect(awaiting).not.toContain("execution obligations are not established");
-    expect(await ungoverned()).toEqual([]);
+    expect(await ungoverned()).toEqual([
+      "R4:ungoverned-function:src/core/readings/total.ts:average",
+      "R4:ungoverned-function:src/core/readings/total.ts:total",
+    ]);
 
     expect((await runVerify(request())).exitCode).toBe(0);
     expect(await ungoverned()).toEqual([expect.stringContaining("src/core/readings/total.ts")]);
@@ -133,18 +137,21 @@ test("kit verify keeps what each test ran with its pass, and kit check reads it 
     expect(recorded).not.toContain("wait for");
     expect(recorded).not.toContain("execution obligations are not established");
 
-    // A new test has no kept pass, so the rules wait again until it runs.
+    // The new test has no pass, but the existing total proof remains useful.
     project.write({
       "src/core/readings/round.ts": "export function round(value: number): number { return Math.round(value); }\n",
       "oracle/sums/rounds-down.test.ts": roundsTest,
     });
-    expect((await runCheck(request())).stdout).toContain("wait for 1 tests");
+    expect((await runCheck(request())).stdout).toContain("1 tests have no current execution evidence");
+    expect(await ungoverned()).not.toContain("R4:ungoverned-function:src/core/readings/total.ts:total");
+    expect(await ungoverned()).toContain("R4:ungoverned-function:src/core/readings/round.ts:round");
     expect(JSON.parse((await runVerify(request())).stdout.split("Kit verify ")[1] ?? "{}")).toMatchObject({ reused: 1, ran: 1, failed: 0 });
     expect((await runCheck(request())).stdout).not.toContain("wait for");
 
     // An edit to what a test ran makes its pass stop holding.
     project.write({ "src/core/readings/total.ts": "export function total(values: readonly number[]): number { return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value); }\n" });
-    expect((await runCheck(request())).stdout).toContain("wait for 1 tests");
+    expect((await runCheck(request())).stdout).toContain("1 tests have no current execution evidence");
+    expect(await ungoverned()).toContain("R4:ungoverned-function:src/core/readings/total.ts:total");
   } finally {
     project.dispose();
   }

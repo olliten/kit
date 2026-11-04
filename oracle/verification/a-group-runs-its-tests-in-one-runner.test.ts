@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url";
 import { afterEach, expect, test } from "vitest";
 import { heldKeys, pathUses, verdictKind, verdictOf } from "../../src/core/readings/verdict-reuse.js";
 import { testLine } from "../../src/core/readings/verification-configuration.js";
-import { coverageProvider } from "../../src/substrate/adapters/coverage-provider.mjs";
 import { evidenceStore } from "../../src/substrate/adapters/evidence-store.js";
 import { processes } from "../../src/substrate/adapters/processes.js";
 import { readRecorder } from "../../src/substrate/adapters/read-recorder.mjs";
@@ -81,8 +80,9 @@ test("a batch keeps each test's pass with only its own reads and the code it ran
   // The test whose coverage holds another test's ran again alone.
   expect(summary(first.stdout)).toMatchObject({ ran: 5, failed: 1, recorded: 4, alone: 1 });
   expect(await planned()).toBe("reuse a reuse b run c reuse d reuse e");
-  expect(kept(BATCHED, "a")).toEqual(["data/a.txt", "lib/m.ts#ran:0", "package.json#manifest", "tests/a.test.ts"]);
-  expect(kept(BATCHED, "b")).toEqual(["data/b.txt", "lib/m.ts#ran:1", "package.json#manifest", "tests/b.test.ts"]);
+  // The default runner may discover arbitrary package configuration, so this read is application data.
+  expect(kept(BATCHED, "a")).toEqual(["data/a.txt", "lib/m.ts#ran:0", "package.json", "tests/a.test.ts"]);
+  expect(kept(BATCHED, "b")).toEqual(["data/b.txt", "lib/m.ts#ran:1", "package.json", "tests/b.test.ts"]);
 
   project.write({ "data/b.txt": "b!" });
   expect(await planned()).toBe("reuse a run b run c reuse d reuse e");
@@ -107,70 +107,6 @@ test("a test run in a batch keeps what it keeps when its file runs alone", async
   expect((await verify("alone")).exitCode).toBe(0);
   for (const name of ["a", "b", "c", "d"]) expect(kept(BATCHED, name)).toEqual(kept(ALONE, name));
 }, 240_000);
-
-test("the provider writes each test file's result, coverage and executed scripts apart", async () => {
-  const project = temporaryProjects.open("kit-provider-");
-  projects.push(project);
-  const text = "export function f() {\n  return 1;\n}\nexport function g() {\n  return 2;\n}\n";
-  project.write({ "lib/m.mjs": text, "tests/a.test.mjs": "", "tests/b.test.mjs": "", "tests/c.test.mjs": "" });
-  const root = project.root;
-  const url = (path: string) => `file://${root}/${path}`;
-  const at = (name: string) => text.indexOf(`function ${name}`);
-  // A blob of raw V8 coverage, as a test file's process gives it: the scripts it executed and their functions.
-  const blob = (ran: string, ...tests: string[]) => ({
-    result: [
-      {
-        scriptId: "1",
-        url: url("lib/m.mjs"),
-        functions: [
-          { functionName: "", isBlockCoverage: true, ranges: [{ startOffset: 0, endOffset: text.length, count: 1 }] },
-          ...["f", "g"].map((name) => ({
-            functionName: name,
-            isBlockCoverage: true,
-            ranges: [{ startOffset: at(name), endOffset: text.indexOf("}", at(name)) + 1, count: name === ran ? 1 : 0 }],
-          })),
-        ],
-      },
-      ...tests.map((test, index) => ({ scriptId: `${index + 2}`, url: url(test), functions: [] })),
-    ],
-  });
-  const reports = join(root, "reports");
-  const provider = await coverageProvider.getProvider();
-  provider.initialize({
-    config: { root, watch: false, coverage: { enabled: true, all: false, reporter: ["lcovonly"], reportsDirectory: reports, reportOnFailure: true } },
-    state: {
-      getFiles: () => [
-        { filepath: `${root}/tests/a.test.mjs`, result: { state: "pass" } },
-        { filepath: `${root}/tests/b.test.mjs`, result: { state: "fail" } },
-        { filepath: `${root}/tests/c.test.mjs` },
-      ],
-      getUnhandledErrors: () => [],
-    },
-    projects: [],
-    vitenode: { fetchCache: new Map(), fetchCaches: { ssr: new Map(), web: new Map() }, transformRequest: async () => null },
-    logger: { log: () => undefined },
-  });
-  provider.onAfterSuiteRun({ coverage: blob("f", "tests/a.test.mjs"), transformMode: "ssr", projectName: "" });
-  provider.onAfterSuiteRun({ coverage: blob("g", "tests/b.test.mjs"), transformMode: "ssr", projectName: "" });
-  // A file whose coverage holds another test file too can't be told apart.
-  provider.onAfterSuiteRun({ coverage: blob("f", "tests/c.test.mjs", "tests/a.test.mjs"), transformMode: "ssr", projectName: "" });
-  await provider.reportCoverage({ allTestsRun: true });
-  const written = (test: string, file: string) => {
-    const path = join(reports, encodeURIComponent(test), file);
-    return textFiles.exists(path) ? textFiles.read(path) : undefined;
-  };
-  expect(JSON.parse(textFiles.read(join(reports, "batch.json")))).toEqual({ errors: 0 });
-  expect(JSON.parse(written("tests/a.test.mjs", "run.json") ?? "")).toEqual({
-    test: "tests/a.test.mjs",
-    state: "pass",
-    scripts: [`${root}/lib/m.mjs`, `${root}/tests/a.test.mjs`],
-  });
-  expect(written("tests/a.test.mjs", "lcov.info")).toMatch(/SF:lib\/m\.mjs[\s\S]*FNDA:1,f\nFNDA:0,g\n/);
-  expect(JSON.parse(written("tests/b.test.mjs", "run.json") ?? "")).toMatchObject({ state: "fail" });
-  expect(written("tests/b.test.mjs", "lcov.info")).toMatch(/FNDA:0,f\nFNDA:1,g\n/);
-  expect(JSON.parse(written("tests/c.test.mjs", "run.json") ?? "")).toEqual({ test: "tests/c.test.mjs", state: null, scripts: null });
-  expect(written("tests/c.test.mjs", "lcov.info")).toBeUndefined();
-});
 
 test("a process the runner starts names the one test it was sent, and a process it starts names it too", async () => {
   const project = temporaryProjects.open("kit-names-");

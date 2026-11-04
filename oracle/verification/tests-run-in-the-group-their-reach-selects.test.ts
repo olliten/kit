@@ -207,7 +207,7 @@ test("kit check reads each test's pass under the command of the group its reach 
   expect((await runCheck(request())).stdout).not.toContain("wait for");
   // The test's own reads still hold, but it now runs in the first group, under whose command it has no pass yet.
   project.write({ "kit/config.md": configOf("src/core/readings/total") });
-  expect((await runCheck(request())).stdout).toContain("wait for 1 tests");
+  expect((await runCheck(request())).stdout).toContain("1 tests have no current execution evidence");
   expect(JSON.parse((await runVerify(request())).stdout.split("Kit verify ")[1] ?? "{}")).toMatchObject({ ran: 1, reused: 0, failed: 0 });
   expect((await runCheck(request())).stdout).not.toContain("wait for");
 }, 180_000);

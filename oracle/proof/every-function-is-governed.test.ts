@@ -1,7 +1,8 @@
 import { expect, test } from "vitest";
 import type { Runs } from "../../src/core/primitives/runs.js";
 import type { Snapshot } from "../../src/core/primitives/snapshot.js";
-import { functionGovernance } from "../../src/core/readings/function-governance.js";
+import { functionGovernance as readGovernance } from "../../src/core/readings/function-governance.js";
+import { executionContextOf } from "../../src/core/readings/execution-context.js";
 import { projectSnapshot } from "../core/readings/project-snapshot.js";
 import { recordedFunctions } from "../substrate/compositions/recorded-functions.js";
 
@@ -27,6 +28,17 @@ function snapshot(): Snapshot {
       { file: "spec/sums.md", anchor: "rounds-halves", line: 2, terms: [] },
     ],
   };
+}
+
+// These fixtures describe independently recorded runs. Tests of missing/incomplete recording call the
+// public reading directly, rather than receiving this fixture's complete context.
+function functionGovernance(value: Snapshot, runs: Runs) {
+  return readGovernance(value, {
+    ...runs,
+    contexts: Object.fromEntries(Object.keys(runs.tests).map((test) => [test, {
+      complete: true, runtime: "fixture", loaded: [test, module],
+    }])),
+  });
 }
 
 const keys = (runs: Runs): string[] => functionGovernance(snapshot(), runs).map((item) => `${item.debtKey} ${item.fix}`);
@@ -175,4 +187,102 @@ test("an unrelated runtime cycle remains independently provable", () => {
     { from: "oracle/legacy/driver.ts", to: "src/legacy/cycle.ts" },
     { from: "src/legacy/cycle.ts", to: "oracle/legacy/driver.ts" },
   ]), { tests: { [proof]: { [module]: allFunctions } } })).toEqual([]);
+});
+
+test("old or incomplete execution records cannot establish an independent contract proof", () => {
+  const tests = { [proof]: { [module]: allFunctions } };
+  expect(readGovernance(graph([]), { tests })).toHaveLength(3);
+  expect(readGovernance(graph([]), {
+    tests,
+    contexts: { [proof]: { complete: false, runtime: "fixture", loaded: [proof, module] } },
+  })).toHaveLength(3);
+  expect(readGovernance(graph([]), {
+    tests,
+    contexts: { [proof]: { complete: true, runtime: "fixture", loaded: [proof, module] } },
+  })).toEqual([]);
+});
+
+test("observed startup disqualifies a proof even when no static import points to the application", () => {
+  const base = graph([], false, []);
+  const value = { ...base, files: [...base.files, { path: startup, type: "source" as const }], config: { ...base.config, bootstraps: [startup] } };
+  expect(readGovernance(value, {
+    tests: { [proof]: { [module]: allFunctions } },
+    contexts: { [proof]: { complete: true, runtime: "fixture", loaded: [proof, module, startup] } },
+  })).toHaveLength(3);
+  expect(value.config.exceptions).toEqual([]);
+});
+
+test("an explicit bootstrap inventory distinguishes a proof host exception from the application", () => {
+  const host = "src/tools/proof-host.ts";
+  const base = graph([{ from: proof, to: host }], false, [host]);
+  const value = { ...base, files: [...base.files, { path: startup, type: "source" as const }], config: { ...base.config, bootstraps: [startup] } };
+  const tests = { [proof]: { [module]: allFunctions } };
+  expect(readGovernance(value, { tests, contexts: { [proof]: {
+    complete: true, runtime: "fixture", loaded: [proof, module, host],
+  } } })).toEqual([]);
+  expect(readGovernance(value, { tests, contexts: { [proof]: {
+    complete: true, runtime: "fixture", loaded: [proof, module, host, startup],
+  } } })).toHaveLength(3);
+});
+
+test("a library may explicitly have no application bootstrap while legacy declarations retain their meaning", () => {
+  const base = graph([{ from: proof, to: startup }]);
+  expect(functionGovernance(base, { tests: { [proof]: { [module]: allFunctions } } })).toHaveLength(3);
+  expect(functionGovernance({ ...base, config: { ...base.config, bootstraps: [] } }, {
+    tests: { [proof]: { [module]: allFunctions } },
+  })).toEqual([]);
+});
+
+test("unmapped executable output cannot bypass a bootstrap's original-source identity", () => {
+  expect(readGovernance(graph([]), {
+    tests: { [proof]: { [module]: allFunctions } },
+    contexts: { [proof]: { complete: true, runtime: "fixture", loaded: [proof, module, "dist/index.js"] } },
+  })).toHaveLength(3);
+});
+
+test("an allegedly complete capture must include both its proof and the code receiving execution credit", () => {
+  for (const loaded of [[proof], [module], []]) expect(readGovernance(graph([]), {
+    tests: { [proof]: { [module]: allFunctions } },
+    contexts: { [proof]: { complete: true, runtime: "fixture", loaded } },
+  })).toHaveLength(3);
+});
+
+test("malformed stored source identities cannot establish governance", () => {
+  const context = executionContextOf({ complete: true, runtime: "fixture", loaded: [proof, module, "../src/start.ts"] });
+  expect(context).toBeUndefined();
+  expect(readGovernance(graph([]), { tests: { [proof]: { [module]: allFunctions } }, contexts: context === undefined ? {} : { [proof]: context } })).toHaveLength(3);
+});
+
+test("one ambiguous name and line cannot govern two distinct functions", () => {
+  const text = "export const first = { run: (): number => 1 }; export const second = { run: (): number => 2 };\n";
+  const facts = recordedFunctions({ [module]: text });
+  const original = snapshot();
+  const project = original.compiler?.projects[0];
+  if (project === undefined) throw new Error("The fixture must retain its compiler project.");
+  const value = { ...original, compiler: { version: "", projects: [{ ...project, ...facts }] } };
+  const functions = facts.functions ?? [];
+  expect(functions.filter(({ name, line }) => name === "run" && line === 1)).toHaveLength(2);
+  const findings = readGovernance(value, {
+    tests: { [proof]: { [module]: ["run@1"] } },
+    contexts: { [proof]: { complete: true, runtime: "fixture", loaded: [proof, module] } },
+  });
+  expect(findings.map(({ debtKey }) => debtKey)).toEqual(functions.map(({ id }) => `R4:ungoverned-function:${module}:${id}`).sort());
+});
+
+test("an observed helper reaching a bootstrap also prevents independent execution credit", () => {
+  const helper = "src/legacy/browser-driver.ts";
+  expect(readGovernance(graph([{ from: helper, to: startup }]), {
+    tests: { [proof]: { [module]: allFunctions } },
+    contexts: { [proof]: { complete: true, runtime: "fixture", loaded: [proof, module, helper] } },
+  })).toHaveLength(3);
+});
+
+test("a missing unrelated proof does not erase valid independent execution credit", () => {
+  expect(readGovernance(snapshot(), {
+    tests: { [proof]: { [module]: ["total@1"] } },
+    contexts: { [proof]: { complete: true, runtime: "fixture", loaded: [proof, module] } },
+  }).map(({ debtKey }) => debtKey)).toEqual([
+    `R4:ungoverned-function:${module}:average`,
+    `R4:ungoverned-function:${module}:half`,
+  ]);
 });

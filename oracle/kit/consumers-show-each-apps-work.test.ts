@@ -1,12 +1,13 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { afterAll, expect, test } from "vitest";
 
 import { describeConsumer, pinnedKit, readCheck } from "../../src/core/readings/consumer-report.js";
+import { processes } from "../../src/substrate/adapters/processes.js";
 import { runConsumers } from "../../src/substrate/compositions/consumers-run.js";
+import { temporaryProjects } from "../substrate/adapters/temporary-project.js";
 
-const engine = resolve(import.meta.dirname, "../..");
 const scratch = mkdtempSync(join(tmpdir(), "kit-consumers-"));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
@@ -46,25 +47,46 @@ test("an app that passes says so; one that fails lists its work under its pin", 
   );
 });
 
-test("the real run checks an app checkout against this Kit and does not fail on the app's findings", async () => {
-  const app = join(scratch, "tally");
-  cpSync(join(engine, "examples/tally"), app, { recursive: true });
-  // The known violation: a module no claim names, planted in the copy of the clean example.
-  mkdirSync(join(app, "src/substrate/compositions"), { recursive: true });
-  writeFileSync(join(app, "src/substrate/compositions/save.ts"), "export function save(text: string): string {\n  return text;\n}\n");
-  writeFileSync(join(app, "package-lock.json"), lock("git+https://github.com/olliten/kit.git#552affb"));
-  const { stdout: output, exitCode } = await runConsumers({ engineRoot: engine, args: [app], cwd: engine });
-  expect(exitCode).toBe(0);
-  expect(output).toMatch(/^tally: \d+ failing \(pins 552affb\): /);
-  expect(output).toContain("  R4:unreferenced-module:substrate/compositions/save:");
-}, 120_000);
-
-test("an app whose config this Kit does not accept is reported with the config error", async () => {
-  const app = join(scratch, "stale");
-  cpSync(join(engine, "examples/tally"), app, { recursive: true });
-  const config = join(app, "kit/config.md");
-  writeFileSync(config, readFileSync(config, "utf8").replace("```yaml\n", "```yaml\nzones: {core: src/core/}\n"));
-  const { stdout: output, exitCode } = await runConsumers({ engineRoot: engine, args: [app], cwd: engine });
-  expect(exitCode).toBe(0);
-  expect(output).toContain(`${app}: Kit config ${config}: zones is not a key Kit reads.`);
-}, 120_000);
+test("the composition exchanges the real child protocol without booting the Kit application", async () => {
+  const project = temporaryProjects.open("kit-consumer-contract-");
+  const engineRoot = join(project.root, "engine");
+  try {
+    project.write({
+      "engine/scripts/kit-check.mjs": [
+        'import assert from "node:assert/strict";',
+        'import { readFileSync } from "node:fs";',
+        'const root = process.argv[3];',
+        'assert.deepEqual(process.argv.slice(2), JSON.parse(readFileSync(`${root}/expected-argv.json`, "utf8")));',
+        'const mode = readFileSync(`${root}/mode.txt`, "utf8");',
+        'if (mode === "pass") process.stdout.write("Kit check {\\"counts\\":{}}\\n");',
+        'else if (mode === "findings") { process.stderr.write("R4:unreferenced-module:src/legacy/new.ts: Name the module.\\n"); process.exitCode = 1; }',
+        'else if (mode === "config") { process.stderr.write(`Kit config ${root}/kit/config.md: stale key.\\n`); process.exitCode = 1; }',
+        'else { process.stderr.write("consumer child crashed\\n"); process.exitCode = 2; }',
+      ].join("\n"),
+    });
+    expect(processes.run("git", ["init", "--quiet"], engineRoot).status).toBe(0);
+    expect(processes.run("git", ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "--allow-empty", "-m", "fixture"], engineRoot).status).toBe(0);
+    const head = processes.run("git", ["rev-parse", "HEAD"], engineRoot).stdout.trim();
+    const other = `${head.startsWith("a") ? "b" : "a"}${head.slice(1)}`;
+    for (const [name, mode, directory] of [["passing", "pass", true], ["failing", "findings", false], ["stale", "config", false], ["crash", "crash", false]] as const) {
+      const root = join(project.root, name);
+      if (directory) project.directory(`${name}/kit/debt/legacy`);
+      project.write({
+        [`${name}/mode.txt`]: mode,
+        [`${name}/expected-argv.json`]: JSON.stringify(["--root", root, "--config", `${root}/kit/config.md`, "--baseline", `${root}/kit/debt/legacy${directory ? "" : ".json"}`]),
+        [`${name}/kit/config.md`]: "fixture configuration",
+        [`${name}/package-lock.json`]: lock(`git+https://github.com/olliten/kit.git#${name === "passing" ? head : other}`),
+      });
+    }
+    const result = await runConsumers({ engineRoot, args: ["passing", "failing", "stale"], cwd: project.root });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(
+      `passing: passes (pins this Kit).\nfailing: 1 failing (pins ${other.slice(0, 7)}): unreferenced-module 1\n` +
+      `  R4:unreferenced-module:src/legacy/new.ts: Name the module.\nstale: Kit config ${project.root}/stale/kit/config.md: stale key.\n`,
+    );
+    await expect(runConsumers({ engineRoot, args: ["crash"], cwd: project.root })).rejects.toThrow("consumer child crashed");
+    await expect(runConsumers({ engineRoot, args: [], cwd: project.root })).rejects.toThrow("Name the app checkouts");
+  } finally {
+    project.dispose();
+  }
+});

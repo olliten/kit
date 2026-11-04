@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import { textFiles } from "../../src/substrate/adapters/text-files.js";
 import { runCheck } from "../../src/substrate/compositions/check-run.js";
+import { runVerify } from "../../src/substrate/compositions/verify-run.js";
 
 const engine = join(import.meta.dirname, "../..");
 const apps = textFiles
@@ -17,11 +18,14 @@ test.each(apps)("the %s example declares an empty baseline and passes its check"
   const root = join(engine, "examples", app);
   const baseline = join(root, "kit/debt/legacy.json");
   expect(JSON.parse(textFiles.read(baseline))).toEqual({});
-  const result = await runCheck({
+  const request = {
     engineRoot: engine,
     args: ["--root", root, "--config", join(root, "kit/config.md"), "--baseline", baseline],
     cwd: engine,
-  });
+  };
+  const qualified = await runVerify(request);
+  expect(qualified.exitCode, qualified.stderr).toBe(0);
+  const result = await runCheck(request);
   expect(result.exitCode, result.stderr).toBe(0);
   expect(result.stdout).toContain('"counts":{}');
 }, 120_000);
