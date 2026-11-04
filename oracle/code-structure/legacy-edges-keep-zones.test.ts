@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
+import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { authorityGraph } from "../../src/core/readings/authority-graph.js";
 import { capabilityContext } from "../../src/core/readings/capability-context.js";
 import { edgeCheck } from "../../src/core/readings/edge-check.js";
@@ -7,6 +8,7 @@ import { importAuthority } from "../../src/core/readings/import-authority.js";
 import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
 import { projectSnapshot } from "../core/readings/project-snapshot.js";
 import { recordedImports } from "../substrate/compositions/recorded-imports.js";
+import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 // The fixture's import edges, what they carry, and what the import, edge and zone checks find in them; a
 // fixture that doesn't compile throws.
@@ -123,4 +125,81 @@ test("recognizing a private local contract preserves the original migration limi
     `R1:migration-zone:legacy/index.ts:${localConsumer}`,
     `R1:migration-zone:legacy/index.ts:${run}`,
   ]);
+});
+
+// Every possible declared origin admits an inward Core edge. An unknown legacy origin has no
+// layer, so choosing any of those origins cannot turn the same Core destination into an outward edge.
+const originZones = [undefined, "core", "shell", "substrate"] as const;
+const coreTargets = [
+  ["primitives", "export interface Value { readonly amount: number; }", "import type { Value }", "export function read(value: Value): number { return value.amount; }"],
+  ["readings", "export function value(input: number): number { return input + 1; }", "import { value }", "export function read(input: number): number { return value(input); }"],
+  ["compositions", "export function value(input: number): number { return input + 1; }", "import { value }", "export function read(input: number): number { return value(input); }"],
+] as const;
+
+test.each(originZones)("legacy origin %s may consume each pure Core layer", (zone) => {
+  for (const [layer, declaration, imported, body] of coreTargets) {
+    const result = inspect({
+      "legacy/read.ts": `${imported} from '../src/core/${layer}/value.js';\n${body}\n`,
+      [`src/core/${layer}/value.ts`]: declaration,
+    }, {
+      ...DEFAULT_CONFIG,
+      layout: { legacy: ["legacy"] },
+      ...(zone === undefined ? {} : { legacyZones: [{ root: "legacy", zone }] }),
+    });
+    expect(result.findings, `${String(zone)} -> core/${layer}`).toEqual([]);
+  }
+});
+
+test.each(["shell", "substrate"])("unknown legacy origin still needs a zone before importing %s", (zone) => {
+  const path = "legacy/read.ts";
+  const target = `src/${zone}/readings/value.ts`;
+  const result = inspect({
+    [path]: `import { value } from '../${target.replace(/\.ts$/, ".js")}';\nexport function read(): number { return value(); }`,
+    [target]: "export function value(): number { return 1; }",
+  }, { ...DEFAULT_CONFIG, layout: { legacy: ["legacy"] } });
+  expect(result.findings.map((finding) => finding.debtKey)).toEqual([
+    `R1:migration-zone:${path}:${target}`,
+  ]);
+});
+
+test("a known Core origin cannot establish an unknown legacy target's zone", () => {
+  const path = "src/core/compositions/read.ts";
+  const target = "legacy/value.ts";
+  const result = inspect({
+    [path]: "import { value } from '../../../legacy/value.js';\nexport function read(): number { return value(); }",
+    [target]: "export function value(): number { return 1; }",
+  }, { ...DEFAULT_CONFIG, layout: { legacy: ["legacy"] } });
+  expect(result.findings.map((finding) => finding.debtKey)).toEqual([
+    `R1:migration-zone:${path}:${target}`,
+  ]);
+});
+
+test("inward migration does not exempt cycles through the legacy caller", () => {
+  const result = inspect({
+    "legacy/read.ts": "import { value } from '../src/core/readings/value.js';\nexport function read(): number { return value(); }",
+    "src/core/readings/value.ts": "import { read } from '../../../legacy/read.js';\nexport function value(): number { return read(); }",
+  }, { ...DEFAULT_CONFIG, layout: { legacy: ["legacy"] } });
+  expect(result.findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({ debtKey: expect.stringContaining("R2:cycle:"), blocking: true }),
+  ]));
+});
+
+test("an unknown legacy caller grants no native authority or behaviour input to Core", () => {
+  const target = "src/core/compositions/read.ts";
+  const snapshot = sourceFixture({
+    "legacy/run.ts": "import { read } from '../src/core/compositions/read.js';\nexport { read };",
+    [target]: "export function read(signal: AbortSignal, next: () => boolean): boolean { return signal.aborted || next(); }",
+  }, { layout: { legacy: ["legacy"] } });
+  const checked = capabilityCheck(snapshot);
+  const targetCapabilities = checked.requirements.find((row) => row.path === target)?.inherited;
+  expect(targetCapabilities?.length).toBeGreaterThan(0);
+  expect(checked.requirements.find((row) => row.path === "legacy/run.ts")?.inherited).toEqual(
+    expect.arrayContaining(targetCapabilities ?? []),
+  );
+  const result = checked.findings;
+  expect(result).toEqual(expect.arrayContaining([
+    expect.objectContaining({ path: target, blocking: true, debtKey: expect.stringContaining("R1:native-authority:") }),
+    expect.objectContaining({ path: target, blocking: true, debtKey: `R1:takes-behaviour:${target}:read` }),
+  ]));
+  expect(result.some((finding) => finding.debtKey.includes("migration-zone:legacy/run.ts:"))).toBe(false);
 });
