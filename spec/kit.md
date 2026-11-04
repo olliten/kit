@@ -63,7 +63,7 @@ its config, and its debt in its own baseline.
   imports, claims, terms and references through {{filesystem}} and {{compiler}}, and the check finds exactly the
   planted findings ({{snapshot}}, {{file}}). · {#read-snapshot-fixture}
   - Implementation: {{dependency-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{claim-proof-binder}}
-  - Proof: {{binding-findings}}, {{temporary-project}}, {{text-files}}
+  - Proof: {{authored-example}}, {{binding-findings}}, {{temporary-project}}, {{text-files}}
 - The real snapshot reader discovers every case input it is given, and readings over that data run without
   changing it ({{read-snapshot}}). · {#readings-use-data}
   - Proof: {{case-inventory}}, {{source-loader}}, {{capability-app}}, {{temporary-project}}
@@ -98,14 +98,14 @@ its config, and its debt in its own baseline.
   lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins, or the
   config error when this Kit does not accept the app's config; an app that fails does not fail the run. · {#consumers-show-each-apps-work}
   - Implementation: {{consumer-report}}, {{consumers-run}}, {{processes}}
-  - Proof: {{temporary-project}}
+  - Proof: {{authored-example}}, {{temporary-project}}
 - Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. A
   launcher in `scripts/` hands its command the arguments, working directory and input, and answers the terminal
   with the command's output and exit status. Unless the caller set a heap size, a command runs with a heap of at
   least 4 GB, since a first read of a large app holds the compiler's checked program, near 2 GB for some apps on
   its own. · {#paths-from-the-caller}
   - Implementation: {{check-paths}}, {{config-values}}, {{source-loader}}
-  - Proof: {{temporary-project}}, {{processes}}, {{text-files}}, {{module-doubles}}
+  - Proof: {{authored-example}}, {{temporary-project}}, {{processes}}, {{text-files}}, {{module-doubles}}
 
 ## Checking itself
 
@@ -128,4 +128,4 @@ its config, and its debt in its own baseline.
   and an empty `kit/debt/legacy.json`, and `kit check` passes on it, so an example can't drift from the rules
   it shows. A deliberate violation lives in the proof that needs it, never in an example. · {#examples-pass-their-check}
   - Implementation: {{check-run}}
-  - Proof: {{text-files}}, {{verify-run}}
+  - Proof: {{authored-example}}, {{text-files}}, {{verify-run}}

@@ -500,6 +500,10 @@
 
 ## Composition contracts
 
+- **authored-example** — an example's semantic files and exact project metadata, with supplied fixture replacements instead of their original bytes.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{text-files}}
 - **authority-recorder** — the recorder of where a file's code can acquire authority: export parameters, raw primitives, dynamic code, native members and ambient globals.
   - Role: composition
   - Zone: substrate
