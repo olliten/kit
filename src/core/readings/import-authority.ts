@@ -26,7 +26,8 @@ export function importAuthority(snapshot: Snapshot, context: CapabilityContext):
       : edge.specifier.split("/")[0];
     const declaration = snapshot.config.packages?.find((row) => row.name === packageName);
     const bound = context.adapters.filter(
-      ({ adapter }) => adapter.kind === "external" && packageName !== undefined && adapter.packages?.includes(packageName) === true,
+      ({ adapter }) => adapter.kind === "external" && packageName !== undefined &&
+        (adapter.packages?.includes(edge.specifier) === true || adapter.packages?.includes(packageName) === true),
     );
     const owners = bound.filter(({ path }) => path === edge.file);
     const local = edge.specifier.startsWith(".") || edge.specifier.startsWith("#");

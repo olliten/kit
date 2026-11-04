@@ -227,8 +227,14 @@ export function projectFacts(context: AppContext, file: string, reuse?: FactReus
   const adapterFiles = (config.adapters ?? []).flatMap((adapter) =>
     [...closures.keys()].filter((path) => path === adapter.module || path.replace(/\.[^./]+$/, "") === adapter.module),
   );
-  // The gate and the app's name are no input to extraction, so editing a test command reads no fact again.
-  const { verify: _gate, app: _name, ...extracted } = config;
+  // Only extraction inputs belong here. Rules, limits, debt policy and gate scheduling interpret the facts
+  // later; changing them must rerun their checks without making the compiler produce the same facts again.
+  const extracted = {
+    srcRoot: config.srcRoot,
+    layerNames: config.layerNames,
+    adapters: config.adapters,
+    ignore: config.ignore,
+  };
   const project = projectKey({
     engine: context.engine,
     typescript: ts.version,

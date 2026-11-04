@@ -1,8 +1,9 @@
 import fs from "node:fs";
-import { syncBuiltinESMExports } from "node:module";
+import * as nodeModule from "node:module";
 import { isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { threadId } from "node:worker_threads";
+import { Buffer } from "node:buffer";
 
 // Preloaded into a check's processes, it records every path inside the app the check reads, lists or probes,
 // in its own process, its worker threads and the processes it starts, which inherit the preload, each with how it
@@ -29,6 +30,7 @@ if (directory && root) {
   // The recorder's own walks use the operations as they were, so they are not recorded twice.
   const listing = fs.readdirSync;
   const statOf = fs.statSync;
+  const readText = fs.readFileSync;
   // The tests a process the runner starts may be running, read before reads are recorded, since this read is
   // the recorder's own.
   const inherited = process.env["KIT_TEST"];
@@ -91,7 +93,8 @@ if (directory && root) {
     if (!Array.isArray(sites)) return undefined;
     for (const site of sites) {
       const file = typeof site?.getFileName === "function" ? site.getFileName() : undefined;
-      if (typeof file === "string" && file !== "" && !file.startsWith("node:") && !file.includes("read-recorder.mjs")) return file;
+      if (typeof file === "string" && file !== "" && !file.startsWith("node:") && !file.includes("read-recorder.mjs"))
+        return { file, name: typeof site?.getFunctionName === "function" ? site.getFunctionName() : undefined };
     }
     return undefined;
   };
@@ -106,13 +109,24 @@ if (directory && root) {
   const useOf = (operation, path = undefined) => {
     if (PROBES.has(operation)) return "probe";
     const frame = caller();
-    if (frame !== undefined && path !== undefined && NPM.test(frame) && /(?:^|\/)package\.json$/.test(path) && !LISTINGS.has(operation)) return "load";
+    const manifest = path !== undefined && /(?:^|\/)package\.json$/.test(path);
+    if (frame !== undefined && manifest && NPM.test(frame.file) && !LISTINGS.has(operation)) return "load";
     // The test runner's own listings, such as finding its test files, are not the check's: recording them would
     // make adding any file under a listed directory rerun every test. Any other package's listing, such as a
     // compiler expanding its configuration's globs, is the check's.
-    if (frame !== undefined && LOADERS.test(frame)) return LISTINGS.has(operation) || GLOBS.has(operation) ? undefined : "load";
+    if (frame !== undefined && LOADERS.test(frame.file)) {
+      if (LISTINGS.has(operation) || GLOBS.has(operation)) return undefined;
+      // Known resolver reads hold metadata. A JSON module transformed by the same loader is application data,
+      // and an unknown consumer is held whole rather than inferred from which package it belongs to.
+      // Workspace discovery reads only the workspaces metadata. Generic configuration searches are not
+      // resolver reads: their chosen property may itself be a dependency declaration, so they stay whole.
+      const metadata = frame.name === "loadPackageData" || frame.name === "findNearestPackageData" ||
+        (/\/node_modules\/vite\//.test(frame.file) && frame.name === "hasWorkspacePackageJSON");
+      if (manifest && !metadata) return "read";
+      return "load";
+    }
     if (LISTINGS.has(operation) || GLOBS.has(operation)) return "list";
-    return frame === undefined ? "load" : "read";
+    return frame === undefined && !manifest ? "load" : "read";
   };
   /** @param {unknown} path @returns {string | undefined} */
   const resolved = (path) => {
@@ -167,6 +181,60 @@ if (directory && root) {
     }
     once(`${use} ${local}`);
   };
+  // A loader can execute a generated file and delete it before the proof ends. Its inline source map supplies
+  // original identities only when every embedded source is a real file with exactly the mapped bytes.
+  /** @param {string} url @param {unknown} result */
+  const mappedSources = (url, result) => {
+    if (!url.startsWith("file:") || typeof result !== "object" || result === null) return;
+    const generated = absolute(new URL(url));
+    if (generated === undefined) return;
+    const source = Reflect.get(result, "source");
+    const text = typeof source === "string" ? source : source instanceof Uint8Array ? new TextDecoder().decode(source) : undefined;
+    if (text === undefined) return;
+    const maps = [...text.matchAll(/(?:\/\/[#@]|\/\*[#@])\s*sourceMappingURL=data:application\/json(?:;charset=[^;,]+)?;base64,([A-Za-z0-9+/=]+)/g)];
+    const encoded = maps.length === 1 ? maps[0]?.[1] : undefined;
+    if (encoded === undefined) return;
+    try {
+      /** @type {unknown} */
+      const map = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+      if (typeof map !== "object" || map === null) return;
+      const version = Reflect.get(map, "version");
+      const sources = Reflect.get(map, "sources");
+      const contents = Reflect.get(map, "sourcesContent");
+      const mappings = Reflect.get(map, "mappings");
+      const sourceRoot = Reflect.get(map, "sourceRoot");
+      if (version !== 3 || !Array.isArray(sources) || sources.length === 0 || !Array.isArray(contents) ||
+        sources.length !== contents.length || typeof mappings !== "string" || !mappings ||
+        (sourceRoot !== undefined && typeof sourceRoot !== "string")) return;
+      /** @type {string[]} */
+      const originals = [];
+      for (let index = 0; index < sources.length; index++) {
+        if (typeof sources[index] !== "string" || typeof contents[index] !== "string") return;
+        const original = absolute(new URL(sources[index], sourceRoot ? new URL(`${sourceRoot.replace(/\/$/, "")}/`, url) : url));
+        if (original === undefined || original === generated || readText(original, "utf8") !== contents[index]) return;
+        originals.push(original);
+      }
+      for (const original of originals) record("read", original);
+      record(`source:${encodeURIComponent(JSON.stringify([...new Set(originals.map((path) => path.slice(prefix.length)))].sort()))}`, generated);
+    } catch {
+      // A missing, foreign or ambiguous source map gives no provenance. The generated identity remains unknown.
+    }
+  };
+  // Native JSON imports bypass ordinary JavaScript reads in some Node versions. A synchronous loader hook
+  // records their data dependency explicitly; unsupported hosts retain conservative manifest reads above.
+  const registerHooks = Reflect.get(nodeModule, "registerHooks");
+  if (typeof registerHooks === "function") registerHooks({
+    /** @param {string} url @param {unknown} context @param {(url: string, context: unknown) => unknown} nextLoad */
+    load(url, context, nextLoad) {
+      if (url.startsWith("file:") && new URL(url).pathname.endsWith("/package.json")) {
+        const path = absolute(new URL(url));
+        if (path !== undefined) record("read", path);
+      }
+      const result = nextLoad(url, context);
+      mappedSources(url, result);
+      return result;
+    },
+  });
   // Every directory under one, as listed, and with `files` every file in it as used, for an operation that
   // reaches into the whole tree: a recursive listing, a glob, or a copy of a directory.
   /** @param {string} at @param {string | undefined} files */
@@ -264,7 +332,7 @@ if (directory && root) {
   wrap(fs.realpathSync, ["native"]);
   wrap(fs.realpath, ["native"]);
   wrap(fs.promises, ["readFile", "readdir", "stat", "lstat", "access", "open", "opendir", "realpath", "readlink", "copyFile", "cp", "statfs", "glob"]);
-  syncBuiltinESMExports();
+  nodeModule.syncBuiltinESMExports();
 
   // The test a process runs is named on a line of its own, `test <path>`, and the test a process it started runs
   // as `under <path>`.

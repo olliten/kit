@@ -9,7 +9,7 @@
     "refs": "node scripts/kit-refs.mjs",
     "consumers": "node scripts/kit-consumers.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "node scripts/kit-proof.mjs run --dir oracle",
     "verify": "node scripts/kit-verify.mjs"
   },
   "dependencies": {

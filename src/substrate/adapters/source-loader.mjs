@@ -26,6 +26,8 @@ async function withKit(engineRoot, use) {
   const server = await createServer({
     root: engineRoot,
     configFile: false,
+    envFile: false,
+    css: { postcss: { plugins: [] } },
     logLevel: "silent",
     server: { middlewareMode: true, hmr: false, watch: null },
   });

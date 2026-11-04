@@ -20,20 +20,25 @@ its config, and its debt in its own baseline.
   - Proof: {{temporary-project}}
 
 - An app's plain-Node script loads the Kit configuration and its test roots through the configuration runner,
-  without a build, and reads the values the commands read. · {#apps-load-the-config-from-plain-node}
+  without a build, and reads the values the commands read. Loading Kit's modules discovers no application,
+  environment or PostCSS configuration. · {#apps-load-the-config-from-plain-node}
   - Implementation: {{configuration-runner}}, {{kit-configuration}}, {{test-roots}}, {{source-loader}}
+  - Proof: {{temporary-project}}
 
 - An app switches a rule off only by declaring it, with its reason: under `rules`, the rule's name maps to
   `off` and why, as nonempty text. Only the rules that read what tests ran, `ungoverned-function` and
   `excerpt-cohesion`, may be switched off; another rule's name, another key, or a missing or empty reason is a
-  configuration error naming its key. A rule switched off reports no finding, so its baseline keys are paid;
+  configuration error naming its key. A rule switched off reports no finding and retains its baseline keys;
   the check prints its name and reason so its absence is explicit.
   The authority rules `native-authority` and `ambient-global` may instead be scoped to production code, as
   `tests: off` with a nonempty `reason`: the rule then reports nothing on a file Kit reads as a test, one named
   `<name>.test.<extension>`, and everything it did on every other file; a value other than `off`, a
   missing key or reason, or another key is a configuration error naming its key.
-  While those rules wait for tests with no kept pass, their baseline keys are left as they are: not paid, and
-  not dropped by tightening. · {#a-rule-is-switched-off-by-declaration}
+  Missing or unqualified execution evidence never pays an existing execution obligation or establishes
+  migration progress. Enabled rules assess available evidence without waiting for unrelated tests;
+  uncertain cohesion obligations remain until their relevant independent proofs establish the reduction.
+  Tightening preserves those uncertain entries and entries of a disabled execution rule.
+  · {#a-rule-is-switched-off-by-declaration}
   - Implementation: {{rule-switch}}, {{kit-configuration}}, {{config-schema}}, {{gate}}, {{check-run}}, {{paid-debt}}, {{ratchet}}
   - Proof: {{temporary-project}}, {{recorded-functions}}, {{project-snapshot}}, {{recorded-authority}}
 
@@ -67,13 +72,14 @@ its config, and its debt in its own baseline.
   functions whose return type it declares, which no importer can see. A test's reach is keyed the same way on the
   test, and is kept with the digest of each file whose code it followed, one entry per set of digests, and
   reused only while each still has its digest. Each key also holds what Kit takes each file for, and
-  the project, which is the Kit that read it, the
+  the project, which holds the extraction producer and its transitive dependencies rather than unrelated
+  checkers or gate policy, the
   compiler, the config without its gate and the app's name, the project's options, every declaration file the program loads, every file declaring
   globals or ambient modules, and the registered adapter modules. What belongs to no one file, such as the config's own errors, is also keyed on
   the text of every compiler config the project reads and the files it compiles. A read reuses every file and test whose key
   still matches and computes the rest, so a change recomputes exactly the files and tests whose key it
   changes, and worktrees of one repository share the store. · {#facts-are-keyed-on-their-inputs}
-  - Implementation: {{fact-keys}}, {{file-facts}}, {{project-facts}}, {{read-snapshot}}, {{evidence-store}}, {{root-token}}, {{fact-walk}}, {{compiler}}, {{verdict-reuse}}
+  - Implementation: {{fact-keys}}, {{file-facts}}, {{project-facts}}, {{read-snapshot}}, {{evidence-store}}, {{root-token}}, {{fact-walk}}, {{compiler}}, {{toolchain}}, {{verdict-reuse}}
   - Proof: {{extraction-proof}}, {{small-app}}, {{temporary-project}}
 - A read through the store equals a read without it, as a snapshot and in its findings, after any sequence of
   edits: the compiler's member and union order, which depends on what it checked first, is never kept. `kit
@@ -92,13 +98,14 @@ its config, and its debt in its own baseline.
   lists per app the findings that would fail it, grouped by check, beside the Kit commit the app pins, or the
   config error when this Kit does not accept the app's config; an app that fails does not fail the run. · {#consumers-show-each-apps-work}
   - Implementation: {{consumer-report}}, {{consumers-run}}, {{processes}}
+  - Proof: {{temporary-project}}
 - Paths given to `kit check` resolve against the directory it runs in; with none, the Kit checks itself. A
   launcher in `scripts/` hands its command the arguments, working directory and input, and answers the terminal
   with the command's output and exit status. Unless the caller set a heap size, a command runs with a heap of at
   least 4 GB, since a first read of a large app holds the compiler's checked program, near 2 GB for some apps on
   its own. · {#paths-from-the-caller}
   - Implementation: {{check-paths}}, {{config-values}}, {{source-loader}}
-  - Proof: {{temporary-project}}, {{processes}}, {{text-files}}
+  - Proof: {{temporary-project}}, {{processes}}, {{text-files}}, {{module-doubles}}
 
 ## Checking itself
 
@@ -121,4 +128,4 @@ its config, and its debt in its own baseline.
   and an empty `kit/debt/legacy.json`, and `kit check` passes on it, so an example can't drift from the rules
   it shows. A deliberate violation lives in the proof that needs it, never in an example. · {#examples-pass-their-check}
   - Implementation: {{check-run}}
-  - Proof: {{text-files}}
+  - Proof: {{text-files}}, {{verify-run}}

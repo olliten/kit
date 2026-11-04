@@ -14,18 +14,24 @@ legacy-areas: []
 verify:
   checks:
     - id: typecheck
-      command: npx tsc --noEmit -p tsconfig.json
+      command: node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
     - id: check
-      command: node scripts/kit-check.mjs
+      command: node scripts/kit-check.mjs --evidence {evidence}
       after: tests
   tests:
-    command: npx vitest run --pool=forks --poolOptions.forks.isolate=true {tests} --coverage.enabled --coverage.all=false --coverage.provider=custom --coverage.customProviderModule={provider} --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
+    command: node scripts/kit-proof.mjs run --pool=forks --poolOptions.forks.isolate=true {tests} --coverage.enabled --coverage.all=false --coverage.provider=custom --coverage.customProviderModule={provider} --coverage.reporter=lcovonly --coverage.reportOnFailure --coverage.reportsDirectory={dir}
     under: oracle/
 exceptions:
   - oracle/code-structure/imports-point-inward.test.ts
   - oracle/code-structure/imports-have-no-cycles.test.ts
   - oracle/kit/source-fixtures-own-their-files.test.ts
   - oracle/code-structure/window-authority-stays-in-shell.test.ts
+  - scripts/kit-check.mjs
+  - scripts/kit-consumers.mjs
+  - scripts/kit-verify.mjs
+  - scripts/kit-refs.mjs
+  - scripts/kit-proof.mjs
+bootstraps:
   - scripts/kit-check.mjs
   - scripts/kit-consumers.mjs
   - scripts/kit-verify.mjs
@@ -61,7 +67,25 @@ packages:
     capabilities: []
   - name: node:v8
     capabilities: []
+  - name: node:buffer
+    capabilities: []
 adapters:
+  - module: oracle/substrate/adapters/module-doubles
+    export: moduleDoubles
+    capability: test-runner
+    kind: external
+    zones: [substrate]
+    contract: {type: ModuleDoubles}
+    globals: [process]
+    packages: [vitest/dist/index.js]
+  - module: src/substrate/adapters/proof-runner
+    export: proofRunner
+    capability: test-runner
+    kind: external
+    zones: [substrate]
+    contract: {type: ProofRunner}
+    globals: [process]
+    packages: [vitest/node]
   - module: oracle/substrate/adapters/temporary-project
     export: temporaryProjects
     capability: filesystem
@@ -155,13 +179,19 @@ adapters:
     zones: [substrate]
     contract: {type: Toolchain}
     globals: [process]
+  - module: src/substrate/adapters/toolchain
+    export: toolchain
+    capability: compiler
+    kind: external
+    zones: [substrate]
+    contract: {type: Toolchain}
   - module: src/substrate/adapters/read-recorder.mjs
     export: readRecorder
     capability: read-recording
     kind: external
     zones: [substrate]
     globals: [process]
-    packages: [node:module, node:worker_threads]
+    packages: [node:module, node:worker_threads, node:buffer]
   - module: src/substrate/adapters/coverage-provider.mjs
     export: coverageProvider
     capability: coverage-reporting

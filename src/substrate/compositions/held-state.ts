@@ -65,7 +65,7 @@ export function heldStates(root: string, kit = ""): HeldStates {
         return known.state;
       }
       receipt.read++;
-      const state = manifest ? toolchain.manifest(at(path)) : ran === undefined ? filesystem.state(at(path)) : code(path, id, ran);
+      const state = manifest ? toolchain.manifest(at(path), root) : ran === undefined ? filesystem.state(at(path)) : code(path, id, ran);
       if (id !== undefined) states.set(key, { id, state });
       return state;
     },

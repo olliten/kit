@@ -61,6 +61,7 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
     legacyAreas: texts(declaration["legacy-areas"], "legacy-areas"),
     legacyZones: legacyZones(declaration["legacy-zones"]),
     exceptions: texts(declaration["exceptions"], "exceptions"),
+    ...(declaration["bootstraps"] === undefined ? {} : { bootstraps: applicationBootstraps(declaration["bootstraps"]) }),
     ...(declaration["limits"] === undefined ? {} : { limits: configuredLimits(declaration["limits"]) }),
     ...(declaration["rules"] === undefined ? {} : { rules: configuredRules(declaration["rules"]) }),
     ...(declaration["pending"] === undefined ? {} : { pending: configuredPending(declaration["pending"]) }),
@@ -69,6 +70,17 @@ export function configuredKit(defaults: KitConfig, declaration: Declaration): Ki
     adapters: registered,
     packages: packages(declaration["packages"]),
   };
+}
+
+function applicationBootstraps(declared: unknown): readonly string[] {
+  if (declared === undefined) return [];
+  if (!isTexts(declared)) throw new Error("The Kit configuration's bootstraps must list exact application source paths.");
+  for (const path of declared)
+    if (!path || path.endsWith("/") || !relativeLocation(path) || path !== normalizedPath(path) ||
+      path === "." || path.split("/").includes("..") || /[*?\[\]{}\\]/.test(path))
+      throw new Error(`The Kit configuration's bootstrap ${JSON.stringify(path)} must be an exact relative source path inside the app.`);
+  if (new Set(declared).size !== declared.length) throw new Error("The Kit configuration's bootstraps must not repeat a source path.");
+  return [...declared].sort();
 }
 
 function dependencyExclusions(declared: unknown): NonNullable<KitConfig["dependencyExclusions"]> {

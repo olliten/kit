@@ -1,10 +1,16 @@
 import type { Runs } from "../primitives/runs.js";
 import type { Snapshot } from "../primitives/snapshot.js";
-import { proofOf } from "./placement-of.js";
+import { legacyCodeOf, proofOf, rootOf } from "./placement-of.js";
 
 // Execution credit belongs to an individual proof, before variants of its claim are combined. Runtime
 // imports are followed whole because an unused declaration can still load application startup.
 export function independentRuns(snapshot: Snapshot, runs: Runs): Runs {
+  const original = new Set(snapshot.files.filter((file) =>
+    file.type === "test" || (file.type === "source" && (
+      rootOf(file.path, snapshot.config.srcRoot) !== undefined ||
+      legacyCodeOf(file.path, snapshot.config.layout?.legacy ?? []) || snapshot.config.exceptions?.includes(file.path)
+    )),
+  ).map((file) => file.path));
   const projects = snapshot.compiler?.projects ?? [];
   const compiled = new Set(projects.flatMap((project) => [...project.files, ...project.ambientFiles]));
   const edges = [
@@ -22,7 +28,7 @@ export function independentRuns(snapshot: Snapshot, runs: Runs): Runs {
     importers.set(to, paths);
   }
   const dependent = new Set(
-    (snapshot.config.exceptions ?? []).filter((path) => proofOf(path, snapshot.config.oracleRoot) === null),
+    snapshot.config.bootstraps ?? (snapshot.config.exceptions ?? []).filter((path) => proofOf(path, snapshot.config.oracleRoot) === null),
   );
   const pending = [...dependent];
   for (let path = pending.pop(); path !== undefined; path = pending.pop())
@@ -31,5 +37,16 @@ export function independentRuns(snapshot: Snapshot, runs: Runs): Runs {
         dependent.add(importer);
         pending.push(importer);
       }
-  return { tests: Object.fromEntries(Object.entries(runs.tests).filter(([test]) => !dependent.has(test))) };
+  const tests = Object.fromEntries(
+    Object.entries(runs.tests).filter(([test, modules]) => {
+      const context = runs.contexts?.[test];
+      return context?.complete === true && context.runtime !== "" && !dependent.has(test) &&
+        context.loaded.includes(test) && Object.keys(modules).every((module) => context.loaded.includes(module)) &&
+        !context.loaded.some((path) => dependent.has(path) || !original.has(path));
+    }),
+  );
+  return {
+    tests,
+    contexts: Object.fromEntries(Object.entries(runs.contexts ?? {}).filter(([test]) => Object.hasOwn(tests, test))),
+  };
 }
