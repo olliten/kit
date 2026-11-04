@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import { DEFAULT_CONFIG, type KitConfig } from "../../src/core/primitives/default-config.js";
-import { capabilityCheck } from "../../src/core/compositions/capability-check.js";
 import { authorityGraph } from "../../src/core/readings/authority-graph.js";
 import { capabilityContext } from "../../src/core/readings/capability-context.js";
 import { edgeCheck } from "../../src/core/readings/edge-check.js";
@@ -8,7 +7,6 @@ import { importAuthority } from "../../src/core/readings/import-authority.js";
 import { zoneAuthorityCheck } from "../../src/core/readings/zone-authority-check.js";
 import { projectSnapshot } from "../core/readings/project-snapshot.js";
 import { recordedImports } from "../substrate/compositions/recorded-imports.js";
-import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 // The fixture's import edges, what they carry, and what the import, edge and zone checks find in them; a
 // fixture that doesn't compile throws.
@@ -184,22 +182,22 @@ test("inward migration does not exempt cycles through the legacy caller", () => 
   ]));
 });
 
-test("an unknown legacy caller grants no native authority or behaviour input to Core", () => {
+test("an unknown legacy caller still inherits native authority forbidden in its Core dependency", () => {
   const target = "src/core/compositions/read.ts";
-  const snapshot = sourceFixture({
+  const native = "src/substrate/adapters/clock.ts";
+  const result = inspect({
     "legacy/run.ts": "import { read } from '../src/core/compositions/read.js';\nexport { read };",
-    [target]: "export function read(signal: AbortSignal, next: () => boolean): boolean { return signal.aborted || next(); }",
-  }, { layout: { legacy: ["legacy"] } });
-  const checked = capabilityCheck(snapshot);
-  const targetCapabilities = checked.requirements.find((row) => row.path === target)?.inherited;
-  expect(targetCapabilities?.length).toBeGreaterThan(0);
-  expect(checked.requirements.find((row) => row.path === "legacy/run.ts")?.inherited).toEqual(
-    expect.arrayContaining(targetCapabilities ?? []),
-  );
-  const result = checked.findings;
-  expect(result).toEqual(expect.arrayContaining([
-    expect.objectContaining({ path: target, blocking: true, debtKey: expect.stringContaining("R1:native-authority:") }),
-    expect.objectContaining({ path: target, blocking: true, debtKey: `R1:takes-behaviour:${target}:read` }),
+    [target]: "import { now } from '../../substrate/adapters/clock.js';\nexport function read(): number { return now(); }",
+    [native]: "export function now(): number { return 1; }",
+  }, {
+    ...DEFAULT_CONFIG,
+    layout: { legacy: ["legacy"] },
+    adapters: [{ module: "substrate/adapters/clock", export: "now", capability: "clock", kind: "external", zones: ["substrate"] }],
+  });
+  expect(result.requirements.find((row) => row.path === target)?.inherited).toContain("clock");
+  expect(result.requirements.find((row) => row.path === "legacy/run.ts")?.inherited).toContain("clock");
+  expect(result.findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({ path: target, blocking: true, status: "violation", debtKey: `R1:zone-authority:${target}:clock` }),
   ]));
-  expect(result.some((finding) => finding.debtKey.includes("migration-zone:legacy/run.ts:"))).toBe(false);
+  expect(result.findings.some((finding) => finding.debtKey.includes("migration-zone:legacy/run.ts:"))).toBe(false);
 });
