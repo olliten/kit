@@ -4,8 +4,9 @@ import { cycles } from "./dependency-check.js";
 
 // The import edges among checked code: no module imports an entrypoint, layers depend down or sideways within a
 // zone and inward across zones, an edge between legacy and placed code keeps zone boundaries once the legacy
-// end has a declared zone, and the layered graph has no cycle. Cross-zone failures are kept so the zone check
-// doesn't report them again. Unplaced code a test, or placed code under the proof root, imports is that code's
+// end has a declared zone or the target is inward for every zone, and the layered graph has no cycle.
+// Cross-zone failures are kept so the zone check doesn't report them again. Unplaced code a test, or placed
+// code under the proof root, imports is that code's
 // debt, not a boundary the importer establishes, so such an edge asks no zone of it.
 export function edgeCheck(
   snapshot: Snapshot,
@@ -59,7 +60,7 @@ export function edgeCheck(
       const fromZone = zoneOf(snapshot, edge.file);
       const toZone = zoneOf(snapshot, edge.target);
       if (fromZone === undefined || toZone === undefined) {
-        if (!intoDebt(edge.file, edge.target))
+        if (toZone !== "core" && !intoDebt(edge.file, edge.target))
           unresolved(
             edge.file,
             "Declare the legacy prefix's actual zone before establishing this cross-placement boundary.",

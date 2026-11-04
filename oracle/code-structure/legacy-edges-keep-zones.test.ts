@@ -124,3 +124,80 @@ test("recognizing a private local contract preserves the original migration limi
     `R1:migration-zone:legacy/index.ts:${run}`,
   ]);
 });
+
+// Every possible declared origin admits an inward Core edge. An unknown legacy origin has no
+// layer, so choosing any of those origins cannot turn the same Core destination into an outward edge.
+const originZones = [undefined, "core", "shell", "substrate"] as const;
+const coreTargets = [
+  ["primitives", "export interface Value { readonly amount: number; }", "import type { Value }", "export function read(value: Value): number { return value.amount; }"],
+  ["readings", "export function value(input: number): number { return input + 1; }", "import { value }", "export function read(input: number): number { return value(input); }"],
+  ["compositions", "export function value(input: number): number { return input + 1; }", "import { value }", "export function read(input: number): number { return value(input); }"],
+] as const;
+
+test.each(originZones)("legacy origin %s may consume each pure Core layer", (zone) => {
+  for (const [layer, declaration, imported, body] of coreTargets) {
+    const result = inspect({
+      "legacy/read.ts": `${imported} from '../src/core/${layer}/value.js';\n${body}\n`,
+      [`src/core/${layer}/value.ts`]: declaration,
+    }, {
+      ...DEFAULT_CONFIG,
+      layout: { legacy: ["legacy"] },
+      ...(zone === undefined ? {} : { legacyZones: [{ root: "legacy", zone }] }),
+    });
+    expect(result.findings, `${String(zone)} -> core/${layer}`).toEqual([]);
+  }
+});
+
+test.each(["shell", "substrate"])("unknown legacy origin still needs a zone before importing %s", (zone) => {
+  const path = "legacy/read.ts";
+  const target = `src/${zone}/readings/value.ts`;
+  const result = inspect({
+    [path]: `import { value } from '../${target.replace(/\.ts$/, ".js")}';\nexport function read(): number { return value(); }`,
+    [target]: "export function value(): number { return 1; }",
+  }, { ...DEFAULT_CONFIG, layout: { legacy: ["legacy"] } });
+  expect(result.findings.map((finding) => finding.debtKey)).toEqual([
+    `R1:migration-zone:${path}:${target}`,
+  ]);
+});
+
+test("a known Core origin cannot establish an unknown legacy target's zone", () => {
+  const path = "src/core/compositions/read.ts";
+  const target = "legacy/value.ts";
+  const result = inspect({
+    [path]: "import { value } from '../../../legacy/value.js';\nexport function read(): number { return value(); }",
+    [target]: "export function value(): number { return 1; }",
+  }, { ...DEFAULT_CONFIG, layout: { legacy: ["legacy"] } });
+  expect(result.findings.map((finding) => finding.debtKey)).toEqual([
+    `R1:migration-zone:${path}:${target}`,
+  ]);
+});
+
+test("inward migration does not exempt cycles through the legacy caller", () => {
+  const result = inspect({
+    "legacy/read.ts": "import { value } from '../src/core/readings/value.js';\nexport function read(): number { return value(); }",
+    "src/core/readings/value.ts": "import { read } from '../../../legacy/read.js';\nexport function value(): number { return read(); }",
+  }, { ...DEFAULT_CONFIG, layout: { legacy: ["legacy"] } });
+  expect(result.findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({ debtKey: expect.stringContaining("R2:cycle:"), blocking: true }),
+  ]));
+});
+
+test("an unknown legacy caller still inherits native authority forbidden in its Core dependency", () => {
+  const target = "src/core/compositions/read.ts";
+  const native = "src/substrate/adapters/clock.ts";
+  const result = inspect({
+    "legacy/run.ts": "import { read } from '../src/core/compositions/read.js';\nexport { read };",
+    [target]: "import { now } from '../../substrate/adapters/clock.js';\nexport function read(): number { return now(); }",
+    [native]: "export function now(): number { return 1; }",
+  }, {
+    ...DEFAULT_CONFIG,
+    layout: { legacy: ["legacy"] },
+    adapters: [{ module: "substrate/adapters/clock", export: "now", capability: "clock", kind: "external", zones: ["substrate"] }],
+  });
+  expect(result.requirements.find((row) => row.path === target)?.inherited).toContain("clock");
+  expect(result.requirements.find((row) => row.path === "legacy/run.ts")?.inherited).toContain("clock");
+  expect(result.findings).toEqual(expect.arrayContaining([
+    expect.objectContaining({ path: target, blocking: true, status: "violation", debtKey: `R1:zone-authority:${target}:clock` }),
+  ]));
+  expect(result.findings.some((finding) => finding.debtKey.includes("migration-zone:legacy/run.ts:"))).toBe(false);
+});
