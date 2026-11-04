@@ -1,4 +1,5 @@
 import type { Snapshot } from "../primitives/snapshot.js";
+import { packageContract } from "./package-contract.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
 import { entrypointOf, rootOf } from "./placement-of.js";
 
@@ -84,15 +85,13 @@ export function dependencyExclusions(snapshot: Snapshot): {
         for (const edge of edges.get(file) ?? []) {
           if (rule.imports === "runtime" && edge.typeOnly === true) continue;
           const target = edge.target ?? (rule.reach === "direct" ? edge.declarationTarget ?? null : null);
-          const packageName = edge.specifier.startsWith("@")
-            ? edge.specifier.split("/").slice(0, 2).join("/")
-            : edge.specifier.split("/")[0];
+          const { root: packageName, declaration } = packageContract(edge.specifier, snapshot.config.packages);
           const classifiedPackage =
             rule.reach === "direct" &&
             target === null &&
             !/^[.#/]/.test(edge.specifier) &&
-            (snapshot.config.packages?.some((row) => row.name === packageName) ||
-              snapshot.config.adapters?.some((row) => row.packages?.includes(packageName ?? "")));
+            (declaration !== undefined || snapshot.config.adapters?.some((row) =>
+              row.packages?.includes(edge.specifier) || row.packages?.includes(packageName ?? "")));
           if (classifiedPackage && (rule.imports === "all" || edge.typeOnly === false)) continue;
           if (target === null || (rule.imports === "runtime" && edge.typeOnly !== false)) {
             limits.push(
