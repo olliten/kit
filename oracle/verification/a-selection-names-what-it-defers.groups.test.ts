@@ -103,10 +103,13 @@ test.each([
   ["--defer-group=browser", "--defer-group=browser"],
   ["--defer-group", "browser", "--defer-group=browser"],
   ["--defer-group", "browser", "--selection", "selection.json"],
+  ["--defer-group=browser", "--selection=selection.json"],
 ])("malformed or conflicting group selectors %j cannot start verification", async (...flags) => {
   const project = temporaryProjects.open("kit-deferred-invalid-");
   try {
-    project.write(files());
+    project.write({ ...files(), "selection.json": JSON.stringify({
+      version: 1, discovery: discoveryIdentity(initial), policy: "manual-empty", tests: [],
+    }) });
     const result = await runVerify({ engineRoot: project.root, cwd: project.root,
       args: ["--root", project.root, "--config", join(project.root, "kit/config.md"), ...flags] });
     expect(result.exitCode).toBe(2);
