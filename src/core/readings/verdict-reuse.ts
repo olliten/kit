@@ -52,6 +52,18 @@ export function loadedBeside(recordings: readonly ProcessFile[], coverage: reado
 // path in the app is written so.
 export const PACKAGE_KEY = "#package:";
 
+// The segment a recorded path holds where it spells the root's own location, as a resolver asking whether the
+// root holds itself reads `<root>/<root>`: it names wherever the app is, so a pass names no folder. No path in the
+// app is written so.
+export const ROOT_MARK = "#root";
+
+// Where a recorded path is, with each mark read as the root's own location.
+export function appPath(root: string, path: string): string {
+  if (path === ".") return root;
+  const own = root.split("/").filter(Boolean).join("/");
+  return `${root}/${path.split("/").map((segment) => (segment === ROOT_MARK ? own : segment)).join("/")}`;
+}
+
 const MANIFEST = /(?:^|\/)package\.json$/;
 
 // What a pass depends on in each path, as the key its state is kept under: the path alone for its content (read
@@ -126,7 +138,7 @@ export function verdictOf(text: string): Verdict | null {
 // How a pass is recorded: the keys its states are kept under, a state's text, a script's ran code and their
 // digests, here and in what records them. A pass is kept under this version, not under Kit's source, so a Kit
 // release reuses every pass; it changes only when a pass recorded before could be misread after.
-export const RECORDING_FORMAT = 5;
+export const RECORDING_FORMAT = 6;
 
 // The key a pass holds the source of a Kit outside the app under, when its processes loaded that Kit's code: no
 // path in the app is written so.

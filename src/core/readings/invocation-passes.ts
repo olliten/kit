@@ -1,5 +1,6 @@
 import type { InvocationEvidence } from "../primitives/invocation-evidence.js";
 import type { Verdict } from "../primitives/verdict.js";
+import { digest } from "./fact-keys.js";
 import { runtimeOf, verdictOf } from "./verdict-reuse.js";
 
 const record = (value: unknown): value is Readonly<Record<string, unknown>> =>
@@ -40,6 +41,10 @@ export function invocationPasses(
   }
   return tests;
 }
+
+// What a post-test check's pass is kept under: every offered byte but the root's location, which names where
+// the tree is, not what it holds; a check given the evidence still validates the root it names.
+export const invocationIdentity = (evidence: InvocationEvidence): string => digest(invocationText({ ...evidence, root: "." }));
 
 // Every offered byte is an input of post-test checks. Keep diagnostics outside this public artifact rather
 // than hashing a projection of fields a consumer can still read from the actual file.

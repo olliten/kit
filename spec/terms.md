@@ -277,10 +277,10 @@
   - Role: derived
   - Zone: core
   - From: {{placement-of}}, {{runs}}, {{snapshot}}
-- **invocation-passes** — serialization of timing-free invocation input and passing test verdicts from its validated envelope whose root, runtime, commands and held states match the check.
+- **invocation-passes** — serialization of timing-free invocation input, the identity it is kept under apart from the root's location, and passing test verdicts from its validated envelope whose root, runtime, commands and held states match the check.
   - Role: derived
   - Zone: core
-  - From: {{invocation-evidence}}, {{verdict}}, {{verdict-reuse}}
+  - From: {{fact-keys}}, {{invocation-evidence}}, {{verdict}}, {{verdict-reuse}}
 - **layout-check** — findings from comparing file roles with configured target roots and existing legacy locations.
   - Role: derived
   - Zone: core
@@ -413,7 +413,7 @@
   - Role: derived
   - Zone: core
   - From: {{snapshot}}, {{finding}}, {{claim-inventory}}
-- **verdict-reuse** — how a check's processes used each path, the paths a process other than the test's loaded, the key each path is kept under and what it holds, the key an installed package is held under, a stored verdict read back, the recording format a pass is kept under, whether a check's command runs package scripts and the runtime it is kept under, where a check's passes are kept, the key a Kit's own source is held under, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
+- **verdict-reuse** — how a check's processes used each path, the paths a process other than the test's loaded, the key each path is kept under and what it holds, the key an installed package is held under, the mark a path holds where it spells the root's own location and where such a path is, a stored verdict read back, the recording format a pass is kept under, whether a check's command runs package scripts and the runtime it is kept under, where a check's passes are kept, the key a Kit's own source is held under, the kept entry whose paths all still hold, where an entry is kept among its subject's, and what each test ran from its pass that still holds.
   - Role: derived
   - Zone: core
   - From: {{execution-context}}, {{fact-keys}}, {{runs}}, {{verdict}}
@@ -477,7 +477,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **read-recorder** — a preload that records every path inside the app a check's processes read, list, probe or load, with how each was used, the installed package each path under `node_modules` falls in, the files of a Kit installed among them, and whether they loaded the code of a Kit outside the app.
+- **read-recorder** — a preload that records every path inside the app a check's processes read, list, probe or load, with how each was used and the root's own location in it marked, the installed package each path under `node_modules` falls in, the files of a Kit installed among them, and whether they loaded the code of a Kit outside the app.
   - Role: adapter
   - Zone: substrate
   - Of: []

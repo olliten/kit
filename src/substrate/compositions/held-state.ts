@@ -1,6 +1,6 @@
 import type { FunctionSpan } from "../../core/primitives/function-span.js";
 import { ranState } from "../../core/readings/ran-code.js";
-import { KIT_KEY, heldPath } from "../../core/readings/verdict-reuse.js";
+import { KIT_KEY, appPath, heldPath } from "../../core/readings/verdict-reuse.js";
 import { compilerWorkspace } from "../adapters/compiler.js";
 import { filesystem } from "../adapters/filesystem.js";
 import { textFiles } from "../adapters/text-files.js";
@@ -33,7 +33,7 @@ export function heldStates(root: string, kit = ""): HeldStates {
   const spans = new Map<string, { readonly id: string; readonly spans: readonly FunctionSpan[] }>();
   // The last script read, for its other keys and its functions: keys of one path sort together.
   let last: { readonly path: string; readonly id: string; readonly text: string } | undefined;
-  const at = (path: string): string => (path === "." ? root : `${root}/${path}`);
+  const at = (path: string): string => appPath(root, path);
   const trusted = (path: string): string | undefined => {
     const version = filesystem.version(at(path));
     return version !== undefined && version.changed < mark ? version.id : undefined;
