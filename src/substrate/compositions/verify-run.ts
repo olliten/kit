@@ -4,7 +4,7 @@ import type { InvocationEvidence } from "../../core/primitives/invocation-eviden
 import type { ExecutionContext } from "../../core/primitives/runs.js";
 import { deferredGroupSelection, verificationSelection } from "../../core/readings/verification-selection.js";
 import { executionContext, executionContextOf } from "../../core/readings/execution-context.js";
-import { invocationText } from "../../core/readings/invocation-passes.js";
+import { invocationIdentity, invocationText } from "../../core/readings/invocation-passes.js";
 import { batchAttribution } from "../../core/readings/batch-attribution.js";
 import { normalizedPath } from "../../core/readings/config-values.js";
 import { digest } from "../../core/readings/fact-keys.js";
@@ -14,7 +14,7 @@ import { testRuns } from "../../core/readings/test-runs.js";
 import { ranLines } from "../../core/readings/coverage-report.js";
 import { functionsRun } from "../../core/readings/ran-code.js";
 import { sharedPath, sharedRefs } from "../../core/readings/shared-passes.js";
-import { heldKey, heldKeys, heldPath, holding, loadedBeside, pathUses, runtimeOf, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
+import { appPath, heldKey, heldKeys, heldPath, holding, loadedBeside, pathUses, runtimeOf, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { testLine } from "../../core/readings/verification-configuration.js";
 import { calendar } from "../adapters/calendar.js";
 import { coverageProvider } from "../adapters/coverage-provider.mjs";
@@ -316,7 +316,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
       const changedSince = (key: string): boolean => {
         const { path: named, kind, package: installed } = heldPath(key);
         const path = installed === undefined ? named : "package-lock.json";
-        const at = path === "." ? root : `${root}/${path}`;
+        const at = appPath(root, path);
         const modified = filesystem.modified(at);
         return !kind && modified !== undefined && modified > start && filesystem.kind(at) === "file";
       };
@@ -515,7 +515,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     for (const { check, reused } of opening)
       if (check.test !== undefined && reused !== undefined) invocation[check.test] = { command: check.line, verdict: reused };
     if (opening.every(({ check, reused }) => check.test === undefined || reused !== undefined))
-      invocationInput = digest(invocationText({ version: 1, root, runtime, scripts, tests: invocation }));
+      invocationInput = invocationIdentity({ version: 1, root, runtime, scripts, tests: invocation });
     const planned = [...opening, ...plan(last).planned];
     return {
       stdout: [...planned.map(({ check, reused: kept }) => `${kept === undefined ? "run" : "reuse"} ${named(check)}`), ...left].map((line) => `${line}\n`).join(""),
@@ -527,9 +527,8 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   // A check declared after the tests, such as one reading what each test ran, runs once their passes are kept.
   textFiles.directory(invocationDirectory);
   const evidence: InvocationEvidence = { version: 1, root, runtime, scripts, tests: invocation };
-  const input = invocationText(evidence);
-  invocationInput = digest(input);
-  textFiles.write(invocationPath, input);
+  invocationInput = invocationIdentity(evidence);
+  textFiles.write(invocationPath, invocationText(evidence));
   try {
     await run(last, failures.size === 0 && unrecorded === 0);
   } finally {

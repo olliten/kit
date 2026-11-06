@@ -26,6 +26,10 @@ if (directory && root) {
   // One file per process and thread, named by both, so what each process loaded can be told apart.
   const out = `${directory}/${process.pid}-${threadId}.txt`;
   const prefix = `${root}/`;
+  // The root's own location as segments of a path inside it, and the mark a recording names it by
+  // (`verdict-reuse`'s `ROOT_MARK`, which this preload can't import).
+  const own = root.split("/").filter(Boolean);
+  const ROOT_MARK = "#root";
   const append = fs.appendFileSync;
   // The recorder's own walks use the operations as they were, so they are not recorded twice.
   const listing = fs.readdirSync;
@@ -168,10 +172,21 @@ if (directory && root) {
   /** @param {string} use @param {string} text */
   const record = (use, text) => {
     // The app root itself is `.`.
-    const local = text === root ? "." : text.slice(prefix.length);
+    const given = text === root ? "." : text.slice(prefix.length);
     // The repository's own bookkeeping is no input.
-    const parts = local.split("/");
-    if (parts[0] === ".git") return;
+    if (given.split("/")[0] === ".git") return;
+    // A run of segments spelling the root's own location, as in `<root>/<root>`, is the mark `#root`, so a
+    // recording names no folder.
+    /** @type {string[]} */
+    const parts = [];
+    const spelled = given.split("/");
+    for (let at = 0; at < spelled.length; ) {
+      if (own.length > 0 && own.every((segment, index) => spelled[at + index] === segment)) {
+        parts.push(ROOT_MARK);
+        at += own.length;
+      } else parts.push(spelled[at++] ?? "");
+    }
+    const local = parts.join("/");
     if (parts.includes("node_modules")) {
       const at = packageOf(parts);
       if (at === undefined) return;

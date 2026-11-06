@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { heldKeys, heldPath, pathUses } from "../../src/core/readings/verdict-reuse.js";
+import { appPath, heldKeys, heldPath, pathUses } from "../../src/core/readings/verdict-reuse.js";
 import { processes } from "../../src/substrate/adapters/processes.js";
 import { readRecorder } from "../../src/substrate/adapters/read-recorder.mjs";
 import { runVerify } from "../../src/substrate/compositions/verify-run.js";
@@ -200,4 +200,37 @@ test("recordings are read as each path's uses, and each path is kept by what it 
   ]);
   expect(heldPath("#package:node_modules/a/node_modules/b")).toEqual({ path: "#package:node_modules/a/node_modules/b", kind: false, package: "node_modules/a/node_modules/b" });
   expect(heldPath("package.json#manifest")).toEqual({ path: "package.json", kind: false, manifest: true });
+});
+
+test("a path spelling the root's own location inside the root is recorded with the mark, and read back where the app is", async () => {
+  const project = temporaryProjects.open("kit-reads-");
+  projects.push(project);
+  const app = join(project.root, "app");
+  const reads = join(project.root, "reads");
+  project.write({
+    // As Vite's resolver asks whether the root holds itself, and a Kit installed among the packages resolves from
+    // its own folder the same way.
+    "app/main.mjs": [
+      'import { existsSync, readFileSync } from "node:fs";',
+      'import { join } from "node:path";',
+      "const root = process.cwd();",
+      "existsSync(join(root, root));",
+      'existsSync(join(root, "node_modules/kit", root, "node_modules/a"));',
+      'readFileSync(join(root, "data", root.split("/").at(-1), "x.txt"));',
+    ].join("\n"),
+    [`app/data/app/x.txt`]: "x",
+    "reads/.keep": "",
+  });
+  const uses = await recorded(app, reads, "node main.mjs");
+  expect(uses.get("#root")).toEqual(new Set(["probe"]));
+  expect(uses.get("node_modules/kit/#root/node_modules/a")).toEqual(new Set(["package"]));
+  // Only the whole location is marked: a folder named as the root's last segment is the app's own.
+  expect(uses.get("data/app/x.txt")).toEqual(new Set(["read"]));
+  expect([...uses.keys()].filter((path) => path.includes(app.slice(1)))).toEqual([]);
+  expect(heldKeys(uses, new Map())).toContain("#root#kind");
+  expect(heldPath("#root#kind")).toEqual({ path: "#root", kind: true });
+  expect(appPath(app, "#root")).toBe(`${app}/${app.slice(1)}`);
+  expect(appPath(app, "node_modules/kit/#root/node_modules/a")).toBe(`${app}/node_modules/kit/${app.slice(1)}/node_modules/a`);
+  expect(appPath(app, ".")).toBe(app);
+  expect(appPath(app, "src/a.ts")).toBe(`${app}/src/a.ts`);
 });

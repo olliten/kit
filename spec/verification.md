@@ -55,7 +55,10 @@ so a later gate runs only what an edit can have changed.
   directory under it, and a copy reads every file. A load is a read only the module loader made, Node's own or the
   test runner's, or npm's own of a package manifest; any other code's read is a read, whatever stack trace limit
   it set. A directory listing the test runner makes, such as finding its tests, is not recorded; one any other
-  installed package makes, such as a compiler expanding its configuration's globs, is. Loaded without being asked to record, it changes nothing. · {#reads-are-observed}
+  installed package makes, such as a compiler expanding its configuration's globs, is. A path that spells the
+  root's own location inside the root, as a resolver asking whether the root holds itself does, is recorded with
+  that location as the mark `#root`, which names wherever the app is, so a recording names no folder. Loaded
+  without being asked to record, it changes nothing. · {#reads-are-observed}
   - Implementation: {{read-recorder}}, {{verdict-reuse}}, {{verify-run}}, {{processes}}
   - Proof: {{temporary-project}}, {{processes}}
 - `kit verify` keeps a passing check with the state of every path its run used: a file's content or a
@@ -65,7 +68,7 @@ so a later gate runs only what an edit can have changed.
   an earlier pass kept, or a file it read since its run started, is reported and not kept, and runs on different trees each keep
   theirs. A check declared
   `after: tests` runs once the tests' passes are kept, and is not kept itself when a test's pass was not. Its
-  reuse also holds the exact invocation evidence input: explicit root, runtime and scripts, and each test's
+  reuse also holds the exact invocation evidence input but the root's location: runtime and scripts, and each test's
   command, held states, named functions and attributable execution context. That input omits elapsed time;
   durations remain diagnostic data in the persistent passes. Serialization orders its identities and offers
   only those fields. `--plan` can reuse an after-test check only when every selected test already has a valid
@@ -74,7 +77,9 @@ so a later gate runs only what an edit can have changed.
   after tests. Their command may use `{evidence}` for this invocation's evidence file; `kit check --evidence`
   validates its format, governed root, runtime, expected test commands and held states before granting credit.
   A changed input invalidates evidence and is counted separately from intentionally unpersisted evidence.
-  `--plan` says what would run, and it exits 1 when a check fails. · {#verdicts-hold-while-their-reads-hold}
+  `--plan` says what would run, and it exits 1 when a check fails. A pass holds a tree, not a folder: the same
+  tree verified in another folder that shares the store, such as another worktree of the repository, reuses
+  every pass and keeps no new one. · {#verdicts-hold-while-their-reads-hold}
   - Implementation: {{verify-run}}, {{check-run}}, {{invocation-evidence}}, {{invocation-passes}}, {{verdict-reuse}}, {{verdict}}, {{evidence-store}}, {{filesystem}}, {{toolchain}}, {{processes}}, {{read-recorder}}, {{stopwatch}}, {{text-files}}
   - Proof: {{temporary-project}}
 - A pass is kept under the recording format, a version Kit declares and changes only when how a pass's states,
