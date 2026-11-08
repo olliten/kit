@@ -74,11 +74,13 @@ a claim depends on are named in it, so each module's claims are found from its n
   placed module the tests reach only through such a module is that module's debt, not the test's; one they
   reach directly, or through other placed code, is still charged. For the same reason an import from a test, or
   from a placed module under the proof root, into unplaced code is no `migration-zone` limit; every other edge
-  keeps its zone rules. No key declares shared test code instead: a new unplaced module is new debt and fails
-  as any new debt does. A module a claim's tests reach without its name is debt: the baseline holds it, it may
-  only shrink, and a new claim starts exact. · {#proofs-reach-only-named-modules}
-  - Implementation: {{proof-scope}}, {{edge-check}}, {{capability-check}}, {{proof-reach}}, {{finding}}, {{placement-of}}, {{kit-configuration}}, {{config-schema}}, {{layout-check}}, {{legacy-size}}, {{ratchet}}
-  - Proof: {{fixture-snapshot}}, {{project-snapshot}}, {{source-fixture}}
+  keeps its zone rules. Reaching is using, here as everywhere: a module the tests could import through placed
+  code, but whose code they never use that way, is reached only through the unplaced module. No key declares
+  shared test code instead: a new unplaced module is new debt and fails as any new debt does. A module a
+  claim's tests reach without its name is debt: the baseline holds it, it may only shrink, and a new claim
+  starts exact. · {#proofs-reach-only-named-modules}
+  - Implementation: {{proof-scope}}, {{edge-check}}, {{capability-check}}, {{proof-reach}}, {{finding}}, {{placement-of}}, {{kit-configuration}}, {{config-schema}}, {{layout-check}}, {{legacy-size}}, {{ratchet}}, {{test-reach}}
+  - Proof: {{fixture-snapshot}}, {{project-snapshot}}, {{source-fixture}}, {{recorded-reach}}
 - Two claims that share no code share no module. When the claims naming a placed module fall into groups
   whose tests use disjoint top-level declarations of it, the module is a finding: split it so each group has
   its own. A module of only types links no claims, and a module a test reaches in ways that can't be followed

@@ -50,24 +50,26 @@ export function proofScope(snapshot: Snapshot): ProofScopeFinding[] {
   };
   // Per claim, what its tests reach only through unplaced debt: the closure of each such module they come to,
   // less what they reach by imports that never enter one.
+  const used = recordedUses(snapshot);
   const throughDebt = new Map<string, { readonly covered: Set<string>; readonly own: Set<string> }>();
   for (const file of snapshot.files) {
     const proof = file.type === "test" ? proofOf(file.path, oracleRoot) : null;
     if (proof === null) continue;
     const key = `${specRoot}/${proof.topic}.md:${proof.anchor}`;
     const known = throughDebt.get(key) ?? { covered: new Set<string>(), own: new Set<string>() };
-    const own = new Set([file.path]);
     const entered = new Set<string>();
-    const pending = [file.path];
-    for (let next = pending.pop(); next !== undefined; next = pending.pop())
-      for (const target of edges.get(next) ?? []) {
-        if (isDebt(target)) entered.add(target);
-        else if (!own.has(target)) {
-          own.add(target);
-          pending.push(target);
-        }
-      }
-    for (const path of own) known.own.add(path);
+    for (const path of closureOf(file.path, (from) => edges.get(from) ?? [], isDebt, entered)) known.own.add(path);
+    // A test owns what its code uses without passing through debt, at its reach's precision: the uses the
+    // compiler followed, and what a file it charges whole imports. Without recorded uses, its imports.
+    const uses = used.get(file.path);
+    if (uses !== undefined) {
+      known.own.clear();
+      const next = (from: string): readonly string[] => [
+        ...(uses.next.get(from) ?? []),
+        ...(uses.whole.has(from) ? (edges.get(from) ?? []) : []),
+      ];
+      for (const path of closureOf(file.path, next, isDebt, new Set())) known.own.add(path);
+    }
     for (const debt of entered) for (const path of composed(debt)) known.covered.add(path);
     throughDebt.set(key, known);
   }
@@ -103,4 +105,42 @@ export function proofScope(snapshot: Snapshot): ProofScopeFinding[] {
     }
   }
   return [...findings.values()].sort(byDebtKey);
+}
+
+/** What `start` reaches along `next` without entering a module `stops` holds; each stop it meets is added to
+ *  `met`. */
+function closureOf(
+  start: string,
+  next: (from: string) => readonly string[],
+  stops: (path: string) => boolean,
+  met: Set<string>,
+): Set<string> {
+  const seen = new Set([start]);
+  const pending = [start];
+  for (let from = pending.pop(); from !== undefined; from = pending.pop())
+    for (const target of next(from)) {
+      if (stops(target)) met.add(target);
+      else if (!seen.has(target)) {
+        seen.add(target);
+        pending.push(target);
+      }
+    }
+  return seen;
+}
+
+/** Each test's recorded uses, as the compiler followed them: which files its code leads to from each file, and
+ *  the files it charges whole. Tests without recorded uses are absent. */
+function recordedUses(
+  snapshot: Snapshot,
+): Map<string, { readonly next: Map<string, string[]>; readonly whole: Set<string> }> {
+  const out = new Map<string, { readonly next: Map<string, string[]>; readonly whole: Set<string> }>();
+  for (const project of snapshot.compiler?.projects ?? [])
+    for (const { file, uses, whole } of project.proofs ?? []) {
+      if (uses === undefined) continue;
+      const known = out.get(file) ?? { next: new Map<string, string[]>(), whole: new Set<string>() };
+      for (const { from, to } of uses) known.next.set(from, [...(known.next.get(from) ?? []), to]);
+      for (const path of whole) known.whole.add(path);
+      out.set(file, known);
+    }
+  return out;
 }

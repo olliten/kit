@@ -250,7 +250,8 @@ export function projectFacts(context: AppContext, file: string, reuse?: FactReus
   for (const sf of own) outlines.set(local(sf.fileName), outlineOf(sf));
   const keyOf = (path: string): string => factsKey(project, path, closures.get(path) ?? [path], digests, outlines, roles);
   // A test's reaches are kept one per set of files followed, so worktrees that differ in those files each keep theirs.
-  const reachesOf = (path: string): string => `reaches/${digest(`reach\u0000${keyOf(path)}`)}`;
+  // A reach recorded before it held its uses is never read back: the key names what a reach holds.
+  const reachesOf = (path: string): string => `reaches/${digest(`reach-uses\u0000${keyOf(path)}`)}`;
 
   const stored = <T>(kind: string, key: string): T | undefined => {
     const text = reuse?.read(kind, key);
@@ -364,7 +365,7 @@ export function projectFacts(context: AppContext, file: string, reuse?: FactReus
     const proofOf = testReach(checker, new Set([...source, ...tests]), local, importTarget);
     for (const sf of dirtyProofs) {
       const path = local(sf.fileName);
-      const { reached, whole, declarations, read } = proofOf(sf);
+      const { reached, whole, declarations, uses, read } = proofOf(sf);
       // An import for its effect alone runs the module it names.
       const run = sf.statements.flatMap((statement) =>
         ts.isImportDeclaration(statement) && statement.importClause === undefined && ts.isStringLiteral(statement.moduleSpecifier)
@@ -376,6 +377,7 @@ export function projectFacts(context: AppContext, file: string, reuse?: FactReus
         reached,
         whole: [...new Set([...whole, ...run])].sort(),
         declarations: declarations.filter((declaration) => declaration.file !== path),
+        uses,
       };
       proofs.set(path, proof);
       const kept: StoredReach = { proof, states: Object.fromEntries(read.map((each) => [each, digests.get(each) ?? ""])) };

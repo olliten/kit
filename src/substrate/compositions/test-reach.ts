@@ -6,6 +6,8 @@ export interface TestReach {
   readonly reached: readonly string[];
   readonly whole: readonly string[];
   readonly declarations: readonly { readonly file: string; readonly name: string }[];
+  // Which file's code led into which: code in `from` uses code in `to`, or charges `to` whole.
+  readonly uses: readonly { readonly from: string; readonly to: string }[];
 }
 
 // The names a piece of code's top-level statement declares: the module-level declaration it belongs to.
@@ -547,7 +549,7 @@ export function testReach(
   };
   // Everything a piece leads to, as one set of item ids. A cycle of pieces shares one set.
   const items = new Map<string, number>();
-  const values: { readonly kind: "reached" | "whole" | "declaration" | "read"; readonly name: string }[] = [];
+  const values: { readonly kind: "reached" | "whole" | "declaration" | "read" | "use"; readonly name: string }[] = [];
   const bit = (key: string, value: (typeof values)[number]): bigint => {
     let id = items.get(key);
     if (id === undefined) {
@@ -557,8 +559,22 @@ export function testReach(
     }
     return 1n << BigInt(id);
   };
+  // The file a piece's code is in: its node's, or its binding's or function's declaration's.
+  const fileOf = (key: Key): string | undefined => {
+    const node = isResults(key)
+      ? key.results.declarations?.[0]
+      : isSymbol(key)
+        ? key.declarations?.[0]
+        : key;
+    const sf = node?.getSourceFile();
+    return sf === undefined || sf.isDeclarationFile ? undefined : local(sf.fileName);
+  };
   const own = (key: Key, piece: Piece): bigint => {
     let bits = 0n;
+    const from = fileOf(key);
+    if (from !== undefined)
+      for (const to of [...piece.edges.map(fileOf), ...piece.whole])
+        if (to !== undefined && to !== from) bits |= bit(`u:${from}\u0000${to}`, { kind: "use", name: `${from}\u0000${to}` });
     if (!isResults(key) && !isSymbol(key)) {
       const file = local(key.getSourceFile().fileName);
       bits |= bit(`r:${file}`, { kind: "reached", name: file });
@@ -626,6 +642,7 @@ export function testReach(
     const whole = new Set<string>();
     const declarations = new Set<string>();
     const read = new Set<string>();
+    const uses = new Set<string>();
     for (let index = 0; index < bits.length; index++) {
       if (bits[bits.length - 1 - index] !== "1") continue;
       const value = values[index];
@@ -633,6 +650,7 @@ export function testReach(
       else if (value?.kind === "whole") whole.add(value.name);
       else if (value?.kind === "declaration") declarations.add(value.name);
       else if (value?.kind === "read") read.add(value.name);
+      else if (value?.kind === "use") uses.add(value.name);
     }
     return {
       reached: [...reached].sort(),
@@ -642,6 +660,10 @@ export function testReach(
         return { file, name };
       }),
       read: [...read].sort(),
+      uses: [...uses].sort().map((key) => {
+        const [from = "", to = ""] = key.split("\u0000");
+        return { from, to };
+      }),
     };
   };
 }
