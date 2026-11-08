@@ -51,6 +51,12 @@ export function proofScope(snapshot: Snapshot): ProofScopeFinding[] {
   // Per claim, what its tests reach only through unplaced debt: the closure of each such module they come to,
   // less what they reach by imports that never enter one.
   const used = recordedUses(snapshot);
+  const clear = new Map<string, Set<string>>();
+  const importable = (from: string): Set<string> => {
+    const known = clear.get(from) ?? closureOf(from, (at) => edges.get(at) ?? [], isDebt, new Set());
+    clear.set(from, known);
+    return known;
+  };
   const throughDebt = new Map<string, { readonly covered: Set<string>; readonly own: Set<string> }>();
   for (const file of snapshot.files) {
     const proof = file.type === "test" ? proofOf(file.path, oracleRoot) : null;
@@ -60,12 +66,14 @@ export function proofScope(snapshot: Snapshot): ProofScopeFinding[] {
     const entered = new Set<string>();
     for (const path of closureOf(file.path, (from) => edges.get(from) ?? [], isDebt, entered)) known.own.add(path);
     // A test owns what its code uses without passing through debt, at its reach's precision: the uses the
-    // compiler followed, and what a file it charges whole imports. Without recorded uses, its imports.
+    // compiler followed, and what a file it charges whole imports. Without recorded uses, its imports. A use
+    // follows a name to where it is declared, past the modules that re-export it, so it is the test's only
+    // when its file imports it without entering debt.
     const uses = used.get(file.path);
     if (uses !== undefined) {
       known.own.clear();
       const next = (from: string): readonly string[] => [
-        ...(uses.next.get(from) ?? []),
+        ...(uses.next.get(from) ?? []).filter((to) => importable(from).has(to)),
         ...(uses.whole.has(from) ? (edges.get(from) ?? []) : []),
       ];
       for (const path of closureOf(file.path, next, isDebt, new Set())) known.own.add(path);

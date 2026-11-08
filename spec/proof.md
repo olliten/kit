@@ -75,7 +75,8 @@ a claim depends on are named in it, so each module's claims are found from its n
   reach directly, or through other placed code, is still charged. For the same reason an import from a test, or
   from a placed module under the proof root, into unplaced code is no `migration-zone` limit; every other edge
   keeps its zone rules. Reaching is using, here as everywhere: a module the tests could import through placed
-  code, but whose code they never use that way, is reached only through the unplaced module. No key declares
+  code, but whose code they never use that way, is reached only through the unplaced module; and a use the
+  tests name through an unplaced module that re-exports it is that module's too. No key declares
   shared test code instead: a new unplaced module is new debt and fails as any new debt does. A module a
   claim's tests reach without its name is debt: the baseline holds it, it may only shrink, and a new claim
   starts exact. · {#proofs-reach-only-named-modules}
