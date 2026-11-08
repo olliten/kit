@@ -80,7 +80,7 @@ a claim depends on are named in it, so each module's claims are found from its n
   claim's tests reach without its name is debt: the baseline holds it, it may only shrink, and a new claim
   starts exact. · {#proofs-reach-only-named-modules}
   - Implementation: {{proof-scope}}, {{edge-check}}, {{capability-check}}, {{proof-reach}}, {{finding}}, {{placement-of}}, {{kit-configuration}}, {{config-schema}}, {{layout-check}}, {{legacy-size}}, {{ratchet}}, {{test-reach}}
-  - Proof: {{fixture-snapshot}}, {{project-snapshot}}, {{source-fixture}}, {{recorded-reach}}
+  - Proof: {{fixture-snapshot}}, {{project-snapshot}}, {{source-fixture}}, {{recorded-uses}}
 - Two claims that share no code share no module. When the claims naming a placed module fall into groups
   whose tests use disjoint top-level declarations of it, the module is a finding: split it so each group has
   its own. A module of only types links no claims, and a module a test reaches in ways that can't be followed

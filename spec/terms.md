@@ -640,6 +640,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{default-config}}, {{fact-walk}}, {{program-fixture}}, {{syntax-reading}}, {{term-recorder}}
+- **recorded-uses** — the workflow that compiles a fixture and records which file's code one of its tests led into which.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{default-config}}, {{program-fixture}}, {{test-reach}}
 - **refs-run** — the `kit refs` workflow: list the claims a module keeps, also as a read hook.
   - Role: composition
   - Zone: substrate

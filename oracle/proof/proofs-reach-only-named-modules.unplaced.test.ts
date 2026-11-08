@@ -9,7 +9,7 @@ import { proofScope } from "../../src/core/readings/proof-scope.js";
 import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 import { projectSnapshot } from "../core/readings/project-snapshot.js";
-import { recordedUses } from "../substrate/compositions/recorded-reach.js";
+import { recordedUses } from "../substrate/compositions/recorded-uses.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const claim = { file: "spec/topic.md", anchor: "total-sums", line: 1, terms: ["total"] };
