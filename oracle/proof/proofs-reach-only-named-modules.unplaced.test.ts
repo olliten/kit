@@ -9,6 +9,7 @@ import { proofScope } from "../../src/core/readings/proof-scope.js";
 import { ratchetFindings } from "../../src/core/readings/ratchet.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 import { projectSnapshot } from "../core/readings/project-snapshot.js";
+import { recordedUses } from "../substrate/compositions/recorded-uses.js";
 import { sourceFixture } from "../substrate/compositions/source-fixture.js";
 
 const claim = { file: "spec/topic.md", anchor: "total-sums", line: 1, terms: ["total"] };
@@ -46,6 +47,55 @@ test("a placed module the test reaches through other placed unnamed code is stil
   expect(keys([...through(inRoot), `${proof} > ${helper}`, `${helper} > ${round}`], [inRoot, helper])).toEqual([helperDebt, debt]);
   // Placed code in front of unplaced code is charged; what the unplaced code reaches is not.
   expect(keys([`${proof} > ${total}`, `${proof} > ${helper}`, `${helper} > ${inRoot}`, `${inRoot} > ${round}`], [inRoot, helper])).toEqual([helperDebt]);
+});
+
+// What a test reaches "directly, or through placed code" is what its code uses there, as the compiler follows
+// it: a placed helper the test imports lends it only what the helper's code it runs uses.
+test("the compiler records which file's code led into which, only where code is used", () => {
+  const uses = recordedUses(
+    {
+      "src/round.ts": "export const round = (n: number): number => Math.round(n);\n",
+      "src/helper.ts": [
+        'import { round } from "./round.js";',
+        "export const label = (n: number): string => `#${n}`;",
+        "export const rounded = (n: number): number => round(n);",
+        "",
+      ].join("\n"),
+      "src/use.test.ts": 'import { label } from "./helper.js";\nvoid label(1);\n',
+    },
+    "src/use.test.ts",
+  );
+  expect(uses).toEqual([{ from: "src/use.test.ts", to: "src/helper.ts" }]);
+});
+
+test("a placed module the test could import only through placed code it never uses there is reached only through the unplaced code", () => {
+  const helper = "src/core/readings/helper.ts";
+  const helperDebt = `R4:proof-scope:spec/topic.md:total-sums:${helper}`;
+  const files = [total, round, proof, helper, inRoot];
+  const imports = [`${proof} > ${total}`, `${proof} > ${helper}`, `${helper} > ${round}`, `${proof} > ${inRoot}`, `${inRoot} > ${round}`];
+  const recorded = (uses: readonly string[]): string[] => {
+    const { compiler } = projectSnapshot({
+      files,
+      proofs: [
+        {
+          file: proof,
+          reached: [proof, total, helper, inRoot, round],
+          whole: [],
+          uses: uses.map((edge) => {
+            const [from = "", to = ""] = edge.split(" > ");
+            return { from, to };
+          }),
+        },
+      ],
+    });
+    if (compiler === undefined) throw new Error("the project snapshot holds no compiler facts");
+    return proofScope({ ...snapshotOf({ files, imports, claims: [claim] }), compiler }).map((finding) => finding.debtKey);
+  };
+  const used = [`${proof} > ${total}`, `${proof} > ${helper}`, `${proof} > ${inRoot}`, `${inRoot} > ${round}`];
+  // The helper's code the test runs never uses `round`: `round` arrives only through the unplaced app.
+  expect(recorded(used)).toEqual([helperDebt]);
+  // Once the helper's code the test runs uses `round`, it is the test's again.
+  expect(recorded([...used, `${helper} > ${round}`])).toEqual([helperDebt, debt]);
 });
 
 test("unplaced code the check doesn't count as debt carries no reach", () => {

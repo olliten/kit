@@ -8,7 +8,7 @@ export function recordedReach(
   files: Readonly<Record<string, string>>,
   test: string,
   config: Partial<KitConfig> = {},
-): TestReach {
+): Omit<TestReach, "uses"> {
   const { scope, importTarget } = openProgram(files, config);
   const file = scope.program.getSourceFiles().find((sf) => scope.local(sf.fileName) === test);
   if (file === undefined) throw new Error(`${test} is not in the fixture's program`);
