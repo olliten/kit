@@ -98,6 +98,47 @@ test("a placed module the test could import only through placed code it never us
   expect(recorded([...used, `${helper} > ${round}`])).toEqual([helperDebt, debt]);
 });
 
+test("a use names where the code is declared, past the modules that re-export it", () => {
+  const uses = recordedUses(
+    {
+      "src/round.ts": "export const round = (n: number): number => Math.round(n);\n",
+      "src/app.ts": 'export { round } from "./round.js";\n',
+      "src/use.test.ts": 'import { round } from "./app.js";\nvoid round(1);\n',
+    },
+    "src/use.test.ts",
+  );
+  expect(uses).toEqual([{ from: "src/use.test.ts", to: "src/round.ts" }]);
+});
+
+test("a placed module the test uses through an unplaced re-export is reached only through the unplaced code", () => {
+  const files = [total, round, proof, inRoot];
+  const recorded = (imports: readonly string[]): string[] => {
+    const { compiler } = projectSnapshot({
+      files,
+      proofs: [
+        {
+          file: proof,
+          reached: [proof, total, inRoot, round],
+          whole: [],
+          uses: [
+            { from: proof, to: total },
+            { from: proof, to: round },
+          ],
+        },
+      ],
+    });
+    if (compiler === undefined) throw new Error("the project snapshot holds no compiler facts");
+    return proofScope({ ...snapshotOf({ files, imports: [...imports], claims: [claim] }), compiler }).map(
+      (finding) => finding.debtKey,
+    );
+  };
+  const reExported = [`${proof} > ${total}`, `${proof} > ${inRoot}`, `${inRoot} > ${round}`];
+  // The test names `round` from the unplaced app, which re-exports it: `round` is the app's debt.
+  expect(recorded(reExported)).toEqual([]);
+  // Once the test imports `round` itself, its use is the test's again.
+  expect(recorded([...reExported, `${proof} > ${round}`])).toEqual([debt]);
+});
+
 test("unplaced code the check doesn't count as debt carries no reach", () => {
   // Outside every code root, with no layout declared, nothing counts it, so its reach stays the test's.
   expect(keys(through(legacy), [legacy])).toEqual([debt]);
