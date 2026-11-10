@@ -5,18 +5,24 @@ import { proofReach } from "../../src/core/readings/proof-reach.js";
 import { DEFAULT_CONFIG } from "../../src/core/primitives/default-config.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
+// A declaration's text is proved by a-claim-has-its-text; this proof compares every other field exactly.
+const inventoryOf = (...input: Parameters<typeof claimInventory>) => {
+  const inventory = claimInventory(...input);
+  return { ...inventory, declarations: inventory.declarations.map(({ text: _text, ...claim }) => claim) };
+};
+
 describe("legacy declarations retain their structural scope without changing topic grammar", () => {
   const nested = "- A standing claim · {#value-stays}\n  - The explanatory child has no claim.\n";
 
   test("a legacy parent paragraph closing marker declares its claim before explanatory children", () => {
-    expect(claimInventory(nested, { legacy: true, separator: "·" })).toEqual({
+    expect(inventoryOf(nested, { legacy: true, separator: "·" })).toEqual({
       declarations: [{ anchor: "value-stays", line: 1 }],
       references: [],
     });
   });
 
   test("the same marker remains a reference in a new topic whose parent item continues", () => {
-    expect(claimInventory(nested, { separator: "·" })).toEqual({
+    expect(inventoryOf(nested, { separator: "·" })).toEqual({
       declarations: [],
       references: [{ anchor: "value-stays", line: 1 }],
     });
@@ -24,9 +30,9 @@ describe("legacy declarations retain their structural scope without changing top
 
   test("legacy explanatory children retain the same module relationships as topic metadata", () => {
     const metadata = "  - Implementation: {{value}}\n  - Proof: {{value-cases}}\n";
-    const strict = claimInventory("- A standing claim · {#value-stays}\n" + metadata);
-    expect(claimInventory(nested + metadata, { legacy: true })).toEqual(strict);
-    expect(claimInventory(nested + metadata)).toEqual({
+    const strict = inventoryOf("- A standing claim · {#value-stays}\n" + metadata);
+    expect(inventoryOf(nested + metadata, { legacy: true })).toEqual(strict);
+    expect(inventoryOf(nested + metadata)).toEqual({
       declarations: [],
       references: [{ anchor: "value-stays", line: 1 }],
     });
@@ -34,18 +40,18 @@ describe("legacy declarations retain their structural scope without changing top
 
   test("an annotated legacy law heading declares its identity without mistaking its description for the anchor", () => {
     expect(
-      claimInventory("### law · value-stays — a standing rule\n", { legacy: true, separator: "·" }),
+      inventoryOf("### law · value-stays — a standing rule\n", { legacy: true, separator: "·" }),
     ).toEqual({
       declarations: [{ anchor: "value-stays", line: 1 }],
       references: [],
     });
     expect(
-      claimInventory("### law · value-stays — a standing rule\n", { separator: "·" }).declarations,
+      inventoryOf("### law · value-stays — a standing rule\n", { separator: "·" }).declarations,
     ).toEqual([]);
   });
 
   test("an explicit legacy law marker and its heading identify one declaration, not two", () => {
-    const actual = claimInventory("### law · value-stays — a standing rule\n\n- {#value-stays}\n", {
+    const actual = inventoryOf("### law · value-stays — a standing rule\n\n- {#value-stays}\n", {
       legacy: true,
       separator: "·",
     });
@@ -65,7 +71,7 @@ describe("legacy declarations retain their structural scope without changing top
     },
   ])("the closing marker retains the heading's module metadata: $rows", ({ rows, relationships, terms }) => {
     expect(
-      claimInventory("### law · value-stays — a standing rule\n\n- {#value-stays}\n" + rows, {
+      inventoryOf("### law · value-stays — a standing rule\n\n- {#value-stays}\n" + rows, {
         legacy: true,
         separator: "·",
       }),
@@ -83,7 +89,7 @@ describe("legacy declarations retain their structural scope without changing top
   ])(
     "an annotated heading survives legacy selection and enforces proof reach, reached=$reached",
     ({ reached }) => {
-      const claims = claimInventory(
+      const claims = inventoryOf(
         "### law · value-stays — a standing rule\n\n- {#value-stays}\n" +
           "  - Implementation: {{value}}\n  - Proof: {{value-cases}}\n",
         { legacy: true, separator: "·" },
@@ -114,7 +120,7 @@ describe("legacy declarations retain their structural scope without changing top
 
   test("reflowed references remain references even in a legacy area", () => {
     expect(
-      claimInventory("An explanation cites\n{#missing-value}\nand continues.\n", {
+      inventoryOf("An explanation cites\n{#missing-value}\nand continues.\n", {
         legacy: true,
         separator: "·",
       }),
@@ -125,7 +131,7 @@ describe("legacy declarations retain their structural scope without changing top
   });
 
   test("coalescing a heading's own marker does not hide a second body declaration", () => {
-    const inventory = claimInventory(
+    const inventory = inventoryOf(
       "### law · value-stays — a standing rule\n\n- {#value-stays}\n- Another declaration · {#value-stays}\n",
       { legacy: true, separator: "·" },
     );
@@ -136,7 +142,7 @@ describe("legacy declarations retain their structural scope without changing top
   });
 
   test("coalescing an annotated marker keeps a distinct annotated declaration a duplicate", () => {
-    const claims = claimInventory(
+    const claims = inventoryOf(
       "### law · value-stays — a standing rule\n\n- {#value-stays}\n" +
         "  - Implementation: {{value}}\n" +
         "- Another declaration · {#value-stays}\n  - Implementation: {{other-value}}\n",
@@ -156,7 +162,7 @@ describe("legacy declarations retain their structural scope without changing top
   });
 
   test("two legacy heading homes remain two declarations", () => {
-    const inventory = claimInventory(
+    const inventory = inventoryOf(
       "### law · value-stays — first home\n\n- {#value-stays}\n\n### law · value-stays — second home\n\n- {#value-stays}\n",
       { legacy: true, separator: "·" },
     );
@@ -167,7 +173,7 @@ describe("legacy declarations retain their structural scope without changing top
   });
 
   test("a duplicated legacy parent declaration stays a binder failure despite multiple proofs", () => {
-    const claims = claimInventory(`${nested}\n${nested}`, {
+    const claims = inventoryOf(`${nested}\n${nested}`, {
       legacy: true,
       separator: "·",
     }).declarations.map((claim) => ({ ...claim, file: "spec/value.md" }));

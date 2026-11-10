@@ -59,6 +59,13 @@ a claim depends on are named in it, so each module's claims are found from its n
   claim-proof and proof-reach rules as a topic claim; other legacy claims remain outside those checks. · {#legacy-claims-keep-their-grammar}
   - Implementation: {{claim-proof-binder}}, {{proof-reach}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}, {{temporary-project}}, {{processes}}
+- A claim's text is what its declaration holds, in source order: a list claim's promise paragraph, or a table
+  claim's cells, without its anchor and without its Implementation and Proof rows. A legacy claim adds its
+  explanatory bullets or its law section, less any claim declared inside it; a bullet that is only a label, one
+  word and a colon, is structure, not text. The inventory gives each declaration the ranges of its text, so a
+  reader takes a claim's words without parsing its grammar again. · {#a-claim-has-its-text}
+  - Implementation: {{claim-inventory}}
+  - Proof: {{fixture-snapshot}}
 - A claim's tests together reach every placed module the claim names through the code they use, followed
   into helpers and modules as a capture is, and the modules of only types that code is written in; a named
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}

@@ -20,6 +20,98 @@ const moduleNames = (value: string): readonly string[] | null => {
   return terms;
 };
 
+type Range = readonly [start: number, end: number];
+
+const columnLabel = (table: Table, index: number): string => {
+  const cell = table.children[0]?.children[index];
+  return cell?.children.length === 1 && cell.children[0]?.type === "text" ? cell.children[0].value.trim() : "";
+};
+
+// Trimming here keeps every range on words, so ranges of neighbouring declarations never touch.
+const span = (text: string, start: number, end: number, separator = ""): Range[] => {
+  let from = start;
+  let to = end;
+  while (from < to && /\s/.test(text[from] ?? "")) from++;
+  while (to > from && /\s/.test(text[to - 1] ?? "")) to--;
+  if (separator && text.slice(from, to).endsWith(separator)) {
+    to -= separator.length;
+    while (to > from && /\s/.test(text[to - 1] ?? "")) to--;
+  }
+  return from < to ? [[from, to]] : [];
+};
+
+// Phrasing content's offsets, which leave out a heading's hashes and a cell's pipes.
+const inline = (node: Nodes): Range | null => {
+  if (!("children" in node)) return null;
+  const start = node.children[0]?.position?.start.offset;
+  const end = node.children.at(-1)?.position?.end.offset;
+  return start === undefined || end === undefined ? null : [start, end];
+};
+
+const closingAnchor = (node: Nodes, pattern: string): string | null => {
+  if (!("children" in node)) return null;
+  const tail = node.children.at(-1);
+  if (tail?.type !== "text") return null;
+  for (const match of tail.value.matchAll(new RegExp(pattern, "g")))
+    if (tail.value.slice(match.index + match[0].length).trim() === "") return match[0].slice(2, -1);
+  return null;
+};
+
+// The source offset of a text node's closing anchor; escapes make its value's offsets differ from the source's.
+const anchorOffset = (tail: Text, text: string, pattern: string): number | null => {
+  const start = tail.position?.start.offset;
+  const end = tail.position?.end.offset;
+  if (start === undefined || end === undefined) return null;
+  const source = text.slice(start, end);
+  for (const match of source.matchAll(new RegExp(pattern, "g")))
+    if (source.slice(match.index + match[0].length).trim() === "") return start + match.index;
+  return null;
+};
+
+// A legacy claim's explanatory blocks. Module rows are relationships, a claim declared inside is its own text,
+// and a lead that is one word and a colon only labels the bullets under it.
+const explanation = (node: Nodes, text: string, pattern: string): Range[] => {
+  const within = (child: Nodes): Range[] => explanation(child, text, pattern);
+  if (node.type === "list" || node.type === "blockquote") return node.children.flatMap(within);
+  if (node.type === "listItem") {
+    const [lead, ...rest] = node.children;
+    if (lead?.type !== "paragraph") return node.children.flatMap(within);
+    const range = inline(lead);
+    const words = range === null ? "" : text.slice(range[0], range[1]).trim();
+    if (/^(Implementation|Proof):/.test(words) || closingAnchor(lead, pattern) !== null) return [];
+    return [...(/^[^\s:]+:$/.test(words) ? [] : within(lead)), ...rest.flatMap(within)];
+  }
+  const start = node.position?.start.offset;
+  const end = node.position?.end.offset;
+  return start === undefined || end === undefined ? [] : span(text, start, end);
+};
+
+// A law section is its heading's explanation and what follows it up to the bullet that closes with its id.
+const lawText = (heading: Nodes, siblings: readonly Nodes[], id: string, text: string, pattern: string): Range[] => {
+  const range = inline(heading);
+  const dash = range === null ? -1 : text.slice(range[0], range[1]).indexOf("—");
+  const ranges: Range[] = range === null || dash < 0 ? [] : span(text, range[0] + dash + 1, range[1]);
+  for (const node of siblings) {
+    if (node.type === "heading") break;
+    for (const block of node.type === "list" ? node.children : [node]) {
+      if (block.type === "listItem" && block.children[0] !== undefined &&
+          closingAnchor(block.children[0], pattern) === id) return ranges;
+      ranges.push(...explanation(block, text, pattern));
+    }
+  }
+  return ranges;
+};
+
+const rowText = (table: Table, row: TableRow, text: string, anchor: number, separator: string): Range[] =>
+  row.children.flatMap((cell, index) => {
+    const label = columnLabel(table, index);
+    const range = inline(cell);
+    if (label === "Implementation" || label === "Proof" || range === null) return [];
+    return index === row.children.length - 1
+      ? span(text, range[0], Math.min(range[1], anchor), separator)
+      : span(text, range[0], range[1]);
+  });
+
 export function tableModules(
   table: Table,
   row: TableRow,
@@ -29,11 +121,8 @@ export function tableModules(
 ): Pick<ClaimMarker, "implementation" | "proof"> | null {
   const roles: { implementation?: readonly string[]; proof?: readonly string[] } = {};
   const seen = new Set<string>();
-  for (const [index, cell] of (table.children[0]?.children ?? []).entries()) {
-    const label =
-      cell.children.length === 1 && cell.children[0]?.type === "text"
-        ? cell.children[0].value.trim()
-        : "";
+  for (const index of (table.children[0]?.children ?? []).keys()) {
+    const label = columnLabel(table, index);
     if (label !== "Implementation" && label !== "Proof") continue;
     if (seen.has(label)) return null;
     seen.add(label);
@@ -119,10 +208,16 @@ export function claimInventory(
       : node.type !== "inlineCode" && "children" in node
         ? node.children.flatMap(named)
         : [];
+  const separator = options.separator ?? "·";
+  const lead = (node: Nodes, anchor: number): Range[] => {
+    const range = inline(node);
+    return range === null ? [] : span(text, range[0], Math.min(range[1], anchor), separator);
+  };
   const close = (
     node: Nodes,
     modules: Pick<ClaimMarker, "implementation" | "proof"> = {},
     promise: Nodes = node,
+    words: (anchor: number) => Range[] = (anchor) => lead(node, anchor),
   ): void => {
     if (!("children" in node)) return;
     const tail = node.children.at(-1);
@@ -133,8 +228,8 @@ export function claimInventory(
     for (const match of matches(tail.value)) {
       if (tail.value.slice(match.index + match[0].length).trim() !== "") continue;
       declared.set(tail, match.index);
-      const claim =
-        terms.length === 0 ? marker(tail, match) : { ...marker(tail, match), terms, ...modules };
+      const at = { ...marker(tail, match), text: words(anchorOffset(tail, text, pattern) ?? text.length) };
+      const claim = terms.length === 0 ? at : { ...at, terms, ...modules };
       if (options.legacy && legacyHeading === claim.anchor && !headingMarkerConsumed) {
         headingMarkerConsumed = true;
         const index = declarations.findIndex(
@@ -146,20 +241,25 @@ export function claimInventory(
       } else declarations.push(claim);
     }
   };
-  const visit = (node: Nodes): void => {
+  const visit = (node: Nodes, siblings: readonly Nodes[] = [], index = 0): void => {
     if (node.type === "code") return;
     if (node.type === "table") {
       for (const row of node.children.slice(1)) {
         const cell = row.children.at(-1);
         if (cell !== undefined)
-          close(cell, tableModules(node, row, text, pattern, options.separator) ?? {}, row);
+          close(cell, tableModules(node, row, text, pattern, options.separator) ?? {}, row, (anchor) =>
+            rowText(node, row, text, anchor, separator),
+          );
       }
     }
     if (node.type === "listItem") {
       const modules = claimModules(node, text, options.legacy);
       const paragraph =
         options.legacy || modules !== null ? node.children[0] : node.children.at(-1);
-      if (paragraph?.type === "paragraph") close(paragraph, modules ?? {});
+      const more = (): Range[] =>
+        options.legacy ? node.children.slice(1).flatMap((child) => explanation(child, text, pattern)) : [];
+      if (paragraph?.type === "paragraph")
+        close(paragraph, modules ?? {}, paragraph, (anchor) => [...lead(paragraph, anchor), ...more()]);
     }
     if (node.type === "heading") {
       legacyHeading = null;
@@ -181,7 +281,11 @@ export function claimInventory(
               (claim) => claim.anchor === law[1] && claim.line === node.position?.start.line,
             )
           )
-            declarations.push({ anchor: law[1], line: node.position?.start.line ?? 1 });
+            declarations.push({
+              anchor: law[1],
+              line: node.position?.start.line ?? 1,
+              text: lawText(node, siblings.slice(index + 1), law[1], text, pattern),
+            });
         }
       }
     }
@@ -195,7 +299,10 @@ export function claimInventory(
         references.push({ anchor: match[0].slice(2, -1), line: node.position?.start.line ?? 1 });
       }
     }
-    if ("children" in node) for (const child of node.children) visit(child);
+    if ("children" in node) {
+      const children: readonly Nodes[] = node.children;
+      for (const [position, child] of children.entries()) visit(child, children, position);
+    }
   };
   visit(root);
   return { declarations, references };

@@ -5,6 +5,12 @@ import { semanticReferenceInventory } from "../../src/core/readings/semantic-ref
 import { bindingFindings } from "../core/readings/binding-findings.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
+// A declaration's text is proved by a-claim-has-its-text; this proof compares every other field exactly.
+const inventoryOf = (...input: Parameters<typeof claimInventory>) => {
+  const inventory = claimInventory(...input);
+  return { ...inventory, declarations: inventory.declarations.map(({ text: _text, ...claim }) => claim) };
+};
+
 const table = "# Commands\n\n## Available commands\n\n" +
   "| Command | What it does | Available when |\n| --- | --- | --- |\n" +
   "| Complete {{complete}} | Saves the result; see [[outcomes]]. | In Focus. · {#complete}\n" +
@@ -12,7 +18,7 @@ const table = "# Commands\n\n## Available commands\n\n" +
 
 test("each data row is one claim, collecting references from all its cells", () => {
   expect(topicShape(snapshotOf({ prose: [table] }))).toEqual([]);
-  expect(claimInventory(table)).toEqual({
+  expect(inventoryOf(table)).toEqual({
     declarations: [
       { anchor: "complete", line: 7, terms: ["complete"] },
       { anchor: "skip", line: 8 },
@@ -29,14 +35,14 @@ test("moving list claims into rows preserves their proof homes", () => {
     "- Skip skips the current item. In Focus. · {#skip}\n";
   const snapshot = snapshotOf({ files: ["oracle/commands/complete.test.ts", "oracle/commands/skip.test.ts"] });
   const findings = (text: string) => bindingFindings({ ...snapshot,
-    claims: claimInventory(text).declarations.map((claim) => ({ ...claim, file: "spec/commands.md" })),
+    claims: inventoryOf(text).declarations.map((claim) => ({ ...claim, file: "spec/commands.md" })),
   });
   expect(findings(list)).toEqual([]);
   expect(findings(table)).toEqual([]);
   const duplicate = findings(table + "\n- Complete again. · {#complete}\n");
   expect(duplicate.map((row) => row.debtKey)).toEqual(["R3:duplicate-claim:complete"]);
   expect(bindingFindings({ ...snapshotOf({}), claims:
-    claimInventory(table).declarations.map((claim) => ({ ...claim, file: "spec/commands.md" })),
+    inventoryOf(table).declarations.map((claim) => ({ ...claim, file: "spec/commands.md" })),
   }).map((row) => row.debtKey)).toEqual([
     "R3:missing-proof:spec/commands.md:complete", "R3:missing-proof:spec/commands.md:skip",
   ]);
@@ -61,7 +67,7 @@ test.each([
 test("headers, separators, fenced examples and cells have no independent claim home", () => {
   const prose = "# Commands\n\n| Command {#header} | Behavior |\n| --- | --- |\n" +
     "| Skip | Skips. {#skip} |\n\n```md\n| Example | {#example} |\n```\n";
-  expect(claimInventory(prose)).toEqual({
+  expect(inventoryOf(prose)).toEqual({
     declarations: [{ anchor: "skip", line: 5 }],
     references: [{ anchor: "header", line: 3 }],
   });
@@ -71,7 +77,7 @@ test("escaped pipes and code examples do not split claims or invent module refer
   const prose = "# Commands\n\n| Command | Behavior |\n| --- | --- |\n" +
     "| Either a\\|b | `{{example}}` and {{actual}}. {#either} |\n";
   expect(topicShape(snapshotOf({ prose: [prose] }))).toEqual([]);
-  expect(claimInventory(prose).declarations).toEqual([
+  expect(inventoryOf(prose).declarations).toEqual([
     { anchor: "either", line: 5, terms: ["actual"] },
   ]);
 });
@@ -80,7 +86,7 @@ test("row order and mixing lists with tables changes no claim identity", () => {
   const text = "# Commands\n\n- Separate promise. {#separate}\n\n" +
     "| Behavior |\n| --- |\n| Second. {#second} |\n| First. {#first} |\n";
   expect(topicShape(snapshotOf({ prose: [text] }))).toEqual([]);
-  expect(claimInventory(text).declarations.map((claim) => claim.anchor)).toEqual([
+  expect(inventoryOf(text).declarations.map((claim) => claim.anchor)).toEqual([
     "separate", "second", "first",
   ]);
 });

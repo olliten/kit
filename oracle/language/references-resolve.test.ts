@@ -11,6 +11,12 @@ import {
 import { termInventory } from "../../src/core/readings/term-inventory.js";
 import { bindingFindings } from "../core/readings/binding-findings.js";
 
+// A declaration's text is proved by a-claim-has-its-text; this proof compares every other field exactly.
+const inventoryOf = (...input: Parameters<typeof claimInventory>) => {
+  const inventory = claimInventory(...input);
+  return { ...inventory, declarations: inventory.declarations.map(({ text: _text, ...claim }) => claim) };
+};
+
 function snapshot(
   documents: Readonly<Record<string, string>>,
   terms: readonly string[] = [],
@@ -271,7 +277,7 @@ test("ordinary prose is never guessed to be a semantic reference", () => {
 });
 
 test("semantic markup leaves the existing claim declaration and reference grammar intact", () => {
-  const inventory = claimInventory(
+  const inventory = inventoryOf(
     "- Read [[Planning]] and {{value}}. · {#value-stays}\n\nSee {#value-stays}.\n",
     { separator: "·" },
   );

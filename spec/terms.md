@@ -157,7 +157,7 @@
   - Role: derived
   - Zone: core
   - From: {{finding}}, {{proof-reach}}, {{snapshot}}
-- **claim-inventory** — claim declarations, module relationships and references interpreted from supplied Markdown.
+- **claim-inventory** — claim declarations with the text each one states, module relationships and references interpreted from supplied Markdown.
   - Role: derived
   - Zone: core
   - From: {{claim}}
