@@ -7,10 +7,16 @@ import { claimInventory } from "../../src/core/readings/claim-inventory.js";
 import { readSnapshot } from "../../src/substrate/compositions/read-snapshot.js";
 import { bindingFindings } from "../core/readings/binding-findings.js";
 
+// A declaration's text is proved by a-claim-has-its-text; this proof compares every other field exactly.
+const inventoryOf = (...input: Parameters<typeof claimInventory>) => {
+  const inventory = claimInventory(...input);
+  return { ...inventory, declarations: inventory.declarations.map(({ text: _text, ...claim }) => claim) };
+};
+
 test.each(["· ", ""])(
   "a closing marker after a claim sentence declares it with separator %j",
   (separator) => {
-    const inventory = claimInventory(
+    const inventory = inventoryOf(
       `- A reading takes data. ${separator}{#readings-take-data}\n`,
       { separator: "·" },
     );
@@ -71,7 +77,7 @@ const topic = "# value\n\n- A supplied value stays unchanged. · {#value-stays}\
 const proof = "import { test, expect } from 'vitest'; test('value', () => expect(7).toBe(7));\n";
 
 test.each([false, true])("module relationships preserve the claim identity, legacy=%s", (legacy) => {
-  const actual = claimInventory(
+  const actual = inventoryOf(
     "- A decline needs a reason. · {#decline-needs-reason}\n" +
       "  - Implementation: {{decline}}, {{surface}}\n" +
       "  - Proof: {{decline-cases}}\n",
@@ -92,7 +98,7 @@ test.each([false, true])("module relationships preserve the claim identity, lega
 });
 
 test.each(["Implementation", "Proof"])("a claim may name only its %s modules", (role) => {
-  const actual = claimInventory(
+  const actual = inventoryOf(
     `- The helper behaves as promised. · {#helper}\n  - ${role}: {{helper}}\n`,
   );
   expect(actual.declarations).toEqual([
@@ -107,7 +113,7 @@ test.each(["Implementation", "Proof"])("a claim may name only its %s modules", (
 });
 
 test("inline references keep their existing meaning without an inferred relationship", () => {
-  expect(claimInventory("- A value stays. {{value}} · {#value-stays}\n").declarations).toEqual([
+  expect(inventoryOf("- A value stays. {{value}} · {#value-stays}\n").declarations).toEqual([
     { anchor: "value-stays", line: 1, terms: ["value"] },
   ]);
 });

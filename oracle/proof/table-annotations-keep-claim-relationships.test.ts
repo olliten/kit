@@ -4,6 +4,12 @@ import { topicShape } from "../../src/core/readings/topic-shape.js";
 import { bindingFindings } from "../core/readings/binding-findings.js";
 import { snapshotOf } from "../core/readings/fixture-snapshot.js";
 
+// A declaration's text is proved by a-claim-has-its-text; this proof compares every other field exactly.
+const inventoryOf = (...input: Parameters<typeof claimInventory>) => {
+  const inventory = claimInventory(...input);
+  return { ...inventory, declarations: inventory.declarations.map(({ text: _text, ...claim }) => claim) };
+};
+
 test.each([false, true])("annotations keep list relationships and proof binding, roles last=%s", (last) => {
   const text = "# Tally\n\n" + (last
     ? "| Promise | Implementation | Proof |\n| --- | --- | --- |\n" +
@@ -12,8 +18,8 @@ test.each([false, true])("annotations keep list relationships and proof binding,
       "| {{cases}} | {{total}}, {{surface}} | A total is exact. · {#exact} |\n");
   const list = "- A total is exact. · {#exact}\n  - Implementation: {{total}}, {{surface}}\n  - Proof: {{cases}}\n";
   expect(topicShape(snapshotOf({ prose: [text] }))).toEqual([]);
-  const row = claimInventory(text).declarations[0];
-  const old = claimInventory(list).declarations[0];
+  const row = inventoryOf(text).declarations[0];
+  const old = inventoryOf(list).declarations[0];
   expect(row).toMatchObject({ anchor: "exact", implementation: ["total", "surface"], proof: ["cases"] });
   if (row === undefined) throw new Error("the table declares no claim");
   expect([...(row.terms ?? [])].sort()).toEqual([...(old?.terms ?? [])].sort());
@@ -25,7 +31,7 @@ test("empty annotation cells omit relationships, including an anchor-only final 
   const text = "# Tally\n\n| Promise | Implementation | Proof |\n| --- | --- | --- |\n" +
     "| Exact. {{total}} | | · {#exact} |\n";
   expect(topicShape(snapshotOf({ prose: [text] }))).toEqual([]);
-  expect(claimInventory(text).declarations).toEqual([
+  expect(inventoryOf(text).declarations).toEqual([
     { anchor: "exact", line: 5, terms: ["total"] },
   ]);
 });
@@ -49,7 +55,7 @@ test("a configured claim separator is not part of a final annotation value", () 
   const text = "# Tally\n\n| Promise | Proof |\n| --- | --- |\n| Exact. | {{cases}} ~ {#exact} |\n";
   const snapshot = snapshotOf({ prose: [text] });
   expect(topicShape({ ...snapshot, config: { ...snapshot.config, claimSeparator: "~" } })).toEqual([]);
-  expect(claimInventory(text, { separator: "~" }).declarations).toEqual([
+  expect(inventoryOf(text, { separator: "~" }).declarations).toEqual([
     { anchor: "exact", line: 5, terms: ["cases"], proof: ["cases"] },
   ]);
 });
