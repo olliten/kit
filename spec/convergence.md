@@ -47,10 +47,8 @@ and its size are debt that may only shrink, and placed code is held to every rul
   debt on different modules edit different files. · {#baseline-is-one-file-per-path}
   - Implementation: {{baseline-files}}, {{check-run}}, {{ratchet}}, {{text-files}}, {{check-paths}}
   - Proof: {{authored-example}}, {{temporary-project}}
-- A baseline entry whose debt is paid fails the check until tightening drops it: a key no legacy or proof debt
-  finding holds, a legacy module's size larger than the module now is, and a legacy function's lines more than
-  it now spans, each fails with the fix to run `kit check --tighten`, one line per entry, in either baseline
-  form. Tightening drops or shrinks each such entry, so the check after it passes. · {#paid-debt-fails-until-tightened}
+- A baseline entry is paid when tightening changes it. A paid entry fails the check with the fix to run
+  `kit check --tighten`, one line per entry, in either baseline form. Tightening drops or shrinks each such entry, so the check after it passes. · {#paid-debt-fails-until-tightened}
   - Implementation: {{ratchet}}, {{line-ratchet}}, {{baseline-files}}, {{check-run}}
   - Proof: {{temporary-project}}
 - A baseline entry may carry a reason, a `reason` string beside the value it records, and no entry needs one.
@@ -58,8 +56,8 @@ and its size are debt that may only shrink, and placed code is held to every rul
   entry it is left on; a reason that isn't a nonempty string is an error. · {#debt-may-carry-a-reason}
   - Implementation: {{ratchet}}, {{baseline-files}}, {{check-run}}
   - Proof: {{temporary-project}}
-- `kit check --baseline-reference <path>` compares the candidate baseline with the approved reference file or
-  directory as well as checking the actual findings. New keys and larger existing budgets fail; paying one
+- `kit check --baseline-reference <path>` compares the baseline this run leaves with the approved reference file or
+  directory as well as checking the actual findings. With `--tighten`, one call writes and proves the drain. New keys and larger existing budgets fail; paying one
   obligation cannot buy a new one. The caller supplies the approved reference; Kit does not infer Git history.
   · {#a-baseline-cannot-approve-its-own-growth}
   - Implementation: {{debt-policy}}, {{debt-comparison}}, {{baseline-files}}, {{ratchet}}, {{check-run}}, {{text-files}}

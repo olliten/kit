@@ -1,5 +1,7 @@
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
+import { baselineFiles, mergedBaseline } from "../../src/core/readings/baseline-files.js";
 import { debtPolicyFindings } from "../../src/core/readings/debt-comparison.js";
 import { type GateFinding, ratchetFindings } from "../../src/core/readings/ratchet.js";
 import { runCheck } from "../../src/substrate/compositions/check-run.js";
@@ -79,6 +81,69 @@ test("the check rejects actual new legacy debt that a candidate added to its own
     expect(rejected.exitCode).toBe(1);
     expect(rejected.stderr).toContain("baseline-reference");
     expect(rejected.stderr).toContain("src/legacy/added.ts");
+    const tightened = await runCheck(request("--tighten", "--baseline-reference", join(project.root, "reference.json")));
+    expect(tightened.exitCode).toBe(1);
+    expect(tightened.stderr).toContain("baseline-reference");
+    expect(tightened.stderr).toContain("src/legacy/added.ts");
+  } finally {
+    project.dispose();
+  }
+}, 120_000);
+
+
+test.each(["file", "directory"])("one call proves the drain left in a %s baseline without approving remaining growth", async (form) => {
+  const project = temporaryProjects.open("kit-proven-drain-");
+  try {
+    project.write({
+      ".git/HEAD": "ref: refs/heads/main\n",
+      "package.json": JSON.stringify({ type: "module" }),
+      "tsconfig.json": JSON.stringify({ compilerOptions: {
+        target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true, skipLibCheck: true, types: [],
+      }, include: ["src/**/*.ts"] }),
+      "kit/config.md": "```yaml\nroots: {src: src/, spec: spec/, oracle: oracle/}\nterms: spec/terms.md\n```\n",
+      "spec/terms.md": "# Terms\n",
+      [path]: "export const kept = 1;\n",
+    });
+    const candidate = form === "file" ? "baseline.json" : "baseline";
+    const reference = join(project.root, "reference.json");
+    const request = (...flags: string[]) => ({ engineRoot: project.root, cwd: project.root,
+      args: ["--root", project.root, "--config", join(project.root, "kit/config.md"), "--baseline", join(project.root, candidate), ...flags] });
+    const report: { readonly findings: readonly GateFinding[] } = JSON.parse((await runCheck(request("--report"))).stdout);
+    const actual = Object.fromEntries(report.findings.filter((item) => item.category === "legacy-debt").map((item) => [item.debtKey,
+      item.statements === undefined ? null : { statements: item.statements, calls: item.calls }]));
+    expect(actual[key]).toEqual({ statements: 1, calls: 0 });
+    const approved = { ...actual, [key]: { statements: 2, calls: 0 } };
+    const ghost = "R4:ungoverned-function:src/legacy/gone.ts:gone";
+    const oversized = { ...actual, [key]: { statements: 5, calls: 0 }, [ghost]: null };
+    const write = (record: Record<string, unknown>) => {
+      if (form === "file") project.write({ [candidate]: JSON.stringify(record) });
+      else {
+        project.directory(candidate);
+        for (const [file, text] of baselineFiles(candidate, record)) project.write({ [file]: text });
+      }
+    };
+    const read = () => form === "file"
+      ? JSON.parse(readFileSync(join(project.root, candidate), "utf8")) as Record<string, unknown>
+      : mergedBaseline(readdirSync(join(project.root, candidate)).map((name) => ({ path: name, text: readFileSync(join(project.root, candidate, name), "utf8") })));
+    project.write({ "reference.json": JSON.stringify(approved) });
+    write(oversized);
+    const rejected = await runCheck(request("--baseline-reference", reference));
+    expect(rejected.exitCode).toBe(1);
+    expect(rejected.stderr).toContain("baseline-reference");
+    const reported = await runCheck(request("--report", "--tighten", "--baseline-reference", reference));
+    expect(JSON.parse(reported.stdout).policyFailures.length).toBeGreaterThan(0);
+    expect(read()[key]).toEqual(oversized[key]);
+    const drained = await runCheck(request("--tighten", "--baseline-reference", reference));
+    expect(drained.exitCode, drained.stderr).toBe(0);
+    expect(read()).toEqual(actual);
+    expect((await runCheck(request("--baseline-reference", reference))).exitCode).toBe(0);
+
+    project.write({ [path]: "export const first = 1;\nexport const second = 2;\nexport const third = 3;\n" });
+    write({ ...actual, [key]: { statements: 3, calls: 0 } });
+    const grown = await runCheck(request("--tighten", "--baseline-reference", reference));
+    expect(grown.exitCode).toBe(1);
+    expect(grown.stderr).toContain("baseline-reference");
+    expect(grown.stderr).toContain("weakens the approved budget");
   } finally {
     project.dispose();
   }
