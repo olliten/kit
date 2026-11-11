@@ -78,6 +78,11 @@ export function behaviourReading(
     seen = new Set<ts.Type>(),
     supplied: boolean | "adapter" = false,
   ): TypeFacts => {
+    // A nested registered port carries established authority just as a directly supplied one does.
+    // Keep its complete type identities for capability checks, without treating its operations as
+    // behaviour the caller supplies through the surrounding data.
+    if (supplied === "adapter" && contractType(type))
+      return { ...typeFacts(type), callable: false, accessor: false };
     const cache =
       supplied === "adapter"
         ? completeAdapterArgumentFacts

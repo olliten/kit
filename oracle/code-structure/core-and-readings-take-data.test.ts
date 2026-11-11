@@ -84,3 +84,50 @@ test("the same type unregistered is behaviour", () => {
     ),
   ).toContain(`R1:takes-behaviour:${path}:record`);
 });
+
+test.each([
+  ["a data record", "interface Input { readonly bytes: Entry; }"],
+  ["a deep readonly collection", "interface Key { readonly bytes: Entry; } interface Input { readonly nested: { readonly keys: readonly Key[] }; }"],
+  ["a cyclic data record", "interface Input { readonly bytes: Entry; readonly next?: Input; }"],
+])("a returned registered port inside %s is not supplied behaviour", (_, declaration) => {
+  const path = "src/core/compositions/read.ts";
+  const files = {
+    [path]: "import type { Entry } from '../../substrate/adapters/journal.js';\n" +
+      declaration + "\nexport function read(input: Input): Input { return input; }\n",
+  };
+  const registered = keys(files);
+  expect(registered).toContain(`R1:zone-authority:${path}:journal`);
+  expect(keys(files, [])).toContain(`R1:takes-behaviour:${path}:read`);
+  expect(registered.filter((key) => key.startsWith("R1:takes-behaviour:"))).toEqual([]);
+});
+
+test.each([
+  ["a sibling callback", "interface Input { readonly bytes: Entry; readonly run: () => number; }"],
+  ["a nested unregistered accessor", "interface Details { get value(): number; } interface Input { readonly bytes: Entry; readonly nested: Details; }"],
+  ["a deep collection callback", "interface Input { readonly bytes: Entry; readonly nested: readonly { readonly callbacks: readonly (() => number)[] }[]; }"],
+  ["a mutable callback map", "interface Input { readonly bytes: Entry; callbacks: Map<string, () => number>; }"],
+  ["a union with unregistered operations", "type Input = { readonly bytes: Entry } | { readonly operations: { run(): number } };"],
+  ["a callback after a mutual cycle", "interface Input { readonly bytes: Entry; readonly next?: Other; } interface Other { readonly previous?: Input; readonly nested: { readonly run: () => number }; }"],
+])("a registered sibling cannot hide %s", (_, declaration) => {
+  const path = "src/core/compositions/read.ts";
+  expect(keys({
+    [path]: "import type { Entry } from '../../substrate/adapters/journal.js';\n" +
+      declaration + "\nexport function read(input: Input): Input { return input; }\n",
+  })).toContain(`R1:takes-behaviour:${path}:read`);
+});
+
+test("nesting a registered native port does not grant its authority to Core", () => {
+  const path = "src/core/compositions/read.ts";
+  const found = keys({
+    "src/substrate/adapters/cancellation.ts":
+      "export interface Cancellation { signal(): AbortSignal; }\n" +
+      "export const cancellation: Cancellation = { signal: () => new AbortController().signal };\n",
+    [path]: "interface Input { readonly nested: { readonly signal: AbortSignal }; }\n" +
+      "export function read(input: Input): boolean { return input.nested.signal.aborted; }\n",
+  }, [{
+    module: "substrate/adapters/cancellation", export: "cancellation", capability: "cancellation",
+    kind: "external", zones: ["substrate"], contract: { type: "Cancellation" }, globals: ["AbortController"],
+  }]);
+  expect(found.filter((key) => key.startsWith("R1:takes-behaviour:"))).toEqual([]);
+  expect(found.some((key) => key.startsWith(`R1:native-authority:${path}:`))).toBe(true);
+});
