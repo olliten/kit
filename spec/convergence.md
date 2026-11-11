@@ -51,12 +51,12 @@ and its size are debt that may only shrink, and placed code is held to every rul
   finding holds, a legacy module's size larger than the module now is, and a legacy function's lines more than
   it now spans, each fails with the fix to run `kit check --tighten`, one line per entry, in either baseline
   form. Tightening drops or shrinks each such entry, so the check after it passes. · {#paid-debt-fails-until-tightened}
-  - Implementation: {{paid-debt}}, {{ratchet}}, {{line-ratchet}}, {{baseline-files}}, {{check-run}}
+  - Implementation: {{ratchet}}, {{line-ratchet}}, {{baseline-files}}, {{check-run}}
   - Proof: {{temporary-project}}
 - A baseline entry may carry a reason, a `reason` string beside the value it records, and no entry needs one.
   Tightening keeps an entry's reason, and the report shows it beside the entry's finding, or beside the paid
   entry it is left on; a reason that isn't a nonempty string is an error. · {#debt-may-carry-a-reason}
-  - Implementation: {{paid-debt}}, {{ratchet}}, {{baseline-files}}, {{check-run}}
+  - Implementation: {{ratchet}}, {{baseline-files}}, {{check-run}}
   - Proof: {{temporary-project}}
 - `kit check --baseline-reference <path>` compares the candidate baseline with the approved reference file or
   directory as well as checking the actual findings. New keys and larger existing budgets fail; paying one
@@ -70,5 +70,5 @@ and its size are debt that may only shrink, and placed code is held to every rul
   nonempty footprint. Deleting an entry alone, renaming, formatting, or reducing unrelated debt does not count;
   the actual findings must establish the reduction. Neither mode permits new debt or weaker checks.
   · {#paydown-requires-a-real-reduction}
-  - Implementation: {{debt-policy}}, {{debt-comparison}}, {{ratchet}}, {{check-run}}, {{paid-debt}}
+  - Implementation: {{debt-policy}}, {{debt-comparison}}, {{ratchet}}, {{check-run}}
   - Proof: {{temporary-project}}

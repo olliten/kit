@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { baselineFileOf, baselineFiles } from "../../src/core/readings/baseline-files.js";
-import { paidDebt } from "../../src/core/readings/paid-debt.js";
+import { paidDebt } from "../../src/core/readings/ratchet.js";
 import type { GateFinding } from "../../src/core/readings/ratchet.js";
 import { runCheck } from "../../src/substrate/compositions/check-run.js";
 import { type TemporaryProject, temporaryProjects } from "../substrate/adapters/temporary-project.js";
