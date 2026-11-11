@@ -122,8 +122,8 @@ test.each(["file", "directory"])("one call proves the drain left in a %s baselin
         for (const [file, text] of baselineFiles(candidate, record)) project.write({ [file]: text });
       }
     };
-    const read = () => form === "file"
-      ? JSON.parse(readFileSync(join(project.root, candidate), "utf8")) as Record<string, unknown>
+    const read = (): Record<string, unknown> => form === "file"
+      ? JSON.parse(readFileSync(join(project.root, candidate), "utf8"))
       : mergedBaseline(readdirSync(join(project.root, candidate)).map((name) => ({ path: name, text: readFileSync(join(project.root, candidate, name), "utf8") })));
     project.write({ "reference.json": JSON.stringify(approved) });
     write(oversized);
