@@ -204,3 +204,28 @@ test("recognizing a local contract preserves opaque callback refusal", () => {
   const files = localFiles(localAdapterSource("interface LocalJournal { note(text: string): void; open(): ReadPort; }"));
   expect(boundary(caller, { adapters: localRegistration }, files).map((item) => item.debtKey)).toEqual([key(run, "run")]);
 });
+
+test("a legacy caller hands a nested returned port across only through its registered contract", () => {
+  const adapter = "src/substrate/adapters/entries.ts";
+  const consumer = "src/substrate/compositions/consume.ts";
+  const adapters: NonNullable<KitConfig["adapters"]> = [{
+    module: "substrate/adapters/entries", export: "journal", capability: "journal",
+    kind: "external", zones: ["substrate"], contract: { type: "Journal" },
+  }];
+  const caller = "import { consume } from '../src/substrate/compositions/consume.js';\n" +
+    "import { journal } from '../src/substrate/adapters/entries.js';\n" +
+    "consume({ entry: journal.open() });\n";
+  const files = (callback: boolean) => ({
+    [adapter]: "export interface Entry { note(text: string): void; }\n" +
+      "export interface Journal { open(): Entry; }\n" +
+      "export const journal: Journal = { open: () => ({ note: () => {} }) };\n",
+    [consumer]: "import type { Entry } from '../adapters/entries.js';\n" +
+      `interface Input { readonly entry: Entry; ${callback ? "readonly callback: () => void;" : ""} }\n` +
+      "export function consume(input: Input): void { input.entry.note('a'); }\n",
+  });
+  const handover = key(consumer, "consume");
+  expect(boundary(caller, { adapters: [] }, files(false)).map((item) => item.debtKey)).toEqual([handover]);
+  expect(boundary(caller.replace("entry: journal.open()", "entry: journal.open(), callback: () => {}"),
+    { adapters }, files(true)).map((item) => item.debtKey)).toEqual([handover]);
+  expect(boundary(caller, { adapters }, files(false))).toEqual([]);
+});
