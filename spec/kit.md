@@ -39,7 +39,7 @@ its config, and its debt in its own baseline.
   uncertain cohesion obligations remain until their relevant independent proofs establish the reduction.
   Tightening preserves those uncertain entries and entries of a disabled execution rule.
   · {#a-rule-is-switched-off-by-declaration}
-  - Implementation: {{rule-switch}}, {{kit-configuration}}, {{config-schema}}, {{gate}}, {{check-run}}, {{paid-debt}}, {{ratchet}}
+  - Implementation: {{rule-switch}}, {{kit-configuration}}, {{config-schema}}, {{gate}}, {{check-run}}, {{ratchet}}
   - Proof: {{temporary-project}}, {{recorded-functions}}, {{project-snapshot}}, {{recorded-authority}}
 
 - Test discovery includes the configured proof root and only explicitly configured

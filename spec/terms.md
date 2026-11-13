@@ -317,10 +317,6 @@
   - Role: derived
   - Zone: core
   - From: {{default-config}}
-- **paid-debt** — the baseline entries whose debt is paid: keys no legacy or proof debt finding holds, apart from those of rules that wait, legacy sizes larger than the module now is and legacy function lines more than the function now spans, each with its fix and the reason its entry carries.
-  - Role: derived
-  - Zone: core
-  - From: {{line-ratchet}}, {{ratchet}}
 - **pending-claims** — the claims an app declares awaiting their proof and the tests awaiting their claim's new anchor, each with its reason: their findings reported as pending, and each declared row whose finding is gone, paid.
   - Role: derived
   - Zone: core
@@ -345,7 +341,7 @@
   - Role: derived
   - Zone: core
   - From: {{code-token}}, {{fact-keys}}, {{function-span}}
-- **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, never a pending finding, with a proof's findings as its debt, and the baseline left after a change lands.
+- **ratchet** — the findings that fail a change: placed violations, reachable limits, new debt and grown legacy, never a pending finding, with a proof's findings as its debt, the baseline left after a change lands, and the entries paid because tightening changes them, with their fixes and recorded reasons.
   - Role: derived
   - Zone: core
   - From: {{default-config}}, {{finding}}, {{line-ratchet}}
@@ -527,7 +523,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold and on what it holds that is paid.
   - Role: composition
   - Zone: substrate
-  - Of: {{baseline-files}}, {{check-paths}}, {{claim-runs}}, {{command}}, {{debt-comparison}}, {{debt-policy}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{independent-runs}}, {{invocation-passes}}, {{paid-debt}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{rule-switch}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{claim-runs}}, {{command}}, {{debt-comparison}}, {{debt-policy}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{independent-runs}}, {{invocation-passes}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{rule-switch}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate
