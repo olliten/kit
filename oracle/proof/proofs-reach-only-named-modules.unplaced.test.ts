@@ -204,3 +204,31 @@ test("no key declares shared test code: harnesses is not a key Kit reads", () =>
   const harnesses = [{ under: "spec/harness/", reason: "shared drivers" }];
   expect(() => configuredKit(DEFAULT_CONFIG, { roots, harnesses })).toThrow(/^harnesses is not a key Kit reads\./);
 });
+
+// Every test of a claim owns what its own code uses: a later test with recorded uses joins the claim's ownership,
+// and never replaces what an earlier test of the same claim uses directly.
+test("a claim's later test never takes over what an earlier test owns", () => {
+  const second = "oracle/topic/total-sums.withheld.test.ts";
+  const files = [total, round, proof, second, inRoot];
+  const imports = [`${proof} > ${round}`, `${proof} > ${inRoot}`, `${inRoot} > ${round}`, `${second} > ${total}`, `${second} > ${inRoot}`];
+  const recorded = (file: string, uses: readonly string[], reached: readonly string[]) => ({
+    file,
+    reached,
+    whole: [],
+    uses: uses.map((edge) => {
+      const [from = "", to = ""] = edge.split(" > ");
+      return { from, to };
+    }),
+  });
+  const { compiler } = projectSnapshot({
+    files,
+    proofs: [
+      recorded(proof, [`${proof} > ${round}`, `${proof} > ${inRoot}`, `${inRoot} > ${round}`], [proof, round, inRoot]),
+      recorded(second, [`${second} > ${total}`, `${second} > ${inRoot}`, `${inRoot} > ${round}`], [second, total, inRoot, round]),
+    ],
+  });
+  if (compiler === undefined) throw new Error("the project snapshot holds no compiler facts");
+  const found = proofScope({ ...snapshotOf({ files, imports, claims: [claim] }), compiler }).map((finding) => finding.debtKey);
+  // The first test uses `round` directly, so it stays the claim's to name, whichever test is read last.
+  expect(found).toEqual([debt]);
+});
