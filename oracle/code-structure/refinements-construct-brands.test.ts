@@ -50,3 +50,59 @@ test("an assertion outside a registered refinement constructor stays a type esca
   expect(escapes.map((row) => row.debtKey)).toEqual(expect.arrayContaining([expect.stringMatching(/unchecked/)]));
   expect(escapes.every((row) => row.status === "violation" && row.blocking)).toBe(true);
 });
+
+const ROW_ID = "src/core/primitives/row-id.ts";
+const BRANDS = [
+  "type Brand<T, K extends string> = T & { readonly __brand: K };",
+  "type RowId = Brand<string, 'RowId'>;",
+  "type Loose = string & { label: string };",
+  "export function rowIdOf(value: string): RowId {",
+  "  if (!/^r[0-9]+$/.test(value)) throw new Error('not a row id');",
+  "  return value as RowId;",
+  "}",
+  "export const maybeRowId = (value: string): RowId | null => (value.startsWith('r') ? (value as RowId) : null);",
+  "export function unchecked(value: string): RowId { return value as RowId; }",
+  "export function loose(value: string): Loose {",
+  "  if (value === '') throw new Error('empty');",
+  "  return value as Loose;",
+  "}",
+  "export function plain(value: string): string { return value; }",
+  "",
+].join("\n");
+
+// The compiler and refinement findings of the brands fixture with the given registrations, the given exports of
+// it called directly from a test.
+function refined(registered: readonly string[], called: readonly string[]) {
+  const recorded = recordedEscapes({ "tsconfig.json": TSCONFIG, [ROW_ID]: BRANDS });
+  const proof = { file: "oracle/row-id.test.ts", reached: [ROW_ID], whole: [], declarations: called.map((name) => ({ file: ROW_ID, name })) };
+  const snapshot = projectSnapshot(
+    { ...recorded, proofs: [proof] },
+    { refinements: registered.map((name) => ({ module: ROW_ID, export: name })) },
+  );
+  const findings = compilerCheck(snapshot, capabilityContext(snapshot, []));
+  return {
+    escapes: findings.filter((row) => row.debtKey.startsWith("R1:type-escape:")).map((row) => row.debtKey),
+    refinements: findings.filter((row) => row.debtKey.startsWith("R1:refinement-")).map((row) => row.debtKey),
+  };
+}
+
+test("a registered constructor's checked assertion to its branded result is no escape", () => {
+  const { escapes, refinements } = refined(["rowIdOf", "maybeRowId"], ["rowIdOf", "maybeRowId"]);
+  expect(refinements).toEqual([]);
+  expect(escapes.some((key) => key.includes("rowIdOf") || key.includes("maybeRowId"))).toBe(false);
+  expect(escapes.some((key) => key.includes("unchecked"))).toBe(true);
+  expect(escapes.some((key) => key.includes("loose"))).toBe(true);
+});
+
+test("a registration that is unbranded, unchecked, untested or asserts nothing is a finding and allows nothing", () => {
+  const { escapes, refinements } = refined(["unchecked", "loose", "rowIdOf", "plain"], ["unchecked", "loose", "plain"]);
+  expect(refinements.sort()).toEqual(
+    [
+      `R1:refinement-unchecked:${ROW_ID}:unchecked`,
+      `R1:refinement-brand:${ROW_ID}:loose`,
+      `R1:refinement-untested:${ROW_ID}:rowIdOf`,
+      `R1:refinement-assertion:${ROW_ID}:plain`,
+    ].sort(),
+  );
+  for (const name of ["unchecked", "loose", "rowIdOf"]) expect(escapes.some((key) => key.includes(name))).toBe(true);
+});

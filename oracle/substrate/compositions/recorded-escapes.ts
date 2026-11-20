@@ -14,7 +14,7 @@ export function recordedEscapes(
   compilerOptions: Pick<CompilerOptions, "paths" | "skipLibCheck"> = {},
 ): Pick<Project, "files" | "escapes"> {
   const fixture = openProgram(files, config, compilerOptions);
-  const recorder = escapeRecorder();
+  const recorder = escapeRecorder(fixture.scope);
   factWalk(fixture.scope, [recorder]);
   return { files: fixture.files, escapes: recorder.escapes };
 }
