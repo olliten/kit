@@ -31,6 +31,9 @@ export interface KitConfig {
   readonly bootstraps?: readonly string[];
   // The size limits an app opts into; a limit it doesn't declare is not checked.
   readonly limits?: { readonly functionLines: number };
+  // The refinement constructors an app registers, each by its module and export: the only functions whose type
+  // assertion, producing their branded result past a runtime check, is not an escape.
+  readonly refinements?: readonly { readonly module: string; readonly export: string }[];
   // The rules an app switches off, each with the reason it declares; only the rules that read what tests ran may be.
   // The authority rules a test may need, to drive a browser or the runtime, may instead be scoped to production
   // code, with the reason they are off on tests.

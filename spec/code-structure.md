@@ -160,7 +160,15 @@ compositions wire the others into behaviour.
   - Proof: {{recorded-imports}}, {{project-snapshot}}
 - Imports through project references and path aliases carry the authority of the file they reach, and a
   non-null assertion is allowed only directly on an indexed access ({{compiler-facts}}). · {#project-imports-carry-authority}
-  - Implementation: {{package-contract}}, {{read-snapshot}}, {{capability-context}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{edge-check}}, {{dependency-check}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{compiler-check}}
+  - Implementation: {{package-contract}}, {{read-snapshot}}, {{capability-context}}, {{access-authority}}, {{global-authority}}, {{import-authority}}, {{edge-check}}, {{dependency-check}}, {{authority-graph}}, {{zone-authority-check}}, {{zone-permission}}, {{compiler-check}}, {{refinement-check}}
+  - Proof: {{recorded-escapes}}, {{project-snapshot}}
+- A type assertion is allowed only inside a refinement constructor that the configuration registers by module
+  and export. The constructor declares a branded result: an intersection of a base type with a brand member that
+  no unasserted value supplies. The assertion produces that result, and it is reached only past a runtime check
+  of the value whose failing branch throws or returns. A test calls the constructor directly. An assertion
+  anywhere else stays a type escape, and a registration missing any of these is a finding
+  ({{refinement-check}}, {{compiler-check}}). · {#refinements-construct-brands}
+  - Implementation: {{refinement-configuration}}, {{escape-recorder}}, {{config-schema}}, {{config-values}}, {{capability-context}}, {{placement-of}}, {{finding}}
   - Proof: {{recorded-escapes}}, {{project-snapshot}}
 
 ## Startup
