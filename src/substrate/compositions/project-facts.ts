@@ -322,7 +322,7 @@ export function projectFacts(context: AppContext, file: string, reuse?: FactReus
     const importFacts = importRecorder(scope, importTarget, ambientTargets, syntax, contractTypes, behaviour);
     const authorityFacts = authorityRecorder(scope, context.workerGlobals, syntax, natives, behaviour);
     const contractFacts = contractRecorder(scope, natives, contractTypes, behaviour);
-    const escapeFacts = escapeRecorder();
+    const escapeFacts = escapeRecorder(scope);
     const termFacts = termRecorder(scope, syntax);
     const functionFacts = functionRecorder();
     factWalk(scope, [escapeFacts, importFacts, contractFacts, authorityFacts, termFacts, functionFacts], dirty);
