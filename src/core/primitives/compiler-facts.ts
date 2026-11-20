@@ -130,6 +130,12 @@ export interface CompilerFacts {
       readonly start: number;
       readonly site?: string;
       readonly kind: "any" | "assertion" | "non-null" | "ignore" | "nocheck" | "expect-error";
+      // For an assertion: the top-level declaration holding it, the branded type it produces when that type
+      // intersects a base type with a brand member, and whether a runtime check of the value whose failing branch
+      // throws or returns precedes it there.
+      readonly holder?: string;
+      readonly brand?: { readonly file: string; readonly name: string };
+      readonly checked?: true;
     }[];
     // The named functions of each checked source: the name a runtime reports, the line it starts on, an id
     // unique in its file, the id of the named function holding it, and how many lines its body spans, from the

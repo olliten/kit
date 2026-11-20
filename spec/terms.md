@@ -180,7 +180,7 @@
 - **compiler-check** — the check that checked files are compiled strictly, without errors or escape hatches.
   - Role: derived
   - Zone: core
-  - From: {{capability-context}}, {{snapshot}}
+  - From: {{capability-context}}, {{refinement-check}}, {{snapshot}}
 - **config-schema** — the keys a Kit configuration may declare at each level, and the keys a declaration holds that Kit doesn't read, each named by its full path.
   - Role: derived
   - Zone: core
@@ -345,6 +345,14 @@
   - Role: derived
   - Zone: core
   - From: {{default-config}}, {{finding}}, {{line-ratchet}}
+- **refinement-check** — the type assertions a registered refinement constructor may hold, and the check that each registration names a constructor of a branded result whose assertion is reached only past a rejecting runtime check and which a test calls directly.
+  - Role: derived
+  - Zone: core
+  - From: {{capability-context}}, {{snapshot}}
+- **refinement-configuration** — the refinement constructors an app registers, each by its module and export.
+  - Role: derived
+  - Zone: core
+  - From: {{config-values}}
 - **refs-description** — the claims that name a module, with their text and tests, and how they are listed.
   - Role: derived
   - Zone: core
@@ -579,7 +587,7 @@
 - **kit-configuration** — the config an app declares, read from its YAML fence and validated section by section, and the paths a check is given.
   - Role: composition
   - Zone: core
-  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{pending-claims}}, {{rule-switch}}, {{verification-configuration}}
+  - Of: {{config-schema}}, {{config-values}}, {{default-config}}, {{layout-configuration}}, {{legacy-zone-configuration}}, {{limit-configuration}}, {{pending-claims}}, {{refinement-configuration}}, {{rule-switch}}, {{verification-configuration}}
 - **native-reading** — the reading of the host authority a type or member reaches: its native root, its bases, and whether only a window host has it.
   - Role: composition
   - Zone: substrate
