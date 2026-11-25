@@ -47,6 +47,26 @@ so a later gate runs only what an edit can have changed.
   is not run, and `kit verify` names it, counts it and fails. · {#tests-run-in-the-group-their-reach-selects}
   - Implementation: {{test-groups}}, {{verify-run}}, {{check-run}}, {{verification-configuration}}, {{kit-configuration}}, {{read-snapshot}}
   - Proof: {{temporary-project}}
+- A browser proof records its runs through `kit/browser`: `browserProof(context, {maps})`, given a Playwright
+  Chromium browser context and the path of the app's map artifact, starts precise function coverage on every
+  page the context has or opens, and `done()`, called once before the context closes, takes it from each page,
+  attributes it through the map artifact and writes into the test's own report directory, named by
+  `KIT_COVERAGE` and `KIT_TEST`, an LCOV report of the named functions the pages ran and `browser-context.json`:
+  whether the capture is complete, the original sources the pages loaded, `KIT_RUNTIME`, and the browser's
+  version and executable digest, which are diagnostic. Outside `kit verify`, with none of those variables set,
+  it does nothing. A capture it cannot complete is written incomplete, never left out, so a proof that adopted
+  it is never credited as Node alone. Reading the map artifact, the maps and every original source they name, it
+  makes the test's pass hold them whole; the browser itself is held through the installed `playwright-core` that
+  pins it, and one installed or chosen otherwise is not seen. · {#browser-proofs-record-their-runs}
+  - Implementation: {{browser-proof}}, {{browser-capture}}
+  - Proof: {{temporary-project}}
+- An app's map artifact names the scripts its pages are served, as data: `version: 1`, `scripts`, each the
+  SHA-256 `scriptHash` of a script's exact bytes, the app-relative `base` its map's sources resolve against and
+  the app-relative path of its `map`, and optionally `external`, URL prefixes of scripts that are not the app's.
+  Any other shape, version, key, a digest that is not 64 lowercase hexadecimal digits, a path that leaves the
+  app, or a digest named twice is no map artifact, and a capture given one is incomplete.
+  · {#a-browser-map-names-served-scripts}
+  - Implementation: {{browser-map}}
 - A recorder preloaded into a check's processes, added to the Node options the caller's environment gives, records
   every path inside the app the check reads, lists, probes, copies or loads, the app root itself as `.`, in its
   own process, its worker threads and the processes it starts, nothing of the repository's own bookkeeping, and

@@ -145,6 +145,10 @@
   - Role: derived
   - Zone: core
   - From: {{browser-execution}}
+- **browser-map** — An app's map artifact as data: the served scripts it names by digest, the map and source base of each, and the URL prefixes it declares external.
+  - Role: derived
+  - Zone: core
+  - From: {{browser-execution}}
 - **capability-context** — what every capability check reads: checked files, declared entrypoints, adapter contracts and native roots, and how a capability finding is categorised.
   - Role: derived
   - Zone: core
@@ -373,6 +377,10 @@
   - Role: derived
   - Zone: core
   - From: {{config-values}}, {{default-config}}
+- **runtime-reach** — the placed modules each claim's tests reach by running a named function of them in a complete execution context, from passes that hold.
+  - Role: derived
+  - Zone: core
+  - From: {{runs}}, {{snapshot}}, {{placement-of}}
 - **semantic-references** — marked topic and term references, their resolved homes, incoming topic relationships and nonexclusive module groups.
   - Role: derived
   - Zone: core
@@ -441,6 +449,10 @@
 
 ## Adapter contracts
 
+- **browser-capture** — Starts precise function coverage on every page of a supplied Chromium browser context and takes each page's covered scripts and functions, failing closed on lifecycles it cannot capture.
+  - Role: adapter
+  - Zone: substrate
+  - Of: {{browser-execution}}
 - **browser-runtime** — Launches an owned browser server, observes its actual executable digest and browser version, and closes only that server.
   - Role: adapter
   - Zone: substrate
@@ -524,6 +536,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{contract-reading}}, {{native-reading}}, {{placement-of}}, {{program-scope}}
+- **browser-proof** — the workflow behind `kit/browser` once a capture has started: take the pages' coverage, attribute their coverage through the app's map artifact, and write the test's browser runs and context into its report directory.
+  - Role: composition
+  - Zone: substrate
+  - Of: {{browser-capture}}, {{browser-execution}}, {{browser-function-evidence}}, {{browser-map}}, {{text-files}}
 - **capability-check** — every authority rule over one snapshot, and what each checked file directly and transitively requires.
   - Role: composition
   - Zone: core

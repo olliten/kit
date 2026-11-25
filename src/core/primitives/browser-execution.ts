@@ -46,3 +46,37 @@ export interface BrowserProofEvidence {
   readonly loaded: readonly string[];
   readonly lcov: string;
 }
+
+// One served script an app's map artifact names: the SHA-256 of its exact bytes, the app-relative base its
+// map's sources resolve against, and the app-relative path of the map.
+export interface BrowserMapScript {
+  readonly scriptHash: string;
+  readonly base: string;
+  readonly map: string;
+}
+
+export interface BrowserMapArtifact {
+  readonly version: 1;
+  readonly scripts: readonly BrowserMapScript[];
+  readonly external: readonly string[];
+}
+
+// A script a page ran, as its coverage gives it: the bytes, so the script matches its map by digest.
+export interface BrowserCapturedScript {
+  readonly url: string;
+  readonly source: string;
+  readonly functions: readonly BrowserFunction[];
+}
+
+export interface BrowserCapture {
+  readonly complete: boolean;
+  readonly scripts: readonly BrowserCapturedScript[];
+}
+
+// What a browser proof writes as `browser-context.json`; `browser` is diagnostic and grants nothing.
+export interface BrowserContextRecord {
+  readonly complete: boolean;
+  readonly loaded: readonly string[];
+  readonly runtime: string;
+  readonly browser?: BrowserRuntimeIdentity;
+}
