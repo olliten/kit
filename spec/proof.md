@@ -68,8 +68,12 @@ a claim depends on are named in it, so each module's claims are found from its n
   - Proof: {{fixture-snapshot}}
 - A claim's tests together reach every placed module the claim names through the code they use, followed
   into helpers and modules as a capture is, and the modules of only types that code is written in; a named
-  module none of them reaches is a finding, so a claim's names are proved rather than trusted. · {#proofs-reach-named-modules}
-  - Implementation: {{proof-reach}}, {{placement-of}}, {{read-snapshot}}, {{relative-import}}, {{test-reach}}
+  module none of them reaches is a finding, so a claim's names are proved rather than trusted. A test whose
+  pass holds, and whose execution context is complete, also reaches each placed module of which it ran a
+  named function, in Node or in a browser page, whether or not it is an independent proof: reach is use. While
+  a test of the claim has no pass that holds, a named module only such a run could reach waits, as the rules
+  that read runs do, and the check says so. · {#proofs-reach-named-modules}
+  - Implementation: {{proof-reach}}, {{placement-of}}, {{read-snapshot}}, {{relative-import}}, {{test-reach}}, {{runtime-reach}}, {{runs}}
   - Proof: {{fixture-snapshot}}, {{recorded-reach}}
 - A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. Only
   the modules of only types need no name: a placed oracle module, such as a generator, fixture, driver or
@@ -86,7 +90,8 @@ a claim depends on are named in it, so each module's claims are found from its n
   tests name through an unplaced module that re-exports it is that module's too. No key declares
   shared test code instead: a new unplaced module is new debt and fails as any new debt does. A module a
   claim's tests reach without its name is debt: the baseline holds it, it may only shrink, and a new claim
-  starts exact. · {#proofs-reach-only-named-modules}
+  starts exact. Only this followed reach is charged: a module a test reaches only by running it, such as the
+application code a browser journey runs, is not. · {#proofs-reach-only-named-modules}
   - Implementation: {{proof-scope}}, {{edge-check}}, {{capability-check}}, {{proof-reach}}, {{finding}}, {{placement-of}}, {{kit-configuration}}, {{config-schema}}, {{layout-check}}, {{legacy-size}}, {{ratchet}}, {{test-reach}}
   - Proof: {{fixture-snapshot}}, {{project-snapshot}}, {{source-fixture}}, {{recorded-uses}}
 - Two claims that share no code share no module. When the claims naming a placed module fall into groups
@@ -104,7 +109,8 @@ a claim depends on are named in it, so each module's claims are found from its n
   still holds, or validates the invocation-local evidence explicitly supplied with `--evidence`. A missing or
   deferred test grants no execution credit without disabling the rules for other tests. A placed module no
   test ran has unrun functions. When no test command records runs, the check says execution obligations are
-  not established and asks for a recording test command and `kit verify`. · {#runs-are-kept-with-each-pass}
+  not established and asks for a recording test command and `kit verify`. An LCOV report a browser proof writes
+  into the test's own report directory is the test's, like the runner's. · {#runs-are-kept-with-each-pass}
   - Implementation: {{verify-run}}, {{check-run}}, {{invocation-evidence}}, {{held-state}}, {{coverage-report}}, {{test-runs}}, {{runs}}, {{verdict}}, {{verdict-reuse}}, {{evidence-store}}, {{filesystem}}, {{processes}}, {{text-files}}
   - Proof: {{temporary-project}}
 - Every named function of a placed module is run by a test of a claim that names the module, so each piece of
@@ -133,7 +139,15 @@ a claim depends on are named in it, so each module's claims are found from its n
   Browser execution is attributable only when its served code, source maps and original sources correspond,
   named functions use the compiler's source inventory, and relevant process, page and frame lifecycles were
   captured. Missing or ambiguous mapping makes the context incomplete, never an exemption or an independent
-  pass. · {#execution-context-is-attributable}
+  pass. A served script matches its map by the digest of the bytes the page ran, never by its URL. A covered
+  function is attributed only through a mapping segment inside its own generated range, before its first nested
+  function, to the smallest compiler function span holding that original position; a function a bundler
+  inlined or removed reads as unrun. A page closed or crashed before its coverage was taken, a worker, service
+  worker or out-of-process frame running mapped code, a script matching no map whose URL is not declared
+  external, or a mapped source outside the app or unlike its file makes the context incomplete. An anonymous
+  script matching no map, such as a test's evaluation glue, is ignored, so a source function serialized into
+  the page reads as unrun. A page that loads a declared bootstrap among its sources is an application journey:
+  its runs reach, but grant no independent credit. · {#execution-context-is-attributable}
   - Implementation: {{browser-execution}}, {{browser-function-evidence}}, {{browser-runtime}}, {{execution-context}}, {{independent-runs}}, {{runs}}, {{verdict}}, {{test-runs}}, {{function-recorder}}, {{compiler-facts}}, {{verify-run}}, {{read-recorder}}, {{coverage-provider}}
   - Proof: {{temporary-project}}, {{recorded-functions}}, {{proof-runner}}, {{module-doubles}}
 

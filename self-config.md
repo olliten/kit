@@ -72,6 +72,12 @@ packages:
   - name: playwright-core
     capabilities: [browser-driving]
 adapters:
+  - module: src/substrate/adapters/browser-capture
+    export: browserCapture
+    capability: browser-driving
+    kind: external
+    zones: [substrate]
+    contract: {type: BrowserCapture}
   - module: src/substrate/adapters/browser-runtime
     export: browserRuntime
     capability: browser-driving
