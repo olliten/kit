@@ -47,8 +47,8 @@ so a later gate runs only what an edit can have changed.
   is not run, and `kit verify` names it, counts it and fails. · {#tests-run-in-the-group-their-reach-selects}
   - Implementation: {{test-groups}}, {{verify-run}}, {{check-run}}, {{verification-configuration}}, {{kit-configuration}}, {{read-snapshot}}
   - Proof: {{temporary-project}}
-- A browser proof records its runs through `kit/browser`: `browserProof(context, {maps})`, given a Playwright
-  Chromium browser context and the path of the app's map artifact, starts precise function coverage on every
+- A browser proof records its runs through `kit/scripts/kit-browser.js`: `browserProof(context, {maps})`,
+  given a Playwright Chromium browser context and the path of the app's map artifact, starts precise function coverage on every
   page the context has or opens, and `done()`, called once before the context closes, takes it from each page,
   attributes it through the map artifact and writes into the test's own report directory, named by
   `KIT_COVERAGE` and `KIT_TEST`, an LCOV report of the named functions the pages ran and `browser-context.json`:

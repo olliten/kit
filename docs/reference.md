@@ -463,6 +463,18 @@ capture:
       contexts: [browser]
 ```
 
+```ts
+import { browserProof } from "kit/scripts/kit-browser.js";
+
+const proof = await browserProof(context, { maps: "public/generated/kit-map.json" });
+// … the test drives its pages …
+await proof.done();
+```
+
+Create the context with `serviceWorkers: "block"` when the app registers one: a service worker leaves the
+capture incomplete. Declare the entry's exact package contract, such as
+`{name: kit/scripts/kit-browser.js, capabilities: [browser-driving, filesystem]}`.
+
 The capture starts Chromium's precise function coverage on every page of the context, and `done()`, once the proof
 has finished and before the context closes, attributes what the pages ran to the original sources' named
 functions and writes the test's `browser.info` and `browser-context.json` beside its Node coverage. Outside

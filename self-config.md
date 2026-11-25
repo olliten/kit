@@ -31,6 +31,7 @@ exceptions:
   - scripts/kit-verify.mjs
   - scripts/kit-refs.mjs
   - scripts/kit-proof.mjs
+  - scripts/kit-browser.ts
 bootstraps:
   - scripts/kit-check.mjs
   - scripts/kit-consumers.mjs
