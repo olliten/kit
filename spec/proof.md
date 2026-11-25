@@ -57,7 +57,7 @@ a claim depends on are named in it, so each module's claims are found from its n
   `### law · id — explanation` heading, declares a claim; new topics keep the strict grammar
   ({{claim-inventory}}). A legacy claim with Implementation or Proof rows follows the same module-reference,
   claim-proof and proof-reach rules as a topic claim; other legacy claims remain outside those checks. · {#legacy-claims-keep-their-grammar}
-  - Implementation: {{claim-proof-binder}}, {{proof-reach}}, {{finding}}, {{placement-of}}
+  - Implementation: {{claim-proof-binder}}, {{proof-reach}}, {{runtime-reach}}, {{finding}}, {{placement-of}}
   - Proof: {{fixture-snapshot}}, {{temporary-project}}, {{processes}}
 - A claim's text is what its declaration holds, in source order: a list claim's promise paragraph, or a table
   claim's cells, without its anchor and without its Implementation and Proof rows. A legacy claim adds its
@@ -71,8 +71,9 @@ a claim depends on are named in it, so each module's claims are found from its n
   module none of them reaches is a finding, so a claim's names are proved rather than trusted. A test whose
   pass holds, and whose execution context is complete, also reaches each placed module of which it ran a
   named function, in Node or in a browser page, whether or not it is an independent proof: reach is use. While
-  a test of the claim has no pass that holds, a named module only such a run could reach waits, as the rules
-  that read runs do, and the check says so. · {#proofs-reach-named-modules}
+  a test of the claim whose command records runs has no pass that holds, a named module only such a run could
+  reach waits, as the rules that read runs do, and the check says so; a test whose command records nothing
+  reaches only what its code is followed to. · {#proofs-reach-named-modules}
   - Implementation: {{proof-reach}}, {{placement-of}}, {{read-snapshot}}, {{relative-import}}, {{test-reach}}, {{runtime-reach}}, {{runs}}
   - Proof: {{fixture-snapshot}}, {{recorded-reach}}
 - A claim's tests reach only the placed modules it names, so its names are exactly what its proof uses. Only

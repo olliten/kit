@@ -52,9 +52,8 @@ so a later gate runs only what an edit can have changed.
   page the context has or opens, and `done()`, called once before the context closes, takes it from each page,
   attributes it through the map artifact and writes into the test's own report directory, named by
   `KIT_COVERAGE` and `KIT_TEST`, an LCOV report of the named functions the pages ran and `browser-context.json`:
-  whether the capture is complete, the original sources the pages loaded, `KIT_RUNTIME`, and the browser's
-  version and executable digest, which are diagnostic. Outside `kit verify`, with none of those variables set,
-  it does nothing. A capture it cannot complete is written incomplete, never left out, so a proof that adopted
+  whether the capture is complete, the original sources the pages loaded, and `KIT_RUNTIME`. Outside
+  `kit verify`, with none of those variables set, it does nothing. A capture it cannot complete is written incomplete, never left out, so a proof that adopted
   it is never credited as Node alone. Reading the map artifact, the maps and every original source they name, it
   makes the test's pass hold them whole; the browser itself is held through the installed `playwright-core` that
   pins it, and one installed or chosen otherwise is not seen. · {#browser-proofs-record-their-runs}

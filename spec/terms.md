@@ -336,7 +336,7 @@
 - **proof-reach** — the check that a claim's tests together reach, through the code they use, every placed module the claim names.
   - Role: derived
   - Zone: core
-  - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{snapshot}}
+  - From: {{claim-proof-binder}}, {{finding}}, {{placement-of}}, {{runtime-reach}}, {{snapshot}}
 - **proof-scope** — debt from the placed modules a claim's tests reach without the claim naming them; a named composition, or a named module under the proof root, names what it reaches, and reach stops at unplaced code counted as debt, judged by what the tests' code uses.
   - Role: derived
   - Zone: core
@@ -547,7 +547,7 @@
 - **check-run** — the `kit check` workflow: read the governed root, run the gate and fail on what the baseline doesn't hold and on what it holds that is paid.
   - Role: composition
   - Zone: substrate
-  - Of: {{baseline-files}}, {{check-paths}}, {{claim-runs}}, {{command}}, {{debt-comparison}}, {{debt-policy}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{independent-runs}}, {{invocation-passes}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{rule-switch}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
+  - Of: {{baseline-files}}, {{check-paths}}, {{claim-runs}}, {{command}}, {{debt-comparison}}, {{debt-policy}}, {{evidence-store}}, {{gate}}, {{held-state}}, {{independent-runs}}, {{invocation-passes}}, {{placement-of}}, {{proof-reach}}, {{ratchet}}, {{read-config}}, {{read-snapshot}}, {{rule-switch}}, {{runtime-reach}}, {{stopwatch}}, {{test-groups}}, {{text-files}}, {{toolchain}}, {{verdict}}, {{verdict-reuse}}, {{verification-configuration}}
 - **configuration-runner** — the workflow that loads the configuration readers once for an app's scripts that run under plain Node.
   - Role: composition
   - Zone: substrate

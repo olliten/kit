@@ -11,4 +11,6 @@ export interface ExecutionContext {
 export interface Runs {
   readonly tests: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>>;
   readonly contexts?: Readonly<Record<string, ExecutionContext>>;
+  // Tests whose command records runs but that have no pass that holds: what they would run is not known yet.
+  readonly waiting?: readonly string[];
 }
