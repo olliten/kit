@@ -1,6 +1,6 @@
 # Proposal: coverage from browser-run proofs
 
-Status: **design for Olli's approval — 25 November 2026.** Proposed extension, not the current Kit contract.
+Status: **design; decisions 1–5 chosen by Olli, 25 November 2026.** Proposed extension, not the current Kit contract.
 This PR changes no checker, configuration, claim or baseline. The current contract remains in `spec/`.
 
 ## Why
@@ -221,15 +221,17 @@ In Leeloo, after it moves its pin and adopts the harness:
 | `self-config.md` | registrations | `browser-capture` adapter; `package.json` `exports` gains `./browser`. |
 | `reference.md` | docs | A harness section: the build mode, the map artifact, the two calls. |
 
-## Decisions for Olli
+## Decisions received
 
-1. **Capture owner.** Kit captures through a public `kit/browser` entry the harness calls (proposed), rather than
-   the app capturing and writing Kit's files itself.
-2. **Fail closed** on workers, service workers, out-of-process frames and unmatched non-anonymous scripts in v1
-   (proposed), rather than ignoring them.
-3. **Journeys stay non-independent.** A page that loads the app bootstrap grants reach and integration
-   evidence only (proposed, the current rule), so Leeloo's code run only by full-app journeys becomes debt.
-4. **Runtime reach** satisfies `unreached-module` and waits without a pass (proposed), and is not charged to
-   `proofs-reach-only-named-modules`.
-5. **Browser identity** through the held `playwright-core` package (proposed), rather than a held digest of
-   the executable, which is machine-specific and would stop sharing passes across machines.
+Olli chose the proposed option for each, 25 November 2026:
+
+1. **Capture owner:** Kit captures through the public `kit/browser` entry the harness calls; the app does not
+   write Kit's files.
+2. **Fail closed** in v1 on workers, service workers, out-of-process frames and unmatched non-anonymous
+   scripts: the context is incomplete, never partly credited.
+3. **Journeys stay non-independent:** a page that loads the app bootstrap grants reach and integration evidence
+   only. Code run only by full-app journeys becomes debt, paid with `pageRealm` proofs.
+4. **Runtime reach** satisfies `unreached-module`, waits while the test has no holding pass, and is not charged
+   to `proofs-reach-only-named-modules`.
+5. **Browser identity** is held through the `playwright-core` package; the observed version and digest are
+   diagnostic. A browser installed or pointed to otherwise is a limit.
