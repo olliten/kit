@@ -133,6 +133,35 @@ function functionAt(
     .sort((a, b) => a.end - a.start - (b.end - b.start))[0];
 }
 
+// A function's own first mapped segment: one inside its generated range and before its first nested function.
+// A nearer segment before the function belongs to code a bundler may have put there, so it never attributes.
+function ownSegment(
+  positions: readonly MappedPosition[],
+  functions: readonly BrowserFunction[],
+  start: number,
+  end: number,
+): MappedPosition | undefined {
+  const limit = functions.reduce((nearest, fn) => {
+    const inner = fn.ranges[0]?.startOffset;
+    return inner !== undefined && inner > start && inner < nearest && (fn.ranges[0]?.endOffset ?? end + 1) <= end
+      ? inner
+      : nearest;
+  }, end);
+  let left = 0;
+  let right = positions.length;
+  while (left < right) {
+    const middle = Math.floor((left + right) / 2);
+    if ((positions[middle]?.offset ?? Infinity) < start) left = middle + 1;
+    else right = middle;
+  }
+  for (let index = left; index < positions.length; index++) {
+    const position = positions[index];
+    if (position === undefined || position.offset >= limit) return undefined;
+    if (position.source !== undefined) return position;
+  }
+  return undefined;
+}
+
 export function browserFunctionEvidence(
   functions: readonly BrowserFunction[],
   positions: readonly MappedPosition[],
@@ -174,7 +203,10 @@ export function browserFunctionEvidence(
       continue;
     }
     if (range.startOffset === 0 && range.endOffset === scriptLength) continue;
-    const position = mappedPositionAt(positions, range.startOffset);
+    // With no segment of its own, a function after external code stays external and so reads as unrun; after
+    // the app's code it might be anyone's, so the context is incomplete.
+    const position = ownSegment(positions, functions, range.startOffset, range.endOffset) ??
+      (mappedPositionAt(positions, range.startOffset)?.source === null ? mappedPositionAt(positions, range.startOffset) : undefined);
     if (position?.source === null) continue;
     const source = position?.source === undefined ? undefined : inventory.get(position.source);
     const site =

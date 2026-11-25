@@ -157,7 +157,8 @@ app's own Playwright launch works.
   through the map.
 - The browser binary is outside the app, so the recorder never sees it. The pass holds `playwright-core`,
   which pins the Chromium revision Playwright installs; a browser installed or pointed to otherwise is a limit.
-- `RECORDING_FORMAT` goes to 3, since a pass's `ran` and context gain page evidence; every pass runs once more.
+- The recording format stays: how a pass's states and ran code are recorded is unchanged, and no pass kept
+  before held page evidence. (This note first said it would change; the work found no need.)
 
 ## 6. Reach
 

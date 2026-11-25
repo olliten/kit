@@ -13,6 +13,7 @@ import { proofOf } from "../../core/readings/placement-of.js";
 import { paidDebt, ratchetFindings, reasonOf, startupCheckRoots, tightenedBaseline } from "../../core/readings/ratchet.js";
 import { engagedRules } from "../../core/readings/rule-switch.js";
 import { capabilityModules, testGroups } from "../../core/readings/test-groups.js";
+import { runtimeReach } from "../../core/readings/runtime-reach.js";
 import { holding, keptRuns, runtimeOf, verdictKind, verdictOf } from "../../core/readings/verdict-reuse.js";
 import { testLine } from "../../core/readings/verification-configuration.js";
 import { evidenceStore } from "../adapters/evidence-store.js";
@@ -105,7 +106,10 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
     for (const test of invocation.keys())
       if (passes.get(test) === undefined)
         return { stdout, stderr: `Kit evidence: ${test}'s inputs changed since this invocation ran.\n`, exitCode: 2 };
-  const { runs, waiting } = keptRuns(passes);
+  const evidence = keptRuns(passes);
+  const { waiting } = evidence;
+  // Only a test whose command records runs can still bring a run; another's reach stays what its imports say.
+  const runs = { ...evidence.runs, waiting: waiting.filter((test) => commands.get(test)?.includes("{dir}") === true) };
   // Missing attribution must not look like a paid cohesion obligation. Preserve only the affected modules'
   // existing cohesion entries; ungoverned functions still produce findings from the sparse evidence.
   const independent = independentRuns(snapshot, runs);
@@ -119,6 +123,8 @@ export async function runCheck({ engineRoot, args, cwd }: CommandRequest): Promi
     ...claimRuns(snapshot, runs).filter(({ module, naming }) =>
       [...uncertain].some((claim) => naming.has(claim) || reached.get(claim)?.files.has(module)),
     ).map(({ module }) => `R4:excerpt-cohesion:${module}:`),
+    // An unreached module of a claim whose tests wait for a run rests with them, neither paid nor failing.
+    ...[...runtimeReach(snapshot, runs).waiting].map((claim) => `R4:unreached-module:${claim}:`),
     ...(["ungoverned-function", "excerpt-cohesion"] as const)
       .filter((rule) => config.rules?.[rule] !== undefined).map((rule) => `R4:${rule}:`),
   ];

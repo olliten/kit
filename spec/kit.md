@@ -9,7 +9,7 @@ its config, and its debt in its own baseline.
   accepts only the supported root fields and shapes. `roots.src` accepts one code-root path or a set of
   paths, checked together in one snapshot and graph; extraction, authority, structural checks, references
   and debt accounting cover every selected code root. The spec and proof roots remain single paths. · {#declared-roots-are-checked}
-  - Implementation: {{kit-configuration}}, {{config-values}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{placement-of}}, {{term-model}}, {{legacy-size}}, {{ratchet}}, {{line-ratchet}}
+  - Implementation: {{kit-configuration}}, {{config-values}}, {{read-snapshot}}, {{capability-check}}, {{name-check}}, {{comment-check}}, {{module-references}}, {{proof-reach}}, {{runtime-reach}}, {{placement-of}}, {{term-model}}, {{legacy-size}}, {{ratchet}}, {{line-ratchet}}
   - Proof: {{fixture-snapshot}}, {{source-fixture}}
 
 - A configuration declares only the keys Kit reads. An unknown key at any level is an error naming its full

@@ -1,6 +1,7 @@
 import type { Snapshot } from "../primitives/snapshot.js";
 import { type Finding, byDebtKey, finding } from "./finding.js";
 import { placementOf, proofOf } from "./placement-of.js";
+import { runtimeReach } from "./runtime-reach.js";
 
 // What the tests of each claim reach, keyed by the claim's topic file and anchor: the files, the top-level
 // declarations of other files whose code they use, and the files they can't follow precisely, which count as
@@ -94,13 +95,18 @@ export function moduleHomes(snapshot: Snapshot): Map<string, string[]> {
 export function proofReach(snapshot: Snapshot): Finding[] {
   const homes = moduleHomes(snapshot);
   const reached = claimReach(snapshot);
+  const running = runtimeReach(snapshot, snapshot.runs);
   const findings: Finding[] = [];
   for (const claim of snapshot.claims ?? []) {
-    const files = reached.get(`${claim.file}:${claim.anchor}`)?.files;
+    const key = `${claim.file}:${claim.anchor}`;
+    const files = reached.get(key)?.files;
     if (files === undefined) continue;
+    const ran = running.reached.get(key);
     for (const term of claim.terms ?? []) {
       const modules = homes.get(term.toLowerCase().trim()) ?? [];
-      if (modules.length === 0 || modules.some((module) => files.has(module))) continue;
+      if (modules.length === 0 || modules.some((module) => files.has(module) || ran?.has(module) === true)) continue;
+      // Running might reach it, once every test of the claim has a kept run.
+      if (running.waiting.has(key)) continue;
       findings.push(
         finding(
           "R4",
