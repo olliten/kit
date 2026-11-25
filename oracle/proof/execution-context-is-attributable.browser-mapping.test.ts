@@ -267,3 +267,27 @@ test("an invoked function without an original source function receives no credit
     ).complete,
   ).toBe(false);
 });
+
+test("a function is attributed through its own segment, never a nearer one a bundler put before it", () => {
+  const reordered: readonly MappedPosition[] = [
+    { offset: 0, source: FILE, line: 4, col: 0, name: null },
+    { offset: 12, source: FILE, line: 1, col: 2, name: "read" },
+  ];
+  expect(
+    browserFunctionEvidence([{ functionName: "a", ranges: [{ startOffset: 10, endOffset: 30, count: 3 }] }], reordered, 100, [SOURCE]).lcov,
+  ).toContain("FNDA:3,read\n");
+  const evidence = browserFunctionEvidence([{ functionName: "a", ranges: [{ startOffset: 5, endOffset: 9, count: 1 }] }], reordered, 100, [SOURCE]);
+  expect(evidence.complete).toBe(false);
+  expect(evidence.lcov).not.toMatch(/FNDA:[1-9]/);
+});
+
+test("a segment inside a nested function is the nested function's, not its holder's", () => {
+  const nested: readonly MappedPosition[] = [{ offset: 20, source: FILE, line: 1, col: 2, name: "read" }];
+  const evidence = browserFunctionEvidence([
+    { functionName: "outer", ranges: [{ startOffset: 10, endOffset: 60, count: 1 }] },
+    { functionName: "inner", ranges: [{ startOffset: 20, endOffset: 40, count: 1 }] },
+  ], nested, 100, [SOURCE]);
+  expect(evidence.complete).toBe(false);
+  expect(evidence.lcov).toContain("FNDA:1,read\n");
+  expect(evidence.lcov).toContain("FNDA:0,outer\n");
+});

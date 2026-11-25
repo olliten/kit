@@ -431,6 +431,11 @@ them. Their findings are debt that may only shrink:
 - `excerpt-cohesion`: a module holding, for two or more claims, code that only that claim runs and that no
   code other claims run holds. Adapters are exempt.
 
+What a test ran also counts as reach: `unreached-module` is settled for a claim when one of its tests, in a complete
+context, ran a named function of the module, whether or not the test is independent. While a test of the claim has
+no pass that holds, its unreached modules wait, neither failing nor paid. Reach by running is never charged as
+reach the claim doesn't name.
+
 Independence here is a structural import check. It does not establish public-interface invocation or detect
 application startup hidden behind an opaque child process, dynamic load or remote service. Existing compiler
 and capability checks still apply. Browser-page execution requires browser evidence; Node coverage alone
@@ -442,6 +447,54 @@ compliance; configure recording and use `kit verify` for the execution evidence.
 
 A check with `after: tests`, such as `kit check`, runs once the tests' passes are kept, and is not kept itself
 when a test's pass was not.
+
+### Browser proofs
+
+A test that drives a browser runs the app's code in the page, which Node's coverage never sees. Kit records it
+when the browser group declares the `browser` context and each such test hands its Playwright context to Kit's
+capture:
+
+```yaml
+  tests:
+    - id: browser
+      command: npx vitest run --config browser.config.ts {test}
+      under: [oracle/]
+      capabilities: [browser-driving]
+      contexts: [browser]
+```
+
+The capture starts Chromium's precise function coverage on every page of the context, and `done()`, once the proof
+has finished and before the context closes, attributes what the pages ran to the original sources' named
+functions and writes the test's `browser.info` and `browser-context.json` beside its Node coverage. Outside
+`kit verify` it does nothing. With `contexts: [browser]`, a test that never wrote its capture has an incomplete
+context and earns no independent credit.
+
+The app provides a test build whose served scripts have source maps (external, unminified or without syntax
+minification; renamed identifiers are harmless), and a map artifact naming each served script by the SHA-256 of
+its exact bytes:
+
+```json
+{ "version": 1,
+  "scripts": [{ "scriptHash": "<64 hex>", "base": "", "map": "public/generated/app.js.map" }],
+  "external": ["https://cdn.example.com/"] }
+```
+
+`base` is the app-relative directory the map's `sources` resolve against, and `external` lists URL prefixes of
+scripts that are not the app's. A map source under `node_modules` is external.
+
+The capture is incomplete, never partial, when a page runs a script no entry names and no external prefix covers,
+a worker or service worker starts, a frame of another origin loads, a page closes or crashes before `done()`, or
+a map source is missing, outside the app or unlike its file. An anonymous script no entry names, such as
+`page.evaluate` glue, is ignored, so a source function serialized through `page.evaluate` reads as unrun, and so
+does a function a bundler inlined.
+
+A page whose sources include a declared bootstrap is an application journey: what it ran reaches the claim's
+named modules but earns no independent credit. A page loading a bundle whose entry is the test or a placed oracle
+module, and no bootstrap, earns it.
+
+The pass holds the map artifact, the maps and every original source the capture mapped, whole, so an edit to any
+of them reruns the test. The browser binary is held through `playwright-core`, which pins its Chromium; one
+installed or chosen otherwise is not seen.
 
 ## Sharing passes
 
