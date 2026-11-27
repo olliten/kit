@@ -162,17 +162,23 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const passes: { readonly path: string; readonly text: string }[] = [];
   // Today's ref as the last reading or addition left it, how many passes were added to it, and why the run stopped
   // adding, if it did. The passes kept so far are added once each chunk's are kept, so a run stopped later has
-  // still shared them; after a failure the run adds nothing more.
+  // still shared them. A lost race skips only that addition: the next adds every pass the ref still lacks, and the
+  // race is said only when the last addition lost it too. After any other failure the run adds nothing more.
   let seen = shared === undefined || "failure" in shared ? undefined : { tip: shared.tip, held: shared.held };
   let published = 0;
   let unpublished: string | undefined;
+  let lost: string | undefined;
   const publish = (): void => {
     if (refs === undefined || seen === undefined || unpublished !== undefined) return;
     const result = publishPasses(root, refs[0], passes, seen);
-    if ("failure" in result) unpublished = result.failure;
-    else {
+    if (!("failure" in result)) {
       published += result.published;
       seen = { tip: result.tip, held: result.held };
+      lost = undefined;
+    } else if (result.lost === undefined) unpublished = result.failure;
+    else {
+      lost = result.failure;
+      seen = result.lost;
     }
   };
   // The outermost functions a test ran in each file its coverage lists.
@@ -540,7 +546,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   const failed = lines.filter((line) => line.startsWith("failed ")).length;
   const notes = [
     ...(shared !== undefined && "failure" in shared ? [`Shared no passes: ${shared.failure}\n`] : []),
-    ...(unpublished === undefined ? [] : [`Published no ${published > 0 ? "more " : ""}passes: ${unpublished}\n`]),
+    ...[unpublished ?? lost].flatMap((why) => (why === undefined ? [] : [`Published no ${published > 0 ? "more " : ""}passes: ${why}\n`])),
   ];
   const summary = {
     scope: selection.scope,
