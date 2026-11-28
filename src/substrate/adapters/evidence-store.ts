@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { createHash } from "node:crypto";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 // Where what a machine learns about an app is kept between runs: one file per key, so writers never contend
 // for an index, and the least recently used are evicted past a limit.
@@ -11,6 +11,9 @@ export interface EvidenceStore {
   write(store: string, kind: string, key: string, text: string): void;
   // Every entry of one kind, each as its text.
   entries(store: string, kind: string): string[];
+  // Every entry of one kind, most recently used first, each as its key and a read of its text (undefined when
+  // another run evicted it meanwhile), so a reader that stops at the first it needs reads no more.
+  newest(store: string, kind: string): { readonly key: string; text(): string | undefined }[];
   prune(store: string): void;
   // The store as one reader and writer of its entries, as extraction takes it.
   at(store: string): {
@@ -106,6 +109,21 @@ export const evidenceStore: EvidenceStore = {
         return [];
       }
     });
+  },
+  newest(store, kind) {
+    return files(join(store, kind))
+      .filter((entry) => entry.path.endsWith(".json"))
+      .sort((a, b) => b.used - a.used)
+      .map((entry) => ({
+        key: basename(entry.path, ".json"),
+        text: () => {
+          try {
+            return readFileSync(entry.path, "utf8");
+          } catch {
+            return undefined;
+          }
+        },
+      }));
   },
   at(store) {
     return {

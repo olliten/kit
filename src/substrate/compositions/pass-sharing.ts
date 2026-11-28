@@ -1,6 +1,5 @@
 import { digest } from "../../core/readings/fact-keys.js";
 import { sharedPass, sharedPlace, unshared } from "../../core/readings/shared-passes.js";
-import { evidenceStore } from "../adapters/evidence-store.js";
 import { type GitRefs, gitRefs } from "../adapters/git-refs.js";
 import { stopwatch } from "../adapters/stopwatch.js";
 
@@ -16,38 +15,54 @@ const pauseBefore = (attempt: number, add: readonly { readonly path: string }[])
   return longest / 2 + point * (longest / 2);
 };
 
-// What a reading of the shared refs found: how many passes the store gained, the first ref's tip and the paths
-// its tree holds, which a publish starts from, or why nothing could be read.
-export type SharedReading =
-  | { readonly read: number; readonly tip: string | null; readonly held: readonly string[] }
-  | { readonly read: 0; readonly failure: string };
+// A pass a shared ref lists: its kind and key in the store, and the blob that holds its text.
+export type SharedFile = { readonly kind: string; readonly key: string; readonly path: string; readonly blob: string };
 
-// Keeps in the store every pass on the refs that the store lacks, the first ref's first, so a pass another clone
-// kept is reused as this clone's own. The clone's copies of other days' refs, which no reading asks for again, go.
-export function readSharedPasses(root: string, store: string, refs: readonly string[]): SharedReading {
+// What a reading of the shared refs found: the passes they list by kind, the first ref's first, the first ref's tip
+// and the paths its tree holds, which a publish starts from, or why nothing could be read.
+export type SharedReading =
+  | { readonly offered: ReadonlyMap<string, readonly SharedFile[]>; readonly tip: string | null; readonly held: readonly string[] }
+  | { readonly failure: string };
+
+// Lists the passes on the refs by kind, fetching none: a plan fetches only those of a kind no kept pass holds
+// (`fetchSharedPasses`). The clone's copies of other days' refs, which no reading asks for again, go.
+export function readSharedPasses(root: string, refs: readonly string[]): SharedReading {
   try {
     const tips = refs.map((ref) => gitRefs.read(root, ref));
     gitRefs.forget(root, refs);
-    const wanted = new Map<string, { readonly blob: string; readonly path: string }>();
+    const seen = new Set<string>();
+    const offered = new Map<string, SharedFile[]>();
     for (const tip of tips)
       for (const file of tip?.files ?? []) {
         const place = sharedPlace(file.path);
-        if (place !== null && !wanted.has(file.path) && evidenceStore.read(store, place.kind, place.key) === undefined) wanted.set(file.path, file);
+        if (place === null || seen.has(file.path)) continue;
+        seen.add(file.path);
+        offered.set(place.kind, [...(offered.get(place.kind) ?? []), { ...place, path: file.path, blob: file.blob }]);
       }
-    const files = [...wanted.values()];
-    const texts = gitRefs.texts(root, files.map((file) => file.blob));
-    let read = 0;
-    files.forEach((file, index) => {
-      const text = texts[index] ?? "";
-      const pass = sharedPass(file.path, text);
-      if (pass === null) return;
-      evidenceStore.write(store, pass.kind, pass.key, text);
-      read++;
-    });
     const first = tips[0] ?? null;
-    return { read, tip: first?.tip ?? null, held: first?.files.map((file) => file.path) ?? [] };
+    return { offered, tip: first?.tip ?? null, held: first?.files.map((file) => file.path) ?? [] };
   } catch (error) {
-    return { read: 0, failure: error instanceof Error ? error.message : String(error) };
+    return { failure: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+// The texts of the listed passes, in one fetch, each only when it is a pass kept under its own key, as a torn or
+// foreign file isn't; or why they could not be fetched.
+export function fetchSharedPasses(
+  root: string,
+  files: readonly SharedFile[],
+): { readonly passes: readonly (SharedFile & { readonly text: string })[] } | { readonly failure: string } {
+  if (files.length === 0) return { passes: [] };
+  try {
+    const texts = gitRefs.texts(root, files.map((file) => file.blob));
+    return {
+      passes: files.flatMap((file, index) => {
+        const text = texts[index] ?? "";
+        return sharedPass(file.path, text) === null ? [] : [{ ...file, text }];
+      }),
+    };
+  } catch (error) {
+    return { failure: error instanceof Error ? error.message : String(error) };
   }
 }
 

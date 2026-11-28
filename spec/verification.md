@@ -202,8 +202,10 @@ so a later gate runs only what an edit can have changed.
   - Proof: {{temporary-project}}
 - With `share` declared, a pass is shared through `origin`: one ref per runtime and UTC day,
   `<share>/<day>-<runtime>` with the runtime's digest cut to 16 characters, whose tree holds each kept pass at
-  `verdicts/<kind>/<key>.json` as the store holds it. Before planning, `kit verify` reads today's and yesterday's
-  ref and keeps each pass there the store lacks, so a pass another clone kept is reused like its own; once each
+  `verdicts/<kind>/<key>.json` as the store holds it. Before planning, `kit verify` lists today's and yesterday's
+  ref. A check that no pass in the store holds then tries the listed passes of its kind the store lacks, and keeps
+  the first that holds, so a pass another clone kept is reused like its own; a pass no check can use is never
+  fetched or kept. Planning tries a check's passes newest first and stops at the first that holds. Once each
   chunk's passes are kept it adds to today's ref every pass it kept or reused that the ref lacks, as one commit on
   the tip pushed without force, so a run stopped after a chunk has shared what it kept. A push refused because the tip moved reads the ref again and adds on top, a few times, after a pause that grows with each try and whose length differs from clone to clone; a
   pass already at a path stays. A race still lost after those tries skips only that addition: the next one, and the
