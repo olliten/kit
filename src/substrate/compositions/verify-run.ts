@@ -26,7 +26,7 @@ import { stopwatch } from "../adapters/stopwatch.js";
 import { textFiles } from "../adapters/text-files.js";
 import { toolchain } from "../adapters/toolchain.js";
 import { heldStates } from "./held-state.js";
-import { publishPasses, readSharedPasses } from "./pass-sharing.js";
+import { fetchSharedPasses, publishPasses, readSharedPasses } from "./pass-sharing.js";
 import { readConfig } from "./read-config.js";
 import { readStoredSnapshot } from "./read-snapshot.js";
 
@@ -157,7 +157,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   };
   const share = fresh || args.includes("--no-share") ? undefined : policy.share;
   const refs = share === undefined ? undefined : sharedRefs(share, runtime, calendar.now());
-  const shared = refs === undefined ? undefined : readSharedPasses(root, store, refs);
+  const shared = refs === undefined ? undefined : readSharedPasses(root, refs);
   // The passes this run kept or reused, as today's shared ref would hold them.
   const passes: { readonly path: string; readonly text: string }[] = [];
   // Today's ref as the last reading or addition left it, how many passes were added to it, and why the run stopped
@@ -191,21 +191,57 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     }
     return ran;
   };
+  // How many listed shared passes a plan fetched and kept, and why a fetch failed, if one did.
+  let sharedRead = 0;
+  let unfetched: string | undefined;
+  // Each check's kept passes are tried newest first, each read only when the ones before it don't hold, and the
+  // first that holds is reused: any pass that holds is as good as another. A check none holds then tries the
+  // shared passes of its kind the store lacks, all fetched at once for the plan, and keeps the first that holds.
   const plan = (checks: readonly Check[]) => {
     const states = new Map<string, string>();
     if (!fresh) held.since(fileTime());
+    const firstHolding = (verdicts: Iterable<Verdict>): Verdict | undefined => {
+      for (const verdict of verdicts) {
+        for (const path of Object.keys(verdict.states)) if (!states.has(path)) states.set(path, stateOf(path));
+        if (holding([verdict], states) !== undefined) return verdict;
+      }
+      return undefined;
+    };
+    function* parsed(texts: Iterable<string | undefined>): Generator<Verdict> {
+      for (const text of texts) {
+        const verdict = text === undefined ? null : verdictOf(text);
+        if (verdict !== null) yield verdict;
+      }
+    }
+    const local = checks.map((check) => {
+      if (fresh || (check.afterTests === true && invocationInput === undefined)) return { check, reused: undefined, kept: undefined };
+      const kept = evidenceStore.newest(store, kindOf(check));
+      return { check, reused: firstHolding(parsed(kept.map((entry) => entry.text()).values())), kept: new Set(kept.map((entry) => entry.key)) };
+    });
+    const offered = shared === undefined || "failure" in shared ? undefined : shared.offered;
+    const open = local.filter((item) => item.kept !== undefined && item.reused === undefined);
+    if (offered === undefined || open.length === 0 || unfetched !== undefined) return { states, planned: local };
+    const wanted = open.flatMap(({ check, kept }) => (offered.get(kindOf(check)) ?? []).filter((file) => !kept?.has(file.key)));
+    const fetched = fetchSharedPasses(root, [...new Map(wanted.map((file) => [file.path, file])).values()]);
+    if ("failure" in fetched) {
+      unfetched = fetched.failure;
+      return { states, planned: local };
+    }
+    const byKind = new Map<string, (typeof fetched.passes)[number][]>();
+    for (const pass of fetched.passes) byKind.set(pass.kind, [...(byKind.get(pass.kind) ?? []), pass]);
     return {
       states,
-      planned: checks.map((check) => {
-        if (fresh || (check.afterTests === true && invocationInput === undefined)) return { check, reused: undefined };
-        const verdicts = evidenceStore
-          .entries(store, kindOf(check))
-          .map(verdictOf)
-          .flatMap((verdict) => (verdict === null ? [] : [verdict]));
-        for (const verdict of verdicts)
-          for (const path of Object.keys(verdict.states))
-            if (!states.has(path)) states.set(path, stateOf(path));
-        return { check, reused: holding(verdicts, states) };
+      planned: local.map((item) => {
+        if (item.kept === undefined || item.reused !== undefined) return item;
+        const candidates = (byKind.get(kindOf(item.check)) ?? []).filter((pass) => !item.kept?.has(pass.key));
+        const reused = firstHolding(parsed(candidates.map((pass) => pass.text)));
+        const pass = reused === undefined ? undefined : candidates.find((each) => each.key === heldKey(reused));
+        if (pass !== undefined) {
+          evidenceStore.write(store, pass.kind, pass.key, pass.text);
+          item.kept.add(pass.key);
+          sharedRead++;
+        }
+        return { ...item, reused };
       }),
     };
   };
@@ -545,7 +581,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
   evidenceStore.prune(store);
   const failed = lines.filter((line) => line.startsWith("failed ")).length;
   const notes = [
-    ...(shared !== undefined && "failure" in shared ? [`Shared no passes: ${shared.failure}\n`] : []),
+    ...[shared !== undefined && "failure" in shared ? shared.failure : unfetched].flatMap((why) => (why === undefined ? [] : [`Shared no passes: ${why}\n`])),
     ...[unpublished ?? lost].flatMap((why) => (why === undefined ? [] : [`Published no ${published > 0 ? "more " : ""}passes: ${why}\n`])),
   ];
   const summary = {
@@ -564,7 +600,7 @@ export async function runVerify({ engineRoot, args, cwd }: CommandRequest): Prom
     invalidated,
     alone,
     unassigned: unassigned.length,
-    shared: { read: shared?.read ?? 0, published },
+    shared: { read: sharedRead, published },
     states: { ...held.receipt },
     seconds: (stopwatch.now() - started) / 1000,
   };

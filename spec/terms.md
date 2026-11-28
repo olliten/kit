@@ -469,7 +469,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **evidence-store** — ownership of what a machine learns about an app between runs: one file per key beside the repository, read and written whole, and evicted least recently used past a limit.
+- **evidence-store** — ownership of what a machine learns about an app between runs: one file per key beside the repository, read and written whole, listed most recently used first, and evicted least recently used past a limit.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -608,10 +608,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{program-scope}}
-- **pass-sharing** — the workflow that keeps the passes on `origin`'s shared refs in the local store, and adds a run's passes to today's ref, again on a moved tip after a growing pause that differs by clone, from the tip the last reading or addition left.
+- **pass-sharing** — the workflow that lists the passes on `origin`'s shared refs by kind, fetches those a plan asks for as checked passes, and adds a run's passes to today's ref, again on a moved tip after a growing pause that differs by clone, from the tip the last reading or addition left.
   - Role: composition
   - Zone: substrate
-  - Of: {{evidence-store}}, {{fact-keys}}, {{git-refs}}, {{shared-passes}}, {{stopwatch}}
+  - Of: {{fact-keys}}, {{git-refs}}, {{shared-passes}}, {{stopwatch}}
 - **program-fixture** — the workflow that compiles a fixture and hands a test its program scope, so a proof uses only the recorders it names.
   - Role: composition
   - Zone: substrate

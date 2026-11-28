@@ -128,8 +128,9 @@ test("a push that loses the race reads the moved tip and adds on top, keeping bo
   await one.verify();
   const [today] = refsOf(one.root);
   const stale = tipOf(origin, today);
-  const seen = readSharedPasses(two.root, evidenceStore.directory(two.root), [today]);
-  expect(seen).toMatchObject({ read: 3, tip: stale });
+  const seen = readSharedPasses(two.root, [today]);
+  expect(seen).toMatchObject({ tip: stale });
+  expect("offered" in seen && [...seen.offered.values()].flat()).toHaveLength(3);
   one.write({ "b.txt": "b2" });
   await one.verify();
   const moved = tipOf(origin, today);
@@ -142,6 +143,26 @@ test("a push that loses the race reads the moved tip and adds on top, keeping bo
   expect(publishPasses(two.root, today, [mine], seen)).toMatchObject({ published: 1, tip: tipOf(origin, today) });
   expect(treeOf(origin, today)).toHaveLength(5);
   expect(git(origin, "rev-parse", `${today}^`)).toBe(moved);
+}, 120_000);
+
+test("only a pass that holds for a check is fetched and kept; one the store has fetches nothing", async () => {
+  const { origin, lane } = remote();
+  const one = lane("one");
+  await one.verify();
+  one.write({ "data.txt": "2" });
+  await one.verify();
+  const [today] = refsOf(one.root);
+  expect(treeOf(origin, today)).toHaveLength(4);
+
+  const two = lane("two");
+  const lint = verdictKind("lint", "node lint.mjs", toolchain.runtime(two.root));
+  const kept = () => evidenceStore.newest(evidenceStore.directory(two.root), lint);
+  expect(summary((await two.verify()).stdout)).toMatchObject({ reused: 3, ran: 0, shared: { read: 3 } });
+  // The ref holds two lint passes; only the one whose states hold here is kept.
+  expect(kept()).toHaveLength(1);
+  expect(JSON.parse(kept()[0]?.text() ?? "{}")).toMatchObject({ states: { "data.txt": expect.any(String) } });
+  expect(summary((await two.verify()).stdout)).toMatchObject({ reused: 3, ran: 0, shared: { read: 0 } });
+  expect(kept()).toHaveLength(1);
 }, 120_000);
 
 // A ref other clones move on every try but the `wins`th: each read gives a newer tip that holds one more pass.
