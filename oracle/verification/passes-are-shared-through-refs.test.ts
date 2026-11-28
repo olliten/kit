@@ -4,8 +4,9 @@ import { sharedPass, sharedPath, sharedRefs, unshared } from "../../src/core/rea
 import { heldKey, verdictKind } from "../../src/core/readings/verdict-reuse.js";
 import { calendar } from "../../src/substrate/adapters/calendar.js";
 import { evidenceStore } from "../../src/substrate/adapters/evidence-store.js";
-import { gitRefs } from "../../src/substrate/adapters/git-refs.js";
+import { type GitRefs, gitRefs } from "../../src/substrate/adapters/git-refs.js";
 import { processes } from "../../src/substrate/adapters/processes.js";
+import { stopwatch } from "../../src/substrate/adapters/stopwatch.js";
 import { toolchain } from "../../src/substrate/adapters/toolchain.js";
 import { publishPasses, readSharedPasses } from "../../src/substrate/compositions/pass-sharing.js";
 import { runVerify } from "../../src/substrate/compositions/verify-run.js";
@@ -142,6 +143,37 @@ test("a push that loses the race reads the moved tip and adds on top, keeping bo
   expect(treeOf(origin, today)).toHaveLength(5);
   expect(git(origin, "rev-parse", `${today}^`)).toBe(moved);
 }, 120_000);
+
+// A ref other clones move on every try but the `wins`th: each read gives a newer tip that holds one more pass.
+function contested(wins: number): { refs: GitRefs; tries: () => number } {
+  let tries = 0;
+  const refs: GitRefs = {
+    read: (_root, _ref) => ({ tip: `tip-${tries}`, files: [{ path: `theirs-${tries}.json`, blob: "b" }] }),
+    forget: () => undefined,
+    texts: (_root, blobs) => blobs.map(() => ""),
+    advance: (_root, _ref, expected) => (++tries === wins ? `${expected}-mine` : null),
+  };
+  return { refs, tries: () => tries };
+}
+
+test("a race lost on every try gives the tip last read, so the next addition starts from it", () => {
+  const mine = [{ path: "mine.json", text: "{}" }];
+  const always = contested(0);
+  const started = stopwatch.now();
+  const lost = publishPasses("/unused", "refs/kit-passes/x", mine, { tip: null, held: [] }, always.refs);
+  expect(lost).toMatchObject({ published: 0, failure: "refs/kit-passes/x moved on each of 5 pushes" });
+  expect("failure" in lost && lost.lost).toEqual({ tip: "tip-5", held: ["theirs-5.json"] });
+  expect(always.tries()).toBe(5);
+  // Four pauses, each at least half of 250, 500, 1000 and 2000 ms.
+  expect(stopwatch.now() - started).toBeGreaterThanOrEqual(1875);
+
+  const third = contested(3);
+  expect(publishPasses("/unused", "refs/kit-passes/x", mine, { tip: null, held: [] }, third.refs)).toEqual({
+    published: 1,
+    tip: "tip-2-mine",
+    held: ["theirs-2.json", "mine.json"],
+  });
+}, 30_000);
 
 test("without an origin, or with a push refused for another reason, the gate still passes and says so", async () => {
   const { origin, lane } = remote();

@@ -501,7 +501,7 @@
   - Role: adapter
   - Zone: substrate
   - Of: []
-- **stopwatch** — access to the time, for receipts.
+- **stopwatch** — access to the time, for receipts, and a pause between a retry's tries.
   - Role: adapter
   - Zone: substrate
   - Of: []
@@ -608,10 +608,10 @@
   - Role: composition
   - Zone: substrate
   - Of: {{compiler-facts}}, {{program-scope}}
-- **pass-sharing** — the workflow that keeps the passes on `origin`'s shared refs in the local store, and adds a run's passes to today's ref, again on a moved tip, from the tip the last reading or addition left.
+- **pass-sharing** — the workflow that keeps the passes on `origin`'s shared refs in the local store, and adds a run's passes to today's ref, again on a moved tip after a growing pause that differs by clone, from the tip the last reading or addition left.
   - Role: composition
   - Zone: substrate
-  - Of: {{evidence-store}}, {{git-refs}}, {{shared-passes}}
+  - Of: {{evidence-store}}, {{fact-keys}}, {{git-refs}}, {{shared-passes}}, {{stopwatch}}
 - **program-fixture** — the workflow that compiles a fixture and hands a test its program scope, so a proof uses only the recorders it names.
   - Role: composition
   - Zone: substrate

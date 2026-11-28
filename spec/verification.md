@@ -205,9 +205,11 @@ so a later gate runs only what an edit can have changed.
   `verdicts/<kind>/<key>.json` as the store holds it. Before planning, `kit verify` reads today's and yesterday's
   ref and keeps each pass there the store lacks, so a pass another clone kept is reused like its own; once each
   chunk's passes are kept it adds to today's ref every pass it kept or reused that the ref lacks, as one commit on
-  the tip pushed without force, so a run stopped after a chunk has shared what it kept. A push refused because the tip moved reads the ref again and adds on top, a few times; a
-  pass already at a path stays. No origin, no network, a refused push or a lost race is said in the output, the
-  run publishes nothing more and goes on with its own store, so sharing never fails the gate; the summary counts what was read and
+  the tip pushed without force, so a run stopped after a chunk has shared what it kept. A push refused because the tip moved reads the ref again and adds on top, a few times, after a pause that grows with each try and whose length differs from clone to clone; a
+  pass already at a path stays. A race still lost after those tries skips only that addition: the next one, and the
+  last, after every chunk has ended, add what it missed. No origin, no network or a push refused for another reason
+  is said in the output and the run publishes nothing more; a race the last addition lost is said too. Either way the
+  run goes on with its own store, so sharing never fails the gate; the summary counts what was read and
   published. A reading removes the clone's copies of every other ref beside the two it reads. `--plan` reads and does not publish, and `--fresh` and `--no-share` neither read nor publish. · {#passes-are-shared-through-refs}
-  - Implementation: {{pass-sharing}}, {{shared-passes}}, {{git-refs}}, {{calendar}}, {{verify-run}}, {{evidence-store}}, {{toolchain}}, {{verification-configuration}}
+  - Implementation: {{pass-sharing}}, {{shared-passes}}, {{git-refs}}, {{calendar}}, {{verify-run}}, {{evidence-store}}, {{toolchain}}, {{verification-configuration}}, {{stopwatch}}
   - Proof: {{temporary-project}}
